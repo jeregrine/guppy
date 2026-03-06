@@ -15,10 +15,14 @@ IO.puts("opened and asked GPUI to activate/focus the window")
 :ok =
   Guppy.mount(
     view_id,
-    Guppy.IR.div([
-      Guppy.IR.text("Hello from examples/hello_world.exs"),
-      Guppy.IR.text("Rendered through BridgeView IR")
-    ])
+    Guppy.IR.div(
+      [
+        Guppy.IR.text("Hello from examples/hello_world.exs", id: "title"),
+        Guppy.IR.text("Rendered through BridgeView IR")
+      ],
+      id: "hello_root",
+      style: %{flex: true, flex_col: true, gap_2: true, p_4: true, bg: :gray, rounded_md: true}
+    )
   )
 
 IO.puts("mounted IR tree")
@@ -31,10 +35,14 @@ receive_loop = fn receive_loop ->
     :update_text ->
       case Guppy.update(
              view_id,
-             Guppy.IR.div([
-               Guppy.IR.text("Hello from examples/hello_world.exs (updated)"),
-               Guppy.IR.text("Full-tree replacement rerender worked")
-             ])
+             Guppy.IR.div(
+               [
+                 Guppy.IR.text("Hello from examples/hello_world.exs (updated)", id: "title"),
+                 Guppy.IR.text("Full-tree replacement rerender worked")
+               ],
+               id: "hello_root",
+               style: %{flex: true, flex_col: true, gap_2: true, p_4: true, bg: :blue, rounded_md: true}
+             )
            ) do
         :ok ->
           IO.puts("updated window via IR")

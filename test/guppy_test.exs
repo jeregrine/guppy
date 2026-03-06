@@ -12,6 +12,24 @@ defmodule GuppyTest do
     assert is_binary(Guppy.nif_path())
   end
 
+  test "ir validation accepts ids/styles and rejects invalid values" do
+    assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
+
+    assert :ok =
+             Guppy.IR.validate(
+               Guppy.IR.div(
+                 [Guppy.IR.text("hello")],
+                 id: "root",
+                 style: %{flex: true, flex_col: true, gap_2: true, bg: :gray}
+               )
+             )
+
+    assert {:error, {:invalid_id, 123}} = Guppy.IR.validate(Guppy.IR.text("hello", id: 123))
+
+    assert {:error, {:invalid_style, :bogus, true}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: %{bogus: true}))
+  end
+
   test "native ping is wired through the server" do
     case Guppy.Native.Nif.load_status() do
       :ok ->
@@ -35,10 +53,14 @@ defmodule GuppyTest do
         assert :ok =
                  Guppy.mount(
                    view_id,
-                   Guppy.IR.div([
-                     Guppy.IR.text("Hello from IR"),
-                     Guppy.IR.text("Rendered as a nested tree")
-                   ])
+                   Guppy.IR.div(
+                     [
+                       Guppy.IR.text("Hello from IR", id: "greeting"),
+                       Guppy.IR.text("Rendered as a nested tree")
+                     ],
+                     id: "root",
+                     style: %{flex: true, flex_col: true, gap_2: true, p_4: true, bg: :gray}
+                   )
                  )
 
         assert :ok =
@@ -60,6 +82,7 @@ defmodule GuppyTest do
                        Guppy.IR.text("Clickable IR tree"),
                        Guppy.IR.text("Simulated click should roundtrip")
                      ],
+                     id: "increment_button",
                      events: %{click: "increment"}
                    )
                  )

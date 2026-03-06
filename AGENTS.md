@@ -91,7 +91,7 @@ Useful functions today:
 - `Guppy.native_build_info/0`
 - `Guppy.native_runtime_status/0`
 - `Guppy.native_gui_status/0`
-- `Guppy.IR.text/1`
+- `Guppy.IR.text/2`
 - `Guppy.IR.div/2`
 
 ## Current tracer-shot limitations
@@ -102,14 +102,14 @@ The current bridge is still intentionally narrow:
 - minimal IR validation exists on the Elixir side
 - supported native nodes are still intentionally small (`:div` + `:text`)
 - click and window-close are the only native event roundtrips today
-- style mapping is still minimal
-- stable node ids are not in the IR yet
+- style mapping exists, but only as a small explicit subset on `:div`
+- explicit node ids now exist, but richer keyed/stateful behaviors are still ahead
 
 So if you are extending the project, the next likely architectural moves are:
 
-- add explicit IR node ids
-- expand minimal style mapping carefully
+- keep expanding style/event coverage carefully without breaking the simple IR model
 - keep the full-tree replacement invariant
+- add more events only after the identity model stays stable
 
 ## Main-thread / macOS guidance
 

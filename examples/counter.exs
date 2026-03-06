@@ -10,14 +10,21 @@ IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
 IO.inspect(view_id, label: "opened_view_id")
 
 render_counter = fn count ->
-  Guppy.IR.div([
-    Guppy.IR.text("Counter example"),
-    Guppy.IR.text("count = #{count}"),
-    Guppy.IR.div([
-      Guppy.IR.text("This window is rerendered from Elixir state."),
-      Guppy.IR.text("Each tick sends a full replacement IR tree.")
-    ])
-  ])
+  Guppy.IR.div(
+    [
+      Guppy.IR.text("Counter example", id: "title"),
+      Guppy.IR.text("count = #{count}", id: "count_label"),
+      Guppy.IR.div(
+        [
+          Guppy.IR.text("This window is rerendered from Elixir state."),
+          Guppy.IR.text("Each tick sends a full replacement IR tree.")
+        ],
+        style: %{p_2: true, bg: :gray, rounded_md: true}
+      )
+    ],
+    id: "counter_root",
+    style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+  )
 end
 
 :ok = Guppy.mount(view_id, render_counter.(0))

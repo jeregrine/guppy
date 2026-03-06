@@ -1,7 +1,7 @@
-use crate::ir::IrNode;
+use crate::ir::{ColorToken, DivStyle, IrNode};
 use gpui::{
-    AnyElement, App, Application, AsyncApp, Bounds, Context, SharedString, Window, WindowBounds,
-    WindowOptions, div, prelude::*, px, rgb,
+    AnyElement, App, Application, AsyncApp, Bounds, Context, InteractiveText, SharedString,
+    StyledText, Window, WindowBounds, WindowOptions, div, prelude::*, px, rgb,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -182,30 +182,44 @@ pub fn view_count() -> u64 {
 
 fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
     match ir {
-        IrNode::Text(content) => SharedString::from(content.clone()).into_any_element(),
-        IrNode::Div { children, click } => render_div(view_id, path, children, click.as_deref()),
+        IrNode::Text { id, content } => render_text(view_id, path, id.as_deref(), content),
+        IrNode::Div {
+            id,
+            style,
+            children,
+            click,
+        } => render_div(view_id, path, id.as_deref(), style, children, click.as_deref()),
     }
 }
 
-fn render_div(view_id: u64, path: &str, children: &[IrNode], click: Option<&str>) -> AnyElement {
+fn render_text(view_id: u64, path: &str, id: Option<&str>, content: &str) -> AnyElement {
+    let element_id = element_id(view_id, path, id);
+    InteractiveText::new(element_id, StyledText::new(content.to_owned())).into_any_element()
+}
+
+fn render_div(
+    view_id: u64,
+    path: &str,
+    id: Option<&str>,
+    style: &DivStyle,
+    children: &[IrNode],
+    click: Option<&str>,
+) -> AnyElement {
     let child_elements = children
         .iter()
         .enumerate()
         .map(|(index, child)| render_ir(view_id, &format!("{path}.{index}"), child))
         .collect::<Vec<_>>();
 
+    let element_id = element_id(view_id, path, id);
+    let styled_div = apply_div_style(div().id(element_id).children(child_elements), style);
+
     match click {
         Some(callback_id) => {
             let callback_id = callback_id.to_owned();
 
-            div()
-                .id(SharedString::from(format!("guppy-{view_id}-{path}")))
-                .flex()
-                .flex_col()
-                .gap_2()
-                .cursor_pointer()
+            styled_div
                 .active(|style| style.opacity(0.85))
-                .children(child_elements)
                 .on_click(move |_, _, _| unsafe {
                     let _ = guppy_c_send_click_event(
                         view_id,
@@ -215,12 +229,69 @@ fn render_div(view_id: u64, path: &str, children: &[IrNode], click: Option<&str>
                 })
                 .into_any_element()
         }
-        None => div()
-            .flex()
-            .flex_col()
-            .gap_2()
-            .children(child_elements)
-            .into_any_element(),
+        None => styled_div.into_any_element(),
+    }
+}
+
+fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
+where
+    E: Styled + InteractiveElement,
+{
+    if style.flex {
+        element = element.flex();
+    }
+    if style.flex_col {
+        element = element.flex_col();
+    }
+    if style.gap_2 {
+        element = element.gap_2();
+    }
+    if style.p_2 {
+        element = element.p_2();
+    }
+    if style.p_4 {
+        element = element.p_4();
+    }
+    if style.p_6 {
+        element = element.p_6();
+    }
+    if style.items_center {
+        element = element.items_center();
+    }
+    if style.justify_center {
+        element = element.justify_center();
+    }
+    if style.cursor_pointer {
+        element = element.cursor_pointer();
+    }
+    if style.rounded_md {
+        element = element.rounded_md();
+    }
+    if let Some(color) = style.bg {
+        element = element.bg(color_token_to_color(color));
+    }
+    if let Some(color) = style.text_color {
+        element = element.text_color(color_token_to_color(color));
+    }
+    element
+}
+
+fn element_id(view_id: u64, path: &str, id: Option<&str>) -> SharedString {
+    match id {
+        Some(id) => SharedString::from(id.to_owned()),
+        None => SharedString::from(format!("guppy-{view_id}-{path}")),
+    }
+}
+
+fn color_token_to_color(color: ColorToken) -> gpui::Hsla {
+    match color {
+        ColorToken::Red => rgb(0xff0000).into(),
+        ColorToken::Green => rgb(0x00ff00).into(),
+        ColorToken::Blue => rgb(0x0000ff).into(),
+        ColorToken::Yellow => rgb(0xffff00).into(),
+        ColorToken::Black => rgb(0x000000).into(),
+        ColorToken::White => rgb(0xffffff).into(),
+        ColorToken::Gray => rgb(0x505050).into(),
     }
 }
 
@@ -264,6 +335,8 @@ fn handle_request(request: MainThreadRequest) {
             let _ = reply.send(open_window(
                 view_id,
                 IrNode::Div {
+                    id: None,
+                    style: DivStyle::default(),
                     children: vec![IrNode::text(format!("Hello from Guppy view {view_id}"))],
                     click: None,
                 },

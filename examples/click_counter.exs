@@ -11,17 +11,23 @@ owner = self()
 IO.inspect(view_id, label: "opened_view_id")
 
 render = fn count ->
-  Guppy.IR.div([
-    Guppy.IR.text("Click counter"),
-    Guppy.IR.div(
-      [
-        Guppy.IR.text("count = #{count}"),
-        Guppy.IR.text("Click this block to increment")
-      ],
-      events: %{click: "increment"}
-    ),
-    Guppy.IR.text("Close the window to stop this script.")
-  ])
+  Guppy.IR.div(
+    [
+      Guppy.IR.text("Click counter", id: "title"),
+      Guppy.IR.div(
+        [
+          Guppy.IR.text("count = #{count}", id: "count_label"),
+          Guppy.IR.text("Click this block to increment")
+        ],
+        id: "increment_button",
+        style: %{p_4: true, bg: :blue, rounded_md: true, cursor_pointer: true},
+        events: %{click: "increment"}
+      ),
+      Guppy.IR.text("Close the window to stop this script.")
+    ],
+    id: "click_counter_root",
+    style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+  )
 end
 
 :ok = Guppy.mount(view_id, render.(0))

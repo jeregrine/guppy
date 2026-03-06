@@ -24,7 +24,7 @@ The current tracer-shot API is intentionally small:
 - `Guppy.mount/2`
 - `Guppy.update/2`
 - `Guppy.close_window/1`
-- `Guppy.IR.text/1`
+- `Guppy.IR.text/2`
 - `Guppy.IR.div/2`
 
 ## Native build
@@ -117,14 +117,26 @@ Minimal native events are delivered to the owning Elixir process as:
 {:guppy_event, view_id, %{type: :window_closed}}
 ```
 
-You can attach a click callback id to a `div` like this:
+You can attach a stable node id and click callback id to a `div` like this:
 
 ```elixir
 Guppy.IR.div(
-  [Guppy.IR.text("Click me")],
+  [Guppy.IR.text("Click me", id: "button_label")],
+  id: "increment_button",
   events: %{click: "increment"}
 )
 ```
+
+Identity rules today:
+
+- if an IR node has an explicit `id`, native rendering uses it as the GPUI element id
+- otherwise Guppy falls back to a generated path-based id
+
+Minimal `:div` style tokens currently supported:
+
+- booleans: `flex`, `flex_col`, `gap_2`, `p_2`, `p_4`, `p_6`, `items_center`, `justify_center`, `cursor_pointer`, `rounded_md`
+- colors: `bg`, `text_color`
+- color tokens: `:red`, `:green`, `:blue`, `:yellow`, `:black`, `:white`, `:gray`
 
 ## Current architecture
 
@@ -169,7 +181,8 @@ The tracer shot is real, but still intentionally narrow:
 - native rendering only supports a minimal IR shape today
 - supported nodes are effectively `:div` and `:text`
 - only a minimal click event path exists today
-- style mapping is still minimal
+- style mapping exists, but only for a small explicit subset on `:div`
+- explicit node ids are supported, but there is not yet broader keyed/stateful UI behavior built on top of them
 - `update_window_text/2` is now just a convenience wrapper over `update(view_id, Guppy.IR.text(text))`
 
 ## Development workflow
