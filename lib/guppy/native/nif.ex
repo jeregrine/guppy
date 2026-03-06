@@ -108,6 +108,10 @@ defmodule Guppy.Native.Nif do
     {:reply, with_loaded(state, fn -> normalize_status(native_open_window(view_id)) end), state}
   end
 
+  def handle_call({:request, {:set_event_target, [pid]}}, _from, state) when is_pid(pid) do
+    {:reply, with_loaded(state, fn -> normalize_status(native_set_event_target(pid)) end), state}
+  end
+
   def handle_call({:request, {:mount, [view_id, ir]}}, _from, state) do
     {:reply, with_loaded(state, fn -> normalize_status(native_mount(view_id, ir)) end), state}
   end
@@ -157,6 +161,10 @@ defmodule Guppy.Native.Nif do
   end
 
   def native_open_window(_view_id) do
+    {:error, :nif_not_loaded}
+  end
+
+  def native_set_event_target(_pid) do
     {:error, :nif_not_loaded}
   end
 

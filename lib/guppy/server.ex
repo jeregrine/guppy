@@ -79,7 +79,7 @@ defmodule Guppy.Server do
       nif_path: Keyword.get(opts, :nif_path, Application.get_env(:guppy, :nif_path))
     }
 
-    {:ok, state}
+    {:ok, maybe_register_event_target(state)}
   end
 
   @impl true
@@ -170,6 +170,30 @@ defmodule Guppy.Server do
   end
 
   @impl true
+  def handle_info({:guppy_native_event, view_id, :click, callback_id}, state)
+      when is_integer(view_id) and is_binary(callback_id) do
+    case Map.fetch(state.views, view_id) do
+      {:ok, owner} ->
+        send(owner, {:guppy_event, view_id, %{type: :click, callback: callback_id}})
+        {:noreply, state}
+
+      :error ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:guppy_native_event, view_id, :window_closed, _payload}, state)
+      when is_integer(view_id) do
+    case Map.fetch(state.views, view_id) do
+      {:ok, owner} ->
+        send(owner, {:guppy_event, view_id, %{type: :window_closed}})
+        {:noreply, delete_view(state, view_id)}
+
+      :error ->
+        {:noreply, state}
+    end
+  end
+
   def handle_info({:DOWN, monitor_ref, :process, owner, _reason}, state) do
     case Map.fetch(state.monitors, monitor_ref) do
       {:ok, ^owner} ->
@@ -185,6 +209,14 @@ defmodule Guppy.Server do
     cond do
       not Map.has_key?(state.views, view_id) -> {:error, :unknown_view_id}
       true -> Guppy.IR.validate(ir)
+    end
+  end
+
+  defp maybe_register_event_target(state) do
+    case state.native.request(state.native_server, {:set_event_target, [self()]}) do
+      :ok -> state
+      {:ok, _payload} -> state
+      {:error, _reason} -> state
     end
   end
 

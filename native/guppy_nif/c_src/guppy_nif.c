@@ -31,9 +31,12 @@ void guppy_c_nif_link_anchor(void) {}
 
 static ErlNifMutex *guppy_gui_status_mutex = NULL;
 static ErlNifCond *guppy_gui_status_cond = NULL;
+static ErlNifMutex *guppy_event_target_mutex = NULL;
 static ErlNifTid guppy_gui_thread;
+static ErlNifPid guppy_event_target_pid;
 static int guppy_gui_status = 0;
 static int guppy_gui_started = 0;
+static int guppy_event_target_set = 0;
 
 static ERL_NIF_TERM make_atom(ErlNifEnv *env, const char *name) {
   return enif_make_atom(env, name);
@@ -63,6 +66,81 @@ void guppy_c_gui_started(int status) {
   guppy_gui_status = status;
   enif_cond_signal(guppy_gui_status_cond);
   enif_mutex_unlock(guppy_gui_status_mutex);
+}
+
+static int send_native_event(ErlNifEnv *msg_env, uint64_t view_id,
+                             ERL_NIF_TERM event_term,
+                             ERL_NIF_TERM payload_term) {
+  ERL_NIF_TERM message;
+  ErlNifPid target_pid;
+  int has_target = 0;
+  int sent;
+
+  if (guppy_event_target_mutex == NULL) {
+    return 0;
+  }
+
+  enif_mutex_lock(guppy_event_target_mutex);
+  if (guppy_event_target_set) {
+    target_pid = guppy_event_target_pid;
+    has_target = 1;
+  }
+  enif_mutex_unlock(guppy_event_target_mutex);
+
+  if (!has_target) {
+    return 0;
+  }
+
+  message = enif_make_tuple4(msg_env, make_atom(msg_env, "guppy_native_event"),
+                             enif_make_uint64(msg_env, view_id), event_term,
+                             payload_term);
+
+  sent = enif_send(NULL, &target_pid, msg_env, message);
+  return sent;
+}
+
+int guppy_c_send_click_event(uint64_t view_id, const unsigned char *callback_id_ptr,
+                             size_t callback_id_len) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM callback_id_term;
+  unsigned char *callback_id_bytes;
+  int sent;
+
+  msg_env = enif_alloc_env();
+
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  callback_id_bytes = enif_make_new_binary(msg_env, callback_id_len, &callback_id_term);
+
+  if (callback_id_bytes == NULL) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  memcpy(callback_id_bytes, callback_id_ptr, callback_id_len);
+
+  sent = send_native_event(msg_env, view_id, make_atom(msg_env, "click"),
+                           callback_id_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
+int guppy_c_send_window_closed_event(uint64_t view_id) {
+  ErlNifEnv *msg_env;
+  int sent;
+
+  msg_env = enif_alloc_env();
+
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id, make_atom(msg_env, "window_closed"),
+                           make_atom(msg_env, "undefined"));
+  enif_free_env(msg_env);
+  return sent;
 }
 
 static int should_boot_hello_window(void) {
@@ -121,6 +199,13 @@ static void maybe_stop_hello_window(void) {
     enif_cond_destroy(guppy_gui_status_cond);
     guppy_gui_status_cond = NULL;
   }
+
+  if (guppy_event_target_mutex != NULL) {
+    enif_mutex_destroy(guppy_event_target_mutex);
+    guppy_event_target_mutex = NULL;
+  }
+
+  guppy_event_target_set = 0;
 }
 
 static ERL_NIF_TERM native_ping(ErlNifEnv *env, int argc,
@@ -172,6 +257,26 @@ static ERL_NIF_TERM native_open_window(ErlNifEnv *env, int argc,
   }
 
   return make_error(env, "runtime_unavailable");
+}
+
+static ERL_NIF_TERM native_set_event_target(ErlNifEnv *env, int argc,
+                                            const ERL_NIF_TERM argv[]) {
+  ErlNifPid target_pid;
+
+  if (argc != 1 || !enif_get_local_pid(env, argv[0], &target_pid)) {
+    return enif_make_badarg(env);
+  }
+
+  if (guppy_event_target_mutex == NULL) {
+    return make_error(env, "event_target_unavailable");
+  }
+
+  enif_mutex_lock(guppy_event_target_mutex);
+  guppy_event_target_pid = target_pid;
+  guppy_event_target_set = 1;
+  enif_mutex_unlock(guppy_event_target_mutex);
+
+  return make_atom(env, "ok");
 }
 
 static int encode_term(ErlNifEnv *env, ERL_NIF_TERM term, ErlNifBinary *binary) {
@@ -294,6 +399,10 @@ static ERL_NIF_TERM native_view_count(ErlNifEnv *env, int argc,
 }
 
 static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
+  if (guppy_event_target_mutex == NULL) {
+    guppy_event_target_mutex = enif_mutex_create((char *)"guppy_event_target_mutex");
+  }
+
   if (guppy_rust_runtime_start() != 1) {
     return 1;
   }
@@ -325,6 +434,7 @@ static ErlNifFunc nif_funcs[] = {
     {"native_runtime_status", 0, native_runtime_status, 0},
     {"native_gui_status", 0, native_gui_status, 0},
     {"native_open_window", 1, native_open_window, 0},
+    {"native_set_event_target", 1, native_set_event_target, 0},
     {"native_mount", 2, native_mount, 0},
     {"native_update", 2, native_update, 0},
     {"native_update_window_text", 2, native_update_window_text, 0},

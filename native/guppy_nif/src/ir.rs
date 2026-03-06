@@ -5,7 +5,7 @@ use std::io::Cursor;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum IrNode {
     Text(String),
-    Div(Vec<IrNode>),
+    Div { children: Vec<IrNode>, click: Option<String> },
 }
 
 impl IrNode {
@@ -33,7 +33,10 @@ impl IrNode {
                     None => Vec::new(),
                 };
 
-                Ok(Self::Div(children))
+                Ok(Self::Div {
+                    children,
+                    click: get_click_event(map)?,
+                })
             }
             other => Err(format!("unsupported ir kind: {other}")),
         }
@@ -63,6 +66,19 @@ fn get_string_field(map: &HashMap<Term, Term>, key: &str) -> Result<String, Stri
     match get_field(map, key) {
         Some(term) => term_to_string(term),
         None => Err(format!("missing required field: {key}")),
+    }
+}
+
+fn get_click_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    let Some(events_term) = get_field(map, "events") else {
+        return Ok(None);
+    };
+
+    let events = expect_map(events_term)?;
+
+    match get_field(events, "click") {
+        Some(term) => term_to_string(term).map(Some),
+        None => Ok(None),
     }
 }
 

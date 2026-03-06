@@ -11,6 +11,12 @@ use std::time::Duration;
 
 unsafe extern "C" {
     fn guppy_c_gui_started(status: i32);
+    fn guppy_c_send_click_event(
+        view_id: u64,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+    ) -> i32;
+    fn guppy_c_send_window_closed_event(view_id: u64) -> i32;
 }
 
 thread_local! {
@@ -38,6 +44,7 @@ pub(crate) enum MainThreadRequest {
 }
 
 pub struct BridgeView {
+    pub view_id: u64,
     pub ir: IrNode,
 }
 
@@ -48,7 +55,7 @@ impl Render for BridgeView {
             .p_6()
             .bg(rgb(0x202020))
             .text_color(rgb(0xffffff))
-            .child(render_ir(&self.ir))
+            .child(render_ir(self.view_id, "root", &self.ir))
     }
 }
 
@@ -91,7 +98,7 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
                 ))),
                 ..Default::default()
             },
-            move |_, cx| cx.new(|_| BridgeView { ir }),
+            move |_, cx| cx.new(|_| BridgeView { view_id, ir }),
         );
 
         match result {
@@ -100,8 +107,14 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
                     cx.activate(true);
                 });
 
-                let _ = handle.update(&mut app, |_, window, _| {
+                let _ = handle.update(&mut app, |_, window, cx| {
                     window.activate_window();
+                    window.on_window_should_close(cx, move |_window, _cx| {
+                        unsafe {
+                            let _ = guppy_c_send_window_closed_event(view_id);
+                        }
+                        true
+                    });
                 });
 
                 WINDOWS.with(|windows| {
@@ -167,14 +180,46 @@ pub fn view_count() -> u64 {
     WINDOWS.with(|windows| windows.borrow().len() as u64)
 }
 
-fn render_ir(ir: &IrNode) -> AnyElement {
+fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
     match ir {
         IrNode::Text(content) => SharedString::from(content.clone()).into_any_element(),
-        IrNode::Div(children) => div()
+        IrNode::Div { children, click } => render_div(view_id, path, children, click.as_deref()),
+    }
+}
+
+fn render_div(view_id: u64, path: &str, children: &[IrNode], click: Option<&str>) -> AnyElement {
+    let child_elements = children
+        .iter()
+        .enumerate()
+        .map(|(index, child)| render_ir(view_id, &format!("{path}.{index}"), child))
+        .collect::<Vec<_>>();
+
+    match click {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+
+            div()
+                .id(SharedString::from(format!("guppy-{view_id}-{path}")))
+                .flex()
+                .flex_col()
+                .gap_2()
+                .cursor_pointer()
+                .active(|style| style.opacity(0.85))
+                .children(child_elements)
+                .on_click(move |_, _, _| unsafe {
+                    let _ = guppy_c_send_click_event(
+                        view_id,
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                    );
+                })
+                .into_any_element()
+        }
+        None => div()
             .flex()
             .flex_col()
             .gap_2()
-            .children(children.iter().map(render_ir))
+            .children(child_elements)
             .into_any_element(),
     }
 }
@@ -218,7 +263,10 @@ fn handle_request(request: MainThreadRequest) {
         MainThreadRequest::OpenWindow { view_id, reply } => {
             let _ = reply.send(open_window(
                 view_id,
-                IrNode::Div(vec![IrNode::text(format!("Hello from Guppy view {view_id}"))]),
+                IrNode::Div {
+                    children: vec![IrNode::text(format!("Hello from Guppy view {view_id}"))],
+                    click: None,
+                },
             ));
         }
         MainThreadRequest::MountIr { view_id, ir, reply } => {

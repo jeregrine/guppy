@@ -14,6 +14,8 @@ Today the project can:
 - focus/activate that window
 - mount minimal Elixir IR into the window
 - replace that IR and rerender
+- render nested `:div` / `:text` trees through a native `BridgeView`
+- roundtrip minimal click events back into the owning Elixir process
 - close native windows when the owning Elixir process dies
 
 The current tracer-shot API is intentionally small:
@@ -23,7 +25,7 @@ The current tracer-shot API is intentionally small:
 - `Guppy.update/2`
 - `Guppy.close_window/1`
 - `Guppy.IR.text/1`
-- `Guppy.IR.div/1`
+- `Guppy.IR.div/2`
 
 ## Native build
 
@@ -58,9 +60,9 @@ Expected output after a successful build/install is roughly:
 {:ok, :pong}
 ```
 
-## Hello-world example
+## Examples
 
-Run the current tracer-shot example:
+### Hello world
 
 ```bash
 cd guppy
@@ -71,9 +73,58 @@ mix run examples/hello_world.exs
 What it does:
 
 - opens a real focused GPUI window from Elixir
-- mounts minimal IR text
-- updates that IR after 1 second
+- mounts a small `div/text` IR tree
+- updates that tree after 1 second
 - closes the window after 5 seconds
+
+### Timer counter
+
+```bash
+cd guppy
+mix guppy.native.build
+mix run examples/counter.exs
+```
+
+What it does:
+
+- opens a real GPUI window
+- mounts a counter view owned by Elixir state
+- sends repeated full-tree replacement updates
+- closes the window after several rerenders
+
+### Click counter
+
+```bash
+cd guppy
+mix guppy.native.build
+mix run examples/click_counter.exs
+```
+
+What it does:
+
+- opens a real GPUI window
+- mounts a clickable IR tree
+- receives `{:guppy_event, view_id, %{type: :click, callback: "increment"}}`
+- updates the window from Elixir when clicked
+- stops cleanly when the window is manually closed
+
+## Event shape today
+
+Minimal native events are delivered to the owning Elixir process as:
+
+```elixir
+{:guppy_event, view_id, %{type: :click, callback: callback_id}}
+{:guppy_event, view_id, %{type: :window_closed}}
+```
+
+You can attach a click callback id to a `div` like this:
+
+```elixir
+Guppy.IR.div(
+  [Guppy.IR.text("Click me")],
+  events: %{click: "increment"}
+)
+```
 
 ## Current architecture
 
@@ -91,10 +142,12 @@ High-level flow:
 
 1. Elixir calls into the NIF wrapper
 2. the C shim owns NIF bootstrap and macOS main-thread handoff
-3. Rust owns most of the native runtime logic
-4. Elixir requests go through a native queue
-5. the main-thread GPUI app drains requests and mutates UI state
-6. GPUI renders and rerenders from Elixir-driven state
+3. mount/update terms are copied into owned ETF binaries before the NIF returns
+4. Rust owns most of the native runtime logic and decodes ETF into native IR
+5. native click handlers send messages back into the BEAM through the C shim
+6. `Guppy.Server` routes native events back to the owning Elixir process
+7. Elixir sends full-tree replacement updates back to native
+8. GPUI renders and rerenders from Elixir-driven state
 
 ## Reference repositories
 
@@ -113,11 +166,11 @@ Useful references while developing:
 
 The tracer shot is real, but still intentionally narrow:
 
-- native rendering is still backed by a specialized `HelloWindow` root view
-- Elixir IR helpers include `:div` and `:text`, but native handling is effectively text-first today
-- there is not yet a general recursive `BridgeView` rendering arbitrary IR trees
-- event routing is still minimal
+- native rendering only supports a minimal IR shape today
+- supported nodes are effectively `:div` and `:text`
+- only a minimal click event path exists today
 - style mapping is still minimal
+- `update_window_text/2` still exists as a convenience bring-up helper, but the main path should be `mount/update` with IR
 
 ## Development workflow
 
@@ -128,6 +181,8 @@ cd guppy
 mix guppy.native.build
 mix test
 mix run examples/hello_world.exs
+mix run examples/counter.exs
+mix run examples/click_counter.exs
 ```
 
 If you change native code under `native/guppy_nif/`, rebuild before testing.

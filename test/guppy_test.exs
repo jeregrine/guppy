@@ -24,7 +24,7 @@ defmodule GuppyTest do
     end
   end
 
-  test "window lifecycle, bridge view IR, and owner cleanup are tracked" do
+  test "window lifecycle, bridge view IR, native event routing, and owner cleanup are tracked" do
     case Guppy.Native.Nif.load_status() do
       :ok ->
         starting_count = native_view_count!()
@@ -52,10 +52,33 @@ defmodule GuppyTest do
                    ])
                  )
 
+        assert :ok =
+                 Guppy.update(
+                   view_id,
+                   Guppy.IR.div(
+                     [
+                       Guppy.IR.text("Clickable IR tree"),
+                       Guppy.IR.text("Simulated click should roundtrip")
+                     ],
+                     events: %{click: "increment"}
+                   )
+                 )
+
+        send(Guppy.server(), {:guppy_native_event, view_id, :click, "increment"})
+
+        assert_receive {:guppy_event, ^view_id, %{type: :click, callback: "increment"}}
+
         assert :ok = Guppy.update_window_text(view_id, "Hello again from Elixir")
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
 
-        :ok = Guppy.close_window(view_id)
+        send(Guppy.server(), {:guppy_native_event, view_id, :window_closed, :undefined})
+
+        assert_receive {:guppy_event, ^view_id, %{type: :window_closed}}
+        refute Map.has_key?(Guppy.info().views, view_id)
+
+        assert :ok =
+                 Guppy.Native.Nif.request(Guppy.Native.Nif, {:close_window, [view_id]})
+
         assert Guppy.native_view_count() == {:ok, starting_count}
 
         owner = self()

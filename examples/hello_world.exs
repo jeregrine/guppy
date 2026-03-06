@@ -29,21 +29,40 @@ Process.send_after(self(), :close_window, 5_000)
 receive_loop = fn receive_loop ->
   receive do
     :update_text ->
-      :ok =
-        Guppy.update(
-          view_id,
-          Guppy.IR.div([
-            Guppy.IR.text("Hello from examples/hello_world.exs (updated)"),
-            Guppy.IR.text("Full-tree replacement rerender worked")
-          ])
-        )
+      case Guppy.update(
+             view_id,
+             Guppy.IR.div([
+               Guppy.IR.text("Hello from examples/hello_world.exs (updated)"),
+               Guppy.IR.text("Full-tree replacement rerender worked")
+             ])
+           ) do
+        :ok ->
+          IO.puts("updated window via IR")
+          receive_loop.(receive_loop)
 
-      IO.puts("updated window via IR")
-      receive_loop.(receive_loop)
+        {:error, :unknown_view_id} ->
+          IO.puts("window already closed before update")
+
+        other ->
+          IO.inspect(other, label: "unexpected_update_result")
+      end
 
     :close_window ->
-      :ok = Guppy.close_window(view_id)
-      IO.puts("closed window")
+      case Guppy.close_window(view_id) do
+        :ok ->
+          IO.puts("closed window")
+          IO.inspect(Guppy.native_view_count(), label: "native_view_count")
+
+        {:error, :unknown_view_id} ->
+          IO.puts("window already closed")
+          IO.inspect(Guppy.native_view_count(), label: "native_view_count")
+
+        other ->
+          IO.inspect(other, label: "unexpected_close_result")
+      end
+
+    {:guppy_event, ^view_id, %{type: :window_closed}} ->
+      IO.puts("window was closed manually")
       IO.inspect(Guppy.native_view_count(), label: "native_view_count")
 
     other ->
