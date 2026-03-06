@@ -117,11 +117,13 @@ Minimal native events are delivered to the owning Elixir process as:
 {:guppy_event, view_id, %{type: :window_closed}}
 ```
 
-You can attach a stable node id and click callback id to a `div` like this:
+You can attach a stable node id and click callback id to a `div` or `text` node like this:
 
 ```elixir
 Guppy.IR.div(
-  [Guppy.IR.text("Click me", id: "button_label")],
+  [
+    Guppy.IR.text("Click me", id: "button_label", events: %{click: "increment"})
+  ],
   id: "increment_button",
   events: %{click: "increment"}
 )
@@ -180,7 +182,7 @@ The tracer shot is real, but still intentionally narrow:
 
 - native rendering only supports a minimal IR shape today
 - supported nodes are effectively `:div` and `:text`
-- only a minimal click event path exists today
+- only a minimal click event path exists today (`:div` and `:text` click)
 - style mapping exists, but only for a small explicit subset on `:div`
 - explicit node ids are supported, but there is not yet broader keyed/stateful UI behavior built on top of them
 - `update_window_text/2` is now just a convenience wrapper over `update(view_id, Guppy.IR.text(text))`

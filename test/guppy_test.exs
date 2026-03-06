@@ -14,6 +14,7 @@ defmodule GuppyTest do
 
   test "ir validation accepts ids/styles and rejects invalid values" do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
+    assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))
 
     assert :ok =
              Guppy.IR.validate(
@@ -80,7 +81,10 @@ defmodule GuppyTest do
                    Guppy.IR.div(
                      [
                        Guppy.IR.text("Clickable IR tree"),
-                       Guppy.IR.text("Simulated click should roundtrip")
+                       Guppy.IR.text("Simulated click should roundtrip",
+                         id: "increment_text",
+                         events: %{click: "increment"}
+                       )
                      ],
                      id: "increment_button",
                      events: %{click: "increment"}
@@ -91,11 +95,11 @@ defmodule GuppyTest do
           :guppy_native_event,
           view_id,
           :click,
-          %{id: "increment_button", callback: "increment"}
+          %{id: "increment_text", callback: "increment"}
         })
 
         assert_receive {:guppy_event, ^view_id,
-                        %{type: :click, id: "increment_button", callback: "increment"}}
+                        %{type: :click, id: "increment_text", callback: "increment"}}
 
         assert :ok = Guppy.update_window_text(view_id, "Hello again from Elixir")
         assert Guppy.native_view_count() == {:ok, starting_count + 1}

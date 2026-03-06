@@ -34,7 +34,8 @@ defmodule Guppy.IR do
   @type text_node :: %{
           required(:kind) => :text,
           required(:content) => String.t(),
-          optional(:id) => node_id()
+          optional(:id) => node_id(),
+          optional(:events) => events()
         }
 
   @type div_node :: %{
@@ -66,9 +67,11 @@ defmodule Guppy.IR do
   @spec text(String.t(), keyword()) :: text_node()
   def text(content, opts \\ []) when is_binary(content) and is_list(opts) do
     id = Keyword.get(opts, :id)
+    events = Keyword.get(opts, :events)
 
     %{kind: :text, content: content}
     |> maybe_put(:id, id)
+    |> maybe_put(:events, events)
   end
 
   @spec div([ir_node()], keyword()) :: div_node()
@@ -85,7 +88,10 @@ defmodule Guppy.IR do
 
   @spec validate(ir_node()) :: :ok | {:error, term()}
   def validate(%{kind: :text, content: content} = node) when is_binary(content) do
-    validate_id(Map.get(node, :id))
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_events(Map.get(node, :events)) do
+      :ok
+    end
   end
 
   def validate(%{kind: :div, children: children} = node) when is_list(children) do

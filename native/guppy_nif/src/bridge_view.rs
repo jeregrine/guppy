@@ -32,7 +32,9 @@ impl Render for BridgeView {
 
 fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
     match ir {
-        IrNode::Text { id, content } => render_text(view_id, path, id.as_deref(), content),
+        IrNode::Text { id, content, click } => {
+            render_text(view_id, path, id.as_deref(), content, click.as_deref())
+        }
         IrNode::Div {
             id,
             style,
@@ -42,10 +44,36 @@ fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
     }
 }
 
-fn render_text(view_id: u64, path: &str, id: Option<&str>, content: &str) -> AnyElement {
+fn render_text(
+    view_id: u64,
+    path: &str,
+    id: Option<&str>,
+    content: &str,
+    click: Option<&str>,
+) -> AnyElement {
     let node_id = node_id(view_id, path, id);
-    InteractiveText::new(SharedString::from(node_id), StyledText::new(content.to_owned()))
-        .into_any_element()
+    let interactive_text =
+        InteractiveText::new(SharedString::from(node_id.clone()), StyledText::new(content.to_owned()));
+
+    match click {
+        Some(callback_id) if !content.is_empty() => {
+            let callback_id = callback_id.to_owned();
+            let click_node_id = node_id.clone();
+
+            interactive_text
+                .on_click(vec![0..content.len()], move |_, _, _| unsafe {
+                    let _ = guppy_c_send_click_event(
+                        view_id,
+                        click_node_id.as_ptr(),
+                        click_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                    );
+                })
+                .into_any_element()
+        }
+        _ => interactive_text.into_any_element(),
+    }
 }
 
 fn render_div(

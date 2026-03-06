@@ -34,6 +34,7 @@ pub enum IrNode {
     Text {
         id: Option<String>,
         content: String,
+        click: Option<String>,
     },
     Div {
         id: Option<String>,
@@ -48,6 +49,7 @@ impl IrNode {
         Self::Text {
             id: None,
             content: content.into(),
+            click: None,
         }
     }
 
@@ -65,6 +67,7 @@ impl IrNode {
             "text" => Ok(Self::Text {
                 id,
                 content: get_string_field(map, "content")?,
+                click: get_click_event(map)?,
             }),
             "div" => {
                 let children = match get_field(map, "children") {
