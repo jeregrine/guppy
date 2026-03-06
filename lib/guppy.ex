@@ -53,7 +53,7 @@ defmodule Guppy do
     Server.update(Server, view_id, ir, timeout)
   end
 
-  @doc "Convenience wrapper that updates a window with `Guppy.IR.text/1`."
+  @doc "Convenience wrapper that updates a window with `Guppy.IR.text/2`."
   def update_window_text(view_id, text, timeout \\ 5_000) when is_binary(text) do
     update(view_id, Guppy.IR.text(text), timeout)
   end

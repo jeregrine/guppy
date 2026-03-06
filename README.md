@@ -104,7 +104,7 @@ What it does:
 
 - opens a real GPUI window
 - mounts a clickable IR tree
-- receives `{:guppy_event, view_id, %{type: :click, callback: "increment"}}`
+- receives `{:guppy_event, view_id, %{type: :click, id: "increment_button", callback: "increment"}}`
 - updates the window from Elixir when clicked
 - stops cleanly when the window is manually closed
 
@@ -113,7 +113,7 @@ What it does:
 Minimal native events are delivered to the owning Elixir process as:
 
 ```elixir
-{:guppy_event, view_id, %{type: :click, callback: callback_id}}
+{:guppy_event, view_id, %{type: :click, id: node_id, callback: callback_id}}
 {:guppy_event, view_id, %{type: :window_closed}}
 ```
 

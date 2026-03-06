@@ -87,9 +87,15 @@ defmodule GuppyTest do
                    )
                  )
 
-        send(Guppy.server(), {:guppy_native_event, view_id, :click, "increment"})
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :click,
+          %{id: "increment_button", callback: "increment"}
+        })
 
-        assert_receive {:guppy_event, ^view_id, %{type: :click, callback: "increment"}}
+        assert_receive {:guppy_event, ^view_id,
+                        %{type: :click, id: "increment_button", callback: "increment"}}
 
         assert :ok = Guppy.update_window_text(view_id, "Hello again from Elixir")
         assert Guppy.native_view_count() == {:ok, starting_count + 1}

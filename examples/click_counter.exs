@@ -34,7 +34,7 @@ end
 
 loop = fn loop, count ->
   receive do
-    {:guppy_event, ^view_id, %{type: :click, callback: "increment"}} ->
+    {:guppy_event, ^view_id, %{type: :click, id: "increment_button", callback: "increment"}} ->
       next_count = count + 1
 
       case Guppy.update(view_id, render.(next_count)) do

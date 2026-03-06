@@ -13,6 +13,8 @@ unsafe extern "C" {
     fn guppy_c_gui_started(status: i32);
     fn guppy_c_send_click_event(
         view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
         callback_id_ptr: *const u8,
         callback_id_len: usize,
     ) -> i32;
@@ -193,8 +195,9 @@ fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
 }
 
 fn render_text(view_id: u64, path: &str, id: Option<&str>, content: &str) -> AnyElement {
-    let element_id = element_id(view_id, path, id);
-    InteractiveText::new(element_id, StyledText::new(content.to_owned())).into_any_element()
+    let node_id = node_id(view_id, path, id);
+    InteractiveText::new(SharedString::from(node_id), StyledText::new(content.to_owned()))
+        .into_any_element()
 }
 
 fn render_div(
@@ -211,18 +214,26 @@ fn render_div(
         .map(|(index, child)| render_ir(view_id, &format!("{path}.{index}"), child))
         .collect::<Vec<_>>();
 
-    let element_id = element_id(view_id, path, id);
-    let styled_div = apply_div_style(div().id(element_id).children(child_elements), style);
+    let node_id = node_id(view_id, path, id);
+    let styled_div = apply_div_style(
+        div()
+            .id(SharedString::from(node_id.clone()))
+            .children(child_elements),
+        style,
+    );
 
     match click {
         Some(callback_id) => {
             let callback_id = callback_id.to_owned();
+            let click_node_id = node_id.clone();
 
             styled_div
                 .active(|style| style.opacity(0.85))
                 .on_click(move |_, _, _| unsafe {
                     let _ = guppy_c_send_click_event(
                         view_id,
+                        click_node_id.as_ptr(),
+                        click_node_id.len(),
                         callback_id.as_ptr(),
                         callback_id.len(),
                     );
@@ -276,10 +287,10 @@ where
     element
 }
 
-fn element_id(view_id: u64, path: &str, id: Option<&str>) -> SharedString {
+fn node_id(view_id: u64, path: &str, id: Option<&str>) -> String {
     match id {
-        Some(id) => SharedString::from(id.to_owned()),
-        None => SharedString::from(format!("guppy-{view_id}-{path}")),
+        Some(id) => id.to_owned(),
+        None => format!("guppy-{view_id}-{path}"),
     }
 }
 

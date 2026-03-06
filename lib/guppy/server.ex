@@ -155,11 +155,14 @@ defmodule Guppy.Server do
   end
 
   @impl true
-  def handle_info({:guppy_native_event, view_id, :click, callback_id}, state)
-      when is_integer(view_id) and is_binary(callback_id) do
+  def handle_info(
+        {:guppy_native_event, view_id, :click, %{id: node_id, callback: callback_id}},
+        state
+      )
+      when is_integer(view_id) and is_binary(node_id) and is_binary(callback_id) do
     case Map.fetch(state.views, view_id) do
       {:ok, owner} ->
-        send(owner, {:guppy_event, view_id, %{type: :click, callback: callback_id}})
+        send(owner, {:guppy_event, view_id, %{type: :click, id: node_id, callback: callback_id}})
         {:noreply, state}
 
       :error ->
