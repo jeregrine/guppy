@@ -22,8 +22,6 @@ extern int guppy_rust_mount_ir_window(uint64_t view_id, const unsigned char *ir_
                                       size_t ir_len);
 extern int guppy_rust_update_ir_window(uint64_t view_id, const unsigned char *ir_ptr,
                                        size_t ir_len);
-extern int guppy_rust_update_window_text(uint64_t view_id, const unsigned char *text_ptr,
-                                         size_t text_len);
 extern int guppy_rust_close_window(uint64_t view_id);
 extern uint64_t guppy_rust_view_count(void);
 
@@ -341,30 +339,6 @@ static ERL_NIF_TERM native_update(ErlNifEnv *env, int argc,
   return make_error(env, "runtime_unavailable");
 }
 
-static ERL_NIF_TERM native_update_window_text(ErlNifEnv *env, int argc,
-                                              const ERL_NIF_TERM argv[]) {
-  uint64_t view_id;
-  ErlNifBinary text;
-  int result;
-
-  if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
-      !enif_inspect_binary(env, argv[1], &text)) {
-    return enif_make_badarg(env);
-  }
-
-  result = guppy_rust_update_window_text(view_id, text.data, text.size);
-
-  if (result == 1) {
-    return make_atom(env, "ok");
-  }
-
-  if (result == 0) {
-    return make_error(env, "unknown_view_id");
-  }
-
-  return make_error(env, "runtime_unavailable");
-}
-
 static ERL_NIF_TERM native_close_window(ErlNifEnv *env, int argc,
                                         const ERL_NIF_TERM argv[]) {
   uint64_t view_id;
@@ -437,7 +411,6 @@ static ErlNifFunc nif_funcs[] = {
     {"native_set_event_target", 1, native_set_event_target, 0},
     {"native_mount", 2, native_mount, 0},
     {"native_update", 2, native_update, 0},
-    {"native_update_window_text", 2, native_update_window_text, 0},
     {"native_close_window", 1, native_close_window, 0},
     {"native_view_count", 0, native_view_count, 0},
 };

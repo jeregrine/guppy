@@ -57,10 +57,6 @@ defmodule Guppy.Server do
     GenServer.call(server, {:update, view_id, ir}, timeout)
   end
 
-  def update_window_text(server \\ __MODULE__, view_id, text, timeout \\ 5_000) do
-    GenServer.call(server, {:update_window_text, view_id, text}, timeout)
-  end
-
   def close_window(server \\ __MODULE__, view_id, timeout \\ 5_000) do
     GenServer.call(server, {:close_window, view_id}, timeout)
   end
@@ -141,17 +137,6 @@ defmodule Guppy.Server do
 
       error ->
         {:reply, error, state}
-    end
-  end
-
-  def handle_call({:update_window_text, view_id, text}, _from, state) when is_binary(text) do
-    case Map.has_key?(state.views, view_id) do
-      true ->
-        reply = state.native.request(state.native_server, {:update_window_text, [view_id, text]})
-        {:reply, normalize_native_reply(reply), state}
-
-      false ->
-        {:reply, {:error, :unknown_view_id}, state}
     end
   end
 

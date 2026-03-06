@@ -53,9 +53,9 @@ defmodule Guppy do
     Server.update(Server, view_id, ir, timeout)
   end
 
-  @doc "Updates the hello text for an open native window."
+  @doc "Convenience wrapper that updates a window with `Guppy.IR.text/1`."
   def update_window_text(view_id, text, timeout \\ 5_000) when is_binary(text) do
-    Server.update_window_text(Server, view_id, text, timeout)
+    update(view_id, Guppy.IR.text(text), timeout)
   end
 
   @doc "Closes a previously opened native window."

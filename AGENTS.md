@@ -92,23 +92,23 @@ Useful functions today:
 - `Guppy.native_runtime_status/0`
 - `Guppy.native_gui_status/0`
 - `Guppy.IR.text/1`
-- `Guppy.IR.div/1`
+- `Guppy.IR.div/2`
 
 ## Current tracer-shot limitations
 
 The current bridge is still intentionally narrow:
 
-- native rendering is still backed by the `HelloWindow` root view
+- native rendering now goes through a `BridgeView`
 - minimal IR validation exists on the Elixir side
-- native IR handling currently only accepts the text case in practice
-- `:div` exists in Elixir IR helpers but is not yet rendered natively as a full tree walker
-- there is not yet a general `BridgeView` that recursively renders arbitrary IR
-- event routing is still minimal
+- supported native nodes are still intentionally small (`:div` + `:text`)
+- click and window-close are the only native event roundtrips today
+- style mapping is still minimal
+- stable node ids are not in the IR yet
 
-So if you are extending the project, the next likely architectural move is:
+So if you are extending the project, the next likely architectural moves are:
 
-- replace the `HelloWindow`-specific root state with a real bridge view
-- support `:div` + `:text` tree walking
+- add explicit IR node ids
+- expand minimal style mapping carefully
 - keep the full-tree replacement invariant
 
 ## Main-thread / macOS guidance

@@ -152,19 +152,6 @@ pub extern "C" fn guppy_rust_update_ir_window(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_update_window_text(
-    view_id: u64,
-    text_ptr: *const u8,
-    text_len: usize,
-) -> i32 {
-    request_text(view_id, text_ptr, text_len, |view_id, text, reply| Command::UpdateIr {
-        view_id,
-        ir: IrNode::text(text),
-        reply,
-    })
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn guppy_rust_close_window(view_id: u64) -> i32 {
     request_i32(|reply| Command::CloseWindow { view_id, reply }).unwrap_or(-1)
 }
@@ -189,23 +176,6 @@ fn request_ir(
     };
 
     request_i32(|reply| build(view_id, ir, reply)).unwrap_or(-1)
-}
-
-fn request_text(
-    view_id: u64,
-    text_ptr: *const u8,
-    text_len: usize,
-    build: impl FnOnce(u64, String, Sender<i32>) -> Command,
-) -> i32 {
-    let Some(bytes) = (unsafe { slice_from_raw_parts(text_ptr, text_len) }) else {
-        return -1;
-    };
-
-    let Ok(text) = std::str::from_utf8(bytes) else {
-        return -2;
-    };
-
-    request_i32(|reply| build(view_id, text.to_owned(), reply)).unwrap_or(-1)
 }
 
 unsafe fn slice_from_raw_parts<'a>(ptr: *const u8, len: usize) -> Option<&'a [u8]> {

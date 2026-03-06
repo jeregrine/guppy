@@ -170,7 +170,7 @@ The tracer shot is real, but still intentionally narrow:
 - supported nodes are effectively `:div` and `:text`
 - only a minimal click event path exists today
 - style mapping is still minimal
-- `update_window_text/2` still exists as a convenience bring-up helper, but the main path should be `mount/update` with IR
+- `update_window_text/2` is now just a convenience wrapper over `update(view_id, Guppy.IR.text(text))`
 
 ## Development workflow
 

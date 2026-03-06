@@ -120,13 +120,6 @@ defmodule Guppy.Native.Nif do
     {:reply, with_loaded(state, fn -> normalize_status(native_update(view_id, ir)) end), state}
   end
 
-  def handle_call({:request, {:update_window_text, [view_id, text]}}, _from, state)
-      when is_binary(text) do
-    {:reply,
-     with_loaded(state, fn -> normalize_status(native_update_window_text(view_id, text)) end),
-     state}
-  end
-
   def handle_call({:request, {:close_window, [view_id]}}, _from, state) do
     {:reply, with_loaded(state, fn -> normalize_status(native_close_window(view_id)) end), state}
   end
@@ -173,10 +166,6 @@ defmodule Guppy.Native.Nif do
   end
 
   def native_update(_view_id, _ir) do
-    {:error, :nif_not_loaded}
-  end
-
-  def native_update_window_text(_view_id, _text) do
     {:error, :nif_not_loaded}
   end
 
