@@ -24,7 +24,7 @@ defmodule GuppyTest do
     end
   end
 
-  test "window lifecycle and owner cleanup are tracked" do
+  test "window lifecycle, bridge view IR, and owner cleanup are tracked" do
     case Guppy.Native.Nif.load_status() do
       :ok ->
         starting_count = native_view_count!()
@@ -32,8 +32,26 @@ defmodule GuppyTest do
         {:ok, view_id} = Guppy.open_window()
         on_exit(fn -> maybe_close(view_id) end)
 
-        assert :ok = Guppy.mount(view_id, Guppy.IR.text("Hello from IR"))
-        assert :ok = Guppy.update(view_id, Guppy.IR.text("Hello again from IR"))
+        assert :ok =
+                 Guppy.mount(
+                   view_id,
+                   Guppy.IR.div([
+                     Guppy.IR.text("Hello from IR"),
+                     Guppy.IR.text("Rendered as a nested tree")
+                   ])
+                 )
+
+        assert :ok =
+                 Guppy.update(
+                   view_id,
+                   Guppy.IR.div([
+                     Guppy.IR.text("Hello again from IR"),
+                     Guppy.IR.div([
+                       Guppy.IR.text("Nested div rerender")
+                     ])
+                   ])
+                 )
+
         assert :ok = Guppy.update_window_text(view_id, "Hello again from Elixir")
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
 

@@ -18,10 +18,10 @@ extern int guppy_rust_runtime_shutdown(void);
 extern const char *guppy_rust_runtime_status(void);
 extern void *guppy_rust_run_hello_window_main_thread(void *arg);
 extern int guppy_rust_open_window(uint64_t view_id);
-extern int guppy_rust_mount_text_window(uint64_t view_id, const unsigned char *text_ptr,
-                                        size_t text_len);
-extern int guppy_rust_update_text_window(uint64_t view_id, const unsigned char *text_ptr,
-                                         size_t text_len);
+extern int guppy_rust_mount_ir_window(uint64_t view_id, const unsigned char *ir_ptr,
+                                      size_t ir_len);
+extern int guppy_rust_update_ir_window(uint64_t view_id, const unsigned char *ir_ptr,
+                                       size_t ir_len);
 extern int guppy_rust_update_window_text(uint64_t view_id, const unsigned char *text_ptr,
                                          size_t text_len);
 extern int guppy_rust_close_window(uint64_t view_id);
@@ -174,50 +174,23 @@ static ERL_NIF_TERM native_open_window(ErlNifEnv *env, int argc,
   return make_error(env, "runtime_unavailable");
 }
 
-static int get_ir_text(ErlNifEnv *env, ERL_NIF_TERM ir_term, ErlNifBinary *text) {
-  size_t map_size;
-  ERL_NIF_TERM kind_term;
-  ERL_NIF_TERM content_term;
-  char kind[16];
-
-  if (!enif_get_map_size(env, ir_term, &map_size)) {
-    return 0;
-  }
-
-  kind_term = enif_make_atom(env, "kind");
-  content_term = enif_make_atom(env, "content");
-
-  if (!enif_get_map_value(env, ir_term, kind_term, &kind_term)) {
-    return 0;
-  }
-
-  if (!enif_get_atom(env, kind_term, kind, sizeof(kind), ERL_NIF_LATIN1)) {
-    return 0;
-  }
-
-  if (strcmp(kind, "text") != 0) {
-    return 0;
-  }
-
-  if (!enif_get_map_value(env, ir_term, content_term, &content_term)) {
-    return 0;
-  }
-
-  return enif_inspect_binary(env, content_term, text);
+static int encode_term(ErlNifEnv *env, ERL_NIF_TERM term, ErlNifBinary *binary) {
+  return enif_term_to_binary(env, term, binary);
 }
 
 static ERL_NIF_TERM native_mount(ErlNifEnv *env, int argc,
                                  const ERL_NIF_TERM argv[]) {
   uint64_t view_id;
-  ErlNifBinary text;
+  ErlNifBinary ir;
   int result;
 
   if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
-      !get_ir_text(env, argv[1], &text)) {
+      !encode_term(env, argv[1], &ir)) {
     return enif_make_badarg(env);
   }
 
-  result = guppy_rust_mount_text_window(view_id, text.data, text.size);
+  result = guppy_rust_mount_ir_window(view_id, ir.data, ir.size);
+  enif_release_binary(&ir);
 
   if (result == 1) {
     return make_atom(env, "ok");
@@ -225,6 +198,10 @@ static ERL_NIF_TERM native_mount(ErlNifEnv *env, int argc,
 
   if (result == 0) {
     return make_error(env, "unknown_view_id");
+  }
+
+  if (result == -2) {
+    return enif_make_badarg(env);
   }
 
   return make_error(env, "runtime_unavailable");
@@ -233,15 +210,16 @@ static ERL_NIF_TERM native_mount(ErlNifEnv *env, int argc,
 static ERL_NIF_TERM native_update(ErlNifEnv *env, int argc,
                                   const ERL_NIF_TERM argv[]) {
   uint64_t view_id;
-  ErlNifBinary text;
+  ErlNifBinary ir;
   int result;
 
   if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
-      !get_ir_text(env, argv[1], &text)) {
+      !encode_term(env, argv[1], &ir)) {
     return enif_make_badarg(env);
   }
 
-  result = guppy_rust_update_text_window(view_id, text.data, text.size);
+  result = guppy_rust_update_ir_window(view_id, ir.data, ir.size);
+  enif_release_binary(&ir);
 
   if (result == 1) {
     return make_atom(env, "ok");
@@ -249,6 +227,10 @@ static ERL_NIF_TERM native_update(ErlNifEnv *env, int argc,
 
   if (result == 0) {
     return make_error(env, "unknown_view_id");
+  }
+
+  if (result == -2) {
+    return enif_make_badarg(env);
   }
 
   return make_error(env, "runtime_unavailable");

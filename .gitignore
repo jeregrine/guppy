@@ -27,3 +27,6 @@ guppy-*.tar
 /priv/native/*
 !/priv/native/.gitkeep
 
+# Local planning scratchpad.
+PLANS.md
+

@@ -1,5 +1,6 @@
+use crate::ir::IrNode;
 use gpui::{
-    App, Application, AsyncApp, Bounds, Context, SharedString, Window, WindowBounds,
+    AnyElement, App, Application, AsyncApp, Bounds, Context, SharedString, Window, WindowBounds,
     WindowOptions, div, prelude::*, px, rgb,
 };
 use std::cell::RefCell;
@@ -14,7 +15,7 @@ unsafe extern "C" {
 
 thread_local! {
     static APP: RefCell<Option<AsyncApp>> = const { RefCell::new(None) };
-    static WINDOWS: RefCell<HashMap<u64, gpui::WindowHandle<HelloWindow>>> = RefCell::new(HashMap::new());
+    static WINDOWS: RefCell<HashMap<u64, gpui::WindowHandle<BridgeView>>> = RefCell::new(HashMap::new());
 }
 
 static REQUEST_TX: OnceLock<Sender<MainThreadRequest>> = OnceLock::new();
@@ -22,38 +23,32 @@ static REQUEST_RX: OnceLock<Mutex<Receiver<MainThreadRequest>>> = OnceLock::new(
 
 pub(crate) enum MainThreadRequest {
     OpenWindow { view_id: u64, reply: Sender<i32> },
-    MountText {
+    MountIr {
         view_id: u64,
-        text: String,
+        ir: IrNode,
         reply: Sender<i32>,
     },
-    UpdateText {
+    UpdateIr {
         view_id: u64,
-        text: String,
+        ir: IrNode,
         reply: Sender<i32>,
     },
     CloseWindow { view_id: u64, reply: Sender<i32> },
     ViewCount { reply: Sender<u64> },
 }
 
-pub struct HelloWindow {
-    pub text: SharedString,
+pub struct BridgeView {
+    pub ir: IrNode,
 }
 
-impl Render for HelloWindow {
+impl Render for BridgeView {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         div()
-            .flex()
-            .flex_col()
-            .justify_center()
-            .items_center()
-            .gap_3()
-            .bg(rgb(0x202020))
             .size_full()
-            .text_xl()
+            .p_6()
+            .bg(rgb(0x202020))
             .text_color(rgb(0xffffff))
-            .child("Guppy tracer shot")
-            .child(self.text.clone())
+            .child(render_ir(&self.ir))
     }
 }
 
@@ -70,7 +65,7 @@ pub fn run_app(open_boot_window: bool) {
         unsafe { guppy_c_gui_started(1) };
 
         if open_boot_window {
-            let _ = open_window(0, "Hello from Guppy NIF + GPUI".into());
+            let _ = open_window(0, IrNode::text("Hello from Guppy NIF + GPUI"));
         }
     });
 }
@@ -80,7 +75,7 @@ pub(crate) fn enqueue_request(request: MainThreadRequest) -> Result<(), ()> {
     sender.send(request).map_err(|_| ())
 }
 
-pub fn open_window(view_id: u64, text: SharedString) -> i32 {
+pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
     APP.with(|app| {
         let app = app.borrow().as_ref().cloned();
 
@@ -96,7 +91,7 @@ pub fn open_window(view_id: u64, text: SharedString) -> i32 {
                 ))),
                 ..Default::default()
             },
-            move |_, cx| cx.new(|_| HelloWindow { text }),
+            move |_, cx| cx.new(|_| BridgeView { ir }),
         );
 
         match result {
@@ -140,11 +135,11 @@ pub fn close_window(view_id: u64) -> i32 {
     })
 }
 
-pub fn mount_text(view_id: u64, text: SharedString) -> i32 {
-    update_text(view_id, text)
+pub fn mount_ir(view_id: u64, ir: IrNode) -> i32 {
+    update_ir(view_id, ir)
 }
 
-pub fn update_text(view_id: u64, text: SharedString) -> i32 {
+pub fn update_ir(view_id: u64, ir: IrNode) -> i32 {
     let handle = WINDOWS.with(|windows| windows.borrow().get(&view_id).cloned());
 
     let Some(handle) = handle else {
@@ -159,7 +154,7 @@ pub fn update_text(view_id: u64, text: SharedString) -> i32 {
         };
 
         match handle.update(&mut app, |view, _window, cx| {
-            view.text = text;
+            view.ir = ir;
             cx.notify();
         }) {
             Ok(_) => 1,
@@ -170,6 +165,18 @@ pub fn update_text(view_id: u64, text: SharedString) -> i32 {
 
 pub fn view_count() -> u64 {
     WINDOWS.with(|windows| windows.borrow().len() as u64)
+}
+
+fn render_ir(ir: &IrNode) -> AnyElement {
+    match ir {
+        IrNode::Text(content) => SharedString::from(content.clone()).into_any_element(),
+        IrNode::Div(children) => div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .children(children.iter().map(render_ir))
+            .into_any_element(),
+    }
 }
 
 fn init_request_queue() {
@@ -211,22 +218,14 @@ fn handle_request(request: MainThreadRequest) {
         MainThreadRequest::OpenWindow { view_id, reply } => {
             let _ = reply.send(open_window(
                 view_id,
-                format!("Hello from Guppy view {}", view_id).into(),
+                IrNode::Div(vec![IrNode::text(format!("Hello from Guppy view {view_id}"))]),
             ));
         }
-        MainThreadRequest::MountText {
-            view_id,
-            text,
-            reply,
-        } => {
-            let _ = reply.send(mount_text(view_id, text.into()));
+        MainThreadRequest::MountIr { view_id, ir, reply } => {
+            let _ = reply.send(mount_ir(view_id, ir));
         }
-        MainThreadRequest::UpdateText {
-            view_id,
-            text,
-            reply,
-        } => {
-            let _ = reply.send(update_text(view_id, text.into()));
+        MainThreadRequest::UpdateIr { view_id, ir, reply } => {
+            let _ = reply.send(update_ir(view_id, ir));
         }
         MainThreadRequest::CloseWindow { view_id, reply } => {
             let _ = reply.send(close_window(view_id));

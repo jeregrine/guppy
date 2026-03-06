@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 path = "src/lib.rs"
 
 [dependencies]
+eetf = "0.11.0"
 gpui = "0.2.2"
 
 [build-dependencies]

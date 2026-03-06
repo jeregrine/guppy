@@ -4,7 +4,9 @@
 //! while this Rust crate grows into the GPUI runtime core.
 
 mod hello_window;
+mod ir;
 
+use crate::ir::IrNode;
 use std::ffi::{c_char, c_void};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -33,14 +35,14 @@ struct RuntimeHandle {
 
 enum Command {
     OpenWindow { view_id: u64, reply: Sender<i32> },
-    MountText {
+    MountIr {
         view_id: u64,
-        text: String,
+        ir: IrNode,
         reply: Sender<i32>,
     },
-    UpdateText {
+    UpdateIr {
         view_id: u64,
-        text: String,
+        ir: IrNode,
         reply: Sender<i32>,
     },
     CloseWindow { view_id: u64, reply: Sender<i32> },
@@ -124,27 +126,27 @@ pub extern "C" fn guppy_rust_open_window(view_id: u64) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_mount_text_window(
+pub extern "C" fn guppy_rust_mount_ir_window(
     view_id: u64,
-    text_ptr: *const u8,
-    text_len: usize,
+    ir_ptr: *const u8,
+    ir_len: usize,
 ) -> i32 {
-    request_text(view_id, text_ptr, text_len, |view_id, text, reply| Command::MountText {
+    request_ir(view_id, ir_ptr, ir_len, |view_id, ir, reply| Command::MountIr {
         view_id,
-        text,
+        ir,
         reply,
     })
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_update_text_window(
+pub extern "C" fn guppy_rust_update_ir_window(
     view_id: u64,
-    text_ptr: *const u8,
-    text_len: usize,
+    ir_ptr: *const u8,
+    ir_len: usize,
 ) -> i32 {
-    request_text(view_id, text_ptr, text_len, |view_id, text, reply| Command::UpdateText {
+    request_ir(view_id, ir_ptr, ir_len, |view_id, ir, reply| Command::UpdateIr {
         view_id,
-        text,
+        ir,
         reply,
     })
 }
@@ -155,7 +157,11 @@ pub extern "C" fn guppy_rust_update_window_text(
     text_ptr: *const u8,
     text_len: usize,
 ) -> i32 {
-    guppy_rust_update_text_window(view_id, text_ptr, text_len)
+    request_text(view_id, text_ptr, text_len, |view_id, text, reply| Command::UpdateIr {
+        view_id,
+        ir: IrNode::text(text),
+        reply,
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -168,23 +174,42 @@ pub extern "C" fn guppy_rust_view_count() -> u64 {
     request_u64(|reply| Command::ViewCount { reply }).unwrap_or(u64::MAX)
 }
 
+fn request_ir(
+    view_id: u64,
+    ir_ptr: *const u8,
+    ir_len: usize,
+    build: impl FnOnce(u64, IrNode, Sender<i32>) -> Command,
+) -> i32 {
+    let Some(bytes) = (unsafe { slice_from_raw_parts(ir_ptr, ir_len) }) else {
+        return -1;
+    };
+
+    let Ok(ir) = IrNode::decode_etf(bytes) else {
+        return -2;
+    };
+
+    request_i32(|reply| build(view_id, ir, reply)).unwrap_or(-1)
+}
+
 fn request_text(
     view_id: u64,
     text_ptr: *const u8,
     text_len: usize,
     build: impl FnOnce(u64, String, Sender<i32>) -> Command,
 ) -> i32 {
-    let Some(bytes) = (unsafe { text_ptr.as_ref() }).map(|_| unsafe {
-        std::slice::from_raw_parts(text_ptr, text_len)
-    }) else {
+    let Some(bytes) = (unsafe { slice_from_raw_parts(text_ptr, text_len) }) else {
         return -1;
     };
 
     let Ok(text) = std::str::from_utf8(bytes) else {
-        return -1;
+        return -2;
     };
 
     request_i32(|reply| build(view_id, text.to_owned(), reply)).unwrap_or(-1)
+}
+
+unsafe fn slice_from_raw_parts<'a>(ptr: *const u8, len: usize) -> Option<&'a [u8]> {
+    (unsafe { ptr.as_ref() }).map(|_| unsafe { std::slice::from_raw_parts(ptr, len) })
 }
 
 fn request_i32(build: impl FnOnce(Sender<i32>) -> Command) -> Option<i32> {
@@ -210,24 +235,20 @@ fn runtime_loop(receiver: mpsc::Receiver<Command>) {
                     reply,
                 })
             }
-            Command::MountText {
-                view_id,
-                text,
-                reply,
-            } => hello_window::enqueue_request(hello_window::MainThreadRequest::MountText {
-                view_id,
-                text,
-                reply,
-            }),
-            Command::UpdateText {
-                view_id,
-                text,
-                reply,
-            } => hello_window::enqueue_request(hello_window::MainThreadRequest::UpdateText {
-                view_id,
-                text,
-                reply,
-            }),
+            Command::MountIr { view_id, ir, reply } => {
+                hello_window::enqueue_request(hello_window::MainThreadRequest::MountIr {
+                    view_id,
+                    ir,
+                    reply,
+                })
+            }
+            Command::UpdateIr { view_id, ir, reply } => {
+                hello_window::enqueue_request(hello_window::MainThreadRequest::UpdateIr {
+                    view_id,
+                    ir,
+                    reply,
+                })
+            }
             Command::CloseWindow { view_id, reply } => {
                 hello_window::enqueue_request(hello_window::MainThreadRequest::CloseWindow {
                     view_id,
