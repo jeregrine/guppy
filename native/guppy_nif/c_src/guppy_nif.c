@@ -1,0 +1,353 @@
+#include "erl_nif.h"
+#include <limits.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef __APPLE__
+extern int erl_drv_stolen_main_thread_join(ErlNifTid tid, void **respp);
+extern int erl_drv_steal_main_thread(char *name, ErlNifTid *dtid,
+                                     void *(*func)(void *), void *arg,
+                                     ErlNifThreadOpts *opts);
+#endif
+
+extern int guppy_rust_ping_value(void);
+extern const char *guppy_rust_build_info(void);
+extern int guppy_rust_runtime_start(void);
+extern int guppy_rust_runtime_shutdown(void);
+extern const char *guppy_rust_runtime_status(void);
+extern void *guppy_rust_run_hello_window_main_thread(void *arg);
+extern int guppy_rust_open_window(uint64_t view_id);
+extern int guppy_rust_mount_text_window(uint64_t view_id, const unsigned char *text_ptr,
+                                        size_t text_len);
+extern int guppy_rust_update_text_window(uint64_t view_id, const unsigned char *text_ptr,
+                                         size_t text_len);
+extern int guppy_rust_update_window_text(uint64_t view_id, const unsigned char *text_ptr,
+                                         size_t text_len);
+extern int guppy_rust_close_window(uint64_t view_id);
+extern uint64_t guppy_rust_view_count(void);
+
+void guppy_c_nif_link_anchor(void) {}
+
+static ErlNifMutex *guppy_gui_status_mutex = NULL;
+static ErlNifCond *guppy_gui_status_cond = NULL;
+static ErlNifTid guppy_gui_thread;
+static int guppy_gui_status = 0;
+static int guppy_gui_started = 0;
+
+static ERL_NIF_TERM make_atom(ErlNifEnv *env, const char *name) {
+  return enif_make_atom(env, name);
+}
+
+static ERL_NIF_TERM make_error(ErlNifEnv *env, const char *reason) {
+  return enif_make_tuple2(env, make_atom(env, "error"), make_atom(env, reason));
+}
+
+static int get_view_id(ErlNifEnv *env, ERL_NIF_TERM term, uint64_t *view_id) {
+  ErlNifUInt64 raw_view_id;
+
+  if (!enif_get_uint64(env, term, &raw_view_id)) {
+    return 0;
+  }
+
+  *view_id = (uint64_t)raw_view_id;
+  return 1;
+}
+
+void guppy_c_gui_started(int status) {
+  if (guppy_gui_status_mutex == NULL || guppy_gui_status_cond == NULL) {
+    return;
+  }
+
+  enif_mutex_lock(guppy_gui_status_mutex);
+  guppy_gui_status = status;
+  enif_cond_signal(guppy_gui_status_cond);
+  enif_mutex_unlock(guppy_gui_status_mutex);
+}
+
+static int should_boot_hello_window(void) {
+  const char *value = getenv("GUPPY_BOOT_HELLO_WINDOW");
+  return value != NULL && strcmp(value, "1") == 0;
+}
+
+static int maybe_start_hello_window(void) {
+#ifdef __APPLE__
+  int result;
+  void *arg = should_boot_hello_window() ? (void *)1 : NULL;
+
+  if (guppy_gui_started) {
+    return 1;
+  }
+
+  guppy_gui_status_mutex = enif_mutex_create((char *)"guppy_gui_status_mutex");
+  guppy_gui_status_cond = enif_cond_create((char *)"guppy_gui_status_cond");
+  guppy_gui_status = 0;
+
+  result = erl_drv_steal_main_thread((char *)"guppy_gpui", &guppy_gui_thread,
+                                     guppy_rust_run_hello_window_main_thread,
+                                     arg, NULL);
+
+  if (result != 0) {
+    return 0;
+  }
+
+  enif_mutex_lock(guppy_gui_status_mutex);
+  while (guppy_gui_status == 0) {
+    enif_cond_wait(guppy_gui_status_cond, guppy_gui_status_mutex);
+  }
+  enif_mutex_unlock(guppy_gui_status_mutex);
+
+  guppy_gui_started = guppy_gui_status == 1;
+  return guppy_gui_started;
+#else
+  return 1;
+#endif
+}
+
+static void maybe_stop_hello_window(void) {
+#ifdef __APPLE__
+  if (guppy_gui_started) {
+    erl_drv_stolen_main_thread_join(guppy_gui_thread, NULL);
+    guppy_gui_started = 0;
+  }
+#endif
+
+  if (guppy_gui_status_mutex != NULL) {
+    enif_mutex_destroy(guppy_gui_status_mutex);
+    guppy_gui_status_mutex = NULL;
+  }
+
+  if (guppy_gui_status_cond != NULL) {
+    enif_cond_destroy(guppy_gui_status_cond);
+    guppy_gui_status_cond = NULL;
+  }
+}
+
+static ERL_NIF_TERM native_ping(ErlNifEnv *env, int argc,
+                                const ERL_NIF_TERM argv[]) {
+  int ping_value = guppy_rust_ping_value();
+
+  if (ping_value == 1) {
+    return make_atom(env, "pong");
+  }
+
+  return make_error(env, "rust_core_unavailable");
+}
+
+static ERL_NIF_TERM native_build_info(ErlNifEnv *env, int argc,
+                                      const ERL_NIF_TERM argv[]) {
+  const char *info = guppy_rust_build_info();
+  return enif_make_string(env, info, ERL_NIF_LATIN1);
+}
+
+static ERL_NIF_TERM native_runtime_status(ErlNifEnv *env, int argc,
+                                          const ERL_NIF_TERM argv[]) {
+  const char *status = guppy_rust_runtime_status();
+  return enif_make_string(env, status, ERL_NIF_LATIN1);
+}
+
+static ERL_NIF_TERM native_gui_status(ErlNifEnv *env, int argc,
+                                      const ERL_NIF_TERM argv[]) {
+  const char *status = guppy_gui_started ? "started" : "failed";
+  return enif_make_string(env, status, ERL_NIF_LATIN1);
+}
+
+static ERL_NIF_TERM native_open_window(ErlNifEnv *env, int argc,
+                                       const ERL_NIF_TERM argv[]) {
+  uint64_t view_id;
+  int result;
+
+  if (argc != 1 || !get_view_id(env, argv[0], &view_id)) {
+    return enif_make_badarg(env);
+  }
+
+  result = guppy_rust_open_window(view_id);
+
+  if (result == 1) {
+    return make_atom(env, "ok");
+  }
+
+  if (result == 0) {
+    return make_error(env, "duplicate_view_id");
+  }
+
+  return make_error(env, "runtime_unavailable");
+}
+
+static int get_ir_text(ErlNifEnv *env, ERL_NIF_TERM ir_term, ErlNifBinary *text) {
+  size_t map_size;
+  ERL_NIF_TERM kind_term;
+  ERL_NIF_TERM content_term;
+  char kind[16];
+
+  if (!enif_get_map_size(env, ir_term, &map_size)) {
+    return 0;
+  }
+
+  kind_term = enif_make_atom(env, "kind");
+  content_term = enif_make_atom(env, "content");
+
+  if (!enif_get_map_value(env, ir_term, kind_term, &kind_term)) {
+    return 0;
+  }
+
+  if (!enif_get_atom(env, kind_term, kind, sizeof(kind), ERL_NIF_LATIN1)) {
+    return 0;
+  }
+
+  if (strcmp(kind, "text") != 0) {
+    return 0;
+  }
+
+  if (!enif_get_map_value(env, ir_term, content_term, &content_term)) {
+    return 0;
+  }
+
+  return enif_inspect_binary(env, content_term, text);
+}
+
+static ERL_NIF_TERM native_mount(ErlNifEnv *env, int argc,
+                                 const ERL_NIF_TERM argv[]) {
+  uint64_t view_id;
+  ErlNifBinary text;
+  int result;
+
+  if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
+      !get_ir_text(env, argv[1], &text)) {
+    return enif_make_badarg(env);
+  }
+
+  result = guppy_rust_mount_text_window(view_id, text.data, text.size);
+
+  if (result == 1) {
+    return make_atom(env, "ok");
+  }
+
+  if (result == 0) {
+    return make_error(env, "unknown_view_id");
+  }
+
+  return make_error(env, "runtime_unavailable");
+}
+
+static ERL_NIF_TERM native_update(ErlNifEnv *env, int argc,
+                                  const ERL_NIF_TERM argv[]) {
+  uint64_t view_id;
+  ErlNifBinary text;
+  int result;
+
+  if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
+      !get_ir_text(env, argv[1], &text)) {
+    return enif_make_badarg(env);
+  }
+
+  result = guppy_rust_update_text_window(view_id, text.data, text.size);
+
+  if (result == 1) {
+    return make_atom(env, "ok");
+  }
+
+  if (result == 0) {
+    return make_error(env, "unknown_view_id");
+  }
+
+  return make_error(env, "runtime_unavailable");
+}
+
+static ERL_NIF_TERM native_update_window_text(ErlNifEnv *env, int argc,
+                                              const ERL_NIF_TERM argv[]) {
+  uint64_t view_id;
+  ErlNifBinary text;
+  int result;
+
+  if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
+      !enif_inspect_binary(env, argv[1], &text)) {
+    return enif_make_badarg(env);
+  }
+
+  result = guppy_rust_update_window_text(view_id, text.data, text.size);
+
+  if (result == 1) {
+    return make_atom(env, "ok");
+  }
+
+  if (result == 0) {
+    return make_error(env, "unknown_view_id");
+  }
+
+  return make_error(env, "runtime_unavailable");
+}
+
+static ERL_NIF_TERM native_close_window(ErlNifEnv *env, int argc,
+                                        const ERL_NIF_TERM argv[]) {
+  uint64_t view_id;
+  int result;
+
+  if (argc != 1 || !get_view_id(env, argv[0], &view_id)) {
+    return enif_make_badarg(env);
+  }
+
+  result = guppy_rust_close_window(view_id);
+
+  if (result == 1) {
+    return make_atom(env, "ok");
+  }
+
+  if (result == 0) {
+    return make_error(env, "unknown_view_id");
+  }
+
+  return make_error(env, "runtime_unavailable");
+}
+
+static ERL_NIF_TERM native_view_count(ErlNifEnv *env, int argc,
+                                      const ERL_NIF_TERM argv[]) {
+  uint64_t count = guppy_rust_view_count();
+
+  if (count == UINT64_MAX) {
+    return make_error(env, "runtime_unavailable");
+  }
+
+  return enif_make_uint64(env, count);
+}
+
+static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
+  if (guppy_rust_runtime_start() != 1) {
+    return 1;
+  }
+
+  if (!maybe_start_hello_window()) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static int reload(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
+  return load(env, priv_data, load_info);
+}
+
+static int upgrade(ErlNifEnv *env, void **priv_data, void **old_priv_data,
+                   ERL_NIF_TERM load_info) {
+  return load(env, priv_data, load_info);
+}
+
+static void unload(ErlNifEnv *env, void *priv_data) {
+  guppy_rust_runtime_shutdown();
+  maybe_stop_hello_window();
+}
+
+static ErlNifFunc nif_funcs[] = {
+    {"native_ping", 0, native_ping, 0},
+    {"native_build_info", 0, native_build_info, 0},
+    {"native_runtime_status", 0, native_runtime_status, 0},
+    {"native_gui_status", 0, native_gui_status, 0},
+    {"native_open_window", 1, native_open_window, 0},
+    {"native_mount", 2, native_mount, 0},
+    {"native_update", 2, native_update, 0},
+    {"native_update_window_text", 2, native_update_window_text, 0},
+    {"native_close_window", 1, native_close_window, 0},
+    {"native_view_count", 0, native_view_count, 0},
+};
+
+ERL_NIF_INIT(Elixir.Guppy.Native.Nif, nif_funcs, load, reload, upgrade, unload)
