@@ -25,6 +25,10 @@ Guppy.IR currently supports:
 - events:
   - `click`
   - `hover`
+  - `mouse_down`
+  - `mouse_up`
+  - `mouse_move`
+  - `scroll_wheel`
 - style tokens:
   - `flex`
   - `flex_col`
@@ -255,10 +259,10 @@ The rough order below is chosen to improve layout correctness first, then text/l
 
 - [x] hover styles
 - [x] hover enter/leave events
-- [ ] mouse down
-- [ ] mouse up
-- [ ] mouse move
-- [ ] scroll wheel events
+- [x] mouse down
+- [x] mouse up
+- [x] mouse move
+- [x] scroll wheel events
 - [ ] keyboard key down
 - [ ] keyboard key up
 - [ ] focus/blur events

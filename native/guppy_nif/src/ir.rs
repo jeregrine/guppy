@@ -173,6 +173,10 @@ pub enum IrNode {
         children: Vec<IrNode>,
         click: Option<String>,
         hover: Option<String>,
+        mouse_down: Option<String>,
+        mouse_up: Option<String>,
+        mouse_move: Option<String>,
+        scroll_wheel: Option<String>,
     },
 }
 
@@ -217,6 +221,10 @@ impl IrNode {
                     children,
                     click: get_click_event(map)?,
                     hover: get_hover_event(map)?,
+                    mouse_down: get_mouse_down_event(map)?,
+                    mouse_up: get_mouse_up_event(map)?,
+                    mouse_move: get_mouse_move_event(map)?,
+                    scroll_wheel: get_scroll_wheel_event(map)?,
                 })
             }
             other => Err(format!("unsupported ir kind: {other}")),
@@ -478,6 +486,22 @@ fn get_click_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> 
 
 fn get_hover_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
     get_optional_event(map, "hover")
+}
+
+fn get_mouse_down_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "mouse_down")
+}
+
+fn get_mouse_up_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "mouse_up")
+}
+
+fn get_mouse_move_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "mouse_move")
+}
+
+fn get_scroll_wheel_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "scroll_wheel")
 }
 
 fn get_optional_event(map: &HashMap<Term, Term>, key: &str) -> Result<Option<String>, String> {

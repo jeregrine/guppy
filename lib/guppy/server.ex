@@ -156,35 +156,15 @@ defmodule Guppy.Server do
 
   @impl true
   def handle_info(
-        {:guppy_native_event, view_id, :click, %{id: node_id, callback: callback_id}},
+        {:guppy_native_event, view_id, type, %{id: node_id, callback: callback_id} = payload},
         state
       )
-      when is_integer(view_id) and is_binary(node_id) and is_binary(callback_id) do
+      when is_integer(view_id) and is_atom(type) and
+             type in [:click, :hover, :mouse_down, :mouse_up, :mouse_move, :scroll_wheel] and
+             is_binary(node_id) and is_binary(callback_id) do
     case Map.fetch(state.views, view_id) do
       {:ok, owner} ->
-        send(owner, {:guppy_event, view_id, %{type: :click, id: node_id, callback: callback_id}})
-        {:noreply, state}
-
-      :error ->
-        {:noreply, state}
-    end
-  end
-
-  def handle_info(
-        {:guppy_native_event, view_id, :hover,
-         %{id: node_id, callback: callback_id, hovered: hovered}},
-        state
-      )
-      when is_integer(view_id) and is_binary(node_id) and is_binary(callback_id) and
-             is_boolean(hovered) do
-    case Map.fetch(state.views, view_id) do
-      {:ok, owner} ->
-        send(owner, {
-          :guppy_event,
-          view_id,
-          %{type: :hover, id: node_id, callback: callback_id, hovered: hovered}
-        })
-
+        send(owner, {:guppy_event, view_id, Map.put(payload, :type, type)})
         {:noreply, state}
 
       :error ->

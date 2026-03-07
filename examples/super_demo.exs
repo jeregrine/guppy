@@ -19,6 +19,11 @@ defmodule Guppy.SuperDemo do
         selected_demo: :runtime,
         div_clicks: 0,
         text_clicks: 0,
+        mouse_downs: 0,
+        mouse_ups: 0,
+        mouse_moves: 0,
+        scroll_wheels: 0,
+        pointer_status: "none yet",
         timer_ticks: 0,
         timer_remaining: 0,
         timer_running: false,
@@ -41,6 +46,12 @@ defmodule Guppy.SuperDemo do
       {:guppy_event, view_id, %{type: :hover} = event} ->
         state
         |> handle_hover(view_id, event)
+        |> continue()
+
+      {:guppy_event, view_id, %{type: type} = event}
+      when type in [:mouse_down, :mouse_up, :mouse_move, :scroll_wheel] ->
+        state
+        |> handle_pointer_event(view_id, event)
         |> continue()
 
       {:guppy_event, view_id, %{type: :window_closed}} ->
@@ -159,6 +170,27 @@ defmodule Guppy.SuperDemo do
     end
   end
 
+  defp handle_pointer_event(state, view_id, %{type: type, id: node_id, callback: callback_id} = event) do
+    cond do
+      view_id == state.main_view_id ->
+        state
+        |> update_pointer_counters(type)
+        |> Map.put(:pointer_status, format_pointer_event(type, event))
+        |> Map.put(:last_event, "#{type} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      view_id == state.aux_view_id ->
+        state
+        |> Map.put(:last_event, "aux #{type} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      true ->
+        state
+        |> Map.put(:last_event, "#{type} from unknown view #{view_id}: #{node_id}/#{callback_id}")
+        |> rerender!()
+    end
+  end
+
   defp handle_main_click(state, node_id, callback_id) do
     cond do
       String.starts_with?(callback_id, "select_demo:") ->
@@ -271,6 +303,43 @@ defmodule Guppy.SuperDemo do
       |> rerender!()
     end
   end
+
+  defp update_pointer_counters(state, :mouse_down), do: Map.update!(state, :mouse_downs, &(&1 + 1))
+  defp update_pointer_counters(state, :mouse_up), do: Map.update!(state, :mouse_ups, &(&1 + 1))
+  defp update_pointer_counters(state, :mouse_move), do: Map.update!(state, :mouse_moves, &(&1 + 1))
+  defp update_pointer_counters(state, :scroll_wheel), do: Map.update!(state, :scroll_wheels, &(&1 + 1))
+
+  defp format_pointer_event(:mouse_down, event) do
+    "down #{event.button} @ (#{format_number(event.x)}, #{format_number(event.y)}) clicks=#{event.click_count} mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_pointer_event(:mouse_up, event) do
+    "up #{event.button} @ (#{format_number(event.x)}, #{format_number(event.y)}) clicks=#{event.click_count} mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_pointer_event(:mouse_move, event) do
+    "move pressed=#{event.pressed_button} @ (#{format_number(event.x)}, #{format_number(event.y)}) mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_pointer_event(:scroll_wheel, event) do
+    "wheel #{event.delta_kind} Δ(#{format_number(event.delta_x)}, #{format_number(event.delta_y)}) @ (#{format_number(event.x)}, #{format_number(event.y)}) mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_modifiers(modifiers) do
+    active =
+      modifiers
+      |> Enum.filter(fn {_key, value} -> value end)
+      |> Enum.map(fn {key, _value} -> key end)
+      |> Enum.sort()
+
+    case active do
+      [] -> "none"
+      keys -> Enum.join(keys, "+")
+    end
+  end
+
+  defp format_number(number) when is_integer(number), do: Integer.to_string(number)
+  defp format_number(number) when is_float(number), do: :erlang.float_to_binary(number, decimals: 1)
 
   defp open_aux_window(%{aux_view_id: view_id} = state, _node_id) when not is_nil(view_id) do
     state
@@ -485,7 +554,7 @@ defmodule Guppy.SuperDemo do
     panel(
       "interactions_demo",
       [
-        Guppy.IR.text("Clicks and rerenders"),
+        Guppy.IR.text("Clicks, pointer events, and rerenders"),
         Guppy.IR.text("div_clicks = #{state.div_clicks}"),
         action_button("Increment div clicks", "div_button", "div_increment", :blue),
         Guppy.IR.text(
@@ -494,6 +563,44 @@ defmodule Guppy.SuperDemo do
           events: %{click: "text_increment"}
         ),
         Guppy.IR.text("text_clicks = #{state.text_clicks}"),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("Pointer pad", id: "pointer_pad_title"),
+            Guppy.IR.text("Move, press, release, and use the wheel inside this box.", id: "pointer_pad_body")
+          ],
+          id: "pointer_pad",
+          style: [
+            :flex,
+            :flex_col,
+            :justify_center,
+            :items_center,
+            :text_center,
+            :gap_2,
+            :w_full,
+            {:h_px, 220},
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :black},
+            :cursor_pointer
+          ],
+          hover_style: [{:bg_hex, "#2a2a2a"}],
+          events: %{
+            mouse_down: "pointer_down",
+            mouse_up: "pointer_up",
+            mouse_move: "pointer_move",
+            scroll_wheel: "pointer_scroll"
+          }
+        ),
+        Guppy.IR.text("mouse_downs = #{state.mouse_downs}"),
+        Guppy.IR.text("mouse_ups = #{state.mouse_ups}"),
+        Guppy.IR.text("mouse_moves = #{state.mouse_moves}"),
+        Guppy.IR.text("scroll_wheels = #{state.scroll_wheels}"),
+        Guppy.IR.div(
+          [Guppy.IR.text("pointer_status = #{state.pointer_status}", id: "pointer_status_label")],
+          id: "pointer_status_panel",
+          style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
+        ),
         action_button("Start timer rerender demo", "timer_button", "start_timer", :green),
         Guppy.IR.text("timer_ticks = #{state.timer_ticks}"),
         Guppy.IR.text("timer_running = #{state.timer_running}"),
@@ -808,7 +915,7 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("What to try"),
         Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
-        Guppy.IR.text("2. Interactions: click the div button and the text line, then start timer rerenders."),
+        Guppy.IR.text("2. Interactions: click the div button, the text line, and the pointer pad, then start timer rerenders."),
         Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
         Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
         Guppy.IR.text("5. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),

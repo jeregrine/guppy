@@ -167,10 +167,14 @@ Minimal native events are delivered to the owning Elixir process as:
 ```elixir
 {:guppy_event, view_id, %{type: :click, id: node_id, callback: callback_id}}
 {:guppy_event, view_id, %{type: :hover, id: node_id, callback: callback_id, hovered: boolean}}
+{:guppy_event, view_id, %{type: :mouse_down, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, first_mouse: boolean, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :mouse_up, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :mouse_move, id: node_id, callback: callback_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :scroll_wheel, id: node_id, callback: callback_id, x: number, y: number, delta_kind: :pixels | :lines, delta_x: number, delta_y: number, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :window_closed}}
 ```
 
-You can attach a stable node id and click callback id to a `div` or `text` node like this:
+You can attach a stable node id and callback ids to a `div` like this:
 
 ```elixir
 Guppy.IR.div(
@@ -178,9 +182,17 @@ Guppy.IR.div(
     Guppy.IR.text("Click me", id: "button_label", events: %{click: "increment"})
   ],
   id: "increment_button",
-  events: %{click: "increment"}
+  events: %{
+    click: "increment",
+    mouse_down: "pointer_down",
+    mouse_up: "pointer_up",
+    mouse_move: "pointer_move",
+    scroll_wheel: "pointer_scroll"
+  }
 )
 ```
+
+`text` nodes currently support `click` only.
 
 Identity rules today:
 

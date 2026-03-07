@@ -1,6 +1,7 @@
 use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
-    AnyElement, Context, FontWeight, InteractiveElement, InteractiveText, SharedString,
+    AnyElement, Context, FontWeight, InteractiveElement, InteractiveText, MouseButton,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta, ScrollWheelEvent, SharedString,
     StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Window, div, prelude::*, px,
     relative, rems, rgb,
 };
@@ -21,6 +22,75 @@ unsafe extern "C" {
         callback_id_ptr: *const u8,
         callback_id_len: usize,
         hovered: i32,
+    ) -> i32;
+
+    fn guppy_c_send_mouse_down_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        button_code: i32,
+        x: f64,
+        y: f64,
+        click_count: u64,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
+        first_mouse: i32,
+    ) -> i32;
+
+    fn guppy_c_send_mouse_up_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        button_code: i32,
+        x: f64,
+        y: f64,
+        click_count: u64,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
+    ) -> i32;
+
+    fn guppy_c_send_mouse_move_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        pressed_button_code: i32,
+        x: f64,
+        y: f64,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
+    ) -> i32;
+
+    fn guppy_c_send_scroll_wheel_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        x: f64,
+        y: f64,
+        delta_kind_code: i32,
+        delta_x: f64,
+        delta_y: f64,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
     ) -> i32;
 }
 
@@ -52,6 +122,10 @@ fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
             children,
             click,
             hover,
+            mouse_down,
+            mouse_up,
+            mouse_move,
+            scroll_wheel,
         } => render_div(
             view_id,
             path,
@@ -61,6 +135,10 @@ fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
             children,
             click.as_deref(),
             hover.as_deref(),
+            mouse_down.as_deref(),
+            mouse_up.as_deref(),
+            mouse_move.as_deref(),
+            scroll_wheel.as_deref(),
         ),
     }
 }
@@ -108,6 +186,10 @@ fn render_div(
     children: &[IrNode],
     click: Option<&str>,
     hover: Option<&str>,
+    mouse_down: Option<&str>,
+    mouse_up: Option<&str>,
+    mouse_move: Option<&str>,
+    scroll_wheel: Option<&str>,
 ) -> AnyElement {
     let child_elements = children
         .iter()
@@ -143,6 +225,120 @@ fn render_div(
                     callback_id.as_ptr(),
                     callback_id.len(),
                     if *hovered { 1 } else { 0 },
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match mouse_down {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let mouse_down_node_id = node_id.clone();
+
+            styled_div.on_any_mouse_down(move |event: &MouseDownEvent, _, _| unsafe {
+                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
+                let _ = guppy_c_send_mouse_down_event(
+                    view_id,
+                    mouse_down_node_id.as_ptr(),
+                    mouse_down_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    mouse_button_code(event.button),
+                    pixel_to_f64(event.position.x),
+                    pixel_to_f64(event.position.y),
+                    event.click_count as u64,
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
+                    if event.first_mouse { 1 } else { 0 },
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match mouse_up {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let mouse_up_node_id = node_id.clone();
+
+            styled_div.capture_any_mouse_up(move |event: &MouseUpEvent, _, _| unsafe {
+                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
+                let _ = guppy_c_send_mouse_up_event(
+                    view_id,
+                    mouse_up_node_id.as_ptr(),
+                    mouse_up_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    mouse_button_code(event.button),
+                    pixel_to_f64(event.position.x),
+                    pixel_to_f64(event.position.y),
+                    event.click_count as u64,
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match mouse_move {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let mouse_move_node_id = node_id.clone();
+
+            styled_div.on_mouse_move(move |event: &MouseMoveEvent, _, _| unsafe {
+                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
+                let _ = guppy_c_send_mouse_move_event(
+                    view_id,
+                    mouse_move_node_id.as_ptr(),
+                    mouse_move_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    optional_mouse_button_code(event.pressed_button),
+                    pixel_to_f64(event.position.x),
+                    pixel_to_f64(event.position.y),
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match scroll_wheel {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let scroll_node_id = node_id.clone();
+
+            styled_div.on_scroll_wheel(move |event: &ScrollWheelEvent, _, _| unsafe {
+                let (delta_kind_code, delta_x, delta_y) = scroll_delta_parts(event.delta);
+                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
+                let _ = guppy_c_send_scroll_wheel_event(
+                    view_id,
+                    scroll_node_id.as_ptr(),
+                    scroll_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    pixel_to_f64(event.position.x),
+                    pixel_to_f64(event.position.y),
+                    delta_kind_code,
+                    delta_x,
+                    delta_y,
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
                 );
             })
         }
@@ -470,6 +666,41 @@ fn apply_hover_style(mut style: StyleRefinement, hover_style: &DivStyle) -> Styl
     }
 
     style
+}
+
+fn modifier_flags(modifiers: &gpui::Modifiers) -> (i32, i32, i32, i32, i32) {
+    (
+        if modifiers.control { 1 } else { 0 },
+        if modifiers.alt { 1 } else { 0 },
+        if modifiers.shift { 1 } else { 0 },
+        if modifiers.platform { 1 } else { 0 },
+        if modifiers.function { 1 } else { 0 },
+    )
+}
+
+fn pixel_to_f64(value: gpui::Pixels) -> f64 {
+    f64::from(value)
+}
+
+fn mouse_button_code(button: MouseButton) -> i32 {
+    match button {
+        MouseButton::Left => 1,
+        MouseButton::Right => 2,
+        MouseButton::Middle => 3,
+        MouseButton::Navigate(gpui::NavigationDirection::Back) => 4,
+        MouseButton::Navigate(gpui::NavigationDirection::Forward) => 5,
+    }
+}
+
+fn optional_mouse_button_code(button: Option<MouseButton>) -> i32 {
+    button.map(mouse_button_code).unwrap_or(0)
+}
+
+fn scroll_delta_parts(delta: ScrollDelta) -> (i32, f64, f64) {
+    match delta {
+        ScrollDelta::Pixels(delta) => (1, pixel_to_f64(delta.x), pixel_to_f64(delta.y)),
+        ScrollDelta::Lines(delta) => (2, f64::from(delta.x), f64::from(delta.y)),
+    }
 }
 
 fn node_id(view_id: u64, path: &str, id: Option<&str>) -> String {

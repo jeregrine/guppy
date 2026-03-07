@@ -205,6 +205,10 @@ fn handle_request(request: MainThreadRequest) {
                     children: vec![IrNode::text(format!("Hello from Guppy view {view_id}"))],
                     click: None,
                     hover: None,
+                    mouse_down: None,
+                    mouse_up: None,
+                    mouse_move: None,
+                    scroll_wheel: None,
                 },
             ));
         }

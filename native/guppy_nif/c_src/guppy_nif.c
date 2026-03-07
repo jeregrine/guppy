@@ -97,6 +97,76 @@ static int send_native_event(ErlNifEnv *msg_env, uint64_t view_id,
   return sent;
 }
 
+static ERL_NIF_TERM make_bool(ErlNifEnv *env, int value) {
+  return value ? make_atom(env, "true") : make_atom(env, "false");
+}
+
+static ERL_NIF_TERM make_mouse_button_term(ErlNifEnv *env, int button_code) {
+  switch (button_code) {
+  case 1:
+    return make_atom(env, "left");
+  case 2:
+    return make_atom(env, "right");
+  case 3:
+    return make_atom(env, "middle");
+  case 4:
+    return make_atom(env, "navigate_back");
+  case 5:
+    return make_atom(env, "navigate_forward");
+  default:
+    return make_atom(env, "nil");
+  }
+}
+
+static int make_modifiers_map(ErlNifEnv *env, int control, int alt, int shift,
+                              int platform, int function,
+                              ERL_NIF_TERM *modifiers_term) {
+  ERL_NIF_TERM keys[5];
+  ERL_NIF_TERM values[5];
+
+  keys[0] = make_atom(env, "control");
+  keys[1] = make_atom(env, "alt");
+  keys[2] = make_atom(env, "shift");
+  keys[3] = make_atom(env, "platform");
+  keys[4] = make_atom(env, "function");
+
+  values[0] = make_bool(env, control);
+  values[1] = make_bool(env, alt);
+  values[2] = make_bool(env, shift);
+  values[3] = make_bool(env, platform);
+  values[4] = make_bool(env, function);
+
+  return enif_make_map_from_arrays(env, keys, values, 5, modifiers_term);
+}
+
+static int make_id_callback_terms(ErlNifEnv *env, const unsigned char *node_id_ptr,
+                                  size_t node_id_len,
+                                  const unsigned char *callback_id_ptr,
+                                  size_t callback_id_len,
+                                  ERL_NIF_TERM *node_id_term,
+                                  ERL_NIF_TERM *callback_id_term) {
+  unsigned char *node_id_bytes;
+  unsigned char *callback_id_bytes;
+
+  node_id_bytes = enif_make_new_binary(env, node_id_len, node_id_term);
+
+  if (node_id_bytes == NULL) {
+    return 0;
+  }
+
+  memcpy(node_id_bytes, node_id_ptr, node_id_len);
+
+  callback_id_bytes =
+      enif_make_new_binary(env, callback_id_len, callback_id_term);
+
+  if (callback_id_bytes == NULL) {
+    return 0;
+  }
+
+  memcpy(callback_id_bytes, callback_id_ptr, callback_id_len);
+  return 1;
+}
+
 int guppy_c_send_click_event(uint64_t view_id, const unsigned char *node_id_ptr,
                              size_t node_id_len,
                              const unsigned char *callback_id_ptr,
@@ -205,6 +275,229 @@ int guppy_c_send_hover_event(uint64_t view_id, const unsigned char *node_id_ptr,
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "hover"),
                            payload_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
+int guppy_c_send_mouse_down_event(
+    uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
+    const unsigned char *callback_id_ptr, size_t callback_id_len,
+    int button_code, double x, double y, uint64_t click_count, int control,
+    int alt, int shift, int platform, int function, int first_mouse) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM payload_term;
+  ERL_NIF_TERM node_id_term;
+  ERL_NIF_TERM callback_id_term;
+  ERL_NIF_TERM modifiers_term;
+  ERL_NIF_TERM keys[8];
+  ERL_NIF_TERM values[8];
+  int sent;
+
+  msg_env = enif_alloc_env();
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
+                              callback_id_ptr, callback_id_len,
+                              &node_id_term, &callback_id_term) ||
+      !make_modifiers_map(msg_env, control, alt, shift, platform, function,
+                          &modifiers_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  keys[0] = make_atom(msg_env, "id");
+  keys[1] = make_atom(msg_env, "callback");
+  keys[2] = make_atom(msg_env, "button");
+  keys[3] = make_atom(msg_env, "x");
+  keys[4] = make_atom(msg_env, "y");
+  keys[5] = make_atom(msg_env, "click_count");
+  keys[6] = make_atom(msg_env, "first_mouse");
+  keys[7] = make_atom(msg_env, "modifiers");
+
+  values[0] = node_id_term;
+  values[1] = callback_id_term;
+  values[2] = make_mouse_button_term(msg_env, button_code);
+  values[3] = enif_make_double(msg_env, x);
+  values[4] = enif_make_double(msg_env, y);
+  values[5] = enif_make_uint64(msg_env, click_count);
+  values[6] = make_bool(msg_env, first_mouse);
+  values[7] = modifiers_term;
+
+  if (!enif_make_map_from_arrays(msg_env, keys, values, 8, &payload_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id, make_atom(msg_env, "mouse_down"),
+                           payload_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
+int guppy_c_send_mouse_up_event(
+    uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
+    const unsigned char *callback_id_ptr, size_t callback_id_len,
+    int button_code, double x, double y, uint64_t click_count, int control,
+    int alt, int shift, int platform, int function) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM payload_term;
+  ERL_NIF_TERM node_id_term;
+  ERL_NIF_TERM callback_id_term;
+  ERL_NIF_TERM modifiers_term;
+  ERL_NIF_TERM keys[7];
+  ERL_NIF_TERM values[7];
+  int sent;
+
+  msg_env = enif_alloc_env();
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
+                              callback_id_ptr, callback_id_len,
+                              &node_id_term, &callback_id_term) ||
+      !make_modifiers_map(msg_env, control, alt, shift, platform, function,
+                          &modifiers_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  keys[0] = make_atom(msg_env, "id");
+  keys[1] = make_atom(msg_env, "callback");
+  keys[2] = make_atom(msg_env, "button");
+  keys[3] = make_atom(msg_env, "x");
+  keys[4] = make_atom(msg_env, "y");
+  keys[5] = make_atom(msg_env, "click_count");
+  keys[6] = make_atom(msg_env, "modifiers");
+
+  values[0] = node_id_term;
+  values[1] = callback_id_term;
+  values[2] = make_mouse_button_term(msg_env, button_code);
+  values[3] = enif_make_double(msg_env, x);
+  values[4] = enif_make_double(msg_env, y);
+  values[5] = enif_make_uint64(msg_env, click_count);
+  values[6] = modifiers_term;
+
+  if (!enif_make_map_from_arrays(msg_env, keys, values, 7, &payload_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id, make_atom(msg_env, "mouse_up"),
+                           payload_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
+int guppy_c_send_mouse_move_event(
+    uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
+    const unsigned char *callback_id_ptr, size_t callback_id_len,
+    int pressed_button_code, double x, double y, int control, int alt,
+    int shift, int platform, int function) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM payload_term;
+  ERL_NIF_TERM node_id_term;
+  ERL_NIF_TERM callback_id_term;
+  ERL_NIF_TERM modifiers_term;
+  ERL_NIF_TERM keys[6];
+  ERL_NIF_TERM values[6];
+  int sent;
+
+  msg_env = enif_alloc_env();
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
+                              callback_id_ptr, callback_id_len,
+                              &node_id_term, &callback_id_term) ||
+      !make_modifiers_map(msg_env, control, alt, shift, platform, function,
+                          &modifiers_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  keys[0] = make_atom(msg_env, "id");
+  keys[1] = make_atom(msg_env, "callback");
+  keys[2] = make_atom(msg_env, "pressed_button");
+  keys[3] = make_atom(msg_env, "x");
+  keys[4] = make_atom(msg_env, "y");
+  keys[5] = make_atom(msg_env, "modifiers");
+
+  values[0] = node_id_term;
+  values[1] = callback_id_term;
+  values[2] = make_mouse_button_term(msg_env, pressed_button_code);
+  values[3] = enif_make_double(msg_env, x);
+  values[4] = enif_make_double(msg_env, y);
+  values[5] = modifiers_term;
+
+  if (!enif_make_map_from_arrays(msg_env, keys, values, 6, &payload_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id, make_atom(msg_env, "mouse_move"),
+                           payload_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
+int guppy_c_send_scroll_wheel_event(
+    uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
+    const unsigned char *callback_id_ptr, size_t callback_id_len,
+    double x, double y, int delta_kind_code, double delta_x, double delta_y,
+    int control, int alt, int shift, int platform, int function) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM payload_term;
+  ERL_NIF_TERM node_id_term;
+  ERL_NIF_TERM callback_id_term;
+  ERL_NIF_TERM modifiers_term;
+  ERL_NIF_TERM keys[8];
+  ERL_NIF_TERM values[8];
+  int sent;
+
+  msg_env = enif_alloc_env();
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
+                              callback_id_ptr, callback_id_len,
+                              &node_id_term, &callback_id_term) ||
+      !make_modifiers_map(msg_env, control, alt, shift, platform, function,
+                          &modifiers_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  keys[0] = make_atom(msg_env, "id");
+  keys[1] = make_atom(msg_env, "callback");
+  keys[2] = make_atom(msg_env, "x");
+  keys[3] = make_atom(msg_env, "y");
+  keys[4] = make_atom(msg_env, "delta_kind");
+  keys[5] = make_atom(msg_env, "delta_x");
+  keys[6] = make_atom(msg_env, "delta_y");
+  keys[7] = make_atom(msg_env, "modifiers");
+
+  values[0] = node_id_term;
+  values[1] = callback_id_term;
+  values[2] = enif_make_double(msg_env, x);
+  values[3] = enif_make_double(msg_env, y);
+  values[4] = delta_kind_code == 1 ? make_atom(msg_env, "pixels")
+                                   : make_atom(msg_env, "lines");
+  values[5] = enif_make_double(msg_env, delta_x);
+  values[6] = enif_make_double(msg_env, delta_y);
+  values[7] = modifiers_term;
+
+  if (!enif_make_map_from_arrays(msg_env, keys, values, 8, &payload_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id,
+                           make_atom(msg_env, "scroll_wheel"), payload_term);
   enif_free_env(msg_env);
   return sent;
 }

@@ -165,7 +165,15 @@ defmodule Guppy.IR do
   @type style :: [style_op()]
 
   @type text_events :: %{optional(:click) => String.t()}
-  @type div_events :: %{optional(:click) => String.t(), optional(:hover) => String.t()}
+
+  @type div_events :: %{
+          optional(:click) => String.t(),
+          optional(:hover) => String.t(),
+          optional(:mouse_down) => String.t(),
+          optional(:mouse_up) => String.t(),
+          optional(:mouse_move) => String.t(),
+          optional(:scroll_wheel) => String.t()
+        }
 
   @type text_node :: %{
           required(:kind) => :text,
@@ -357,7 +365,15 @@ defmodule Guppy.IR do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
-         :ok <- validate_events(Map.get(node, :events), [:click, :hover]),
+         :ok <-
+           validate_events(Map.get(node, :events), [
+             :click,
+             :hover,
+             :mouse_down,
+             :mouse_up,
+             :mouse_move,
+             :scroll_wheel
+           ]),
          :ok <- validate_children(children) do
       :ok
     end

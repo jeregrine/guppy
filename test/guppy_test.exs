@@ -21,7 +21,14 @@ defmodule GuppyTest do
         [Guppy.IR.text("hello")],
         id: "root",
         hover_style: [{:bg_hex, "#101010"}, {:opacity, 0.9}, :cursor_pointer],
-        events: %{hover: "hovered", click: "clicked"},
+        events: %{
+          hover: "hovered",
+          click: "clicked",
+          mouse_down: "down",
+          mouse_up: "up",
+          mouse_move: "move",
+          scroll_wheel: "wheel"
+        },
         style: [
           :flex,
           :flex_col,
@@ -394,6 +401,142 @@ defmodule GuppyTest do
                           callback: "hover_increment",
                           hovered: true
                         }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :mouse_down,
+          %{
+            id: "increment_button",
+            callback: "pointer_down",
+            button: :left,
+            x: 120.5,
+            y: 64.0,
+            click_count: 1,
+            first_mouse: false,
+            modifiers: %{
+              control: false,
+              alt: false,
+              shift: true,
+              platform: false,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :mouse_down,
+                          id: "increment_button",
+                          callback: "pointer_down",
+                          button: :left,
+                          x: 120.5,
+                          y: 64.0,
+                          click_count: 1,
+                          first_mouse: false,
+                          modifiers: %{shift: true}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :mouse_up,
+          %{
+            id: "increment_button",
+            callback: "pointer_up",
+            button: :left,
+            x: 122.0,
+            y: 70.0,
+            click_count: 1,
+            modifiers: %{
+              control: false,
+              alt: false,
+              shift: false,
+              platform: false,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :mouse_up,
+                          id: "increment_button",
+                          callback: "pointer_up",
+                          button: :left,
+                          x: 122.0,
+                          y: 70.0,
+                          click_count: 1,
+                          modifiers: %{}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :mouse_move,
+          %{
+            id: "increment_button",
+            callback: "pointer_move",
+            pressed_button: nil,
+            x: 140.0,
+            y: 88.0,
+            modifiers: %{
+              control: false,
+              alt: true,
+              shift: false,
+              platform: false,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :mouse_move,
+                          id: "increment_button",
+                          callback: "pointer_move",
+                          pressed_button: nil,
+                          x: 140.0,
+                          y: 88.0,
+                          modifiers: %{alt: true}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :scroll_wheel,
+          %{
+            id: "increment_button",
+            callback: "pointer_scroll",
+            x: 140.0,
+            y: 88.0,
+            delta_kind: :pixels,
+            delta_x: 0.0,
+            delta_y: -24.0,
+            modifiers: %{
+              control: false,
+              alt: false,
+              shift: false,
+              platform: true,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :scroll_wheel,
+                          id: "increment_button",
+                          callback: "pointer_scroll",
+                          x: 140.0,
+                          y: 88.0,
+                          delta_kind: :pixels,
+                          delta_x: delta_x,
+                          delta_y: -24.0,
+                          modifiers: %{platform: true}
+                        }}
+
+        assert delta_x == 0.0
 
         assert :ok = Guppy.update_window_text(view_id, "Hello again from Elixir")
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
