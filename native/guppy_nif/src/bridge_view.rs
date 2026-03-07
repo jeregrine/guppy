@@ -142,6 +142,9 @@ where
     if style.p_6 {
         element = element.p_6();
     }
+    if style.w_64 {
+        element = element.w_64();
+    }
     if style.items_center {
         element = element.items_center();
     }

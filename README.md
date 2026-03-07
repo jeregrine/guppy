@@ -186,7 +186,7 @@ Identity rules today:
 
 Minimal `:div` style tokens currently supported:
 
-- booleans: `flex`, `flex_col`, `gap_2`, `p_2`, `p_4`, `p_6`, `items_center`, `justify_center`, `cursor_pointer`, `rounded_md`, `border_1`
+- booleans: `flex`, `flex_col`, `gap_2`, `p_2`, `p_4`, `p_6`, `w_64`, `items_center`, `justify_center`, `cursor_pointer`, `rounded_md`, `border_1`
 - colors: `bg`, `text_color`, `border_color`
 - color tokens: `:red`, `:green`, `:blue`, `:yellow`, `:black`, `:white`, `:gray`
 

@@ -407,7 +407,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("The main window stays anchored at the top; switch demos instead of scrolling."),
         Guppy.IR.div(items, id: "nav_items", style: %{flex: true, flex_col: true, gap_2: true})
       ],
-      style: %{flex_col: true, p_4: true, bg: :gray}
+      style: %{w_64: true, flex_col: true, p_4: true, bg: :gray}
     )
   end
 
@@ -527,8 +527,6 @@ defmodule Guppy.SuperDemo do
       style: %{bg: :gray}
     )
   end
-
-  defp panel(id, children), do: panel(id, children, [])
 
   defp panel(id, children, opts) do
     base_style = %{
