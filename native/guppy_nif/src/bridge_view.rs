@@ -259,6 +259,8 @@ fn render_ir(
             style,
             hover_style,
             focus_style,
+            disabled_style,
+            disabled,
             focusable,
             tab_stop,
             tab_index,
@@ -286,6 +288,8 @@ fn render_ir(
             style,
             hover_style,
             focus_style,
+            disabled_style,
+            *disabled,
             *focusable,
             *tab_stop,
             *tab_index,
@@ -358,6 +362,8 @@ fn render_div(
     style: &DivStyle,
     hover_style: &DivStyle,
     focus_style: &DivStyle,
+    disabled_style: &DivStyle,
+    disabled: bool,
     focusable: bool,
     tab_stop: Option<bool>,
     tab_index: Option<isize>,
@@ -385,8 +391,25 @@ fn render_div(
     parent_scroll_handle: Option<ScrollHandle>,
     window: &mut Window,
     cx: &mut Context<BridgeView>,
-) -> AnyElement {
+ ) -> AnyElement {
     let node_id = node_id(view_id, path, id);
+    let click = if disabled { None } else { click };
+    let hover = if disabled { None } else { hover };
+    let focus = if disabled { None } else { focus };
+    let blur = if disabled { None } else { blur };
+    let key_down = if disabled { None } else { key_down };
+    let key_up = if disabled { None } else { key_up };
+    let context_menu = if disabled { None } else { context_menu };
+    let drag_start = if disabled { None } else { drag_start };
+    let drag_move = if disabled { None } else { drag_move };
+    let drop = if disabled { None } else { drop };
+    let mouse_down = if disabled { None } else { mouse_down };
+    let mouse_up = if disabled { None } else { mouse_up };
+    let mouse_move = if disabled { None } else { mouse_move };
+    let scroll_wheel = if disabled { None } else { scroll_wheel };
+    let focusable = focusable && !disabled;
+    let tab_stop = if disabled { None } else { tab_stop };
+    let tab_index = if disabled { None } else { tab_index };
 
     let tracked_scroll_handle = if track_scroll {
         Some(
@@ -476,16 +499,17 @@ fn render_div(
         None => styled_div,
     };
 
-    let styled_div = if focus_handle
-        .as_ref()
-        .is_some_and(|handle| !focus_style.is_empty() && handle.is_focused(window))
+    let styled_div = if !disabled
+        && focus_handle
+            .as_ref()
+            .is_some_and(|handle| !focus_style.is_empty() && handle.is_focused(window))
     {
         apply_div_style(styled_div, focus_style)
     } else {
         styled_div
     };
 
-    let styled_div = if hover_style.is_empty() {
+    let styled_div = if disabled || hover_style.is_empty() {
         styled_div
     } else {
         let hover_ops = hover_style.clone();
@@ -818,6 +842,12 @@ fn render_div(
             })
         }
         None => styled_div,
+    };
+
+    let styled_div = if disabled && !disabled_style.is_empty() {
+        apply_div_style(styled_div, disabled_style)
+    } else {
+        styled_div
     };
 
     match click {

@@ -173,6 +173,8 @@ pub enum IrNode {
         style: DivStyle,
         hover_style: DivStyle,
         focus_style: DivStyle,
+        disabled_style: DivStyle,
+        disabled: bool,
         focusable: bool,
         tab_stop: Option<bool>,
         tab_index: Option<isize>,
@@ -235,6 +237,8 @@ impl IrNode {
                     style: get_div_style(map)?,
                     hover_style: get_div_hover_style(map)?,
                     focus_style: get_div_focus_style(map)?,
+                    disabled_style: get_div_disabled_style(map)?,
+                    disabled: get_boolean_field(map, "disabled")?,
                     focusable: get_boolean_field(map, "focusable")?,
                     tab_stop: get_optional_boolean_field(map, "tab_stop")?,
                     tab_index: get_optional_integer_field(map, "tab_index")?,
@@ -345,6 +349,10 @@ fn get_div_hover_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
 
 fn get_div_focus_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     get_style_list_field(map, "focus_style")
+}
+
+fn get_div_disabled_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
+    get_style_list_field(map, "disabled_style")
 }
 
 fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle, String> {

@@ -671,6 +671,8 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("Clicks, pointer events, and rerenders"),
         Guppy.IR.text("div_clicks = #{state.div_clicks}"),
         action_button("Increment div clicks", "div_button", "div_increment", :blue),
+        Guppy.IR.text("Disabled button below should not increment div_clicks."),
+        disabled_action_button("Disabled increment button", "disabled_div_button"),
         Guppy.IR.text(
           "Increment text clicks by clicking this line",
           id: "text_increment_line",
@@ -1338,6 +1340,24 @@ defmodule Guppy.SuperDemo do
         :cursor_pointer
       ],
       events: %{click: callback}
+    )
+  end
+
+  defp disabled_action_button(label, id) do
+    Guppy.IR.div(
+      [Guppy.IR.text(label, id: "#{id}_label")],
+      id: id,
+      disabled: true,
+      disabled_style: [{:opacity, 0.45}, {:bg, :gray}, {:border_color, :white}],
+      style: [
+        :p_2,
+        :rounded_md,
+        :border_1,
+        {:border_color, :yellow},
+        {:bg, :yellow},
+        {:text_color, :black}
+      ],
+      events: %{click: "disabled_increment"}
     )
   end
 

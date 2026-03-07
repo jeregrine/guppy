@@ -22,6 +22,8 @@ defmodule GuppyTest do
         id: "root",
         hover_style: [{:bg_hex, "#101010"}, {:opacity, 0.9}, :cursor_pointer],
         focus_style: [{:bg_hex, "#202020"}, {:text_color, :yellow}],
+        disabled_style: [{:opacity, 0.4}, {:bg, :black}],
+        disabled: false,
         focusable: true,
         tab_stop: true,
         tab_index: 3,
@@ -184,6 +186,8 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(styled_ir)
 
     assert styled_ir.focus_style == [{:bg_hex, "#202020"}, {:text_color, :yellow}]
+    assert styled_ir.disabled_style == [{:opacity, 0.4}, {:bg, :black}]
+    assert styled_ir.disabled == false
     assert styled_ir.focusable == true
     assert styled_ir.tab_stop == true
     assert styled_ir.tab_index == 3
@@ -339,11 +343,17 @@ defmodule GuppyTest do
     assert {:error, {:invalid_style_op, {:bg_hex, "#12"}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:bg_hex, "#12"}]))
 
+    assert {:error, {:invalid_style_op, :bogus}} =
+             Guppy.IR.validate(Guppy.IR.div([], disabled_style: [:bogus]))
+
     assert {:error, {:track_scroll, "yes"}} =
              Guppy.IR.validate(Guppy.IR.div([], track_scroll: "yes"))
 
     assert {:error, {:anchor_scroll, 1}} =
              Guppy.IR.validate(Guppy.IR.div([], anchor_scroll: 1))
+
+    assert {:error, {:disabled, "yes"}} =
+             Guppy.IR.validate(Guppy.IR.div([], disabled: "yes"))
 
     assert {:error, {:focusable, "yes"}} =
              Guppy.IR.validate(Guppy.IR.div([], focusable: "yes"))

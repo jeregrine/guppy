@@ -45,6 +45,9 @@ Guppy.IR currently supports:
   - `tab_stop`
   - `tab_index`
   - `focus_style`
+- disabled behavior:
+  - `disabled`
+  - `disabled_style`
 - style tokens:
   - `flex`
   - `flex_col`
@@ -288,7 +291,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] drag start
 - [x] drag move
 - [x] drop
-- [ ] disabled state semantics
+- [x] disabled state semantics
 - [ ] active/focus state styling expressed in IR
 
 ## 7. Focus and keyboard participation

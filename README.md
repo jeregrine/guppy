@@ -209,7 +209,9 @@ Guppy.IR.div(
   focusable: true,
   tab_stop: true,
   tab_index: 1,
-  focus_style: [{:bg, :blue}, {:border_color, :yellow}]
+  focus_style: [{:bg, :blue}, {:border_color, :yellow}],
+  disabled: false,
+  disabled_style: [{:opacity, 0.45}, {:bg, :gray}]
 )
 ```
 
@@ -233,6 +235,8 @@ style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 - `tab_stop: true | false` to control whether a focused node participates in tab navigation
 - `tab_index: integer` to influence tab order
 - ordered `focus_style` using the same style-op vocabulary as normal `style`
+- `disabled: true | false` to suppress div interaction callbacks and focus participation
+- ordered `disabled_style` using the same style-op vocabulary as normal `style`
 - `track_scroll: true` to preserve and reuse a GPUI `ScrollHandle` across rerenders
 - `anchor_scroll: true` to request scrolling the nearest tracked scroll container so that this div is brought into view
 

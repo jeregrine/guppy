@@ -199,6 +199,8 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:hover_style) => style(),
           optional(:focus_style) => style(),
+          optional(:disabled_style) => style(),
+          optional(:disabled) => boolean(),
           optional(:focusable) => boolean(),
           optional(:tab_stop) => boolean(),
           optional(:tab_index) => integer(),
@@ -363,6 +365,8 @@ defmodule Guppy.IR do
     events = Keyword.get(opts, :events)
     hover_style = Keyword.get(opts, :hover_style)
     focus_style = Keyword.get(opts, :focus_style)
+    disabled_style = Keyword.get(opts, :disabled_style)
+    disabled = Keyword.get(opts, :disabled)
     focusable = Keyword.get(opts, :focusable)
     tab_stop = Keyword.get(opts, :tab_stop)
     tab_index = Keyword.get(opts, :tab_index)
@@ -374,6 +378,8 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
     |> maybe_put(:hover_style, hover_style)
     |> maybe_put(:focus_style, focus_style)
+    |> maybe_put(:disabled_style, disabled_style)
+    |> maybe_put(:disabled, disabled)
     |> maybe_put(:focusable, focusable)
     |> maybe_put(:tab_stop, tab_stop)
     |> maybe_put(:tab_index, tab_index)
@@ -395,6 +401,8 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
          :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :disabled_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_optional_boolean(Map.get(node, :focusable), :focusable),
          :ok <- validate_optional_boolean(Map.get(node, :tab_stop), :tab_stop),
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),

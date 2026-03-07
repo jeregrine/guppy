@@ -212,6 +212,8 @@ fn handle_request(request: MainThreadRequest) {
                     style: DivStyle::default(),
                     hover_style: DivStyle::default(),
                     focus_style: DivStyle::default(),
+                    disabled_style: DivStyle::default(),
+                    disabled: false,
                     focusable: false,
                     tab_stop: None,
                     tab_index: None,
