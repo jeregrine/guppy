@@ -607,6 +607,23 @@ defmodule Guppy.SuperDemo do
               [Guppy.IR.text("corner note", id: "corner_note_label")],
               id: "corner_note",
               style: [:absolute, :top_2, :right_2, :bottom_2, :left_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("max width / full constraints", id: "constraint_box_label"),
+                Guppy.IR.div(
+                  [Guppy.IR.text("max_w_64", id: "constraint_small")],
+                  id: "constraint_small_box",
+                  style: [:max_w_64, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
+                ),
+                Guppy.IR.div(
+                  [Guppy.IR.text("max_w_96 + max_h_full", id: "constraint_large")],
+                  id: "constraint_large_box",
+                  style: [:max_w_96, :max_h_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                )
+              ],
+              id: "constraint_panel",
+              style: [:min_h_full, :max_w_full, :w_full, :flex, :flex_col, :gap_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
             )
           ],
           id: "position_examples",
