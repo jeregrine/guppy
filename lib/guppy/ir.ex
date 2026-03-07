@@ -149,6 +149,13 @@ defmodule Guppy.IR do
           {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
+          | {:opacity, number()}
+          | {:w_px, number()}
+          | {:w_rem, number()}
+          | {:w_frac, number()}
+          | {:h_px, number()}
+          | {:h_rem, number()}
+          | {:h_frac, number()}
 
   @type style_op :: style_flag() | style_value()
   @type style :: [style_op()]
@@ -301,7 +308,9 @@ defmodule Guppy.IR do
     :overflow_y_hidden
   ]
 
-  @style_value_tokens [:bg, :text_color, :border_color]
+  @color_style_value_tokens [:bg, :text_color, :border_color]
+  @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
+  @fraction_value_tokens [:w_frac, :h_frac]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
 
   @spec text(String.t(), keyword()) :: text_node()
@@ -373,8 +382,21 @@ defmodule Guppy.IR do
 
   defp validate_style_op(op) when op in @style_flag_tokens, do: :ok
 
-  defp validate_style_op({key, value}) when key in @style_value_tokens and value in @color_tokens,
-    do: :ok
+  defp validate_style_op({key, value})
+       when key in @color_style_value_tokens and value in @color_tokens,
+       do: :ok
+
+  defp validate_style_op({:opacity, value})
+       when is_number(value) and value >= 0.0 and value <= 1.0,
+       do: :ok
+
+  defp validate_style_op({key, value})
+       when key in @size_value_tokens and is_number(value) and value >= 0.0,
+       do: :ok
+
+  defp validate_style_op({key, value})
+       when key in @fraction_value_tokens and is_number(value) and value >= 0.0 and value <= 1.0,
+       do: :ok
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
 

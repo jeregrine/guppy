@@ -154,6 +154,13 @@ Guppy.IR currently supports:
   - `{:bg, color}`
   - `{:text_color, color}`
   - `{:border_color, color}`
+  - `{:opacity, number}`
+  - `{:w_px, number}`
+  - `{:w_rem, number}`
+  - `{:w_frac, number}`
+  - `{:h_px, number}`
+  - `{:h_rem, number}`
+  - `{:h_frac, number}`
 
 ## Priority order
 
@@ -184,8 +191,8 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] min height tokens
 - [x] max width tokens
 - [x] max height tokens
-- [ ] explicit pixel/rem/relative width values
-- [ ] explicit pixel/rem/relative height values
+- [x] explicit pixel/rem/relative width values
+- [x] explicit pixel/rem/relative height values
 
 ## 2. Overflow and scrolling
 
@@ -234,7 +241,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] side-specific borders
 - [x] border style tokens
 - [x] more radius tokens
-- [ ] opacity
+- [x] opacity
 - [x] box shadow / shadow tokens
 - [ ] richer color space / arbitrary colors
 - [ ] theme/token-based colors beyond the current atoms

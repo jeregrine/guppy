@@ -577,6 +577,21 @@ defmodule Guppy.SuperDemo do
           id: "radius_border_gallery",
           style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
         ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div([Guppy.IR.text("320px × 180px @ 75% opacity", id: "custom_px_box_label")], id: "custom_px_box", style: [{:w_px, 320}, {:h_px, 180}, {:opacity, 0.75}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :blue}]),
+            Guppy.IR.div([Guppy.IR.text("24rem × 12rem", id: "custom_rem_box_label")], id: "custom_rem_box", style: [{:w_rem, 24.0}, {:h_rem, 12.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]),
+            Guppy.IR.div(
+              [
+                Guppy.IR.div([Guppy.IR.text("50% × 100%", id: "custom_frac_box_label")], id: "custom_frac_box", style: [{:w_frac, 0.5}, {:h_frac, 1.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :gray}])
+              ],
+              id: "custom_frac_frame",
+              style: [{:w_px, 320}, {:h_px, 180}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :black}]
+            )
+          ],
+          id: "custom_value_gallery",
+          style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
+        ),
         action_button("Toggle palette", "toggle_palette_button", "toggle_palette", :white),
         action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
       ],

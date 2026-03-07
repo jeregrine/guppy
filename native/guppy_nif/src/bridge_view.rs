@@ -1,7 +1,8 @@
 use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
     AnyElement, Context, FontWeight, InteractiveElement, InteractiveText, SharedString,
-    StatefulInteractiveElement, Styled, StyledText, Window, div, prelude::*, relative, rgb,
+    StatefulInteractiveElement, Styled, StyledText, Window, div, prelude::*, px, relative, rems,
+    rgb,
 };
 
 unsafe extern "C" {
@@ -257,6 +258,13 @@ where
             StyleOp::Bg(color) => element.bg(color_token_to_color(*color)),
             StyleOp::TextColor(color) => element.text_color(color_token_to_color(*color)),
             StyleOp::BorderColor(color) => element.border_color(color_token_to_color(*color)),
+            StyleOp::Opacity(value) => element.opacity(*value),
+            StyleOp::WPx(value) => element.w(px(*value)),
+            StyleOp::WRem(value) => element.w(rems(*value)),
+            StyleOp::WFrac(value) => element.w(relative(*value)),
+            StyleOp::HPx(value) => element.h(px(*value)),
+            StyleOp::HRem(value) => element.h(rems(*value)),
+            StyleOp::HFrac(value) => element.h(relative(*value)),
         };
     }
 

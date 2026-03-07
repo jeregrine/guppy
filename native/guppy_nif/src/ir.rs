@@ -4,7 +4,7 @@ use std::io::Cursor;
 
 pub type DivStyle = Vec<StyleOp>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Flex,
     FlexCol,
@@ -135,6 +135,13 @@ pub enum StyleOp {
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
+    Opacity(f32),
+    WPx(f32),
+    WRem(f32),
+    WFrac(f32),
+    HPx(f32),
+    HRem(f32),
+    HFrac(f32),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,7 +155,7 @@ pub enum ColorToken {
     Gray,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum IrNode {
     Text {
         id: Option<String>,
@@ -263,15 +270,17 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 other => return Err(format!("expected style tuple key atom, got {other}")),
             };
 
-            let color = match &elements[1] {
-                Term::Atom(atom) => parse_color_token(&atom.name)?,
-                other => return Err(format!("expected style tuple value atom, got {other}")),
-            };
-
             match key {
-                "bg" => Ok(StyleOp::Bg(color)),
-                "text_color" => Ok(StyleOp::TextColor(color)),
-                "border_color" => Ok(StyleOp::BorderColor(color)),
+                "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
+                "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
+                "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
+                "opacity" => Ok(StyleOp::Opacity(parse_f32(&elements[1])?)),
+                "w_px" => Ok(StyleOp::WPx(parse_f32(&elements[1])?)),
+                "w_rem" => Ok(StyleOp::WRem(parse_f32(&elements[1])?)),
+                "w_frac" => Ok(StyleOp::WFrac(parse_f32(&elements[1])?)),
+                "h_px" => Ok(StyleOp::HPx(parse_f32(&elements[1])?)),
+                "h_rem" => Ok(StyleOp::HRem(parse_f32(&elements[1])?)),
+                "h_frac" => Ok(StyleOp::HFrac(parse_f32(&elements[1])?)),
                 other => Err(format!("unsupported style tuple key: {other}")),
             }
         }
@@ -408,6 +417,25 @@ fn parse_style_flag(token: &str) -> Result<StyleOp, String> {
         "overflow_x_hidden" => Ok(StyleOp::OverflowXHidden),
         "overflow_y_hidden" => Ok(StyleOp::OverflowYHidden),
         other => Err(format!("unsupported style token: {other}")),
+    }
+}
+
+fn parse_atom_color(term: &Term) -> Result<ColorToken, String> {
+    match term {
+        Term::Atom(atom) => parse_color_token(&atom.name),
+        other => Err(format!("expected style tuple value atom, got {other}")),
+    }
+}
+
+fn parse_f32(term: &Term) -> Result<f32, String> {
+    match term {
+        Term::FixInteger(value) => Ok(value.value as f32),
+        Term::BigInteger(value) => value
+            .to_string()
+            .parse::<f32>()
+            .map_err(|error| format!("invalid numeric style value {value}: {error}")),
+        Term::Float(value) => Ok(value.value as f32),
+        other => Err(format!("expected numeric style tuple value, got {other}")),
     }
 }
 

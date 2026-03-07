@@ -140,6 +140,13 @@ defmodule GuppyTest do
           :shadow_md,
           :shadow_lg,
           {:border_color, :white},
+          {:opacity, 0.75},
+          {:w_px, 320},
+          {:w_rem, 24.0},
+          {:w_frac, 0.5},
+          {:h_px, 180},
+          {:h_rem, 12.0},
+          {:h_frac, 1.0},
           :overflow_y_scroll,
           {:bg, :blue}
         ]
@@ -267,6 +274,13 @@ defmodule GuppyTest do
              :shadow_md,
              :shadow_lg,
              {:border_color, :white},
+             {:opacity, 0.75},
+             {:w_px, 320},
+             {:w_rem, 24.0},
+             {:w_frac, 0.5},
+             {:h_px, 180},
+             {:h_rem, 12.0},
+             {:h_frac, 1.0},
              :overflow_y_scroll,
              {:bg, :blue}
            ]
@@ -278,6 +292,9 @@ defmodule GuppyTest do
 
     assert {:error, {:invalid_style_op, {:bg, :purple}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:bg, :purple}]))
+
+    assert {:error, {:invalid_style_op, {:opacity, 1.5}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:opacity, 1.5}]))
   end
 
   test "native ping is wired through the server" do
