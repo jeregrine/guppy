@@ -526,7 +526,7 @@ defmodule Guppy.SuperDemo do
       "layout_demo",
       [
         Guppy.IR.text("Flex layout behavior tokens"),
-        Guppy.IR.text("This page exercises wrap/nowrap and grow/shrink-style tokens in the ordered style list."),
+        Guppy.IR.text("This page exercises wrap/nowrap, grow/shrink, and spacing tokens in the ordered style list."),
         Guppy.IR.div(
           [
             flex_chip("wrap_1", "wrap-1", [:flex_none, :w_32, {:bg, :blue}]),
@@ -549,6 +549,27 @@ defmodule Guppy.SuperDemo do
           ],
           id: "nowrap_row",
           style: [:flex, :flex_row, :flex_nowrap, :overflow_x_scroll, :max_h_32, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [Guppy.IR.text("p_1 + px_2 + py_2", id: "spacing_one_label")],
+              id: "spacing_one",
+              style: [:p_1, :px_2, :py_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+            ),
+            Guppy.IR.div(
+              [Guppy.IR.text("pt/pr/pb/pl + m_2", id: "spacing_two_label")],
+              id: "spacing_two",
+              style: [:pt_2, :pr_2, :pb_2, :pl_2, :m_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+            ),
+            Guppy.IR.div(
+              [Guppy.IR.text("mx/my/mt/mr/mb/ml", id: "spacing_three_label")],
+              id: "spacing_three",
+              style: [:mx_2, :my_2, :mt_2, :mr_2, :mb_2, :ml_2, :p_8, :rounded_md, :border_1, {:border_color, :white}, {:bg, :yellow}, {:text_color, :black}]
+            )
+          ],
+          id: "spacing_examples",
+          style: [:flex, :flex_col, :gap_1, :gap_4, :w_full, :border_1, {:border_color, :white}, :p_2]
         )
       ],
       style: [:max_h_96, {:bg, :gray}]

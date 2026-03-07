@@ -46,10 +46,27 @@ Guppy.IR currently supports:
   - `min_w_32`
   - `max_h_32`
   - `max_h_96`
+  - `gap_1`
   - `gap_2`
+  - `gap_4`
+  - `p_1`
   - `p_2`
   - `p_4`
   - `p_6`
+  - `p_8`
+  - `px_2`
+  - `py_2`
+  - `pt_2`
+  - `pr_2`
+  - `pb_2`
+  - `pl_2`
+  - `m_2`
+  - `mx_2`
+  - `my_2`
+  - `mt_2`
+  - `mr_2`
+  - `mb_2`
+  - `ml_2`
   - `w_64`
   - `items_start`
   - `items_center`
@@ -118,13 +135,13 @@ The rough order below is chosen to improve layout correctness first, then text/l
 
 ## 3. Spacing and positioning
 
-- [ ] more gap tokens
-- [ ] more padding tokens
-- [ ] axis padding (`px_*`, `py_*`)
-- [ ] side padding (`pt_*`, `pr_*`, `pb_*`, `pl_*`)
-- [ ] margin tokens
-- [ ] axis margin (`mx_*`, `my_*`)
-- [ ] side margin (`mt_*`, `mr_*`, `mb_*`, `ml_*`)
+- [x] more gap tokens
+- [x] more padding tokens
+- [x] axis padding (`px_*`, `py_*`)
+- [x] side padding (`pt_*`, `pr_*`, `pb_*`, `pl_*`)
+- [x] margin tokens
+- [x] axis margin (`mx_*`, `my_*`)
+- [x] side margin (`mt_*`, `mr_*`, `mb_*`, `ml_*`)
 - [ ] `relative`
 - [ ] `absolute`
 - [ ] top/right/bottom/left inset tokens

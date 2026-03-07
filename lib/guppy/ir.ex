@@ -39,10 +39,27 @@ defmodule Guppy.IR do
           | :min_w_32
           | :max_h_32
           | :max_h_96
+          | :gap_1
           | :gap_2
+          | :gap_4
+          | :p_1
           | :p_2
           | :p_4
           | :p_6
+          | :p_8
+          | :px_2
+          | :py_2
+          | :pt_2
+          | :pr_2
+          | :pb_2
+          | :pl_2
+          | :m_2
+          | :mx_2
+          | :my_2
+          | :mt_2
+          | :mr_2
+          | :mb_2
+          | :ml_2
           | :items_start
           | :items_center
           | :items_end
@@ -110,10 +127,27 @@ defmodule Guppy.IR do
     :min_w_32,
     :max_h_32,
     :max_h_96,
+    :gap_1,
     :gap_2,
+    :gap_4,
+    :p_1,
     :p_2,
     :p_4,
     :p_6,
+    :p_8,
+    :px_2,
+    :py_2,
+    :pt_2,
+    :pr_2,
+    :pb_2,
+    :pl_2,
+    :m_2,
+    :mx_2,
+    :my_2,
+    :mt_2,
+    :mr_2,
+    :mb_2,
+    :ml_2,
     :items_start,
     :items_center,
     :items_end,
