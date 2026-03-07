@@ -21,11 +21,19 @@ defmodule GuppyTest do
         [Guppy.IR.text("hello")],
         id: "root",
         hover_style: [{:bg_hex, "#101010"}, {:opacity, 0.9}, :cursor_pointer],
+        focus_style: [{:bg_hex, "#202020"}, {:text_color, :yellow}],
+        focusable: true,
+        tab_stop: true,
+        tab_index: 3,
         track_scroll: true,
         anchor_scroll: true,
         events: %{
           hover: "hovered",
           click: "clicked",
+          focus: "focused",
+          blur: "blurred",
+          key_down: "keyed_down",
+          key_up: "keyed_up",
           mouse_down: "down",
           mouse_up: "up",
           mouse_move: "move",
@@ -170,6 +178,11 @@ defmodule GuppyTest do
       )
 
     assert :ok = Guppy.IR.validate(styled_ir)
+
+    assert styled_ir.focus_style == [{:bg_hex, "#202020"}, {:text_color, :yellow}]
+    assert styled_ir.focusable == true
+    assert styled_ir.tab_stop == true
+    assert styled_ir.tab_index == 3
 
     assert styled_ir.style == [
              :flex,
@@ -327,6 +340,15 @@ defmodule GuppyTest do
 
     assert {:error, {:anchor_scroll, 1}} =
              Guppy.IR.validate(Guppy.IR.div([], anchor_scroll: 1))
+
+    assert {:error, {:focusable, "yes"}} =
+             Guppy.IR.validate(Guppy.IR.div([], focusable: "yes"))
+
+    assert {:error, {:tab_stop, 1}} =
+             Guppy.IR.validate(Guppy.IR.div([], tab_stop: 1))
+
+    assert {:error, {:tab_index, "first"}} =
+             Guppy.IR.validate(Guppy.IR.div([], tab_index: "first"))
   end
 
   test "native ping is wired through the server" do
@@ -412,6 +434,86 @@ defmodule GuppyTest do
                           id: "increment_button",
                           callback: "hover_increment",
                           hovered: true
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :focus,
+          %{id: "increment_button", callback: "focused"}
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{type: :focus, id: "increment_button", callback: "focused"}}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :blur,
+          %{id: "increment_button", callback: "blurred"}
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{type: :blur, id: "increment_button", callback: "blurred"}}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :key_down,
+          %{
+            id: "increment_button",
+            callback: "keyed_down",
+            key: "j",
+            key_char: "j",
+            is_held: false,
+            modifiers: %{
+              control: true,
+              alt: false,
+              shift: false,
+              platform: false,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :key_down,
+                          id: "increment_button",
+                          callback: "keyed_down",
+                          key: "j",
+                          key_char: "j",
+                          is_held: false,
+                          modifiers: %{control: true}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :key_up,
+          %{
+            id: "increment_button",
+            callback: "keyed_up",
+            key: "j",
+            key_char: nil,
+            modifiers: %{
+              control: false,
+              alt: false,
+              shift: false,
+              platform: false,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :key_up,
+                          id: "increment_button",
+                          callback: "keyed_up",
+                          key: "j",
+                          key_char: nil,
+                          modifiers: %{}
                         }}
 
         send(Guppy.server(), {

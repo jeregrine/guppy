@@ -25,6 +25,10 @@ Guppy.IR currently supports:
 - events:
   - `click`
   - `hover`
+  - `focus`
+  - `blur`
+  - `key_down`
+  - `key_up`
   - `mouse_down`
   - `mouse_up`
   - `mouse_move`
@@ -32,6 +36,11 @@ Guppy.IR currently supports:
 - scroll behavior:
   - `track_scroll`
   - `anchor_scroll`
+- focus behavior:
+  - `focusable`
+  - `tab_stop`
+  - `tab_index`
+  - `focus_style`
 - style tokens:
   - `flex`
   - `flex_col`
@@ -268,9 +277,9 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] mouse up
 - [x] mouse move
 - [x] scroll wheel events
-- [ ] keyboard key down
-- [ ] keyboard key up
-- [ ] focus/blur events
+- [x] keyboard key down
+- [x] keyboard key up
+- [x] focus/blur events
 - [ ] right click / context menu event
 - [ ] drag start
 - [ ] drag move
@@ -280,9 +289,9 @@ The rough order below is chosen to improve layout correctness first, then text/l
 
 ## 7. Focus and keyboard participation
 
-- [ ] `focusable`
-- [ ] focus ring / focus styling hooks
-- [ ] tab-order participation
+- [x] `focusable`
+- [x] focus ring / focus styling hooks
+- [x] tab-order participation
 - [ ] keyboard activation semantics
 - [ ] action dispatch / shortcuts
 

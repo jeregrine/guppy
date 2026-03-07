@@ -167,6 +167,10 @@ Minimal native events are delivered to the owning Elixir process as:
 ```elixir
 {:guppy_event, view_id, %{type: :click, id: node_id, callback: callback_id}}
 {:guppy_event, view_id, %{type: :hover, id: node_id, callback: callback_id, hovered: boolean}}
+{:guppy_event, view_id, %{type: :focus, id: node_id, callback: callback_id}}
+{:guppy_event, view_id, %{type: :blur, id: node_id, callback: callback_id}}
+{:guppy_event, view_id, %{type: :key_down, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, is_held: boolean, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :key_up, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_down, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, first_mouse: boolean, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_up, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_move, id: node_id, callback: callback_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
@@ -184,11 +188,19 @@ Guppy.IR.div(
   id: "increment_button",
   events: %{
     click: "increment",
+    focus: "focused",
+    blur: "blurred",
+    key_down: "keyed_down",
+    key_up: "keyed_up",
     mouse_down: "pointer_down",
     mouse_up: "pointer_up",
     mouse_move: "pointer_move",
     scroll_wheel: "pointer_scroll"
-  }
+  },
+  focusable: true,
+  tab_stop: true,
+  tab_index: 1,
+  focus_style: [{:bg, :blue}, {:border_color, :yellow}]
 )
 ```
 
@@ -208,6 +220,10 @@ style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 `div` nodes can also carry an ordered `hover_style` list using the same style ops.
 
 `div` nodes also support:
+- `focusable: true` to opt into GPUI focus participation
+- `tab_stop: true | false` to control whether a focused node participates in tab navigation
+- `tab_index: integer` to influence tab order
+- ordered `focus_style` using the same style-op vocabulary as normal `style`
 - `track_scroll: true` to preserve and reuse a GPUI `ScrollHandle` across rerenders
 - `anchor_scroll: true` to request scrolling the nearest tracked scroll container so that this div is brought into view
 

@@ -1,11 +1,12 @@
 use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
-    AnyElement, Context, FontWeight, InteractiveElement, InteractiveText, MouseButton,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollAnchor, ScrollDelta, ScrollHandle,
-    ScrollWheelEvent, SharedString, StatefulInteractiveElement, StyleRefinement, Styled,
-    StyledText, Window, div, prelude::*, px, relative, rems, rgb,
+    AnyElement, Context, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
+    KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+    ScrollAnchor, ScrollDelta, ScrollHandle, ScrollWheelEvent, SharedString,
+    StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Subscription, Window, div,
+    prelude::*, px, relative, rems, rgb,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 unsafe extern "C" {
     fn guppy_c_send_click_event(
@@ -23,6 +24,59 @@ unsafe extern "C" {
         callback_id_ptr: *const u8,
         callback_id_len: usize,
         hovered: i32,
+    ) -> i32;
+
+    fn guppy_c_send_focus_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+    ) -> i32;
+
+    fn guppy_c_send_blur_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+    ) -> i32;
+
+    fn guppy_c_send_key_down_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        key_ptr: *const u8,
+        key_len: usize,
+        key_char_ptr: *const u8,
+        key_char_len: usize,
+        has_key_char: i32,
+        is_held: i32,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
+    ) -> i32;
+
+    fn guppy_c_send_key_up_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        key_ptr: *const u8,
+        key_len: usize,
+        key_char_ptr: *const u8,
+        key_char_len: usize,
+        has_key_char: i32,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
     ) -> i32;
 
     fn guppy_c_send_mouse_down_event(
@@ -99,10 +153,13 @@ pub struct BridgeView {
     pub view_id: u64,
     pub ir: IrNode,
     pub scroll_handles: HashMap<String, ScrollHandle>,
+    pub focus_handles: HashMap<String, FocusHandle>,
+    pub focus_registered: HashSet<String>,
+    pub focus_subscriptions: Vec<Subscription>,
 }
 
 impl Render for BridgeView {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .size_full()
             .p_6()
@@ -113,7 +170,12 @@ impl Render for BridgeView {
                 "root",
                 &self.ir,
                 &mut self.scroll_handles,
+                &mut self.focus_handles,
+                &mut self.focus_registered,
+                &mut self.focus_subscriptions,
                 None,
+                window,
+                cx,
             ))
     }
 }
@@ -123,7 +185,12 @@ fn render_ir(
     path: &str,
     ir: &IrNode,
     scroll_handles: &mut HashMap<String, ScrollHandle>,
+    focus_handles: &mut HashMap<String, FocusHandle>,
+    focus_registered: &mut HashSet<String>,
+    focus_subscriptions: &mut Vec<Subscription>,
     parent_scroll_handle: Option<ScrollHandle>,
+    window: &mut Window,
+    cx: &mut Context<BridgeView>,
 ) -> AnyElement {
     match ir {
         IrNode::Text { id, content, click } => {
@@ -133,11 +200,19 @@ fn render_ir(
             id,
             style,
             hover_style,
+            focus_style,
+            focusable,
+            tab_stop,
+            tab_index,
             track_scroll,
             anchor_scroll,
             children,
             click,
             hover,
+            focus,
+            blur,
+            key_down,
+            key_up,
             mouse_down,
             mouse_up,
             mouse_move,
@@ -148,17 +223,30 @@ fn render_ir(
             id.as_deref(),
             style,
             hover_style,
+            focus_style,
+            *focusable,
+            *tab_stop,
+            *tab_index,
             *track_scroll,
             *anchor_scroll,
             children,
             click.as_deref(),
             hover.as_deref(),
+            focus.as_deref(),
+            blur.as_deref(),
+            key_down.as_deref(),
+            key_up.as_deref(),
             mouse_down.as_deref(),
             mouse_up.as_deref(),
             mouse_move.as_deref(),
             scroll_wheel.as_deref(),
             scroll_handles,
+            focus_handles,
+            focus_registered,
+            focus_subscriptions,
             parent_scroll_handle,
+            window,
+            cx,
         ),
     }
 }
@@ -203,17 +291,30 @@ fn render_div(
     id: Option<&str>,
     style: &DivStyle,
     hover_style: &DivStyle,
+    focus_style: &DivStyle,
+    focusable: bool,
+    tab_stop: Option<bool>,
+    tab_index: Option<isize>,
     track_scroll: bool,
     anchor_scroll: bool,
     children: &[IrNode],
     click: Option<&str>,
     hover: Option<&str>,
+    focus: Option<&str>,
+    blur: Option<&str>,
+    key_down: Option<&str>,
+    key_up: Option<&str>,
     mouse_down: Option<&str>,
     mouse_up: Option<&str>,
     mouse_move: Option<&str>,
     scroll_wheel: Option<&str>,
     scroll_handles: &mut HashMap<String, ScrollHandle>,
+    focus_handles: &mut HashMap<String, FocusHandle>,
+    focus_registered: &mut HashSet<String>,
+    focus_subscriptions: &mut Vec<Subscription>,
     parent_scroll_handle: Option<ScrollHandle>,
+    window: &mut Window,
+    cx: &mut Context<BridgeView>,
 ) -> AnyElement {
     let node_id = node_id(view_id, path, id);
 
@@ -228,6 +329,36 @@ fn render_div(
         None
     };
 
+    let needs_focus_handle =
+        focusable
+            || tab_stop.is_some()
+            || tab_index.is_some()
+            || !focus_style.is_empty()
+            || focus.is_some()
+            || blur.is_some()
+            || key_down.is_some()
+            || key_up.is_some();
+
+    let focus_handle = if needs_focus_handle {
+        Some(ensure_focus_handle(node_id.as_str(), focus_handles, cx, tab_stop, tab_index))
+    } else {
+        None
+    };
+
+    if let Some(handle) = focus_handle.as_ref() {
+        register_focus_callbacks(
+            view_id,
+            node_id.as_str(),
+            handle,
+            focus,
+            blur,
+            focus_registered,
+            focus_subscriptions,
+            window,
+            cx,
+        );
+    }
+
     let child_scroll_handle = tracked_scroll_handle.clone().or(parent_scroll_handle.clone());
 
     let child_elements = children
@@ -239,7 +370,12 @@ fn render_div(
                 &format!("{path}.{index}"),
                 child,
                 scroll_handles,
+                focus_handles,
+                focus_registered,
+                focus_subscriptions,
                 child_scroll_handle.clone(),
+                window,
+                cx,
             )
         })
         .collect::<Vec<_>>();
@@ -265,6 +401,20 @@ fn render_div(
         styled_div
     };
 
+    let styled_div = match focus_handle.as_ref() {
+        Some(handle) => styled_div.track_focus(handle),
+        None => styled_div,
+    };
+
+    let styled_div = if focus_handle
+        .as_ref()
+        .is_some_and(|handle| !focus_style.is_empty() && handle.is_focused(window))
+    {
+        apply_div_style(styled_div, focus_style)
+    } else {
+        styled_div
+    };
+
     let styled_div = if hover_style.is_empty() {
         styled_div
     } else {
@@ -285,6 +435,85 @@ fn render_div(
                     callback_id.as_ptr(),
                     callback_id.len(),
                     if *hovered { 1 } else { 0 },
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match focus_handle.as_ref() {
+        Some(handle) => {
+            let handle = handle.clone();
+            styled_div.on_any_mouse_down(move |_, window, _| {
+                handle.focus(window);
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match key_down {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let key_down_node_id = node_id.clone();
+
+            styled_div.on_key_down(move |event: &KeyDownEvent, _, _| unsafe {
+                let key = event.keystroke.key.as_bytes();
+                let (key_char_ptr, key_char_len, has_key_char) = match event.keystroke.key_char.as_ref() {
+                    Some(key_char) => (key_char.as_ptr(), key_char.len(), 1),
+                    None => (std::ptr::null(), 0, 0),
+                };
+                let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
+                let _ = guppy_c_send_key_down_event(
+                    view_id,
+                    key_down_node_id.as_ptr(),
+                    key_down_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    key.as_ptr(),
+                    key.len(),
+                    key_char_ptr,
+                    key_char_len,
+                    has_key_char,
+                    if event.is_held { 1 } else { 0 },
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match key_up {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let key_up_node_id = node_id.clone();
+
+            styled_div.on_key_up(move |event: &KeyUpEvent, _, _| unsafe {
+                let key = event.keystroke.key.as_bytes();
+                let (key_char_ptr, key_char_len, has_key_char) = match event.keystroke.key_char.as_ref() {
+                    Some(key_char) => (key_char.as_ptr(), key_char.len(), 1),
+                    None => (std::ptr::null(), 0, 0),
+                };
+                let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
+                let _ = guppy_c_send_key_up_event(
+                    view_id,
+                    key_up_node_id.as_ptr(),
+                    key_up_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    key.as_ptr(),
+                    key.len(),
+                    key_char_ptr,
+                    key_char_len,
+                    has_key_char,
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
                 );
             })
         }
@@ -730,6 +959,81 @@ fn apply_hover_style(mut style: StyleRefinement, hover_style: &DivStyle) -> Styl
     }
 
     style
+}
+
+fn ensure_focus_handle(
+    node_id: &str,
+    focus_handles: &mut HashMap<String, FocusHandle>,
+    cx: &mut Context<BridgeView>,
+    tab_stop: Option<bool>,
+    tab_index: Option<isize>,
+) -> FocusHandle {
+    let handle = focus_handles
+        .entry(node_id.to_owned())
+        .or_insert_with(|| cx.focus_handle())
+        .clone();
+
+    let handle = match tab_stop {
+        Some(tab_stop) => handle.tab_stop(tab_stop),
+        None => handle,
+    };
+
+    match tab_index {
+        Some(tab_index) => handle.tab_index(tab_index),
+        None => handle,
+    }
+}
+
+fn register_focus_callbacks(
+    view_id: u64,
+    node_id: &str,
+    focus_handle: &FocusHandle,
+    focus: Option<&str>,
+    blur: Option<&str>,
+    focus_registered: &mut HashSet<String>,
+    focus_subscriptions: &mut Vec<Subscription>,
+    window: &mut Window,
+    cx: &mut Context<BridgeView>,
+) {
+    let Some(_) = focus.or(blur) else {
+        return;
+    };
+
+    if focus_registered.contains(node_id) {
+        return;
+    }
+
+    if let Some(callback_id) = focus {
+        let focus_node_id = node_id.to_owned();
+        let callback_id = callback_id.to_owned();
+        let subscription = cx.on_focus(focus_handle, window, move |_, _, _| unsafe {
+            let _ = guppy_c_send_focus_event(
+                view_id,
+                focus_node_id.as_ptr(),
+                focus_node_id.len(),
+                callback_id.as_ptr(),
+                callback_id.len(),
+            );
+        });
+        focus_subscriptions.push(subscription);
+    }
+
+    if let Some(callback_id) = blur {
+        let blur_node_id = node_id.to_owned();
+        let callback_id = callback_id.to_owned();
+        let subscription = cx.on_blur(focus_handle, window, move |_, _, _| unsafe {
+            let _ = guppy_c_send_blur_event(
+                view_id,
+                blur_node_id.as_ptr(),
+                blur_node_id.len(),
+                callback_id.as_ptr(),
+                callback_id.len(),
+            );
+        });
+        focus_subscriptions.push(subscription);
+    }
+
+    focus_registered.insert(node_id.to_owned());
 }
 
 fn modifier_flags(modifiers: &gpui::Modifiers) -> (i32, i32, i32, i32, i32) {

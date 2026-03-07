@@ -171,6 +171,10 @@ defmodule Guppy.IR do
   @type div_events :: %{
           optional(:click) => String.t(),
           optional(:hover) => String.t(),
+          optional(:focus) => String.t(),
+          optional(:blur) => String.t(),
+          optional(:key_down) => String.t(),
+          optional(:key_up) => String.t(),
           optional(:mouse_down) => String.t(),
           optional(:mouse_up) => String.t(),
           optional(:mouse_move) => String.t(),
@@ -190,6 +194,10 @@ defmodule Guppy.IR do
           optional(:id) => node_id(),
           optional(:style) => style(),
           optional(:hover_style) => style(),
+          optional(:focus_style) => style(),
+          optional(:focusable) => boolean(),
+          optional(:tab_stop) => boolean(),
+          optional(:tab_index) => integer(),
           optional(:track_scroll) => boolean(),
           optional(:anchor_scroll) => boolean(),
           optional(:events) => div_events()
@@ -350,6 +358,10 @@ defmodule Guppy.IR do
     style = Keyword.get(opts, :style)
     events = Keyword.get(opts, :events)
     hover_style = Keyword.get(opts, :hover_style)
+    focus_style = Keyword.get(opts, :focus_style)
+    focusable = Keyword.get(opts, :focusable)
+    tab_stop = Keyword.get(opts, :tab_stop)
+    tab_index = Keyword.get(opts, :tab_index)
     track_scroll = Keyword.get(opts, :track_scroll)
     anchor_scroll = Keyword.get(opts, :anchor_scroll)
 
@@ -357,6 +369,10 @@ defmodule Guppy.IR do
     |> maybe_put(:id, id)
     |> maybe_put(:style, style)
     |> maybe_put(:hover_style, hover_style)
+    |> maybe_put(:focus_style, focus_style)
+    |> maybe_put(:focusable, focusable)
+    |> maybe_put(:tab_stop, tab_stop)
+    |> maybe_put(:tab_index, tab_index)
     |> maybe_put(:track_scroll, track_scroll)
     |> maybe_put(:anchor_scroll, anchor_scroll)
     |> maybe_put(:events, events)
@@ -374,12 +390,20 @@ defmodule Guppy.IR do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
+         :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :focusable), :focusable),
+         :ok <- validate_optional_boolean(Map.get(node, :tab_stop), :tab_stop),
+         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
          :ok <- validate_optional_boolean(Map.get(node, :track_scroll), :track_scroll),
          :ok <- validate_optional_boolean(Map.get(node, :anchor_scroll), :anchor_scroll),
          :ok <-
            validate_events(Map.get(node, :events), [
              :click,
              :hover,
+             :focus,
+             :blur,
+             :key_down,
+             :key_up,
              :mouse_down,
              :mouse_up,
              :mouse_move,
@@ -408,6 +432,10 @@ defmodule Guppy.IR do
   defp validate_optional_boolean(nil, _field), do: :ok
   defp validate_optional_boolean(value, _field) when is_boolean(value), do: :ok
   defp validate_optional_boolean(value, field), do: {:error, {field, value}}
+
+  defp validate_optional_integer(nil, _field), do: :ok
+  defp validate_optional_integer(value, _field) when is_integer(value), do: :ok
+  defp validate_optional_integer(value, field), do: {:error, {field, value}}
 
   defp validate_style(nil), do: :ok
 

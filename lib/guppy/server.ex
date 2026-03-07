@@ -160,7 +160,18 @@ defmodule Guppy.Server do
         state
       )
       when is_integer(view_id) and is_atom(type) and
-             type in [:click, :hover, :mouse_down, :mouse_up, :mouse_move, :scroll_wheel] and
+             type in [
+               :click,
+               :hover,
+               :focus,
+               :blur,
+               :key_down,
+               :key_up,
+               :mouse_down,
+               :mouse_up,
+               :mouse_move,
+               :scroll_wheel
+             ] and
              is_binary(node_id) and is_binary(callback_id) do
     case Map.fetch(state.views, view_id) do
       {:ok, owner} ->

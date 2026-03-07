@@ -24,6 +24,11 @@ defmodule Guppy.SuperDemo do
         mouse_moves: 0,
         scroll_wheels: 0,
         pointer_status: "none yet",
+        focus_events: 0,
+        blur_events: 0,
+        key_downs: 0,
+        key_ups: 0,
+        keyboard_status: "none yet",
         scroll_anchor_index: 1,
         timer_ticks: 0,
         timer_remaining: 0,
@@ -53,6 +58,12 @@ defmodule Guppy.SuperDemo do
       when type in [:mouse_down, :mouse_up, :mouse_move, :scroll_wheel] ->
         state
         |> handle_pointer_event(view_id, event)
+        |> continue()
+
+      {:guppy_event, view_id, %{type: type} = event}
+      when type in [:focus, :blur, :key_down, :key_up] ->
+        state
+        |> handle_keyboard_event(view_id, event)
         |> continue()
 
       {:guppy_event, view_id, %{type: :window_closed}} ->
@@ -177,6 +188,27 @@ defmodule Guppy.SuperDemo do
         state
         |> update_pointer_counters(type)
         |> Map.put(:pointer_status, format_pointer_event(type, event))
+        |> Map.put(:last_event, "#{type} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      view_id == state.aux_view_id ->
+        state
+        |> Map.put(:last_event, "aux #{type} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      true ->
+        state
+        |> Map.put(:last_event, "#{type} from unknown view #{view_id}: #{node_id}/#{callback_id}")
+        |> rerender!()
+    end
+  end
+
+  defp handle_keyboard_event(state, view_id, %{type: type, id: node_id, callback: callback_id} = event) do
+    cond do
+      view_id == state.main_view_id ->
+        state
+        |> update_keyboard_counters(type)
+        |> Map.put(:keyboard_status, format_keyboard_event(type, event))
         |> Map.put(:last_event, "#{type} #{node_id}/#{callback_id}")
         |> rerender!()
 
@@ -322,6 +354,11 @@ defmodule Guppy.SuperDemo do
   defp update_pointer_counters(state, :mouse_move), do: Map.update!(state, :mouse_moves, &(&1 + 1))
   defp update_pointer_counters(state, :scroll_wheel), do: Map.update!(state, :scroll_wheels, &(&1 + 1))
 
+  defp update_keyboard_counters(state, :focus), do: Map.update!(state, :focus_events, &(&1 + 1))
+  defp update_keyboard_counters(state, :blur), do: Map.update!(state, :blur_events, &(&1 + 1))
+  defp update_keyboard_counters(state, :key_down), do: Map.update!(state, :key_downs, &(&1 + 1))
+  defp update_keyboard_counters(state, :key_up), do: Map.update!(state, :key_ups, &(&1 + 1))
+
   defp format_pointer_event(:mouse_down, event) do
     "down #{event.button} @ (#{format_number(event.x)}, #{format_number(event.y)}) clicks=#{event.click_count} mods=#{format_modifiers(event.modifiers)}"
   end
@@ -336,6 +373,17 @@ defmodule Guppy.SuperDemo do
 
   defp format_pointer_event(:scroll_wheel, event) do
     "wheel #{event.delta_kind} Δ(#{format_number(event.delta_x)}, #{format_number(event.delta_y)}) @ (#{format_number(event.x)}, #{format_number(event.y)}) mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_keyboard_event(:focus, _event), do: "focus gained"
+  defp format_keyboard_event(:blur, _event), do: "focus lost"
+
+  defp format_keyboard_event(:key_down, event) do
+    "down #{event.key} key_char=#{inspect(event.key_char)} held=#{event.is_held} mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_keyboard_event(:key_up, event) do
+    "up #{event.key} key_char=#{inspect(event.key_char)} mods=#{format_modifiers(event.modifiers)}"
   end
 
   defp format_modifiers(modifiers) do
@@ -612,6 +660,47 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [Guppy.IR.text("pointer_status = #{state.pointer_status}", id: "pointer_status_label")],
           id: "pointer_status_panel",
+          style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("Keyboard focus pad", id: "keyboard_pad_title"),
+            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation.", id: "keyboard_pad_body")
+          ],
+          id: "keyboard_pad",
+          focusable: true,
+          tab_stop: true,
+          tab_index: 1,
+          focus_style: [{:bg_hex, "#204060"}, {:border_color, :yellow}],
+          style: [
+            :flex,
+            :flex_col,
+            :justify_center,
+            :items_center,
+            :text_center,
+            :gap_2,
+            :w_full,
+            {:h_px, 180},
+            :rounded_md,
+            :border_2,
+            {:border_color, :white},
+            {:bg, :black},
+            :cursor_pointer
+          ],
+          events: %{
+            focus: "keyboard_focus",
+            blur: "keyboard_blur",
+            key_down: "keyboard_down",
+            key_up: "keyboard_up"
+          }
+        ),
+        Guppy.IR.text("focus_events = #{state.focus_events}"),
+        Guppy.IR.text("blur_events = #{state.blur_events}"),
+        Guppy.IR.text("key_downs = #{state.key_downs}"),
+        Guppy.IR.text("key_ups = #{state.key_ups}"),
+        Guppy.IR.div(
+          [Guppy.IR.text("keyboard_status = #{state.keyboard_status}", id: "keyboard_status_label")],
+          id: "keyboard_status_panel",
           style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
         ),
         action_button("Start timer rerender demo", "timer_button", "start_timer", :green),
@@ -1058,7 +1147,7 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("What to try"),
         Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
-        Guppy.IR.text("2. Interactions: click the div button, the text line, and the pointer pad, then start timer rerenders."),
+        Guppy.IR.text("2. Interactions: click the div button, the text line, the pointer pad, and the keyboard pad, then start timer rerenders."),
         Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
         Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
         Guppy.IR.text("5. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),

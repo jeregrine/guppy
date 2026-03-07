@@ -172,11 +172,19 @@ pub enum IrNode {
         id: Option<String>,
         style: DivStyle,
         hover_style: DivStyle,
+        focus_style: DivStyle,
+        focusable: bool,
+        tab_stop: Option<bool>,
+        tab_index: Option<isize>,
         track_scroll: bool,
         anchor_scroll: bool,
         children: Vec<IrNode>,
         click: Option<String>,
         hover: Option<String>,
+        focus: Option<String>,
+        blur: Option<String>,
+        key_down: Option<String>,
+        key_up: Option<String>,
         mouse_down: Option<String>,
         mouse_up: Option<String>,
         mouse_move: Option<String>,
@@ -222,11 +230,19 @@ impl IrNode {
                     id,
                     style: get_div_style(map)?,
                     hover_style: get_div_hover_style(map)?,
+                    focus_style: get_div_focus_style(map)?,
+                    focusable: get_boolean_field(map, "focusable")?,
+                    tab_stop: get_optional_boolean_field(map, "tab_stop")?,
+                    tab_index: get_optional_integer_field(map, "tab_index")?,
                     track_scroll: get_boolean_field(map, "track_scroll")?,
                     anchor_scroll: get_boolean_field(map, "anchor_scroll")?,
                     children,
                     click: get_click_event(map)?,
                     hover: get_hover_event(map)?,
+                    focus: get_focus_event(map)?,
+                    blur: get_blur_event(map)?,
+                    key_down: get_key_down_event(map)?,
+                    key_up: get_key_up_event(map)?,
                     mouse_down: get_mouse_down_event(map)?,
                     mouse_up: get_mouse_up_event(map)?,
                     mouse_move: get_mouse_move_event(map)?,
@@ -283,12 +299,44 @@ fn get_boolean_field(map: &HashMap<Term, Term>, key: &str) -> Result<bool, Strin
     }
 }
 
+fn get_optional_boolean_field(
+    map: &HashMap<Term, Term>,
+    key: &str,
+) -> Result<Option<bool>, String> {
+    match get_field(map, key) {
+        Some(Term::Atom(atom)) if atom.name == "true" => Ok(Some(true)),
+        Some(Term::Atom(atom)) if atom.name == "false" => Ok(Some(false)),
+        Some(other) => Err(format!("expected optional boolean field {key}, got {other}")),
+        None => Ok(None),
+    }
+}
+
+fn get_optional_integer_field(
+    map: &HashMap<Term, Term>,
+    key: &str,
+) -> Result<Option<isize>, String> {
+    match get_field(map, key) {
+        Some(Term::FixInteger(value)) => Ok(Some(value.value as isize)),
+        Some(Term::BigInteger(value)) => value
+            .to_string()
+            .parse::<isize>()
+            .map(Some)
+            .map_err(|error| format!("invalid integer field {key}: {error}")),
+        Some(other) => Err(format!("expected optional integer field {key}, got {other}")),
+        None => Ok(None),
+    }
+}
+
 fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     get_style_list_field(map, "style")
 }
 
 fn get_div_hover_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     get_style_list_field(map, "hover_style")
+}
+
+fn get_div_focus_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
+    get_style_list_field(map, "focus_style")
 }
 
 fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle, String> {
@@ -503,6 +551,22 @@ fn get_click_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> 
 
 fn get_hover_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
     get_optional_event(map, "hover")
+}
+
+fn get_focus_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "focus")
+}
+
+fn get_blur_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "blur")
+}
+
+fn get_key_down_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "key_down")
+}
+
+fn get_key_up_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "key_up")
 }
 
 fn get_mouse_down_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
