@@ -447,9 +447,13 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("selected_demo = #{state.selected_demo}", id: "selected_demo_label"),
         Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}"),
-        detail_content(state)
+        Guppy.IR.div(
+          [detail_content(state)],
+          id: "detail_scroll",
+          style: [:flex_1, :w_full, :max_h_full, :overflow_y_scroll]
+        )
       ],
-      style: [:flex, :flex_col, :flex_1, :w_full, :max_h_full, :gap_2, :p_4, :overflow_y_scroll]
+      style: [:flex, :flex_col, :flex_1, :w_full, :max_h_full, :overflow_hidden, :gap_2, :p_4]
     )
   end
 
