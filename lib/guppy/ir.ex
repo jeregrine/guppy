@@ -113,8 +113,15 @@ defmodule Guppy.IR do
           | :justify_between
           | :justify_around
           | :cursor_pointer
+          | :rounded_sm
           | :rounded_md
+          | :rounded_lg
+          | :rounded_xl
+          | :rounded_2xl
+          | :rounded_full
           | :border_1
+          | :border_2
+          | :border_dashed
           | :border_t_1
           | :border_r_1
           | :border_b_1
@@ -252,8 +259,15 @@ defmodule Guppy.IR do
     :justify_between,
     :justify_around,
     :cursor_pointer,
+    :rounded_sm,
     :rounded_md,
+    :rounded_lg,
+    :rounded_xl,
+    :rounded_2xl,
+    :rounded_full,
     :border_1,
+    :border_2,
+    :border_dashed,
     :border_t_1,
     :border_r_1,
     :border_b_1,

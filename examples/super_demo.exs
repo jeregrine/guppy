@@ -549,6 +549,17 @@ defmodule Guppy.SuperDemo do
           id: "line_clamp_demo",
           style: [:max_w_64, :line_clamp_2, :text_sm, :underline, :line_through, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
         ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div([Guppy.IR.text("sm", id: "radius_sm_label")], id: "radius_sm", style: [:p_2, :rounded_sm, :border_2, :border_dashed, {:border_color, :white}, {:bg, :blue}]),
+            Guppy.IR.div([Guppy.IR.text("lg", id: "radius_lg_label")], id: "radius_lg", style: [:p_2, :rounded_lg, :border_2, :border_dashed, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]),
+            Guppy.IR.div([Guppy.IR.text("xl", id: "radius_xl_label")], id: "radius_xl", style: [:p_2, :rounded_xl, :border_2, :border_dashed, {:border_color, :white}, {:bg, :yellow}, {:text_color, :black}]),
+            Guppy.IR.div([Guppy.IR.text("2xl", id: "radius_2xl_label")], id: "radius_2xl", style: [:p_2, :rounded_2xl, :border_2, :border_dashed, {:border_color, :white}, {:bg, :red}]),
+            Guppy.IR.div([Guppy.IR.text("full", id: "radius_full_label")], id: "radius_full", style: [:p_2, :rounded_full, :border_2, :border_dashed, {:border_color, :white}, {:bg, :gray}])
+          ],
+          id: "radius_border_gallery",
+          style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
+        ),
         action_button("Toggle palette", "toggle_palette_button", "toggle_palette", :white),
         action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
       ],

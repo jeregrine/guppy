@@ -111,6 +111,13 @@ Guppy.IR currently supports:
   - `not_italic`
   - `underline`
   - `line_through`
+  - `rounded_sm`
+  - `rounded_lg`
+  - `rounded_xl`
+  - `rounded_2xl`
+  - `rounded_full`
+  - `border_2`
+  - `border_dashed`
   - `border_t_1`
   - `border_r_1`
   - `border_b_1`
@@ -214,10 +221,10 @@ The rough order below is chosen to improve layout correctness first, then text/l
 
 ## 5. Visual styling
 
-- [ ] more border width tokens
+- [x] more border width tokens
 - [x] side-specific borders
-- [ ] border style tokens
-- [ ] more radius tokens
+- [x] border style tokens
+- [x] more radius tokens
 - [ ] opacity
 - [x] box shadow / shadow tokens
 - [ ] richer color space / arbitrary colors
