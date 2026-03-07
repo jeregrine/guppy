@@ -34,6 +34,7 @@ defmodule GuppyTest do
           blur: "blurred",
           key_down: "keyed_down",
           key_up: "keyed_up",
+          context_menu: "contexted",
           mouse_down: "down",
           mouse_up: "up",
           mouse_move: "move",
@@ -514,6 +515,35 @@ defmodule GuppyTest do
                           key: "j",
                           key_char: nil,
                           modifiers: %{}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :context_menu,
+          %{
+            id: "increment_button",
+            callback: "contexted",
+            x: 128.0,
+            y: 72.0,
+            modifiers: %{
+              control: false,
+              alt: false,
+              shift: false,
+              platform: true,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :context_menu,
+                          id: "increment_button",
+                          callback: "contexted",
+                          x: 128.0,
+                          y: 72.0,
+                          modifiers: %{platform: true}
                         }}
 
         send(Guppy.server(), {

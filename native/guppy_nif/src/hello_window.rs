@@ -224,6 +224,7 @@ fn handle_request(request: MainThreadRequest) {
                     blur: None,
                     key_down: None,
                     key_up: None,
+                    context_menu: None,
                     mouse_down: None,
                     mouse_up: None,
                     mouse_move: None,

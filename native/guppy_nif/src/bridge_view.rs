@@ -79,6 +79,21 @@ unsafe extern "C" {
         function: i32,
     ) -> i32;
 
+    fn guppy_c_send_context_menu_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        x: f64,
+        y: f64,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
+    ) -> i32;
+
     fn guppy_c_send_mouse_down_event(
         view_id: u64,
         node_id_ptr: *const u8,
@@ -213,6 +228,7 @@ fn render_ir(
             blur,
             key_down,
             key_up,
+            context_menu,
             mouse_down,
             mouse_up,
             mouse_move,
@@ -236,6 +252,7 @@ fn render_ir(
             blur.as_deref(),
             key_down.as_deref(),
             key_up.as_deref(),
+            context_menu.as_deref(),
             mouse_down.as_deref(),
             mouse_up.as_deref(),
             mouse_move.as_deref(),
@@ -304,6 +321,7 @@ fn render_div(
     blur: Option<&str>,
     key_down: Option<&str>,
     key_up: Option<&str>,
+    context_menu: Option<&str>,
     mouse_down: Option<&str>,
     mouse_up: Option<&str>,
     mouse_move: Option<&str>,
@@ -509,6 +527,32 @@ fn render_div(
                     key_char_ptr,
                     key_char_len,
                     has_key_char,
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match context_menu {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let context_menu_node_id = node_id.clone();
+
+            styled_div.on_mouse_down(MouseButton::Right, move |event: &MouseDownEvent, _, _| unsafe {
+                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
+                let _ = guppy_c_send_context_menu_event(
+                    view_id,
+                    context_menu_node_id.as_ptr(),
+                    context_menu_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    pixel_to_f64(event.position.x),
+                    pixel_to_f64(event.position.y),
                     control,
                     alt,
                     shift,

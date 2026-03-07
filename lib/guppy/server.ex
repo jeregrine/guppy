@@ -167,6 +167,7 @@ defmodule Guppy.Server do
                :blur,
                :key_down,
                :key_up,
+               :context_menu,
                :mouse_down,
                :mouse_up,
                :mouse_move,

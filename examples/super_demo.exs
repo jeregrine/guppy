@@ -28,6 +28,7 @@ defmodule Guppy.SuperDemo do
         blur_events: 0,
         key_downs: 0,
         key_ups: 0,
+        context_menus: 0,
         keyboard_status: "none yet",
         scroll_anchor_index: 1,
         timer_ticks: 0,
@@ -61,7 +62,7 @@ defmodule Guppy.SuperDemo do
         |> continue()
 
       {:guppy_event, view_id, %{type: type} = event}
-      when type in [:focus, :blur, :key_down, :key_up] ->
+      when type in [:focus, :blur, :key_down, :key_up, :context_menu] ->
         state
         |> handle_keyboard_event(view_id, event)
         |> continue()
@@ -358,6 +359,7 @@ defmodule Guppy.SuperDemo do
   defp update_keyboard_counters(state, :blur), do: Map.update!(state, :blur_events, &(&1 + 1))
   defp update_keyboard_counters(state, :key_down), do: Map.update!(state, :key_downs, &(&1 + 1))
   defp update_keyboard_counters(state, :key_up), do: Map.update!(state, :key_ups, &(&1 + 1))
+  defp update_keyboard_counters(state, :context_menu), do: Map.update!(state, :context_menus, &(&1 + 1))
 
   defp format_pointer_event(:mouse_down, event) do
     "down #{event.button} @ (#{format_number(event.x)}, #{format_number(event.y)}) clicks=#{event.click_count} mods=#{format_modifiers(event.modifiers)}"
@@ -384,6 +386,10 @@ defmodule Guppy.SuperDemo do
 
   defp format_keyboard_event(:key_up, event) do
     "up #{event.key} key_char=#{inspect(event.key_char)} mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_keyboard_event(:context_menu, event) do
+    "context menu @ (#{format_number(event.x)}, #{format_number(event.y)}) mods=#{format_modifiers(event.modifiers)}"
   end
 
   defp format_modifiers(modifiers) do
@@ -665,7 +671,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [
             Guppy.IR.text("Keyboard focus pad", id: "keyboard_pad_title"),
-            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation.", id: "keyboard_pad_body")
+            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation. Right click for a context-menu event.", id: "keyboard_pad_body")
           ],
           id: "keyboard_pad",
           focusable: true,
@@ -691,13 +697,15 @@ defmodule Guppy.SuperDemo do
             focus: "keyboard_focus",
             blur: "keyboard_blur",
             key_down: "keyboard_down",
-            key_up: "keyboard_up"
+            key_up: "keyboard_up",
+            context_menu: "keyboard_context_menu"
           }
         ),
         Guppy.IR.text("focus_events = #{state.focus_events}"),
         Guppy.IR.text("blur_events = #{state.blur_events}"),
         Guppy.IR.text("key_downs = #{state.key_downs}"),
         Guppy.IR.text("key_ups = #{state.key_ups}"),
+        Guppy.IR.text("context_menus = #{state.context_menus}"),
         Guppy.IR.div(
           [Guppy.IR.text("keyboard_status = #{state.keyboard_status}", id: "keyboard_status_label")],
           id: "keyboard_status_panel",

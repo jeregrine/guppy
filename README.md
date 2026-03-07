@@ -171,6 +171,7 @@ Minimal native events are delivered to the owning Elixir process as:
 {:guppy_event, view_id, %{type: :blur, id: node_id, callback: callback_id}}
 {:guppy_event, view_id, %{type: :key_down, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, is_held: boolean, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :key_up, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :context_menu, id: node_id, callback: callback_id, x: number, y: number, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_down, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, first_mouse: boolean, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_up, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_move, id: node_id, callback: callback_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
@@ -192,6 +193,7 @@ Guppy.IR.div(
     blur: "blurred",
     key_down: "keyed_down",
     key_up: "keyed_up",
+    context_menu: "contexted",
     mouse_down: "pointer_down",
     mouse_up: "pointer_up",
     mouse_move: "pointer_move",

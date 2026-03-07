@@ -501,6 +501,57 @@ int guppy_c_send_key_up_event(
   return sent;
 }
 
+int guppy_c_send_context_menu_event(
+    uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
+    const unsigned char *callback_id_ptr, size_t callback_id_len,
+    double x, double y, int control, int alt, int shift, int platform,
+    int function) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM payload_term;
+  ERL_NIF_TERM node_id_term;
+  ERL_NIF_TERM callback_id_term;
+  ERL_NIF_TERM modifiers_term;
+  ERL_NIF_TERM keys[5];
+  ERL_NIF_TERM values[5];
+  int sent;
+
+  msg_env = enif_alloc_env();
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
+                              callback_id_ptr, callback_id_len,
+                              &node_id_term, &callback_id_term) ||
+      !make_modifiers_map(msg_env, control, alt, shift, platform, function,
+                          &modifiers_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  keys[0] = make_atom(msg_env, "id");
+  keys[1] = make_atom(msg_env, "callback");
+  keys[2] = make_atom(msg_env, "x");
+  keys[3] = make_atom(msg_env, "y");
+  keys[4] = make_atom(msg_env, "modifiers");
+
+  values[0] = node_id_term;
+  values[1] = callback_id_term;
+  values[2] = enif_make_double(msg_env, x);
+  values[3] = enif_make_double(msg_env, y);
+  values[4] = modifiers_term;
+
+  if (!enif_make_map_from_arrays(msg_env, keys, values, 5, &payload_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id,
+                           make_atom(msg_env, "context_menu"), payload_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
 int guppy_c_send_mouse_down_event(
     uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
     const unsigned char *callback_id_ptr, size_t callback_id_len,

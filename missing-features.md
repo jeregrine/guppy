@@ -29,6 +29,7 @@ Guppy.IR currently supports:
   - `blur`
   - `key_down`
   - `key_up`
+  - `context_menu`
   - `mouse_down`
   - `mouse_up`
   - `mouse_move`
@@ -280,7 +281,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] keyboard key down
 - [x] keyboard key up
 - [x] focus/blur events
-- [ ] right click / context menu event
+- [x] right click / context menu event
 - [ ] drag start
 - [ ] drag move
 - [ ] drop

@@ -185,6 +185,7 @@ pub enum IrNode {
         blur: Option<String>,
         key_down: Option<String>,
         key_up: Option<String>,
+        context_menu: Option<String>,
         mouse_down: Option<String>,
         mouse_up: Option<String>,
         mouse_move: Option<String>,
@@ -243,6 +244,7 @@ impl IrNode {
                     blur: get_blur_event(map)?,
                     key_down: get_key_down_event(map)?,
                     key_up: get_key_up_event(map)?,
+                    context_menu: get_context_menu_event(map)?,
                     mouse_down: get_mouse_down_event(map)?,
                     mouse_up: get_mouse_up_event(map)?,
                     mouse_move: get_mouse_move_event(map)?,
@@ -567,6 +569,10 @@ fn get_key_down_event(map: &HashMap<Term, Term>) -> Result<Option<String>, Strin
 
 fn get_key_up_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
     get_optional_event(map, "key_up")
+}
+
+fn get_context_menu_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "context_menu")
 }
 
 fn get_mouse_down_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
