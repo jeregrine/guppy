@@ -170,6 +170,28 @@ defmodule Guppy.Server do
     end
   end
 
+  def handle_info(
+        {:guppy_native_event, view_id, :hover,
+         %{id: node_id, callback: callback_id, hovered: hovered}},
+        state
+      )
+      when is_integer(view_id) and is_binary(node_id) and is_binary(callback_id) and
+             is_boolean(hovered) do
+    case Map.fetch(state.views, view_id) do
+      {:ok, owner} ->
+        send(owner, {
+          :guppy_event,
+          view_id,
+          %{type: :hover, id: node_id, callback: callback_id, hovered: hovered}
+        })
+
+        {:noreply, state}
+
+      :error ->
+        {:noreply, state}
+    end
+  end
+
   def handle_info({:guppy_native_event, view_id, :window_closed, _payload}, state)
       when is_integer(view_id) do
     case Map.fetch(state.views, view_id) do

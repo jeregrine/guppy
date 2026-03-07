@@ -38,6 +38,11 @@ defmodule Guppy.SuperDemo do
         |> handle_click(view_id, event)
         |> continue()
 
+      {:guppy_event, view_id, %{type: :hover} = event} ->
+        state
+        |> handle_hover(view_id, event)
+        |> continue()
+
       {:guppy_event, view_id, %{type: :window_closed}} ->
         state
         |> handle_window_closed(view_id)
@@ -133,6 +138,25 @@ defmodule Guppy.SuperDemo do
     state
     |> Map.put(:last_event, "window #{view_id} closed")
     |> rerender!()
+  end
+
+  defp handle_hover(state, view_id, %{id: node_id, callback: callback_id, hovered: hovered}) do
+    cond do
+      view_id == state.main_view_id ->
+        state
+        |> Map.put(:last_event, "hover #{if hovered, do: "enter", else: "leave"} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      view_id == state.aux_view_id ->
+        state
+        |> Map.put(:last_event, "aux hover #{if hovered, do: "enter", else: "leave"} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      true ->
+        state
+        |> Map.put(:last_event, "hover from unknown view #{view_id}: #{node_id}/#{callback_id}")
+        |> rerender!()
+    end
   end
 
   defp handle_main_click(state, node_id, callback_id) do
@@ -581,7 +605,13 @@ defmodule Guppy.SuperDemo do
           [
             Guppy.IR.div([Guppy.IR.text("320px × 180px @ 75% opacity", id: "custom_px_box_label")], id: "custom_px_box", style: [{:w_px, 320}, {:h_px, 180}, {:opacity, 0.75}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :blue}]),
             Guppy.IR.div([Guppy.IR.text("24rem × 12rem", id: "custom_rem_box_label")], id: "custom_rem_box", style: [{:w_rem, 24.0}, {:h_rem, 12.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]),
-            Guppy.IR.div([Guppy.IR.text("hex colors", id: "custom_hex_box_label")], id: "custom_hex_box", style: [{:w_px, 220}, {:h_px, 120}, :p_2, :rounded_lg, {:bg_hex, "#663399"}, {:text_color_hex, "#f8f8f2"}, {:border_color_hex, "#ff79c6"}, :border_2]),
+            Guppy.IR.div(
+              [Guppy.IR.text("hex colors + hover", id: "custom_hex_box_label")],
+              id: "custom_hex_box",
+              style: [{:w_px, 220}, {:h_px, 120}, :p_2, :rounded_lg, {:bg_hex, "#663399"}, {:text_color_hex, "#f8f8f2"}, {:border_color_hex, "#ff79c6"}, :border_2],
+              hover_style: [{:bg_hex, "#7c3aed"}, {:border_color_hex, "#facc15"}, {:opacity, 0.9}, :cursor_pointer],
+              events: %{hover: "style_hover"}
+            ),
             Guppy.IR.div(
               [
                 Guppy.IR.div([Guppy.IR.text("50% × 100%", id: "custom_frac_box_label")], id: "custom_frac_box", style: [{:w_frac, 0.5}, {:h_frac, 1.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :gray}])

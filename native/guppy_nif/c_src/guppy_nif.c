@@ -152,6 +152,63 @@ int guppy_c_send_click_event(uint64_t view_id, const unsigned char *node_id_ptr,
   return sent;
 }
 
+int guppy_c_send_hover_event(uint64_t view_id, const unsigned char *node_id_ptr,
+                             size_t node_id_len,
+                             const unsigned char *callback_id_ptr,
+                             size_t callback_id_len, int hovered) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM payload_term;
+  ERL_NIF_TERM node_id_term;
+  ERL_NIF_TERM callback_id_term;
+  ERL_NIF_TERM keys[3];
+  ERL_NIF_TERM values[3];
+  unsigned char *node_id_bytes;
+  unsigned char *callback_id_bytes;
+  int sent;
+
+  msg_env = enif_alloc_env();
+
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  node_id_bytes = enif_make_new_binary(msg_env, node_id_len, &node_id_term);
+
+  if (node_id_bytes == NULL) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  memcpy(node_id_bytes, node_id_ptr, node_id_len);
+
+  callback_id_bytes =
+      enif_make_new_binary(msg_env, callback_id_len, &callback_id_term);
+
+  if (callback_id_bytes == NULL) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  memcpy(callback_id_bytes, callback_id_ptr, callback_id_len);
+
+  keys[0] = make_atom(msg_env, "id");
+  keys[1] = make_atom(msg_env, "callback");
+  keys[2] = make_atom(msg_env, "hovered");
+  values[0] = node_id_term;
+  values[1] = callback_id_term;
+  values[2] = hovered ? make_atom(msg_env, "true") : make_atom(msg_env, "false");
+
+  if (!enif_make_map_from_arrays(msg_env, keys, values, 3, &payload_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id, make_atom(msg_env, "hover"),
+                           payload_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
 int guppy_c_send_window_closed_event(uint64_t view_id) {
   ErlNifEnv *msg_env;
   int sent;

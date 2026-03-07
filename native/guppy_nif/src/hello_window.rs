@@ -201,8 +201,10 @@ fn handle_request(request: MainThreadRequest) {
                 IrNode::Div {
                     id: None,
                     style: DivStyle::default(),
+                    hover_style: DivStyle::default(),
                     children: vec![IrNode::text(format!("Hello from Guppy view {view_id}"))],
                     click: None,
+                    hover: None,
                 },
             ));
         }

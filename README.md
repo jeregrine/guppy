@@ -166,6 +166,7 @@ Minimal native events are delivered to the owning Elixir process as:
 
 ```elixir
 {:guppy_event, view_id, %{type: :click, id: node_id, callback: callback_id}}
+{:guppy_event, view_id, %{type: :hover, id: node_id, callback: callback_id, hovered: boolean}}
 {:guppy_event, view_id, %{type: :window_closed}}
 ```
 
@@ -191,6 +192,8 @@ Style tokens are represented as an ordered list, for example:
 ```elixir
 style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 ```
+
+`div` nodes can also carry an ordered `hover_style` list using the same style ops.
 
 Later tokens are applied after earlier tokens, so order is preserved across the bridge.
 

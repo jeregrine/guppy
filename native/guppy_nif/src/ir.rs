@@ -168,8 +168,10 @@ pub enum IrNode {
     Div {
         id: Option<String>,
         style: DivStyle,
+        hover_style: DivStyle,
         children: Vec<IrNode>,
         click: Option<String>,
+        hover: Option<String>,
     },
 }
 
@@ -210,8 +212,10 @@ impl IrNode {
                 Ok(Self::Div {
                     id,
                     style: get_div_style(map)?,
+                    hover_style: get_div_hover_style(map)?,
                     children,
                     click: get_click_event(map)?,
+                    hover: get_hover_event(map)?,
                 })
             }
             other => Err(format!("unsupported ir kind: {other}")),
@@ -256,7 +260,15 @@ fn get_optional_string_field(
 }
 
 fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
-    let Some(style_term) = get_field(map, "style") else {
+    get_style_list_field(map, "style")
+}
+
+fn get_div_hover_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
+    get_style_list_field(map, "hover_style")
+}
+
+fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle, String> {
+    let Some(style_term) = get_field(map, key) else {
         return Ok(Vec::new());
     };
 
@@ -459,13 +471,21 @@ fn parse_color_token(token: &str) -> Result<ColorToken, String> {
 }
 
 fn get_click_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "click")
+}
+
+fn get_hover_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "hover")
+}
+
+fn get_optional_event(map: &HashMap<Term, Term>, key: &str) -> Result<Option<String>, String> {
     let Some(events_term) = get_field(map, "events") else {
         return Ok(None);
     };
 
     let events = expect_map(events_term)?;
 
-    match get_field(events, "click") {
+    match get_field(events, key) {
         Some(term) => term_to_string(term).map(Some),
         None => Ok(None),
     }

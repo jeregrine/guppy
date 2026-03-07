@@ -20,6 +20,8 @@ defmodule GuppyTest do
       Guppy.IR.div(
         [Guppy.IR.text("hello")],
         id: "root",
+        hover_style: [{:bg_hex, "#101010"}, {:opacity, 0.9}, :cursor_pointer],
+        events: %{hover: "hovered", click: "clicked"},
         style: [
           :flex,
           :flex_col,

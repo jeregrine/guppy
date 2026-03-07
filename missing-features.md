@@ -24,6 +24,7 @@ Guppy.IR currently supports:
   - `id`
 - events:
   - `click`
+  - `hover`
 - style tokens:
   - `flex`
   - `flex_col`
@@ -251,8 +252,8 @@ The rough order below is chosen to improve layout correctness first, then text/l
 
 ## 6. Interaction and events
 
-- [ ] hover styles
-- [ ] hover enter/leave events
+- [x] hover styles
+- [x] hover enter/leave events
 - [ ] mouse down
 - [ ] mouse up
 - [ ] mouse move

@@ -163,13 +163,14 @@ defmodule Guppy.IR do
   @type style_op :: style_flag() | style_value()
   @type style :: [style_op()]
 
-  @type events :: %{optional(:click) => String.t()}
+  @type text_events :: %{optional(:click) => String.t()}
+  @type div_events :: %{optional(:click) => String.t(), optional(:hover) => String.t()}
 
   @type text_node :: %{
           required(:kind) => :text,
           required(:content) => String.t(),
           optional(:id) => node_id(),
-          optional(:events) => events()
+          optional(:events) => text_events()
         }
 
   @type div_node :: %{
@@ -177,7 +178,8 @@ defmodule Guppy.IR do
           required(:children) => [ir_node()],
           optional(:id) => node_id(),
           optional(:style) => style(),
-          optional(:events) => events()
+          optional(:hover_style) => style(),
+          optional(:events) => div_events()
         }
 
   @type ir_node :: text_node() | div_node()
@@ -332,17 +334,19 @@ defmodule Guppy.IR do
     id = Keyword.get(opts, :id)
     style = Keyword.get(opts, :style)
     events = Keyword.get(opts, :events)
+    hover_style = Keyword.get(opts, :hover_style)
 
     %{kind: :div, children: children}
     |> maybe_put(:id, id)
     |> maybe_put(:style, style)
+    |> maybe_put(:hover_style, hover_style)
     |> maybe_put(:events, events)
   end
 
   @spec validate(ir_node()) :: :ok | {:error, term()}
   def validate(%{kind: :text, content: content} = node) when is_binary(content) do
     with :ok <- validate_id(Map.get(node, :id)),
-         :ok <- validate_events(Map.get(node, :events)) do
+         :ok <- validate_events(Map.get(node, :events), [:click]) do
       :ok
     end
   end
@@ -350,7 +354,8 @@ defmodule Guppy.IR do
   def validate(%{kind: :div, children: children} = node) when is_list(children) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
-         :ok <- validate_events(Map.get(node, :events)),
+         :ok <- validate_style(Map.get(node, :hover_style)),
+         :ok <- validate_events(Map.get(node, :events), [:click, :hover]),
          :ok <- validate_children(children) do
       :ok
     end
@@ -413,19 +418,20 @@ defmodule Guppy.IR do
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
 
-  defp validate_events(nil), do: :ok
+  defp validate_events(nil, _allowed), do: :ok
 
-  defp validate_events(events) when is_map(events) do
+  defp validate_events(events, allowed) when is_map(events) do
     Enum.reduce_while(events, :ok, fn
-      {:click, callback_id}, :ok when is_binary(callback_id) ->
-        {:cont, :ok}
-
       {event_name, callback_id}, :ok ->
-        {:halt, {:error, {:invalid_event, event_name, callback_id}}}
+        if event_name in allowed and is_binary(callback_id) do
+          {:cont, :ok}
+        else
+          {:halt, {:error, {:invalid_event, event_name, callback_id}}}
+        end
     end)
   end
 
-  defp validate_events(other), do: {:error, {:invalid_events, other}}
+  defp validate_events(other, _allowed), do: {:error, {:invalid_events, other}}
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
