@@ -160,6 +160,8 @@ defmodule Guppy.IR do
           | {:h_px, number()}
           | {:h_rem, number()}
           | {:h_frac, number()}
+          | {:scrollbar_width_px, number()}
+          | {:scrollbar_width_rem, number()}
 
   @type style_op :: style_flag() | style_value()
   @type style :: [style_op()]
@@ -327,6 +329,7 @@ defmodule Guppy.IR do
   @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
   @fraction_value_tokens [:w_frac, :h_frac]
+  @scrollbar_value_tokens [:scrollbar_width_px, :scrollbar_width_rem]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
 
   @spec text(String.t(), keyword()) :: text_node()
@@ -432,6 +435,10 @@ defmodule Guppy.IR do
 
   defp validate_style_op({key, value})
        when key in @fraction_value_tokens and is_number(value) and value >= 0.0 and value <= 1.0,
+       do: :ok
+
+  defp validate_style_op({key, value})
+       when key in @scrollbar_value_tokens and is_number(value) and value >= 0.0,
        do: :ok
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}

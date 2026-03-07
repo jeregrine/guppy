@@ -146,6 +146,8 @@ pub enum StyleOp {
     HPx(f32),
     HRem(f32),
     HFrac(f32),
+    ScrollbarWidthPx(f32),
+    ScrollbarWidthRem(f32),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -308,6 +310,8 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "h_px" => Ok(StyleOp::HPx(parse_f32(&elements[1])?)),
                 "h_rem" => Ok(StyleOp::HRem(parse_f32(&elements[1])?)),
                 "h_frac" => Ok(StyleOp::HFrac(parse_f32(&elements[1])?)),
+                "scrollbar_width_px" => Ok(StyleOp::ScrollbarWidthPx(parse_f32(&elements[1])?)),
+                "scrollbar_width_rem" => Ok(StyleOp::ScrollbarWidthRem(parse_f32(&elements[1])?)),
                 other => Err(format!("unsupported style tuple key: {other}")),
             }
         }

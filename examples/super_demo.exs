@@ -890,11 +890,19 @@ defmodule Guppy.SuperDemo do
   end
 
   defp scroll_demo(state) do
-    long_lines =
-      Enum.map(1..24, fn index ->
+    narrow_lines =
+      Enum.map(1..16, fn index ->
         Guppy.IR.text(
-          "Scroll line #{index}: palette=#{palette_color(state)} div_clicks=#{state.div_clicks} text_clicks=#{state.text_clicks} timer_ticks=#{state.timer_ticks}",
-          id: "scroll_line_#{index}"
+          "narrow #{index}: palette=#{palette_color(state)} timer_ticks=#{state.timer_ticks}",
+          id: "scroll_narrow_line_#{index}"
+        )
+      end)
+
+    wide_lines =
+      Enum.map(1..16, fn index ->
+        Guppy.IR.text(
+          "wide #{index}: div_clicks=#{state.div_clicks} text_clicks=#{state.text_clicks}",
+          id: "scroll_wide_line_#{index}"
         )
       end)
 
@@ -902,9 +910,65 @@ defmodule Guppy.SuperDemo do
       "scroll_demo",
       [
         Guppy.IR.text("Scroll demo"),
-        Guppy.IR.text("This panel is intentionally taller than the available area."),
-        Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored.")
-      ] ++ long_lines,
+        Guppy.IR.text("This page exercises nested scroll regions and explicit scrollbar width values."),
+        Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored."),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("narrow scrollbar width", id: "scroll_narrow_title"),
+                Guppy.IR.div(
+                  narrow_lines,
+                  id: "scroll_narrow_box",
+                  style: [
+                    :flex,
+                    :flex_col,
+                    :gap_2,
+                    :w_full,
+                    {:h_px, 220},
+                    :overflow_y_scroll,
+                    {:scrollbar_width_px, 8},
+                    :p_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :black}
+                  ]
+                )
+              ],
+              id: "scroll_narrow_panel",
+              style: [:flex, :flex_col, :gap_2, :flex_1, :min_h_0, :w_full]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("wide scrollbar width", id: "scroll_wide_title"),
+                Guppy.IR.div(
+                  wide_lines,
+                  id: "scroll_wide_box",
+                  style: [
+                    :flex,
+                    :flex_col,
+                    :gap_2,
+                    :w_full,
+                    {:h_px, 220},
+                    :overflow_y_scroll,
+                    {:scrollbar_width_rem, 1.0},
+                    :p_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :black}
+                  ]
+                )
+              ],
+              id: "scroll_wide_panel",
+              style: [:flex, :flex_col, :gap_2, :flex_1, :min_h_0, :w_full]
+            )
+          ],
+          id: "scroll_compare_row",
+          style: [:flex, :flex_row, :gap_4, :items_start, :w_full]
+        )
+      ],
       style: [{:bg, :gray}]
     )
   end

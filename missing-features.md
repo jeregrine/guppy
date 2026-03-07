@@ -170,6 +170,8 @@ Guppy.IR currently supports:
   - `{:h_px, number}`
   - `{:h_rem, number}`
   - `{:h_frac, number}`
+  - `{:scrollbar_width_px, number}`
+  - `{:scrollbar_width_rem, number}`
 
 ## Priority order
 
@@ -210,7 +212,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] `overflow_hidden`
 - [x] `overflow_x_hidden`
 - [x] `overflow_y_hidden`
-- [ ] `scrollbar_width`
+- [x] `scrollbar_width`
 - [ ] tracked scrolling / `track_scroll`
 - [ ] scroll anchoring / `anchor_scroll`
 - [ ] explicit scroll-container semantics if style tokens are not enough

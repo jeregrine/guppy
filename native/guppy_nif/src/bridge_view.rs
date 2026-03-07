@@ -513,6 +513,8 @@ where
             StyleOp::HPx(value) => element.h(px(*value)),
             StyleOp::HRem(value) => element.h(rems(*value)),
             StyleOp::HFrac(value) => element.h(relative(*value)),
+            StyleOp::ScrollbarWidthPx(value) => element.scrollbar_width(px(*value)),
+            StyleOp::ScrollbarWidthRem(value) => element.scrollbar_width(rems(*value)),
         };
     }
 
@@ -662,6 +664,8 @@ fn apply_hover_style(mut style: StyleRefinement, hover_style: &DivStyle) -> Styl
             StyleOp::HPx(value) => style.h(px(*value)),
             StyleOp::HRem(value) => style.h(rems(*value)),
             StyleOp::HFrac(value) => style.h(relative(*value)),
+            StyleOp::ScrollbarWidthPx(_) => style,
+            StyleOp::ScrollbarWidthRem(_) => style,
         };
     }
 

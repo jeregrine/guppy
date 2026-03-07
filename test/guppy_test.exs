@@ -160,6 +160,8 @@ defmodule GuppyTest do
           {:h_px, 180},
           {:h_rem, 12.0},
           {:h_frac, 1.0},
+          {:scrollbar_width_px, 12},
+          {:scrollbar_width_rem, 1.0},
           :overflow_y_scroll,
           {:bg, :blue}
         ]
@@ -298,6 +300,8 @@ defmodule GuppyTest do
              {:h_px, 180},
              {:h_rem, 12.0},
              {:h_frac, 1.0},
+             {:scrollbar_width_px, 12},
+             {:scrollbar_width_rem, 1.0},
              :overflow_y_scroll,
              {:bg, :blue}
            ]
