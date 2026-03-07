@@ -529,27 +529,29 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("This page exercises wrap/nowrap and grow/shrink-style tokens in the ordered style list."),
         Guppy.IR.div(
           [
-            flex_chip("wrap_1", "wrap-1", [:flex_none, {:bg, :blue}]),
-            flex_chip("wrap_2", "wrap-2", [:flex_none, {:bg, :green}]),
-            flex_chip("wrap_3", "wrap-3", [:flex_none, {:bg, :yellow}, {:text_color, :black}]),
-            flex_chip("wrap_4", "wrap-4", [:flex_none, {:bg, :red}])
+            flex_chip("wrap_1", "wrap-1", [:flex_none, :w_32, {:bg, :blue}]),
+            flex_chip("wrap_2", "wrap-2", [:flex_none, :w_32, {:bg, :green}]),
+            flex_chip("wrap_3", "wrap-3", [:flex_none, :w_32, {:bg, :yellow}, {:text_color, :black}]),
+            flex_chip("wrap_4", "wrap-4", [:flex_none, :w_32, {:bg, :red}]),
+            flex_chip("wrap_5", "wrap-5", [:flex_none, :w_32, {:bg, :gray}]),
+            flex_chip("wrap_6", "wrap-6", [:flex_none, :w_32, {:bg, :blue}])
           ],
           id: "wrap_row",
           style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         ),
         Guppy.IR.div(
           [
-            flex_chip("nowrap_fixed", "fixed", [:flex_none, {:bg, :gray}]),
-            flex_chip("nowrap_auto", "auto", [:flex_auto, {:bg, :blue}]),
-            flex_chip("nowrap_grow", "grow", [:flex_grow, {:bg, :green}, {:text_color, :black}]),
-            flex_chip("nowrap_shrink", "shrink", [:flex_shrink, {:bg, :yellow}, {:text_color, :black}]),
-            flex_chip("nowrap_shrink0", "shrink-0", [:flex_shrink_0, {:bg, :red}])
+            flex_chip("nowrap_fixed", "fixed", [:flex_none, :min_w_32, {:bg, :gray}]),
+            flex_chip("nowrap_auto", "auto", [:flex_auto, :w_32, {:bg, :blue}]),
+            flex_chip("nowrap_grow", "grow", [:flex_grow, :w_32, {:bg, :green}, {:text_color, :black}]),
+            flex_chip("nowrap_shrink", "shrink", [:flex_shrink, :w_32, {:bg, :yellow}, {:text_color, :black}]),
+            flex_chip("nowrap_shrink0", "shrink-0", [:flex_shrink_0, :w_96, {:bg, :red}])
           ],
           id: "nowrap_row",
-          style: [:flex, :flex_row, :flex_nowrap, :overflow_x_scroll, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+          style: [:flex, :flex_row, :flex_nowrap, :overflow_x_scroll, :max_h_32, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         )
       ],
-      style: [{:bg, :gray}]
+      style: [:max_h_96, {:bg, :gray}]
     )
   end
 
@@ -634,7 +636,7 @@ defmodule Guppy.SuperDemo do
     Guppy.IR.div(
       [Guppy.IR.text(label, id: "#{id}_label")],
       id: id,
-      style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:text_color, :white}] ++ style
+      style: [:p_2, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:text_color, :white}] ++ style
     )
   end
 

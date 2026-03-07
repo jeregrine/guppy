@@ -32,11 +32,17 @@ defmodule Guppy.IR do
           | :size_full
           | :w_full
           | :h_full
+          | :w_32
+          | :w_64
+          | :w_96
+          | :h_32
+          | :min_w_32
+          | :max_h_32
+          | :max_h_96
           | :gap_2
           | :p_2
           | :p_4
           | :p_6
-          | :w_64
           | :items_start
           | :items_center
           | :items_end
@@ -97,11 +103,17 @@ defmodule Guppy.IR do
     :size_full,
     :w_full,
     :h_full,
+    :w_32,
+    :w_64,
+    :w_96,
+    :h_32,
+    :min_w_32,
+    :max_h_32,
+    :max_h_96,
     :gap_2,
     :p_2,
     :p_4,
     :p_6,
-    :w_64,
     :items_start,
     :items_center,
     :items_end,

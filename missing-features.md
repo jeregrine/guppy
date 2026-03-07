@@ -39,6 +39,13 @@ Guppy.IR currently supports:
   - `size_full`
   - `w_full`
   - `h_full`
+  - `w_32`
+  - `w_64`
+  - `w_96`
+  - `h_32`
+  - `min_w_32`
+  - `max_h_32`
+  - `max_h_96`
   - `gap_2`
   - `p_2`
   - `p_4`
@@ -88,12 +95,12 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] `justify_end`
 - [x] `justify_between`
 - [x] `justify_around`
-- [ ] width tokens beyond `w_64`
-- [ ] height tokens
-- [ ] min width tokens
+- [x] width tokens beyond `w_64`
+- [x] height tokens
+- [x] min width tokens
 - [ ] min height tokens
 - [ ] max width tokens
-- [ ] max height tokens
+- [x] max height tokens
 - [ ] explicit pixel/rem/relative width values
 - [ ] explicit pixel/rem/relative height values
 
