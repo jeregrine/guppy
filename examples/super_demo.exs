@@ -445,7 +445,7 @@ defmodule Guppy.SuperDemo do
   end
 
   defp section(id, children, opts \\ []) do
-    base_style = %{flex: true, flex_col: true, gap_2: true, p_4: true}
+    base_style = %{flex: true, flex_col: true, gap_2: true, p_4: true, border_1: true, border_color: :white, rounded_md: true}
     merged_style = Map.merge(base_style, Keyword.get(opts, :style, %{}))
 
     Guppy.IR.div(children, id: id, style: merged_style)
@@ -462,6 +462,8 @@ defmodule Guppy.SuperDemo do
       style: %{
         p_2: true,
         rounded_md: true,
+        border_1: true,
+        border_color: contrast_border_color(color),
         bg: color,
         text_color: contrast_text_color(color),
         cursor_pointer: true
@@ -476,6 +478,9 @@ defmodule Guppy.SuperDemo do
 
   defp contrast_text_color(color) when color in [:yellow, :white, :green], do: :black
   defp contrast_text_color(_color), do: :white
+
+  defp contrast_border_color(color) when color in [:white, :yellow], do: :black
+  defp contrast_border_color(_color), do: :white
 
   defp aux_window_ir do
     Guppy.IR.div(

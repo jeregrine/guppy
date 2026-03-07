@@ -21,7 +21,14 @@ defmodule GuppyTest do
                Guppy.IR.div(
                  [Guppy.IR.text("hello")],
                  id: "root",
-                 style: %{flex: true, flex_col: true, gap_2: true, bg: :gray}
+                 style: %{
+                   flex: true,
+                   flex_col: true,
+                   gap_2: true,
+                   bg: :gray,
+                   border_1: true,
+                   border_color: :white
+                 }
                )
              )
 

@@ -14,8 +14,10 @@ pub struct DivStyle {
     pub justify_center: bool,
     pub cursor_pointer: bool,
     pub rounded_md: bool,
+    pub border_1: bool,
     pub bg: Option<ColorToken>,
     pub text_color: Option<ColorToken>,
+    pub border_color: Option<ColorToken>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -144,8 +146,10 @@ fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
         justify_center: get_bool_style(style_map, "justify_center")?,
         cursor_pointer: get_bool_style(style_map, "cursor_pointer")?,
         rounded_md: get_bool_style(style_map, "rounded_md")?,
+        border_1: get_bool_style(style_map, "border_1")?,
         bg: get_color_style(style_map, "bg")?,
         text_color: get_color_style(style_map, "text_color")?,
+        border_color: get_color_style(style_map, "border_color")?,
     })
 }
 

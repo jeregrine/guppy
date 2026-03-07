@@ -25,8 +25,10 @@ defmodule Guppy.IR do
           optional(:justify_center) => boolean(),
           optional(:cursor_pointer) => boolean(),
           optional(:rounded_md) => boolean(),
+          optional(:border_1) => boolean(),
           optional(:bg) => color_token(),
-          optional(:text_color) => color_token()
+          optional(:text_color) => color_token(),
+          optional(:border_color) => color_token()
         }
 
   @type events :: %{optional(:click) => String.t()}
@@ -58,10 +60,11 @@ defmodule Guppy.IR do
     :items_center,
     :justify_center,
     :cursor_pointer,
-    :rounded_md
+    :rounded_md,
+    :border_1
   ]
 
-  @style_color_keys [:bg, :text_color]
+  @style_color_keys [:bg, :text_color, :border_color]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
 
   @spec text(String.t(), keyword()) :: text_node()

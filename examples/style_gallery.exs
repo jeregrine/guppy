@@ -14,6 +14,11 @@ contrast_text_color = fn
   _color -> :white
 end
 
+contrast_border_color = fn
+  color when color in [:white, :yellow] -> :black
+  _color -> :white
+end
+
 render = fn selected ->
   swatch = fn id, label, color ->
     Guppy.IR.div(
@@ -26,6 +31,8 @@ render = fn selected ->
         flex_col: true,
         p_4: true,
         rounded_md: true,
+        border_1: true,
+        border_color: contrast_border_color.(color),
         bg: color,
         text_color: contrast_text_color.(color),
         cursor_pointer: true
@@ -53,7 +60,7 @@ render = fn selected ->
           Guppy.IR.text("Click a swatch above to change this block.", id: "preview_text")
         ],
         id: "preview",
-        style: %{p_6: true, rounded_md: true, bg: selected, text_color: contrast_text_color.(selected)}
+        style: %{p_6: true, rounded_md: true, border_1: true, border_color: contrast_border_color.(selected), bg: selected, text_color: contrast_text_color.(selected)}
       )
     ],
     id: "style_gallery_root",

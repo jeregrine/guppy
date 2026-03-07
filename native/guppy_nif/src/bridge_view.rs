@@ -154,11 +154,17 @@ where
     if style.rounded_md {
         element = element.rounded_md();
     }
+    if style.border_1 {
+        element = element.border_1();
+    }
     if let Some(color) = style.bg {
         element = element.bg(color_token_to_color(color));
     }
     if let Some(color) = style.text_color {
         element = element.text_color(color_token_to_color(color));
+    }
+    if let Some(color) = style.border_color {
+        element = element.border_color(color_token_to_color(color));
     }
     element
 }
