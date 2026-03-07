@@ -60,6 +60,19 @@ defmodule Guppy.IR do
           | :mr_2
           | :mb_2
           | :ml_2
+          | :relative
+          | :absolute
+          | :top_0
+          | :right_0
+          | :bottom_0
+          | :left_0
+          | :inset_0
+          | :top_1
+          | :right_1
+          | :top_2
+          | :right_2
+          | :bottom_2
+          | :left_2
           | :items_start
           | :items_center
           | :items_end
@@ -148,6 +161,19 @@ defmodule Guppy.IR do
     :mr_2,
     :mb_2,
     :ml_2,
+    :relative,
+    :absolute,
+    :top_0,
+    :right_0,
+    :bottom_0,
+    :left_0,
+    :inset_0,
+    :top_1,
+    :right_1,
+    :top_2,
+    :right_2,
+    :bottom_2,
+    :left_2,
     :items_start,
     :items_center,
     :items_end,

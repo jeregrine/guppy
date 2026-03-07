@@ -67,7 +67,19 @@ Guppy.IR currently supports:
   - `mr_2`
   - `mb_2`
   - `ml_2`
-  - `w_64`
+  - `relative`
+  - `absolute`
+  - `top_0`
+  - `right_0`
+  - `bottom_0`
+  - `left_0`
+  - `inset_0`
+  - `top_1`
+  - `right_1`
+  - `top_2`
+  - `right_2`
+  - `bottom_2`
+  - `left_2`
   - `items_start`
   - `items_center`
   - `items_end`
@@ -142,9 +154,9 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] margin tokens
 - [x] axis margin (`mx_*`, `my_*`)
 - [x] side margin (`mt_*`, `mr_*`, `mb_*`, `ml_*`)
-- [ ] `relative`
-- [ ] `absolute`
-- [ ] top/right/bottom/left inset tokens
+- [x] `relative`
+- [x] `absolute`
+- [x] top/right/bottom/left inset tokens
 - [ ] z-index / stacking controls
 
 ## 4. Text styling

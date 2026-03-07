@@ -570,6 +570,40 @@ defmodule Guppy.SuperDemo do
           ],
           id: "spacing_examples",
           style: [:flex, :flex_col, :gap_1, :gap_4, :w_full, :border_1, {:border_color, :white}, :p_2]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("relative container", id: "position_box_label"),
+                Guppy.IR.div(
+                  [Guppy.IR.text("badge", id: "position_badge_label")],
+                  id: "position_badge",
+                  style: [:absolute, :top_1, :right_1, :p_1, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
+                ),
+                Guppy.IR.div(
+                  [Guppy.IR.text("inset overlay", id: "position_overlay_label")],
+                  id: "position_overlay",
+                  style: [:absolute, :inset_0, :flex, :items_center, :justify_center, :overflow_hidden, {:text_color, :black}, {:bg, :yellow}]
+                )
+              ],
+              id: "position_box",
+              style: [:relative, :w_96, :h_32, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+            ),
+            Guppy.IR.div(
+              [Guppy.IR.text("offset frame", id: "offset_frame_label")],
+              id: "offset_frame",
+              style: [:relative, :w_96, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}],
+              events: %{click: "div_increment"}
+            ),
+            Guppy.IR.div(
+              [Guppy.IR.text("corner note", id: "corner_note_label")],
+              id: "corner_note",
+              style: [:absolute, :top_2, :right_2, :bottom_2, :left_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+            )
+          ],
+          id: "position_examples",
+          style: [:relative, :flex, :flex_col, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         )
       ],
       style: [:max_h_96, {:bg, :gray}]
