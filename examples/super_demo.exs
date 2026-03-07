@@ -1192,18 +1192,42 @@ defmodule Guppy.SuperDemo do
 
   defp scroll_demo(state) do
     narrow_lines =
-      Enum.map(1..16, fn index ->
-        Guppy.IR.text(
-          "narrow #{index}: palette=#{palette_color(state)} timer_ticks=#{state.timer_ticks}",
-          id: "scroll_narrow_line_#{index}"
+      Enum.map(1..28, fn index ->
+        Guppy.IR.div(
+          [
+            Guppy.IR.text(
+              "narrow #{index}: palette=#{palette_color(state)} timer_ticks=#{state.timer_ticks}",
+              id: "scroll_narrow_line_#{index}"
+            )
+          ],
+          id: "scroll_narrow_row_#{index}",
+          style: [
+            :p_2,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, if(rem(index, 2) == 0, do: :gray, else: :black)}
+          ]
         )
       end)
 
     wide_lines =
-      Enum.map(1..16, fn index ->
-        Guppy.IR.text(
-          "wide #{index}: div_clicks=#{state.div_clicks} text_clicks=#{state.text_clicks}",
-          id: "scroll_wide_line_#{index}"
+      Enum.map(1..28, fn index ->
+        Guppy.IR.div(
+          [
+            Guppy.IR.text(
+              "wide #{index}: div_clicks=#{state.div_clicks} text_clicks=#{state.text_clicks}",
+              id: "scroll_wide_line_#{index}"
+            )
+          ],
+          id: "scroll_wide_row_#{index}",
+          style: [
+            :p_2,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, if(rem(index, 2) == 0, do: :gray, else: :black)}
+          ]
         )
       end)
 
@@ -1241,6 +1265,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("Scroll demo"),
         Guppy.IR.text("This page exercises tracked scroll state, scroll anchoring, and explicit scrollbar width values."),
         Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored."),
+        Guppy.IR.text("The narrow/wide boxes intentionally overflow so scrollbar width differences should be easy to see while scrolling."),
         Guppy.IR.div(
           [
             action_button("Anchor previous row", "scroll_anchor_prev_button", "scroll_anchor_prev", :white),
@@ -1291,7 +1316,7 @@ defmodule Guppy.SuperDemo do
                     :flex_col,
                     :gap_2,
                     :w_full,
-                    {:h_px, 220},
+                    {:h_px, 180},
                     :overflow_y_scroll,
                     {:scrollbar_width_px, 8},
                     :p_2,
@@ -1317,7 +1342,7 @@ defmodule Guppy.SuperDemo do
                     :flex_col,
                     :gap_2,
                     :w_full,
-                    {:h_px, 220},
+                    {:h_px, 180},
                     :overflow_y_scroll,
                     {:scrollbar_width_rem, 1.0},
                     :p_2,
