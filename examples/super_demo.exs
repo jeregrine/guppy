@@ -29,6 +29,7 @@ defmodule Guppy.SuperDemo do
         key_downs: 0,
         key_ups: 0,
         context_menus: 0,
+        action_events: 0,
         drag_starts: 0,
         drag_moves: 0,
         drops: 0,
@@ -69,7 +70,7 @@ defmodule Guppy.SuperDemo do
         |> continue()
 
       {:guppy_event, view_id, %{type: type} = event}
-      when type in [:focus, :blur, :key_down, :key_up, :context_menu] ->
+      when type in [:focus, :blur, :key_down, :key_up, :context_menu, :action] ->
         state
         |> handle_keyboard_event(view_id, event)
         |> continue()
@@ -408,6 +409,7 @@ defmodule Guppy.SuperDemo do
   defp update_keyboard_counters(state, :key_down), do: Map.update!(state, :key_downs, &(&1 + 1))
   defp update_keyboard_counters(state, :key_up), do: Map.update!(state, :key_ups, &(&1 + 1))
   defp update_keyboard_counters(state, :context_menu), do: Map.update!(state, :context_menus, &(&1 + 1))
+  defp update_keyboard_counters(state, :action), do: Map.update!(state, :action_events, &(&1 + 1))
 
   defp update_drag_counters(state, :drag_start), do: Map.update!(state, :drag_starts, &(&1 + 1))
   defp update_drag_counters(state, :drag_move), do: Map.update!(state, :drag_moves, &(&1 + 1))
@@ -442,6 +444,10 @@ defmodule Guppy.SuperDemo do
 
   defp format_keyboard_event(:context_menu, event) do
     "context menu @ (#{format_number(event.x)}, #{format_number(event.y)}) mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_keyboard_event(:action, event) do
+    "action #{event.action} via #{event.shortcut} key=#{event.key} key_char=#{inspect(event.key_char)} mods=#{format_modifiers(event.modifiers)}"
   end
 
   defp format_drag_event(:drag_start, event) do
@@ -738,7 +744,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [
             Guppy.IR.text("Keyboard focus pad", id: "keyboard_pad_title"),
-            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation. Right click for a context-menu event. Pressing the box also exercises active styling.", id: "keyboard_pad_body")
+            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation. Right click for a context-menu event. Pressing the box also exercises active styling. While focused, press ctrl-j or ctrl-k to dispatch shortcut actions.", id: "keyboard_pad_body")
           ],
           id: "keyboard_pad",
           focusable: true,
@@ -747,6 +753,11 @@ defmodule Guppy.SuperDemo do
           focus_style: [{:bg_hex, "#204060"}, {:border_color, :yellow}],
           in_focus_style: [{:shadow_lg}],
           active_style: [{:bg_hex, "#10263c"}, {:opacity, 0.92}],
+          actions: %{
+            "primary" => "shortcut_primary",
+            "secondary" => "shortcut_secondary"
+          },
+          shortcuts: [{"ctrl-j", "primary"}, {"ctrl-k", "secondary"}],
           style: [
             :flex,
             :flex_col,
@@ -775,6 +786,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("key_downs = #{state.key_downs}"),
         Guppy.IR.text("key_ups = #{state.key_ups}"),
         Guppy.IR.text("context_menus = #{state.context_menus}"),
+        Guppy.IR.text("action_events = #{state.action_events}"),
         Guppy.IR.div(
           [Guppy.IR.text("keyboard_status = #{state.keyboard_status}", id: "keyboard_status_label")],
           id: "keyboard_status_panel",

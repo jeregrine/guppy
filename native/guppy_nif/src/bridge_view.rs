@@ -1,4 +1,4 @@
-use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
+use crate::ir::{ColorToken, DivStyle, IrNode, ShortcutBinding, StyleOp};
 use gpui::{
     AnyElement, Context, Empty, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
     KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
@@ -67,6 +67,28 @@ unsafe extern "C" {
         node_id_len: usize,
         callback_id_ptr: *const u8,
         callback_id_len: usize,
+        key_ptr: *const u8,
+        key_len: usize,
+        key_char_ptr: *const u8,
+        key_char_len: usize,
+        has_key_char: i32,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
+    ) -> i32;
+
+    fn guppy_c_send_action_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        action_ptr: *const u8,
+        action_len: usize,
+        shortcut_ptr: *const u8,
+        shortcut_len: usize,
         key_ptr: *const u8,
         key_len: usize,
         key_char_ptr: *const u8,
@@ -270,6 +292,7 @@ fn render_ir(
             tab_index,
             track_scroll,
             anchor_scroll,
+            shortcuts,
             children,
             click,
             hover,
@@ -303,6 +326,7 @@ fn render_ir(
             *tab_index,
             *track_scroll,
             *anchor_scroll,
+            shortcuts,
             children,
             click.as_deref(),
             hover.as_deref(),
@@ -381,6 +405,7 @@ fn render_div(
     tab_index: Option<isize>,
     track_scroll: bool,
     anchor_scroll: bool,
+    shortcuts: &[ShortcutBinding],
     children: &[IrNode],
     click: Option<&str>,
     hover: Option<&str>,
@@ -419,11 +444,12 @@ fn render_div(
     let mouse_up = if disabled { None } else { mouse_up };
     let mouse_move = if disabled { None } else { mouse_move };
     let scroll_wheel = if disabled { None } else { scroll_wheel };
+    let shortcuts = if disabled { Vec::new() } else { shortcuts.to_vec() };
     let focusable = focusable && !disabled;
     let tab_stop = if disabled { None } else { tab_stop };
     let tab_index = if disabled { None } else { tab_index };
-    let keyboard_clickable = click.is_some();
-    let tab_stop = if keyboard_clickable {
+    let keyboard_actionable = click.is_some() || !shortcuts.is_empty();
+    let tab_stop = if keyboard_actionable {
         Some(tab_stop.unwrap_or(true))
     } else {
         tab_stop
@@ -441,7 +467,7 @@ fn render_div(
     };
 
     let needs_focus_handle =
-        keyboard_clickable
+        keyboard_actionable
             || focusable
             || tab_stop.is_some()
             || tab_index.is_some()
@@ -520,7 +546,7 @@ fn render_div(
         Some(handle) => {
             let styled_div = styled_div.track_focus(handle);
 
-            if keyboard_clickable || focusable {
+            if keyboard_actionable || focusable {
                 styled_div.focusable()
             } else {
                 styled_div
@@ -586,39 +612,69 @@ fn render_div(
         None => styled_div,
     };
 
-    let styled_div = match key_down {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let key_down_node_id = node_id.clone();
+    let styled_div = if key_down.is_some() || !shortcuts.is_empty() {
+        let key_down_callback_id = key_down.map(str::to_owned);
+        let key_down_node_id = node_id.clone();
+        let shortcut_bindings = shortcuts.to_vec();
 
-            styled_div.on_key_down(move |event: &KeyDownEvent, _, _| unsafe {
-                let key = event.keystroke.key.as_bytes();
-                let (key_char_ptr, key_char_len, has_key_char) = match event.keystroke.key_char.as_ref() {
-                    Some(key_char) => (key_char.as_ptr(), key_char.len(), 1),
-                    None => (std::ptr::null(), 0, 0),
-                };
-                let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
-                let _ = guppy_c_send_key_down_event(
-                    view_id,
-                    key_down_node_id.as_ptr(),
-                    key_down_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    key.as_ptr(),
-                    key.len(),
-                    key_char_ptr,
-                    key_char_len,
-                    has_key_char,
-                    if event.is_held { 1 } else { 0 },
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                );
-            })
-        }
-        None => styled_div,
+        styled_div.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            let key = event.keystroke.key.as_bytes();
+            let (key_char_ptr, key_char_len, has_key_char) = key_char_parts(event.keystroke.key_char.as_ref());
+            let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
+
+            if let Some(callback_id) = key_down_callback_id.as_ref() {
+                unsafe {
+                    let _ = guppy_c_send_key_down_event(
+                        view_id,
+                        key_down_node_id.as_ptr(),
+                        key_down_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                        key.as_ptr(),
+                        key.len(),
+                        key_char_ptr,
+                        key_char_len,
+                        has_key_char,
+                        if event.is_held { 1 } else { 0 },
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
+                    );
+                }
+            }
+
+            if let Some(shortcut) = matching_shortcut(event, &shortcut_bindings) {
+                unsafe {
+                    let _ = guppy_c_send_action_event(
+                        view_id,
+                        key_down_node_id.as_ptr(),
+                        key_down_node_id.len(),
+                        shortcut.callback.as_ptr(),
+                        shortcut.callback.len(),
+                        shortcut.action.as_ptr(),
+                        shortcut.action.len(),
+                        shortcut.shortcut.as_ptr(),
+                        shortcut.shortcut.len(),
+                        key.as_ptr(),
+                        key.len(),
+                        key_char_ptr,
+                        key_char_len,
+                        has_key_char,
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
+                    );
+                }
+
+                cx.stop_propagation();
+            }
+        })
+    } else {
+        styled_div
     };
 
     let styled_div = match key_up {
@@ -1305,6 +1361,26 @@ fn modifier_flags(modifiers: &gpui::Modifiers) -> (i32, i32, i32, i32, i32) {
         if modifiers.platform { 1 } else { 0 },
         if modifiers.function { 1 } else { 0 },
     )
+}
+
+fn key_char_parts(key_char: Option<&String>) -> (*const u8, usize, i32) {
+    match key_char {
+        Some(key_char) => (key_char.as_ptr(), key_char.len(), 1),
+        None => (std::ptr::null(), 0, 0),
+    }
+}
+
+fn matching_shortcut<'a>(
+    event: &KeyDownEvent,
+    shortcuts: &'a [ShortcutBinding],
+) -> Option<&'a ShortcutBinding> {
+    if event.is_held {
+        return None;
+    }
+
+    shortcuts
+        .iter()
+        .find(|shortcut| event.keystroke.should_match(&shortcut.parsed))
 }
 
 fn pixel_to_f64(value: gpui::Pixels) -> f64 {

@@ -185,6 +185,11 @@ defmodule Guppy.IR do
           optional(:scroll_wheel) => String.t()
         }
 
+  @type action_name :: String.t()
+  @type callback_id :: String.t()
+  @type action_bindings :: %{optional(action_name()) => callback_id()}
+  @type shortcut_binding :: {String.t(), action_name()}
+
   @type text_node :: %{
           required(:kind) => :text,
           required(:content) => String.t(),
@@ -210,6 +215,8 @@ defmodule Guppy.IR do
           optional(:tab_index) => integer(),
           optional(:track_scroll) => boolean(),
           optional(:anchor_scroll) => boolean(),
+          optional(:actions) => action_bindings(),
+          optional(:shortcuts) => [shortcut_binding()],
           optional(:events) => div_events()
         }
 
@@ -380,6 +387,8 @@ defmodule Guppy.IR do
     tab_index = Keyword.get(opts, :tab_index)
     track_scroll = Keyword.get(opts, :track_scroll)
     anchor_scroll = Keyword.get(opts, :anchor_scroll)
+    actions = Keyword.get(opts, :actions)
+    shortcuts = Keyword.get(opts, :shortcuts)
 
     %{kind: :div, children: children}
     |> maybe_put(:id, id)
@@ -397,6 +406,8 @@ defmodule Guppy.IR do
     |> maybe_put(:tab_index, tab_index)
     |> maybe_put(:track_scroll, track_scroll)
     |> maybe_put(:anchor_scroll, anchor_scroll)
+    |> maybe_put(:actions, actions)
+    |> maybe_put(:shortcuts, shortcuts)
     |> maybe_put(:events, events)
   end
 
@@ -424,6 +435,8 @@ defmodule Guppy.IR do
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
          :ok <- validate_optional_boolean(Map.get(node, :track_scroll), :track_scroll),
          :ok <- validate_optional_boolean(Map.get(node, :anchor_scroll), :anchor_scroll),
+         :ok <- validate_actions(Map.get(node, :actions)),
+         :ok <- validate_shortcuts(Map.get(node, :shortcuts), Map.get(node, :actions)),
          :ok <-
            validate_events(Map.get(node, :events), [
              :click,
@@ -521,6 +534,45 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
+
+  defp validate_actions(nil), do: :ok
+
+  defp validate_actions(actions) when is_map(actions) do
+    Enum.reduce_while(actions, :ok, fn
+      {action_name, callback_id}, :ok when is_binary(action_name) and is_binary(callback_id) ->
+        {:cont, :ok}
+
+      {action_name, callback_id}, :ok ->
+        {:halt, {:error, {:invalid_action_binding, action_name, callback_id}}}
+    end)
+  end
+
+  defp validate_actions(other), do: {:error, {:invalid_actions, other}}
+
+  defp validate_shortcuts(nil, _actions), do: :ok
+
+  defp validate_shortcuts(shortcuts, actions) when is_list(shortcuts) do
+    action_names =
+      case actions do
+        nil -> MapSet.new()
+        %{} -> Map.keys(actions) |> MapSet.new()
+      end
+
+    Enum.reduce_while(shortcuts, :ok, fn
+      {shortcut, action_name}, :ok
+      when is_binary(shortcut) and is_binary(action_name) and shortcut != "" ->
+        if MapSet.member?(action_names, action_name) do
+          {:cont, :ok}
+        else
+          {:halt, {:error, {:unknown_shortcut_action, shortcut, action_name}}}
+        end
+
+      other, :ok ->
+        {:halt, {:error, {:invalid_shortcut_binding, other}}}
+    end)
+  end
+
+  defp validate_shortcuts(other, _actions), do: {:error, {:invalid_shortcuts, other}}
 
   defp validate_events(nil, _allowed), do: :ok
 

@@ -501,6 +501,80 @@ int guppy_c_send_key_up_event(
   return sent;
 }
 
+int guppy_c_send_action_event(
+    uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
+    const unsigned char *callback_id_ptr, size_t callback_id_len,
+    const unsigned char *action_ptr, size_t action_len,
+    const unsigned char *shortcut_ptr, size_t shortcut_len,
+    const unsigned char *key_ptr, size_t key_len,
+    const unsigned char *key_char_ptr, size_t key_char_len, int has_key_char,
+    int control, int alt, int shift, int platform, int function) {
+  ErlNifEnv *msg_env;
+  ERL_NIF_TERM payload_term;
+  ERL_NIF_TERM node_id_term;
+  ERL_NIF_TERM callback_id_term;
+  ERL_NIF_TERM action_term;
+  ERL_NIF_TERM shortcut_term;
+  ERL_NIF_TERM key_term;
+  ERL_NIF_TERM key_char_term;
+  ERL_NIF_TERM modifiers_term;
+  ERL_NIF_TERM keys[7];
+  ERL_NIF_TERM values[7];
+  int sent;
+
+  msg_env = enif_alloc_env();
+  if (msg_env == NULL) {
+    return 0;
+  }
+
+  if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
+                              callback_id_ptr, callback_id_len,
+                              &node_id_term, &callback_id_term) ||
+      !make_binary_term(msg_env, action_ptr, action_len, &action_term) ||
+      !make_binary_term(msg_env, shortcut_ptr, shortcut_len, &shortcut_term) ||
+      !make_binary_term(msg_env, key_ptr, key_len, &key_term) ||
+      !make_modifiers_map(msg_env, control, alt, shift, platform, function,
+                          &modifiers_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  if (has_key_char) {
+    if (!make_binary_term(msg_env, key_char_ptr, key_char_len, &key_char_term)) {
+      enif_free_env(msg_env);
+      return 0;
+    }
+  } else {
+    key_char_term = make_atom(msg_env, "nil");
+  }
+
+  keys[0] = make_atom(msg_env, "id");
+  keys[1] = make_atom(msg_env, "callback");
+  keys[2] = make_atom(msg_env, "action");
+  keys[3] = make_atom(msg_env, "shortcut");
+  keys[4] = make_atom(msg_env, "key");
+  keys[5] = make_atom(msg_env, "key_char");
+  keys[6] = make_atom(msg_env, "modifiers");
+
+  values[0] = node_id_term;
+  values[1] = callback_id_term;
+  values[2] = action_term;
+  values[3] = shortcut_term;
+  values[4] = key_term;
+  values[5] = key_char_term;
+  values[6] = modifiers_term;
+
+  if (!enif_make_map_from_arrays(msg_env, keys, values, 7, &payload_term)) {
+    enif_free_env(msg_env);
+    return 0;
+  }
+
+  sent = send_native_event(msg_env, view_id, make_atom(msg_env, "action"),
+                           payload_term);
+  enif_free_env(msg_env);
+  return sent;
+}
+
 int guppy_c_send_context_menu_event(
     uint64_t view_id, const unsigned char *node_id_ptr, size_t node_id_len,
     const unsigned char *callback_id_ptr, size_t callback_id_len,

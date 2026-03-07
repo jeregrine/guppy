@@ -80,6 +80,7 @@ What it does:
 - exercises div clicks and text clicks in one window
 - exercises pointer, keyboard, context-menu, and drag/drop interaction callbacks
 - exercises keyboard activation of clickable divs via Tab + Enter/Space
+- exercises shortcut-dispatched action events via focused keyboard targets
 - exercises full-tree replacement updates from both clicks and timers
 - exercises minimal style tokens and palette changes
 - opens/closes an auxiliary window owned by the main process
@@ -173,6 +174,7 @@ Minimal native events are delivered to the owning Elixir process as:
 {:guppy_event, view_id, %{type: :blur, id: node_id, callback: callback_id}}
 {:guppy_event, view_id, %{type: :key_down, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, is_held: boolean, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :key_up, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :action, id: node_id, callback: callback_id, action: String.t(), shortcut: String.t(), key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :context_menu, id: node_id, callback: callback_id, x: number, y: number, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :drag_start, id: node_id, callback: callback_id, source_id: node_id}}
 {:guppy_event, view_id, %{type: :drag_move, id: node_id, callback: callback_id, source_id: node_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
@@ -207,6 +209,11 @@ Guppy.IR.div(
     mouse_move: "pointer_move",
     scroll_wheel: "pointer_scroll"
   },
+  actions: %{
+    "primary" => "primary_action",
+    "secondary" => "secondary_action"
+  },
+  shortcuts: [{"ctrl-j", "primary"}, {"ctrl-k", "secondary"}],
   focusable: true,
   tab_stop: true,
   tab_index: 1,
@@ -237,6 +244,8 @@ style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 
 Clickable `div` nodes now participate in keyboard activation automatically: when focused, pressing `Enter` or `Space` emits the same `:click` callback as a mouse click. Guppy gives clickable divs a focus handle and default tab-stop participation unless you explicitly override `tab_stop: false`.
 
+`div` nodes can also declare semantic `actions` plus `shortcuts`. Shortcut handlers dispatch `:action` events from the focused element or the nearest focused ancestor that declares the matching shortcut, and propagation stops at the first match.
+
 `div` nodes also support:
 - `focusable: true` to opt into GPUI focus participation
 - `tab_stop: true | false` to control whether a focused node participates in tab navigation
@@ -250,6 +259,8 @@ Clickable `div` nodes now participate in keyboard activation automatically: when
 - `occlude: true | false` to block mouse interaction from reaching elements behind this div's hitbox
 - `track_scroll: true` to preserve and reuse a GPUI `ScrollHandle` across rerenders
 - `anchor_scroll: true` to request scrolling the nearest tracked scroll container so that this div is brought into view
+- `actions: %{action_name => callback_id}` to name semantic actions on a div
+- `shortcuts: [{keystroke, action_name}, ...]` to dispatch those actions from focused keyboard input
 
 Later tokens are applied after earlier tokens, so order is preserved across the bridge.
 

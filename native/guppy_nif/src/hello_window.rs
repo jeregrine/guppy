@@ -223,6 +223,7 @@ fn handle_request(request: MainThreadRequest) {
                     tab_index: None,
                     track_scroll: false,
                     anchor_scroll: false,
+                    shortcuts: vec![],
                     children: vec![IrNode::text(format!("Hello from Guppy view {view_id}"))],
                     click: None,
                     hover: None,

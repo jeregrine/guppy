@@ -33,6 +33,8 @@ defmodule GuppyTest do
         tab_index: 3,
         track_scroll: true,
         anchor_scroll: true,
+        actions: %{"save" => "save_action", "open" => "open_action"},
+        shortcuts: [{"ctrl-s", "save"}, {"ctrl-o", "open"}],
         events: %{
           hover: "hovered",
           click: "clicked",
@@ -193,6 +195,8 @@ defmodule GuppyTest do
     assert styled_ir.in_focus_style == [{:border_color, :yellow}, :shadow_md]
     assert styled_ir.active_style == [{:opacity, 0.6}, {:bg_hex, "#303030"}]
     assert styled_ir.disabled_style == [{:opacity, 0.4}, {:bg, :black}]
+    assert styled_ir.actions == %{"save" => "save_action", "open" => "open_action"}
+    assert styled_ir.shortcuts == [{"ctrl-s", "save"}, {"ctrl-o", "open"}]
     assert styled_ir.disabled == false
     assert styled_ir.stack_priority == 7
     assert styled_ir.occlude == true
@@ -359,6 +363,23 @@ defmodule GuppyTest do
 
     assert {:error, {:invalid_style_op, :bogus}} =
              Guppy.IR.validate(Guppy.IR.div([], disabled_style: [:bogus]))
+
+    assert {:error, {:invalid_actions, [:nope]}} =
+             Guppy.IR.validate(Guppy.IR.div([], actions: [:nope]))
+
+    assert {:error, {:invalid_action_binding, :save, "save_action"}} =
+             Guppy.IR.validate(Guppy.IR.div([], actions: %{save: "save_action"}))
+
+    assert {:error, {:invalid_shortcuts, %{}}} =
+             Guppy.IR.validate(Guppy.IR.div([], shortcuts: %{}))
+
+    assert {:error, {:invalid_shortcut_binding, {1, "save"}}} =
+             Guppy.IR.validate(
+               Guppy.IR.div([], actions: %{"save" => "save_action"}, shortcuts: [{1, "save"}])
+             )
+
+    assert {:error, {:unknown_shortcut_action, "ctrl-s", "save"}} =
+             Guppy.IR.validate(Guppy.IR.div([], shortcuts: [{"ctrl-s", "save"}]))
 
     assert {:error, {:track_scroll, "yes"}} =
              Guppy.IR.validate(Guppy.IR.div([], track_scroll: "yes"))
@@ -577,6 +598,39 @@ defmodule GuppyTest do
                           x: 128.0,
                           y: 72.0,
                           modifiers: %{platform: true}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :action,
+          %{
+            id: "keyboard_pad",
+            callback: "shortcut_primary",
+            action: "primary",
+            shortcut: "ctrl-j",
+            key: "j",
+            key_char: "j",
+            modifiers: %{
+              control: true,
+              alt: false,
+              shift: false,
+              platform: false,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :action,
+                          id: "keyboard_pad",
+                          callback: "shortcut_primary",
+                          action: "primary",
+                          shortcut: "ctrl-j",
+                          key: "j",
+                          key_char: "j",
+                          modifiers: %{control: true}
                         }}
 
         send(Guppy.server(), {

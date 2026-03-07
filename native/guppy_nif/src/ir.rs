@@ -1,8 +1,17 @@
 use eetf::{Atom, Binary, ByteList, List, Map, Term, Tuple};
+use gpui::{KeybindingKeystroke, Keystroke};
 use std::collections::HashMap;
 use std::io::Cursor;
 
 pub type DivStyle = Vec<StyleOp>;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ShortcutBinding {
+    pub shortcut: String,
+    pub action: String,
+    pub callback: String,
+    pub parsed: KeybindingKeystroke,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
@@ -184,6 +193,7 @@ pub enum IrNode {
         tab_index: Option<isize>,
         track_scroll: bool,
         anchor_scroll: bool,
+        shortcuts: Vec<ShortcutBinding>,
         children: Vec<IrNode>,
         click: Option<String>,
         hover: Option<String>,
@@ -236,6 +246,8 @@ impl IrNode {
                     None => Vec::new(),
                 };
 
+                let actions = get_div_actions(map)?;
+
                 Ok(Self::Div {
                     id,
                     style: get_div_style(map)?,
@@ -252,6 +264,7 @@ impl IrNode {
                     tab_index: get_optional_integer_field(map, "tab_index")?,
                     track_scroll: get_boolean_field(map, "track_scroll")?,
                     anchor_scroll: get_boolean_field(map, "anchor_scroll")?,
+                    shortcuts: get_div_shortcuts(map, &actions)?,
                     children,
                     click: get_click_event(map)?,
                     hover: get_hover_event(map)?,
@@ -387,6 +400,65 @@ fn get_div_active_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
 
 fn get_div_disabled_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     get_style_list_field(map, "disabled_style")
+}
+
+fn get_div_actions(map: &HashMap<Term, Term>) -> Result<HashMap<String, String>, String> {
+    let Some(actions_term) = get_field(map, "actions") else {
+        return Ok(HashMap::new());
+    };
+
+    let actions_map = expect_map(actions_term)?;
+    let mut actions = HashMap::new();
+
+    for (action_term, callback_term) in actions_map {
+        let action_name = term_to_string(action_term)?;
+        let callback_id = term_to_string(callback_term)?;
+        actions.insert(action_name, callback_id);
+    }
+
+    Ok(actions)
+}
+
+fn get_div_shortcuts(
+    map: &HashMap<Term, Term>,
+    actions: &HashMap<String, String>,
+) -> Result<Vec<ShortcutBinding>, String> {
+    let Some(shortcuts_term) = get_field(map, "shortcuts") else {
+        return Ok(Vec::new());
+    };
+
+    let shortcuts = get_list(shortcuts_term)?;
+    shortcuts.iter().map(|shortcut| parse_shortcut_binding(shortcut, actions)).collect()
+}
+
+fn parse_shortcut_binding(
+    term: &Term,
+    actions: &HashMap<String, String>,
+) -> Result<ShortcutBinding, String> {
+    let Term::Tuple(Tuple { elements }) = term else {
+        return Err(format!("expected shortcut tuple, got {term}"));
+    };
+
+    if elements.len() != 2 {
+        return Err(format!("expected shortcut tuple with 2 elements, got {term}"));
+    }
+
+    let shortcut = term_to_string(&elements[0])?;
+    let action = term_to_string(&elements[1])?;
+    let callback = actions
+        .get(&action)
+        .cloned()
+        .ok_or_else(|| format!("shortcut references unknown action: {action}"))?;
+
+    Keystroke::parse(&shortcut)
+        .map(KeybindingKeystroke::from_keystroke)
+        .map_err(|error| error.to_string())
+        .map(|parsed| ShortcutBinding {
+            shortcut,
+            action,
+            callback,
+            parsed,
+        })
 }
 
 fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle, String> {
