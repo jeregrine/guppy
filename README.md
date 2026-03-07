@@ -74,6 +74,7 @@ What it does:
 
 - shows native bridge/runtime status inside the UI instead of printing it to the terminal
 - opens in a larger resizable window so the full demo fits more comfortably
+- shows a demo list on the left and the selected demo content on the right
 - exercises div clicks and text clicks in one window
 - exercises full-tree replacement updates from both clicks and timers
 - exercises minimal style tokens and palette changes

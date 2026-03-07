@@ -2,6 +2,7 @@ defmodule Guppy.SuperDemo do
   @palette [:gray, :red, :green, :blue, :yellow]
   @timer_ticks 5
   @timer_interval_ms 1_000
+  @demo_ids [:runtime, :interactions, :windows, :styles, :help]
 
   def run do
     Mix.Task.run("app.start")
@@ -15,6 +16,7 @@ defmodule Guppy.SuperDemo do
         child_owner_pid: nil,
         child_monitor_ref: nil,
         child_view_id: nil,
+        selected_demo: :runtime,
         div_clicks: 0,
         text_clicks: 0,
         timer_ticks: 0,
@@ -98,9 +100,7 @@ defmodule Guppy.SuperDemo do
     :ok
   end
 
-  defp continue(state) do
-    loop(state)
-  end
+  defp continue(state), do: loop(state)
 
   defp handle_click(state, view_id, %{id: node_id, callback: callback_id}) do
     cond do
@@ -136,6 +136,21 @@ defmodule Guppy.SuperDemo do
   end
 
   defp handle_main_click(state, node_id, callback_id) do
+    cond do
+      String.starts_with?(callback_id, "select_demo:") ->
+        demo_id = callback_id |> String.split(":", parts: 2) |> List.last() |> String.to_existing_atom()
+
+        state
+        |> Map.put(:selected_demo, demo_id)
+        |> Map.put(:last_event, "selected #{demo_id} from #{node_id}")
+        |> rerender!()
+
+      true ->
+        handle_main_action(state, node_id, callback_id)
+    end
+  end
+
+  defp handle_main_action(state, node_id, callback_id) do
     case callback_id do
       "refresh_status" ->
         state
@@ -327,13 +342,8 @@ defmodule Guppy.SuperDemo do
   end
 
   defp cleanup(state) do
-    if state.aux_view_id do
-      _ = Guppy.close_window(state.aux_view_id)
-    end
-
-    if state.child_owner_pid do
-      send(state.child_owner_pid, :stop)
-    end
+    if state.aux_view_id, do: _ = Guppy.close_window(state.aux_view_id)
+    if state.child_owner_pid, do: send(state.child_owner_pid, :stop)
   end
 
   defp rerender!(state) do
@@ -344,9 +354,7 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp refresh_statuses(state) do
-    Map.put(state, :statuses, capture_statuses())
-  end
+  defp refresh_statuses(state), do: Map.put(state, :statuses, capture_statuses())
 
   defp capture_statuses do
     %{
@@ -362,97 +370,199 @@ defmodule Guppy.SuperDemo do
   defp render(state) do
     Guppy.IR.div(
       [
-        section("super demo", [
-          Guppy.IR.text("Guppy super demo"),
-          Guppy.IR.text("Every major tracer-shot feature is testable from this window."),
-          Guppy.IR.text("last_event = #{state.last_event}")
-        ]),
-        row("top_row", [
-          section("runtime", runtime_lines(state), style: %{bg: :gray, rounded_md: true, p_4: true}),
-          section("interactions", interaction_lines(state))
-        ]),
-        row("middle_row", [
-          section("windows", window_lines(state)),
-          section("preview", preview_lines(state), style: %{bg: palette_color(state), text_color: contrast_text_color(palette_color(state)), rounded_md: true, p_4: true})
-        ]),
-        section("controls", control_lines())
+        header_panel(state),
+        Guppy.IR.div(
+          [nav_panel(state), detail_panel(state)],
+          id: "main_split",
+          style: %{flex: true, gap_2: true}
+        )
       ],
       id: "super_demo_root",
       style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
     )
   end
 
-  defp runtime_lines(state) do
-    [
-      Guppy.IR.text("load_status = #{inspect(state.statuses.load_status)}"),
-      Guppy.IR.text("native_build_info = #{inspect(state.statuses.native_build_info)}"),
-      Guppy.IR.text("native_runtime_status = #{inspect(state.statuses.native_runtime_status)}"),
-      Guppy.IR.text("native_gui_status = #{inspect(state.statuses.native_gui_status)}"),
-      Guppy.IR.text("ping = #{inspect(state.statuses.ping)}"),
-      Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}")
-    ]
+  defp header_panel(state) do
+    panel(
+      "header_panel",
+      [
+        Guppy.IR.text("Guppy super demo", id: "demo_title"),
+        Guppy.IR.text("Select a demo on the left. The detail panel on the right updates in place."),
+        Guppy.IR.text("last_event = #{state.last_event}")
+      ],
+      style: %{bg: :gray}
+    )
   end
 
-  defp interaction_lines(state) do
-    [
-      Guppy.IR.text("div_clicks = #{state.div_clicks}"),
-      action_button("Increment div clicks", "div_button", "div_increment", :blue),
-      Guppy.IR.text(
-        "Increment text clicks by clicking this line",
-        id: "text_increment_line",
-        events: %{click: "text_increment"}
-      ),
-      Guppy.IR.text("text_clicks = #{state.text_clicks}"),
-      action_button("Start timer rerender demo", "timer_button", "start_timer", :green),
-      Guppy.IR.text("timer_ticks = #{state.timer_ticks}"),
-      Guppy.IR.text("timer_running = #{state.timer_running}"),
-      Guppy.IR.text("timer_remaining = #{state.timer_remaining}")
-    ]
+  defp nav_panel(state) do
+    items =
+      Enum.map(@demo_ids, fn demo_id ->
+        nav_button(demo_id, state.selected_demo == demo_id)
+      end)
+
+    panel(
+      "nav_panel",
+      [
+        Guppy.IR.text("Demos", id: "nav_title"),
+        Guppy.IR.text("The main window stays anchored at the top; switch demos instead of scrolling."),
+        Guppy.IR.div(items, id: "nav_items", style: %{flex: true, flex_col: true, gap_2: true})
+      ],
+      style: %{flex_col: true, p_4: true, bg: :gray}
+    )
   end
 
-  defp window_lines(state) do
-    [
-      Guppy.IR.text("main_view_id = #{state.main_view_id}"),
-      Guppy.IR.text("aux_view_id = #{inspect(state.aux_view_id)}"),
-      Guppy.IR.text("child_owner_pid = #{inspect(state.child_owner_pid)}"),
-      Guppy.IR.text("child_view_id = #{inspect(state.child_view_id)}"),
-      action_button("Open auxiliary window", "open_aux_button", "open_aux_window", :yellow),
-      action_button("Close auxiliary window", "close_aux_button", "close_aux_window", :yellow),
-      action_button("Spawn child-owner window", "spawn_child_button", "spawn_child_owner", :green),
-      action_button("Kill child owner (tests DOWN cleanup)", "kill_child_button", "kill_child_owner", :red)
-    ]
+  defp detail_panel(state) do
+    panel(
+      "detail_panel",
+      [
+        Guppy.IR.text("selected_demo = #{state.selected_demo}", id: "selected_demo_label"),
+        Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}"),
+        detail_content(state)
+      ],
+      style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+    )
   end
 
-  defp preview_lines(state) do
-    [
-      Guppy.IR.text("palette = #{palette_color(state)}"),
-      Guppy.IR.text("This panel changes color via clicks and timer updates."),
-      action_button("Toggle palette", "toggle_palette_button", "toggle_palette", :white),
-      action_button("Refresh runtime status", "refresh_status_button", "refresh_status", :white),
-      action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
-    ]
+  defp detail_content(%{selected_demo: :runtime} = state), do: runtime_demo(state)
+  defp detail_content(%{selected_demo: :interactions} = state), do: interactions_demo(state)
+  defp detail_content(%{selected_demo: :windows} = state), do: windows_demo(state)
+  defp detail_content(%{selected_demo: :styles} = state), do: styles_demo(state)
+  defp detail_content(%{selected_demo: :help} = state), do: help_demo(state)
+
+  defp runtime_demo(state) do
+    panel(
+      "runtime_demo",
+      [
+        Guppy.IR.text("Runtime status shown in the UI"),
+        Guppy.IR.text("load_status = #{inspect(state.statuses.load_status)}"),
+        Guppy.IR.text("native_build_info = #{inspect(state.statuses.native_build_info)}"),
+        Guppy.IR.text("native_runtime_status = #{inspect(state.statuses.native_runtime_status)}"),
+        Guppy.IR.text("native_gui_status = #{inspect(state.statuses.native_gui_status)}"),
+        Guppy.IR.text("ping = #{inspect(state.statuses.ping)}"),
+        action_button("Refresh runtime status", "refresh_status_button", "refresh_status", :white)
+      ],
+      style: %{bg: :gray}
+    )
   end
 
-  defp control_lines do
-    [
-      Guppy.IR.text("Try these in one place:"),
-      Guppy.IR.text("1. Click div and text actions"),
-      Guppy.IR.text("2. Start timer rerenders"),
-      Guppy.IR.text("3. Open/close the auxiliary window"),
-      Guppy.IR.text("4. Spawn and kill the child-owner window to test owner cleanup"),
-      Guppy.IR.text("5. Close the red traffic-light button to test window_closed")
-    ]
+  defp interactions_demo(state) do
+    panel(
+      "interactions_demo",
+      [
+        Guppy.IR.text("Clicks and rerenders"),
+        Guppy.IR.text("div_clicks = #{state.div_clicks}"),
+        action_button("Increment div clicks", "div_button", "div_increment", :blue),
+        Guppy.IR.text(
+          "Increment text clicks by clicking this line",
+          id: "text_increment_line",
+          events: %{click: "text_increment"}
+        ),
+        Guppy.IR.text("text_clicks = #{state.text_clicks}"),
+        action_button("Start timer rerender demo", "timer_button", "start_timer", :green),
+        Guppy.IR.text("timer_ticks = #{state.timer_ticks}"),
+        Guppy.IR.text("timer_running = #{state.timer_running}"),
+        Guppy.IR.text("timer_remaining = #{state.timer_remaining}")
+      ],
+      style: %{bg: :gray}
+    )
   end
 
-  defp section(id, children, opts \\ []) do
-    base_style = %{flex: true, flex_col: true, gap_2: true, p_4: true, border_1: true, border_color: :white, rounded_md: true}
+  defp windows_demo(state) do
+    panel(
+      "windows_demo",
+      [
+        Guppy.IR.text("Window lifecycle"),
+        Guppy.IR.text("main_view_id = #{state.main_view_id}"),
+        Guppy.IR.text("aux_view_id = #{inspect(state.aux_view_id)}"),
+        Guppy.IR.text("child_owner_pid = #{inspect(state.child_owner_pid)}"),
+        Guppy.IR.text("child_view_id = #{inspect(state.child_view_id)}"),
+        action_button("Open auxiliary window", "open_aux_button", "open_aux_window", :yellow),
+        action_button("Close auxiliary window", "close_aux_button", "close_aux_window", :yellow),
+        action_button("Spawn child-owner window", "spawn_child_button", "spawn_child_owner", :green),
+        action_button("Kill child owner (tests DOWN cleanup)", "kill_child_button", "kill_child_owner", :red)
+      ],
+      style: %{bg: :gray}
+    )
+  end
+
+  defp styles_demo(state) do
+    panel(
+      "styles_demo",
+      [
+        Guppy.IR.text("Style tokens and palette changes"),
+        Guppy.IR.text("palette = #{palette_color(state)}"),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("Preview area", id: "preview_title"),
+            Guppy.IR.text("Click the button below to rotate colors.", id: "preview_text")
+          ],
+          id: "preview_panel",
+          style: %{
+            p_6: true,
+            rounded_md: true,
+            border_1: true,
+            border_color: contrast_border_color(palette_color(state)),
+            bg: palette_color(state),
+            text_color: contrast_text_color(palette_color(state))
+          }
+        ),
+        action_button("Toggle palette", "toggle_palette_button", "toggle_palette", :white),
+        action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
+      ],
+      style: %{bg: :gray}
+    )
+  end
+
+  defp help_demo(_state) do
+    panel(
+      "help_demo",
+      [
+        Guppy.IR.text("What to try"),
+        Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
+        Guppy.IR.text("2. Interactions: click the div button and the text line, then start timer rerenders."),
+        Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
+        Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
+        Guppy.IR.text("5. Close the traffic-light button on any window to test window_closed handling.")
+      ],
+      style: %{bg: :gray}
+    )
+  end
+
+  defp panel(id, children), do: panel(id, children, [])
+
+  defp panel(id, children, opts) do
+    base_style = %{
+      flex: true,
+      flex_col: true,
+      gap_2: true,
+      p_4: true,
+      border_1: true,
+      border_color: :white,
+      rounded_md: true
+    }
+
     merged_style = Map.merge(base_style, Keyword.get(opts, :style, %{}))
-
     Guppy.IR.div(children, id: id, style: merged_style)
   end
 
-  defp row(id, children) do
-    Guppy.IR.div(children, id: id, style: %{flex: true, gap_2: true})
+  defp nav_button(demo_id, selected?) do
+    label = demo_label(demo_id)
+    bg = if selected?, do: :blue, else: :gray
+
+    Guppy.IR.div(
+      [Guppy.IR.text(label, id: "nav_#{demo_id}_label")],
+      id: "nav_#{demo_id}",
+      style: %{
+        p_2: true,
+        rounded_md: true,
+        border_1: true,
+        border_color: :white,
+        bg: bg,
+        text_color: :white,
+        cursor_pointer: true
+      },
+      events: %{click: "select_demo:#{demo_id}"}
+    )
   end
 
   defp action_button(label, id, callback, color) do
@@ -472,9 +582,13 @@ defmodule Guppy.SuperDemo do
     )
   end
 
-  defp palette_color(state) do
-    Enum.at(@palette, state.palette_index)
-  end
+  defp demo_label(:runtime), do: "Runtime"
+  defp demo_label(:interactions), do: "Interactions"
+  defp demo_label(:windows), do: "Windows"
+  defp demo_label(:styles), do: "Styles"
+  defp demo_label(:help), do: "Help"
+
+  defp palette_color(state), do: Enum.at(@palette, state.palette_index)
 
   defp contrast_text_color(color) when color in [:yellow, :white, :green], do: :black
   defp contrast_text_color(_color), do: :white
