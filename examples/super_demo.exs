@@ -537,6 +537,23 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.div(
           [
+            Guppy.IR.div([Guppy.IR.text("xl", id: "text_size_xl")], id: "text_size_xl_row", style: [:text_xl]),
+            Guppy.IR.div([Guppy.IR.text("2xl", id: "text_size_2xl")], id: "text_size_2xl_row", style: [:text_2xl]),
+            Guppy.IR.div([Guppy.IR.text("3xl", id: "text_size_3xl")], id: "text_size_3xl_row", style: [:text_3xl])
+          ],
+          id: "text_size_panel",
+          style: [:flex, :flex_col, :gap_2, :p_4, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :gray}]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div([Guppy.IR.text("leading-none sample line one\nline two", id: "leading_none_text")], id: "leading_none_row", style: [:leading_none]),
+            Guppy.IR.div([Guppy.IR.text("leading-relaxed sample line one\nline two", id: "leading_relaxed_text")], id: "leading_relaxed_row", style: [:leading_relaxed])
+          ],
+          id: "line_height_panel",
+          style: [:flex, :flex_col, :gap_2, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+        ),
+        Guppy.IR.div(
+          [
             Guppy.IR.text("This is a long line that should truncate inside a constrained width block to show ordered text overflow styling in the IR bridge.", id: "truncate_demo_label")
           ],
           id: "truncate_demo",

@@ -98,6 +98,15 @@ Guppy.IR currently supports:
   - `text_sm`
   - `text_base`
   - `text_lg`
+  - `text_xl`
+  - `text_2xl`
+  - `text_3xl`
+  - `leading_none`
+  - `leading_tight`
+  - `leading_snug`
+  - `leading_normal`
+  - `leading_relaxed`
+  - `leading_loose`
   - `font_thin`
   - `font_extralight`
   - `font_light`
@@ -213,7 +222,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] font size tokens
 - [x] font weight tokens
 - [x] font style / italic
-- [ ] line height tokens
+- [x] line height tokens
 - [ ] letter spacing
 - [x] underline
 - [x] strikethrough
