@@ -149,6 +149,9 @@ defmodule Guppy.IR do
           {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
+          | {:bg_hex, String.t()}
+          | {:text_color_hex, String.t()}
+          | {:border_color_hex, String.t()}
           | {:opacity, number()}
           | {:w_px, number()}
           | {:w_rem, number()}
@@ -309,6 +312,7 @@ defmodule Guppy.IR do
   ]
 
   @color_style_value_tokens [:bg, :text_color, :border_color]
+  @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
   @fraction_value_tokens [:w_frac, :h_frac]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
@@ -385,6 +389,15 @@ defmodule Guppy.IR do
   defp validate_style_op({key, value})
        when key in @color_style_value_tokens and value in @color_tokens,
        do: :ok
+
+  defp validate_style_op({key, value})
+       when key in @hex_color_style_value_tokens and is_binary(value) do
+    if Regex.match?(~r/^#?[0-9a-fA-F]{6}$/, value) do
+      :ok
+    else
+      {:error, {:invalid_style_op, {key, value}}}
+    end
+  end
 
   defp validate_style_op({:opacity, value})
        when is_number(value) and value >= 0.0 and value <= 1.0,

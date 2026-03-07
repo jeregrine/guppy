@@ -140,6 +140,9 @@ defmodule GuppyTest do
           :shadow_md,
           :shadow_lg,
           {:border_color, :white},
+          {:bg_hex, "#112233"},
+          {:text_color_hex, "445566"},
+          {:border_color_hex, "#abcdef"},
           {:opacity, 0.75},
           {:w_px, 320},
           {:w_rem, 24.0},
@@ -274,6 +277,9 @@ defmodule GuppyTest do
              :shadow_md,
              :shadow_lg,
              {:border_color, :white},
+             {:bg_hex, "#112233"},
+             {:text_color_hex, "445566"},
+             {:border_color_hex, "#abcdef"},
              {:opacity, 0.75},
              {:w_px, 320},
              {:w_rem, 24.0},
@@ -295,6 +301,9 @@ defmodule GuppyTest do
 
     assert {:error, {:invalid_style_op, {:opacity, 1.5}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:opacity, 1.5}]))
+
+    assert {:error, {:invalid_style_op, {:bg_hex, "#12"}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:bg_hex, "#12"}]))
   end
 
   test "native ping is wired through the server" do

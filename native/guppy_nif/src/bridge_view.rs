@@ -258,6 +258,9 @@ where
             StyleOp::Bg(color) => element.bg(color_token_to_color(*color)),
             StyleOp::TextColor(color) => element.text_color(color_token_to_color(*color)),
             StyleOp::BorderColor(color) => element.border_color(color_token_to_color(*color)),
+            StyleOp::BgHex(value) => element.bg(hex_color_to_color(value)),
+            StyleOp::TextColorHex(value) => element.text_color(hex_color_to_color(value)),
+            StyleOp::BorderColorHex(value) => element.border_color(hex_color_to_color(value)),
             StyleOp::Opacity(value) => element.opacity(*value),
             StyleOp::WPx(value) => element.w(px(*value)),
             StyleOp::WRem(value) => element.w(rems(*value)),
@@ -288,4 +291,10 @@ fn color_token_to_color(color: ColorToken) -> gpui::Hsla {
         ColorToken::White => rgb(0xffffff).into(),
         ColorToken::Gray => rgb(0x505050).into(),
     }
+}
+
+fn hex_color_to_color(value: &str) -> gpui::Hsla {
+    let normalized = value.trim_start_matches('#');
+    let parsed = u32::from_str_radix(normalized, 16).unwrap_or(0xff00ff);
+    rgb(parsed).into()
 }

@@ -154,6 +154,9 @@ Guppy.IR currently supports:
   - `{:bg, color}`
   - `{:text_color, color}`
   - `{:border_color, color}`
+  - `{:bg_hex, "#RRGGBB"}`
+  - `{:text_color_hex, "#RRGGBB"}`
+  - `{:border_color_hex, "#RRGGBB"}`
   - `{:opacity, number}`
   - `{:w_px, number}`
   - `{:w_rem, number}`
@@ -243,7 +246,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] more radius tokens
 - [x] opacity
 - [x] box shadow / shadow tokens
-- [ ] richer color space / arbitrary colors
+- [x] richer color space / arbitrary colors
 - [ ] theme/token-based colors beyond the current atoms
 
 ## 6. Interaction and events

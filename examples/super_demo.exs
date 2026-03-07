@@ -581,6 +581,7 @@ defmodule Guppy.SuperDemo do
           [
             Guppy.IR.div([Guppy.IR.text("320px × 180px @ 75% opacity", id: "custom_px_box_label")], id: "custom_px_box", style: [{:w_px, 320}, {:h_px, 180}, {:opacity, 0.75}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :blue}]),
             Guppy.IR.div([Guppy.IR.text("24rem × 12rem", id: "custom_rem_box_label")], id: "custom_rem_box", style: [{:w_rem, 24.0}, {:h_rem, 12.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]),
+            Guppy.IR.div([Guppy.IR.text("hex colors", id: "custom_hex_box_label")], id: "custom_hex_box", style: [{:w_px, 220}, {:h_px, 120}, :p_2, :rounded_lg, {:bg_hex, "#663399"}, {:text_color_hex, "#f8f8f2"}, {:border_color_hex, "#ff79c6"}, :border_2]),
             Guppy.IR.div(
               [
                 Guppy.IR.div([Guppy.IR.text("50% × 100%", id: "custom_frac_box_label")], id: "custom_frac_box", style: [{:w_frac, 0.5}, {:h_frac, 1.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :gray}])
