@@ -1,6 +1,6 @@
 use crate::bridge_view::BridgeView;
 use crate::ir::{DivStyle, IrNode};
-use gpui::{App, AppContext, Application, AsyncApp, Bounds, WindowBounds, WindowOptions, px};
+use gpui::{App, AppContext, Application, AsyncApp, Bounds, WindowBounds, WindowOptions, px, size};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
@@ -70,9 +70,11 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
         let result = app.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(Bounds::from_corners(
-                    gpui::point(px(100.0), px(100.0)),
-                    gpui::point(px(740.0), px(500.0)),
+                    gpui::point(px(80.0), px(80.0)),
+                    gpui::point(px(1280.0), px(920.0)),
                 ))),
+                is_resizable: true,
+                window_min_size: Some(size(px(960.0), px(720.0))),
                 ..Default::default()
             },
             move |_, cx| cx.new(|_| BridgeView { view_id, ir }),
