@@ -186,10 +186,18 @@ Identity rules today:
 - if an IR node has an explicit `id`, native rendering uses it as the GPUI element id
 - otherwise Guppy falls back to a generated path-based id
 
+Style tokens are represented as an ordered list, for example:
+
+```elixir
+style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
+```
+
+Later tokens are applied after earlier tokens, so order is preserved across the bridge.
+
 Minimal `:div` style tokens currently supported:
 
-- booleans: `flex`, `flex_col`, `flex_row`, `flex_1`, `size_full`, `w_full`, `h_full`, `gap_2`, `p_2`, `p_4`, `p_6`, `w_64`, `items_start`, `items_center`, `items_end`, `justify_start`, `justify_center`, `justify_end`, `justify_between`, `justify_around`, `cursor_pointer`, `rounded_md`, `border_1`, `overflow_y_scroll`
-- colors: `bg`, `text_color`, `border_color`
+- flags: `flex`, `flex_col`, `flex_row`, `flex_1`, `size_full`, `w_full`, `h_full`, `gap_2`, `p_2`, `p_4`, `p_6`, `w_64`, `items_start`, `items_center`, `items_end`, `justify_start`, `justify_center`, `justify_end`, `justify_between`, `justify_around`, `cursor_pointer`, `rounded_md`, `border_1`, `overflow_scroll`, `overflow_x_scroll`, `overflow_y_scroll`, `overflow_hidden`, `overflow_x_hidden`, `overflow_y_hidden`
+- color ops: `{:bg, color}`, `{:text_color, color}`, `{:border_color, color}`
 - color tokens: `:red`, `:green`, `:blue`, `:yellow`, `:black`, `:white`, `:gray`
 
 ## Current architecture

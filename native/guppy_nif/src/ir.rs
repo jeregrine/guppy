@@ -1,36 +1,43 @@
-use eetf::{Atom, Binary, ByteList, List, Map, Term};
+use eetf::{Atom, Binary, ByteList, List, Map, Term, Tuple};
 use std::collections::HashMap;
 use std::io::Cursor;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct DivStyle {
-    pub flex: bool,
-    pub flex_col: bool,
-    pub flex_row: bool,
-    pub flex_1: bool,
-    pub size_full: bool,
-    pub w_full: bool,
-    pub h_full: bool,
-    pub gap_2: bool,
-    pub p_2: bool,
-    pub p_4: bool,
-    pub p_6: bool,
-    pub w_64: bool,
-    pub items_start: bool,
-    pub items_center: bool,
-    pub items_end: bool,
-    pub justify_start: bool,
-    pub justify_center: bool,
-    pub justify_end: bool,
-    pub justify_between: bool,
-    pub justify_around: bool,
-    pub cursor_pointer: bool,
-    pub rounded_md: bool,
-    pub border_1: bool,
-    pub overflow_y_scroll: bool,
-    pub bg: Option<ColorToken>,
-    pub text_color: Option<ColorToken>,
-    pub border_color: Option<ColorToken>,
+pub type DivStyle = Vec<StyleOp>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum StyleOp {
+    Flex,
+    FlexCol,
+    FlexRow,
+    Flex1,
+    SizeFull,
+    WFull,
+    HFull,
+    Gap2,
+    P2,
+    P4,
+    P6,
+    W64,
+    ItemsStart,
+    ItemsCenter,
+    ItemsEnd,
+    JustifyStart,
+    JustifyCenter,
+    JustifyEnd,
+    JustifyBetween,
+    JustifyAround,
+    CursorPointer,
+    RoundedMd,
+    Border1,
+    OverflowScroll,
+    OverflowXScroll,
+    OverflowYScroll,
+    OverflowHidden,
+    OverflowXHidden,
+    OverflowYHidden,
+    Bg(ColorToken),
+    TextColor(ColorToken),
+    BorderColor(ColorToken),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -143,56 +150,70 @@ fn get_optional_string_field(
 
 fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     let Some(style_term) = get_field(map, "style") else {
-        return Ok(DivStyle::default());
+        return Ok(Vec::new());
     };
 
-    let style_map = expect_map(style_term)?;
-
-    Ok(DivStyle {
-        flex: get_bool_style(style_map, "flex")?,
-        flex_col: get_bool_style(style_map, "flex_col")?,
-        flex_row: get_bool_style(style_map, "flex_row")?,
-        flex_1: get_bool_style(style_map, "flex_1")?,
-        size_full: get_bool_style(style_map, "size_full")?,
-        w_full: get_bool_style(style_map, "w_full")?,
-        h_full: get_bool_style(style_map, "h_full")?,
-        gap_2: get_bool_style(style_map, "gap_2")?,
-        p_2: get_bool_style(style_map, "p_2")?,
-        p_4: get_bool_style(style_map, "p_4")?,
-        p_6: get_bool_style(style_map, "p_6")?,
-        w_64: get_bool_style(style_map, "w_64")?,
-        items_start: get_bool_style(style_map, "items_start")?,
-        items_center: get_bool_style(style_map, "items_center")?,
-        items_end: get_bool_style(style_map, "items_end")?,
-        justify_start: get_bool_style(style_map, "justify_start")?,
-        justify_center: get_bool_style(style_map, "justify_center")?,
-        justify_end: get_bool_style(style_map, "justify_end")?,
-        justify_between: get_bool_style(style_map, "justify_between")?,
-        justify_around: get_bool_style(style_map, "justify_around")?,
-        cursor_pointer: get_bool_style(style_map, "cursor_pointer")?,
-        rounded_md: get_bool_style(style_map, "rounded_md")?,
-        border_1: get_bool_style(style_map, "border_1")?,
-        overflow_y_scroll: get_bool_style(style_map, "overflow_y_scroll")?,
-        bg: get_color_style(style_map, "bg")?,
-        text_color: get_color_style(style_map, "text_color")?,
-        border_color: get_color_style(style_map, "border_color")?,
-    })
+    let style_list = get_list(style_term)?;
+    style_list.iter().map(parse_style_op).collect()
 }
 
-fn get_bool_style(map: &HashMap<Term, Term>, key: &str) -> Result<bool, String> {
-    match get_field(map, key) {
-        Some(Term::Atom(atom)) if atom.name == "true" => Ok(true),
-        Some(Term::Atom(atom)) if atom.name == "false" => Ok(false),
-        Some(other) => Err(format!("expected boolean style {key}, got {other}")),
-        None => Ok(false),
+fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
+    match term {
+        Term::Atom(atom) => parse_style_flag(&atom.name),
+        Term::Tuple(Tuple { elements }) if elements.len() == 2 => {
+            let key = match &elements[0] {
+                Term::Atom(atom) => atom.name.as_str(),
+                other => return Err(format!("expected style tuple key atom, got {other}")),
+            };
+
+            let color = match &elements[1] {
+                Term::Atom(atom) => parse_color_token(&atom.name)?,
+                other => return Err(format!("expected style tuple value atom, got {other}")),
+            };
+
+            match key {
+                "bg" => Ok(StyleOp::Bg(color)),
+                "text_color" => Ok(StyleOp::TextColor(color)),
+                "border_color" => Ok(StyleOp::BorderColor(color)),
+                other => Err(format!("unsupported style tuple key: {other}")),
+            }
+        }
+        other => Err(format!("unsupported style op: {other}")),
     }
 }
 
-fn get_color_style(map: &HashMap<Term, Term>, key: &str) -> Result<Option<ColorToken>, String> {
-    match get_field(map, key) {
-        Some(Term::Atom(atom)) => Ok(Some(parse_color_token(&atom.name)?)),
-        Some(other) => Err(format!("expected color style {key}, got {other}")),
-        None => Ok(None),
+fn parse_style_flag(token: &str) -> Result<StyleOp, String> {
+    match token {
+        "flex" => Ok(StyleOp::Flex),
+        "flex_col" => Ok(StyleOp::FlexCol),
+        "flex_row" => Ok(StyleOp::FlexRow),
+        "flex_1" => Ok(StyleOp::Flex1),
+        "size_full" => Ok(StyleOp::SizeFull),
+        "w_full" => Ok(StyleOp::WFull),
+        "h_full" => Ok(StyleOp::HFull),
+        "gap_2" => Ok(StyleOp::Gap2),
+        "p_2" => Ok(StyleOp::P2),
+        "p_4" => Ok(StyleOp::P4),
+        "p_6" => Ok(StyleOp::P6),
+        "w_64" => Ok(StyleOp::W64),
+        "items_start" => Ok(StyleOp::ItemsStart),
+        "items_center" => Ok(StyleOp::ItemsCenter),
+        "items_end" => Ok(StyleOp::ItemsEnd),
+        "justify_start" => Ok(StyleOp::JustifyStart),
+        "justify_center" => Ok(StyleOp::JustifyCenter),
+        "justify_end" => Ok(StyleOp::JustifyEnd),
+        "justify_between" => Ok(StyleOp::JustifyBetween),
+        "justify_around" => Ok(StyleOp::JustifyAround),
+        "cursor_pointer" => Ok(StyleOp::CursorPointer),
+        "rounded_md" => Ok(StyleOp::RoundedMd),
+        "border_1" => Ok(StyleOp::Border1),
+        "overflow_scroll" => Ok(StyleOp::OverflowScroll),
+        "overflow_x_scroll" => Ok(StyleOp::OverflowXScroll),
+        "overflow_y_scroll" => Ok(StyleOp::OverflowYScroll),
+        "overflow_hidden" => Ok(StyleOp::OverflowHidden),
+        "overflow_x_hidden" => Ok(StyleOp::OverflowXHidden),
+        "overflow_y_hidden" => Ok(StyleOp::OverflowYHidden),
+        other => Err(format!("unsupported style token: {other}")),
     }
 }
 

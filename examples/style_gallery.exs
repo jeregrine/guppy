@@ -26,17 +26,17 @@ render = fn selected ->
         Guppy.IR.text(label, id: "#{id}_label", events: %{click: id})
       ],
       id: id,
-      style: %{
-        flex: true,
-        flex_col: true,
-        p_4: true,
-        rounded_md: true,
-        border_1: true,
-        border_color: contrast_border_color.(color),
-        bg: color,
-        text_color: contrast_text_color.(color),
-        cursor_pointer: true
-      },
+      style: [
+        :flex,
+        :flex_col,
+        :p_4,
+        :rounded_md,
+        :border_1,
+        {:border_color, contrast_border_color.(color)},
+        {:bg, color},
+        {:text_color, contrast_text_color.(color)},
+        :cursor_pointer
+      ],
       events: %{click: id}
     )
   end
@@ -52,7 +52,7 @@ render = fn selected ->
           swatch.("select_blue", "Blue", :blue)
         ],
         id: "swatch_list",
-        style: %{flex: true, flex_col: true, gap_2: true}
+        style: [:flex, :flex_col, :gap_2]
       ),
       Guppy.IR.div(
         [
@@ -60,11 +60,18 @@ render = fn selected ->
           Guppy.IR.text("Click a swatch above to change this block.", id: "preview_text")
         ],
         id: "preview",
-        style: %{p_6: true, rounded_md: true, border_1: true, border_color: contrast_border_color.(selected), bg: selected, text_color: contrast_text_color.(selected)}
+        style: [
+          :p_6,
+          :rounded_md,
+          :border_1,
+          {:border_color, contrast_border_color.(selected)},
+          {:bg, selected},
+          {:text_color, contrast_text_color.(selected)}
+        ]
       )
     ],
     id: "style_gallery_root",
-    style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+    style: [:flex, :flex_col, :gap_2, :p_4]
   )
 end
 

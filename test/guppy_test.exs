@@ -12,43 +12,70 @@ defmodule GuppyTest do
     assert is_binary(Guppy.nif_path())
   end
 
-  test "ir validation accepts ids/styles and rejects invalid values" do
+  test "ir validation accepts ordered style lists and rejects invalid values" do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))
 
-    assert :ok =
-             Guppy.IR.validate(
-               Guppy.IR.div(
-                 [Guppy.IR.text("hello")],
-                 id: "root",
-                 style: %{
-                   flex: true,
-                   flex_col: true,
-                   flex_row: true,
-                   flex_1: true,
-                   size_full: true,
-                   w_full: true,
-                   h_full: true,
-                   gap_2: true,
-                   items_start: true,
-                   items_end: true,
-                   justify_start: true,
-                   bg: :gray,
-                   border_1: true,
-                   border_color: :white,
-                   justify_center: true,
-                   justify_end: true,
-                   justify_between: true,
-                   justify_around: true,
-                   overflow_y_scroll: true
-                 }
-               )
-             )
+    styled_ir =
+      Guppy.IR.div(
+        [Guppy.IR.text("hello")],
+        id: "root",
+        style: [
+          :flex,
+          :flex_col,
+          :flex_row,
+          :flex_1,
+          :size_full,
+          :w_full,
+          :h_full,
+          :gap_2,
+          :items_start,
+          :items_end,
+          :justify_start,
+          :justify_center,
+          :justify_end,
+          :justify_between,
+          :justify_around,
+          {:bg, :gray},
+          :border_1,
+          {:border_color, :white},
+          :overflow_y_scroll,
+          {:bg, :blue}
+        ]
+      )
+
+    assert :ok = Guppy.IR.validate(styled_ir)
+
+    assert styled_ir.style == [
+             :flex,
+             :flex_col,
+             :flex_row,
+             :flex_1,
+             :size_full,
+             :w_full,
+             :h_full,
+             :gap_2,
+             :items_start,
+             :items_end,
+             :justify_start,
+             :justify_center,
+             :justify_end,
+             :justify_between,
+             :justify_around,
+             {:bg, :gray},
+             :border_1,
+             {:border_color, :white},
+             :overflow_y_scroll,
+             {:bg, :blue}
+           ]
 
     assert {:error, {:invalid_id, 123}} = Guppy.IR.validate(Guppy.IR.text("hello", id: 123))
 
-    assert {:error, {:invalid_style, :bogus, true}} =
-             Guppy.IR.validate(Guppy.IR.div([], style: %{bogus: true}))
+    assert {:error, {:invalid_style_op, :bogus}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [:bogus]))
+
+    assert {:error, {:invalid_style_op, {:bg, :purple}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:bg, :purple}]))
   end
 
   test "native ping is wired through the server" do
@@ -80,7 +107,7 @@ defmodule GuppyTest do
                        Guppy.IR.text("Rendered as a nested tree")
                      ],
                      id: "root",
-                     style: %{flex: true, flex_col: true, gap_2: true, p_4: true, bg: :gray}
+                     style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}]
                    )
                  )
 

@@ -13,6 +13,8 @@ The goal is to add these incrementally:
 
 ## Current implemented subset
 
+Guppy.IR currently supports an ordered style-op list, not a style map. Later ops are applied after earlier ops.
+
 Guppy.IR currently supports:
 
 - nodes:
@@ -46,10 +48,15 @@ Guppy.IR currently supports:
   - `cursor_pointer`
   - `rounded_md`
   - `border_1`
+  - `overflow_scroll`
+  - `overflow_x_scroll`
   - `overflow_y_scroll`
-  - `bg`
-  - `text_color`
-  - `border_color`
+  - `overflow_hidden`
+  - `overflow_x_hidden`
+  - `overflow_y_hidden`
+  - `{:bg, color}`
+  - `{:text_color, color}`
+  - `{:border_color, color}`
 
 ## Priority order
 
@@ -85,11 +92,11 @@ The rough order below is chosen to improve layout correctness first, then text/l
 
 ## 2. Overflow and scrolling
 
-- [ ] `overflow_scroll`
-- [ ] `overflow_x_scroll`
-- [ ] `overflow_hidden`
-- [ ] `overflow_x_hidden`
-- [ ] `overflow_y_hidden`
+- [x] `overflow_scroll`
+- [x] `overflow_x_scroll`
+- [x] `overflow_hidden`
+- [x] `overflow_x_hidden`
+- [x] `overflow_y_hidden`
 - [ ] `scrollbar_width`
 - [ ] tracked scrolling / `track_scroll`
 - [ ] scroll anchoring / `anchor_scroll`

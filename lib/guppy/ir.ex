@@ -9,40 +9,52 @@ defmodule Guppy.IR do
   - native GPUI renders that description
   - Elixir sends full-tree replacement updates
   - native click events can roundtrip back to Elixir
+
+  Style tokens are represented as an ordered list.
+  That order is preserved across the bridge so later tokens can override earlier ones.
   """
 
   @type node_id :: String.t()
   @type color_token :: :red | :green | :blue | :yellow | :black | :white | :gray
 
-  @type style :: %{
-          optional(:flex) => boolean(),
-          optional(:flex_col) => boolean(),
-          optional(:flex_row) => boolean(),
-          optional(:flex_1) => boolean(),
-          optional(:size_full) => boolean(),
-          optional(:w_full) => boolean(),
-          optional(:h_full) => boolean(),
-          optional(:gap_2) => boolean(),
-          optional(:p_2) => boolean(),
-          optional(:p_4) => boolean(),
-          optional(:p_6) => boolean(),
-          optional(:w_64) => boolean(),
-          optional(:items_start) => boolean(),
-          optional(:items_center) => boolean(),
-          optional(:items_end) => boolean(),
-          optional(:justify_start) => boolean(),
-          optional(:justify_center) => boolean(),
-          optional(:justify_end) => boolean(),
-          optional(:justify_between) => boolean(),
-          optional(:justify_around) => boolean(),
-          optional(:cursor_pointer) => boolean(),
-          optional(:rounded_md) => boolean(),
-          optional(:border_1) => boolean(),
-          optional(:overflow_y_scroll) => boolean(),
-          optional(:bg) => color_token(),
-          optional(:text_color) => color_token(),
-          optional(:border_color) => color_token()
-        }
+  @type style_flag ::
+          :flex
+          | :flex_col
+          | :flex_row
+          | :flex_1
+          | :size_full
+          | :w_full
+          | :h_full
+          | :gap_2
+          | :p_2
+          | :p_4
+          | :p_6
+          | :w_64
+          | :items_start
+          | :items_center
+          | :items_end
+          | :justify_start
+          | :justify_center
+          | :justify_end
+          | :justify_between
+          | :justify_around
+          | :cursor_pointer
+          | :rounded_md
+          | :border_1
+          | :overflow_scroll
+          | :overflow_x_scroll
+          | :overflow_y_scroll
+          | :overflow_hidden
+          | :overflow_x_hidden
+          | :overflow_y_hidden
+
+  @type style_value ::
+          {:bg, color_token()}
+          | {:text_color, color_token()}
+          | {:border_color, color_token()}
+
+  @type style_op :: style_flag() | style_value()
+  @type style :: [style_op()]
 
   @type events :: %{optional(:click) => String.t()}
 
@@ -63,7 +75,7 @@ defmodule Guppy.IR do
 
   @type ir_node :: text_node() | div_node()
 
-  @style_boolean_keys [
+  @style_flag_tokens [
     :flex,
     :flex_col,
     :flex_row,
@@ -87,10 +99,15 @@ defmodule Guppy.IR do
     :cursor_pointer,
     :rounded_md,
     :border_1,
-    :overflow_y_scroll
+    :overflow_scroll,
+    :overflow_x_scroll,
+    :overflow_y_scroll,
+    :overflow_hidden,
+    :overflow_x_hidden,
+    :overflow_y_hidden
   ]
 
-  @style_color_keys [:bg, :text_color, :border_color]
+  @style_value_tokens [:bg, :text_color, :border_color]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
 
   @spec text(String.t(), keyword()) :: text_node()
@@ -149,20 +166,23 @@ defmodule Guppy.IR do
 
   defp validate_style(nil), do: :ok
 
-  defp validate_style(style) when is_map(style) do
-    Enum.reduce_while(style, :ok, fn
-      {key, value}, :ok when key in @style_boolean_keys and is_boolean(value) ->
-        {:cont, :ok}
-
-      {key, value}, :ok when key in @style_color_keys and value in @color_tokens ->
-        {:cont, :ok}
-
-      {key, value}, :ok ->
-        {:halt, {:error, {:invalid_style, key, value}}}
+  defp validate_style(style) when is_list(style) do
+    Enum.reduce_while(style, :ok, fn op, :ok ->
+      case validate_style_op(op) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
     end)
   end
 
-  defp validate_style(other), do: {:error, {:invalid_style_map, other}}
+  defp validate_style(other), do: {:error, {:invalid_style_list, other}}
+
+  defp validate_style_op(op) when op in @style_flag_tokens, do: :ok
+
+  defp validate_style_op({key, value}) when key in @style_value_tokens and value in @color_tokens,
+    do: :ok
+
+  defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
 
   defp validate_events(nil), do: :ok
 

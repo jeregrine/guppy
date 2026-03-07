@@ -19,11 +19,11 @@ render_counter = fn count ->
           Guppy.IR.text("This window is rerendered from Elixir state."),
           Guppy.IR.text("Each tick sends a full replacement IR tree.")
         ],
-        style: %{p_2: true, bg: :gray, rounded_md: true}
+        style: [:p_2, {:bg, :gray}, :rounded_md]
       )
     ],
     id: "counter_root",
-    style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+    style: [:flex, :flex_col, :gap_2, :p_4]
   )
 end
 

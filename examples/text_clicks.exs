@@ -18,7 +18,7 @@ render = fn status ->
       Guppy.IR.text("Or click this line", id: "line_two", events: %{click: "line_two"})
     ],
     id: "text_click_root",
-    style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+    style: [:flex, :flex_col, :gap_2, :p_4]
   )
 end
 

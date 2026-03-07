@@ -26,6 +26,11 @@ This `AGENTS.md` applies to the `./guppy` repo only.
 
 Important:
 
+- do not preserve backwards compatibility just because an older approach exists
+- the project is not released or deployed yet, so prefer replacing broken or limiting designs outright
+- when a current representation is getting in the way, throw away the old way and implement the better one cleanly
+- optimize for solving the architectural problem, not for compatibility shims
+
 - the jj/git repo is rooted at `./guppy`
 - do **not** initialize or commit from the parent directory unless explicitly asked
 - use `jj` commands from inside `./guppy`
@@ -103,6 +108,7 @@ The current bridge is still intentionally narrow:
 - supported native nodes are still intentionally small (`:div` + `:text`)
 - click and window-close are the only native event roundtrips today
 - style mapping exists, but only as a small explicit subset on `:div`
+- div styles are represented as an ordered style-op list, not a style map; preserve order when extending the bridge
 - explicit node ids now exist, but richer keyed/stateful behaviors are still ahead
 
 So if you are extending the project, the next likely architectural moves are:

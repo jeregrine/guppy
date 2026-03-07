@@ -1,7 +1,7 @@
-use crate::ir::{ColorToken, DivStyle, IrNode};
+use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
-    AnyElement, Context, InteractiveElement, InteractiveText, SharedString, StatefulInteractiveElement, Styled, StyledText,
-    Window, div, prelude::*, rgb,
+    AnyElement, Context, InteractiveElement, InteractiveText, SharedString,
+    StatefulInteractiveElement, Styled, StyledText, Window, div, prelude::*, rgb,
 };
 
 unsafe extern "C" {
@@ -52,8 +52,10 @@ fn render_text(
     click: Option<&str>,
 ) -> AnyElement {
     let node_id = node_id(view_id, path, id);
-    let interactive_text =
-        InteractiveText::new(SharedString::from(node_id.clone()), StyledText::new(content.to_owned()));
+    let interactive_text = InteractiveText::new(
+        SharedString::from(node_id.clone()),
+        StyledText::new(content.to_owned()),
+    );
 
     match click {
         Some(callback_id) if !content.is_empty() => {
@@ -124,87 +126,43 @@ fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
 where
     E: Styled + InteractiveElement + StatefulInteractiveElement,
 {
-    if style.flex {
-        element = element.flex();
+    for op in style {
+        element = match op {
+            StyleOp::Flex => element.flex(),
+            StyleOp::FlexCol => element.flex_col(),
+            StyleOp::FlexRow => element.flex_row(),
+            StyleOp::Flex1 => element.flex_1(),
+            StyleOp::SizeFull => element.size_full(),
+            StyleOp::WFull => element.w_full(),
+            StyleOp::HFull => element.h_full(),
+            StyleOp::Gap2 => element.gap_2(),
+            StyleOp::P2 => element.p_2(),
+            StyleOp::P4 => element.p_4(),
+            StyleOp::P6 => element.p_6(),
+            StyleOp::W64 => element.w_64(),
+            StyleOp::ItemsStart => element.items_start(),
+            StyleOp::ItemsCenter => element.items_center(),
+            StyleOp::ItemsEnd => element.items_end(),
+            StyleOp::JustifyStart => element.justify_start(),
+            StyleOp::JustifyCenter => element.justify_center(),
+            StyleOp::JustifyEnd => element.justify_end(),
+            StyleOp::JustifyBetween => element.justify_between(),
+            StyleOp::JustifyAround => element.justify_around(),
+            StyleOp::CursorPointer => element.cursor_pointer(),
+            StyleOp::RoundedMd => element.rounded_md(),
+            StyleOp::Border1 => element.border_1(),
+            StyleOp::OverflowScroll => element.overflow_scroll(),
+            StyleOp::OverflowXScroll => element.overflow_x_scroll(),
+            StyleOp::OverflowYScroll => element.overflow_y_scroll(),
+            StyleOp::OverflowHidden => element.overflow_hidden(),
+            StyleOp::OverflowXHidden => element.overflow_x_hidden(),
+            StyleOp::OverflowYHidden => element.overflow_y_hidden(),
+            StyleOp::Bg(color) => element.bg(color_token_to_color(*color)),
+            StyleOp::TextColor(color) => element.text_color(color_token_to_color(*color)),
+            StyleOp::BorderColor(color) => element.border_color(color_token_to_color(*color)),
+        };
     }
-    if style.flex_col {
-        element = element.flex_col();
-    }
-    if style.flex_row {
-        element = element.flex_row();
-    }
-    if style.size_full {
-        element = element.size_full();
-    }
-    if style.w_full {
-        element = element.w_full();
-    }
-    if style.h_full {
-        element = element.h_full();
-    }
-    if style.flex_1 {
-        element = element.flex_1();
-    }
-    if style.gap_2 {
-        element = element.gap_2();
-    }
-    if style.p_2 {
-        element = element.p_2();
-    }
-    if style.p_4 {
-        element = element.p_4();
-    }
-    if style.p_6 {
-        element = element.p_6();
-    }
-    if style.w_64 {
-        element = element.w_64();
-    }
-    if style.items_start {
-        element = element.items_start();
-    }
-    if style.items_center {
-        element = element.items_center();
-    }
-    if style.items_end {
-        element = element.items_end();
-    }
-    if style.justify_start {
-        element = element.justify_start();
-    }
-    if style.justify_center {
-        element = element.justify_center();
-    }
-    if style.justify_end {
-        element = element.justify_end();
-    }
-    if style.justify_between {
-        element = element.justify_between();
-    }
-    if style.justify_around {
-        element = element.justify_around();
-    }
-    if style.cursor_pointer {
-        element = element.cursor_pointer();
-    }
-    if style.rounded_md {
-        element = element.rounded_md();
-    }
-    if style.border_1 {
-        element = element.border_1();
-    }
-    if style.overflow_y_scroll {
-        element = element.overflow_y_scroll();
-    }
-    if let Some(color) = style.bg {
-        element = element.bg(color_token_to_color(color));
-    }
-    if let Some(color) = style.text_color {
-        element = element.text_color(color_token_to_color(color));
-    }
-    if let Some(color) = style.border_color {
-        element = element.border_color(color_token_to_color(color));
-    }
+
     element
 }
 

@@ -374,11 +374,11 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [nav_panel(state), detail_panel(state)],
           id: "main_split",
-          style: %{flex: true, flex_1: true, w_full: true, h_full: true, gap_2: true}
+          style: [:flex, :flex_1, :w_full, :h_full, :gap_2]
         )
       ],
       id: "super_demo_root",
-      style: %{size_full: true, flex: true, flex_col: true, gap_2: true, p_4: true}
+      style: [:size_full, :flex, :flex_col, :gap_2, :p_4]
     )
   end
 
@@ -392,11 +392,11 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.text("last_event = #{state.last_event}", id: "last_event_label")
           ],
           id: "header_row",
-          style: %{flex: true, flex_row: true, w_full: true, justify_between: true, items_start: true}
+          style: [:flex, :flex_row, :w_full, :justify_between, :items_start]
         ),
         Guppy.IR.text("Select a demo on the left. The detail panel on the right updates in place.")
       ],
-      style: %{bg: :gray}
+      style: [{:bg, :gray}]
     )
   end
 
@@ -411,9 +411,9 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("Demos", id: "nav_title"),
         Guppy.IR.text("The main window stays anchored at the top; switch demos instead of scrolling."),
-        Guppy.IR.div(items, id: "nav_items", style: %{flex: true, flex_col: true, w_full: true, gap_2: true})
+        Guppy.IR.div(items, id: "nav_items", style: [:flex, :flex_col, :w_full, :gap_2])
       ],
-      style: %{w_64: true, h_full: true, flex_col: true, items_start: true, p_4: true, bg: :gray}
+      style: [:w_64, :h_full, :flex_col, :items_start, :p_4, {:bg, :gray}]
     )
   end
 
@@ -425,7 +425,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}"),
         detail_content(state)
       ],
-      style: %{flex: true, flex_col: true, flex_1: true, w_full: true, h_full: true, gap_2: true, p_4: true, overflow_y_scroll: true}
+      style: [:flex, :flex_col, :flex_1, :w_full, :h_full, :gap_2, :p_4, :overflow_y_scroll]
     )
   end
 
@@ -448,7 +448,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("ping = #{inspect(state.statuses.ping)}"),
         action_button("Refresh runtime status", "refresh_status_button", "refresh_status", :white)
       ],
-      style: %{bg: :gray}
+      style: [{:bg, :gray}]
     )
   end
 
@@ -470,7 +470,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("timer_running = #{state.timer_running}"),
         Guppy.IR.text("timer_remaining = #{state.timer_remaining}")
       ],
-      style: %{bg: :gray}
+      style: [{:bg, :gray}]
     )
   end
 
@@ -488,7 +488,7 @@ defmodule Guppy.SuperDemo do
         action_button("Spawn child-owner window", "spawn_child_button", "spawn_child_owner", :green),
         action_button("Kill child owner (tests DOWN cleanup)", "kill_child_button", "kill_child_owner", :red)
       ],
-      style: %{bg: :gray}
+      style: [{:bg, :gray}]
     )
   end
 
@@ -504,19 +504,19 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.text("Click the button below to rotate colors.", id: "preview_text")
           ],
           id: "preview_panel",
-          style: %{
-            p_6: true,
-            rounded_md: true,
-            border_1: true,
-            border_color: contrast_border_color(palette_color(state)),
-            bg: palette_color(state),
-            text_color: contrast_text_color(palette_color(state))
-          }
+          style: [
+            :p_6,
+            :rounded_md,
+            :border_1,
+            {:border_color, contrast_border_color(palette_color(state))},
+            {:bg, palette_color(state)},
+            {:text_color, contrast_text_color(palette_color(state))}
+          ]
         ),
         action_button("Toggle palette", "toggle_palette_button", "toggle_palette", :white),
         action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
       ],
-      style: %{bg: :gray}
+      style: [{:bg, :gray}]
     )
   end
 
@@ -536,7 +536,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("This panel is intentionally taller than the available area."),
         Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored.")
       ] ++ long_lines,
-      style: %{bg: :gray}
+      style: [{:bg, :gray}]
     )
   end
 
@@ -553,31 +553,22 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("6. Close the traffic-light button on any window to test window_closed handling."),
         Guppy.IR.div(
           [
-            alignment_chip("justify_start", "start", %{flex: true, flex_row: true, justify_start: true, items_start: true, p_2: true, bg: :black}),
-            alignment_chip("justify_end", "end", %{flex: true, flex_row: true, justify_end: true, items_end: true, p_2: true, bg: :black}),
-            alignment_chip("justify_between", "between", %{flex: true, flex_row: true, justify_between: true, p_2: true, bg: :black}),
-            alignment_chip("justify_around", "around", %{flex: true, flex_row: true, justify_around: true, p_2: true, bg: :black})
+            alignment_chip("justify_start", "start", [:flex, :flex_row, :justify_start, :items_start, :p_2, {:bg, :black}]),
+            alignment_chip("justify_end", "end", [:flex, :flex_row, :justify_end, :items_end, :p_2, {:bg, :black}]),
+            alignment_chip("justify_between", "between", [:flex, :flex_row, :justify_between, :p_2, {:bg, :black}]),
+            alignment_chip("justify_around", "around", [:flex, :flex_row, :justify_around, :p_2, {:bg, :black}])
           ],
           id: "alignment_examples",
-          style: %{flex: true, flex_col: true, gap_2: true, w_full: true}
+          style: [:flex, :flex_col, :gap_2, :w_full]
         )
       ],
-      style: %{bg: :gray}
+      style: [{:bg, :gray}]
     )
   end
 
   defp panel(id, children, opts) do
-    base_style = %{
-      flex: true,
-      flex_col: true,
-      gap_2: true,
-      p_4: true,
-      border_1: true,
-      border_color: :white,
-      rounded_md: true
-    }
-
-    merged_style = Map.merge(base_style, Keyword.get(opts, :style, %{}))
+    base_style = [:flex, :flex_col, :gap_2, :p_4, :border_1, {:border_color, :white}, :rounded_md]
+    merged_style = base_style ++ Keyword.get(opts, :style, [])
     Guppy.IR.div(children, id: id, style: merged_style)
   end
 
@@ -588,15 +579,7 @@ defmodule Guppy.SuperDemo do
     Guppy.IR.div(
       [Guppy.IR.text(label, id: "nav_#{demo_id}_label")],
       id: "nav_#{demo_id}",
-      style: %{
-        p_2: true,
-        rounded_md: true,
-        border_1: true,
-        border_color: :white,
-        bg: bg,
-        text_color: :white,
-        cursor_pointer: true
-      },
+      style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, bg}, {:text_color, :white}, :cursor_pointer],
       events: %{click: "select_demo:#{demo_id}"}
     )
   end
@@ -609,7 +592,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text(label, id: "#{id}_right")
       ],
       id: id,
-      style: Map.merge(%{border_1: true, border_color: :white, text_color: :white}, style)
+      style: [:border_1, {:border_color, :white}, {:text_color, :white}] ++ style
     )
   end
 
@@ -617,15 +600,15 @@ defmodule Guppy.SuperDemo do
     Guppy.IR.div(
       [Guppy.IR.text(label, id: "#{id}_label")],
       id: id,
-      style: %{
-        p_2: true,
-        rounded_md: true,
-        border_1: true,
-        border_color: contrast_border_color(color),
-        bg: color,
-        text_color: contrast_text_color(color),
-        cursor_pointer: true
-      },
+      style: [
+        :p_2,
+        :rounded_md,
+        :border_1,
+        {:border_color, contrast_border_color(color)},
+        {:bg, color},
+        {:text_color, contrast_text_color(color)},
+        :cursor_pointer
+      ],
       events: %{click: callback}
     )
   end
@@ -653,12 +636,12 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [Guppy.IR.text("Close this window", id: "aux_close_label")],
           id: "aux_close_button",
-          style: %{p_4: true, bg: :yellow, text_color: :black, rounded_md: true, cursor_pointer: true},
+          style: [:p_4, {:bg, :yellow}, {:text_color, :black}, :rounded_md, :cursor_pointer],
           events: %{click: "close_aux_window"}
         )
       ],
       id: "aux_root",
-      style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+      style: [:flex, :flex_col, :gap_2, :p_4]
     )
   end
 
@@ -675,7 +658,7 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.text("Or close this window manually with the traffic-light button.")
           ],
           id: "child_root",
-          style: %{flex: true, flex_col: true, gap_2: true, p_4: true, bg: :gray, rounded_md: true}
+          style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}, :rounded_md]
         )
       )
 

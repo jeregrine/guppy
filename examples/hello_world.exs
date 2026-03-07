@@ -21,7 +21,7 @@ IO.puts("opened and asked GPUI to activate/focus the window")
         Guppy.IR.text("Rendered through BridgeView IR")
       ],
       id: "hello_root",
-      style: %{flex: true, flex_col: true, gap_2: true, p_4: true, bg: :gray, rounded_md: true}
+      style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}, :rounded_md]
     )
   )
 
@@ -41,7 +41,7 @@ receive_loop = fn receive_loop ->
                  Guppy.IR.text("Full-tree replacement rerender worked")
                ],
                id: "hello_root",
-               style: %{flex: true, flex_col: true, gap_2: true, p_4: true, bg: :blue, rounded_md: true}
+               style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :blue}, :rounded_md]
              )
            ) do
         :ok ->

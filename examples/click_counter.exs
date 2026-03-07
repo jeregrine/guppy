@@ -20,13 +20,13 @@ render = fn count ->
           Guppy.IR.text("Click this text to increment", id: "increment_text", events: %{click: "increment"})
         ],
         id: "increment_button",
-        style: %{p_4: true, bg: :blue, rounded_md: true, cursor_pointer: true},
+        style: [:p_4, {:bg, :blue}, :rounded_md, :cursor_pointer],
         events: %{click: "increment"}
       ),
       Guppy.IR.text("Close the window to stop this script.")
     ],
     id: "click_counter_root",
-    style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+    style: [:flex, :flex_col, :gap_2, :p_4]
   )
 end
 
