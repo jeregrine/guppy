@@ -98,6 +98,15 @@ Guppy.IR currently supports:
   - `text_sm`
   - `text_base`
   - `text_lg`
+  - `font_thin`
+  - `font_extralight`
+  - `font_light`
+  - `font_normal`
+  - `font_medium`
+  - `font_semibold`
+  - `font_bold`
+  - `font_extrabold`
+  - `font_black`
   - `italic`
   - `not_italic`
   - `underline`
@@ -195,7 +204,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] truncation (`truncate`, `text_ellipsis`)
 - [x] line clamp
 - [x] font size tokens
-- [ ] font weight tokens
+- [x] font weight tokens
 - [x] font style / italic
 - [ ] line height tokens
 - [ ] letter spacing

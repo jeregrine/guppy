@@ -524,6 +524,19 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.div(
           [
+            Guppy.IR.div([Guppy.IR.text("Thin", id: "font_weight_thin")], id: "font_weight_thin_row", style: [:font_thin]),
+            Guppy.IR.div([Guppy.IR.text("Light", id: "font_weight_light")], id: "font_weight_light_row", style: [:font_light]),
+            Guppy.IR.div([Guppy.IR.text("Normal", id: "font_weight_normal")], id: "font_weight_normal_row", style: [:font_normal]),
+            Guppy.IR.div([Guppy.IR.text("Medium", id: "font_weight_medium")], id: "font_weight_medium_row", style: [:font_medium]),
+            Guppy.IR.div([Guppy.IR.text("Semibold", id: "font_weight_semibold")], id: "font_weight_semibold_row", style: [:font_semibold]),
+            Guppy.IR.div([Guppy.IR.text("Bold", id: "font_weight_bold")], id: "font_weight_bold_row", style: [:font_bold]),
+            Guppy.IR.div([Guppy.IR.text("Black", id: "font_weight_black")], id: "font_weight_black_row", style: [:font_black])
+          ],
+          id: "font_weight_panel",
+          style: [:flex, :flex_col, :gap_1, :text_base, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
+        ),
+        Guppy.IR.div(
+          [
             Guppy.IR.text("This is a long line that should truncate inside a constrained width block to show ordered text overflow styling in the IR bridge.", id: "truncate_demo_label")
           ],
           id: "truncate_demo",

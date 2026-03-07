@@ -91,6 +91,15 @@ defmodule Guppy.IR do
           | :text_sm
           | :text_base
           | :text_lg
+          | :font_thin
+          | :font_extralight
+          | :font_light
+          | :font_normal
+          | :font_medium
+          | :font_semibold
+          | :font_bold
+          | :font_extrabold
+          | :font_black
           | :italic
           | :not_italic
           | :underline
@@ -221,6 +230,15 @@ defmodule Guppy.IR do
     :text_sm,
     :text_base,
     :text_lg,
+    :font_thin,
+    :font_extralight,
+    :font_light,
+    :font_normal,
+    :font_medium,
+    :font_semibold,
+    :font_bold,
+    :font_extrabold,
+    :font_black,
     :italic,
     :not_italic,
     :underline,

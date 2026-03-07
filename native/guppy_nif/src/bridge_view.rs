@@ -1,6 +1,6 @@
 use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
-    AnyElement, Context, InteractiveElement, InteractiveText, SharedString,
+    AnyElement, Context, FontWeight, InteractiveElement, InteractiveText, SharedString,
     StatefulInteractiveElement, Styled, StyledText, Window, div, prelude::*, rgb,
 };
 
@@ -201,6 +201,15 @@ where
             StyleOp::TextSm => element.text_sm(),
             StyleOp::TextBase => element.text_base(),
             StyleOp::TextLg => element.text_lg(),
+            StyleOp::FontThin => element.font_weight(FontWeight::THIN),
+            StyleOp::FontExtralight => element.font_weight(FontWeight::EXTRA_LIGHT),
+            StyleOp::FontLight => element.font_weight(FontWeight::LIGHT),
+            StyleOp::FontNormal => element.font_weight(FontWeight::NORMAL),
+            StyleOp::FontMedium => element.font_weight(FontWeight::MEDIUM),
+            StyleOp::FontSemibold => element.font_weight(FontWeight::SEMIBOLD),
+            StyleOp::FontBold => element.font_weight(FontWeight::BOLD),
+            StyleOp::FontExtrabold => element.font_weight(FontWeight::EXTRA_BOLD),
+            StyleOp::FontBlack => element.font_weight(FontWeight::BLACK),
             StyleOp::Italic => element.italic(),
             StyleOp::NotItalic => element.not_italic(),
             StyleOp::Underline => element.underline(),
