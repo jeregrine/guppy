@@ -85,6 +85,23 @@ Guppy.IR currently supports:
   - `right_2`
   - `bottom_2`
   - `left_2`
+  - `text_left`
+  - `text_center`
+  - `text_right`
+  - `whitespace_normal`
+  - `whitespace_nowrap`
+  - `truncate`
+  - `text_ellipsis`
+  - `line_clamp_2`
+  - `line_clamp_3`
+  - `text_xs`
+  - `text_sm`
+  - `text_base`
+  - `text_lg`
+  - `italic`
+  - `not_italic`
+  - `underline`
+  - `line_through`
   - `border_t_1`
   - `border_r_1`
   - `border_b_1`
@@ -173,17 +190,17 @@ The rough order below is chosen to improve layout correctness first, then text/l
 
 ## 4. Text styling
 
-- [ ] text alignment (`text_left`, `text_center`, `text_right`)
-- [ ] whitespace control (`whitespace_normal`, `whitespace_nowrap`)
-- [ ] truncation (`truncate`, `text_ellipsis`)
-- [ ] line clamp
-- [ ] font size tokens
+- [x] text alignment (`text_left`, `text_center`, `text_right`)
+- [x] whitespace control (`whitespace_normal`, `whitespace_nowrap`)
+- [x] truncation (`truncate`, `text_ellipsis`)
+- [x] line clamp
+- [x] font size tokens
 - [ ] font weight tokens
-- [ ] font style / italic
+- [x] font style / italic
 - [ ] line height tokens
 - [ ] letter spacing
-- [ ] underline
-- [ ] strikethrough
+- [x] underline
+- [x] strikethrough
 - [ ] richer text runs/highlights
 
 ## 5. Visual styling

@@ -78,6 +78,23 @@ defmodule Guppy.IR do
           | :right_2
           | :bottom_2
           | :left_2
+          | :text_left
+          | :text_center
+          | :text_right
+          | :whitespace_normal
+          | :whitespace_nowrap
+          | :truncate
+          | :text_ellipsis
+          | :line_clamp_2
+          | :line_clamp_3
+          | :text_xs
+          | :text_sm
+          | :text_base
+          | :text_lg
+          | :italic
+          | :not_italic
+          | :underline
+          | :line_through
           | :items_start
           | :items_center
           | :items_end
@@ -191,6 +208,23 @@ defmodule Guppy.IR do
     :right_2,
     :bottom_2,
     :left_2,
+    :text_left,
+    :text_center,
+    :text_right,
+    :whitespace_normal,
+    :whitespace_nowrap,
+    :truncate,
+    :text_ellipsis,
+    :line_clamp_2,
+    :line_clamp_3,
+    :text_xs,
+    :text_sm,
+    :text_base,
+    :text_lg,
+    :italic,
+    :not_italic,
+    :underline,
+    :line_through,
     :items_start,
     :items_center,
     :items_end,

@@ -514,6 +514,28 @@ defmodule Guppy.SuperDemo do
             {:text_color, contrast_text_color(palette_color(state))}
           ]
         ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("Centered large italic text", id: "text_style_centered"),
+            Guppy.IR.text("This container uses inherited text styling tokens.", id: "text_style_centered_body")
+          ],
+          id: "text_style_panel",
+          style: [:text_center, :text_lg, :italic, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("This is a long line that should truncate inside a constrained width block to show ordered text overflow styling in the IR bridge.", id: "truncate_demo_label")
+          ],
+          id: "truncate_demo",
+          style: [:max_w_64, :overflow_x_hidden, :truncate, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("This is a longer paragraph intended to demonstrate line clamping in the bridge. It should stop after a small number of lines instead of expanding forever when the width is constrained.", id: "line_clamp_demo_label")
+          ],
+          id: "line_clamp_demo",
+          style: [:max_w_64, :line_clamp_2, :text_sm, :underline, :line_through, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
+        ),
         action_button("Toggle palette", "toggle_palette_button", "toggle_palette", :white),
         action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
       ],
