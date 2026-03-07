@@ -386,9 +386,15 @@ defmodule Guppy.SuperDemo do
     panel(
       "header_panel",
       [
-        Guppy.IR.text("Guppy super demo", id: "demo_title"),
-        Guppy.IR.text("Select a demo on the left. The detail panel on the right updates in place."),
-        Guppy.IR.text("last_event = #{state.last_event}")
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("Guppy super demo", id: "demo_title"),
+            Guppy.IR.text("last_event = #{state.last_event}", id: "last_event_label")
+          ],
+          id: "header_row",
+          style: %{flex: true, flex_row: true, w_full: true, justify_between: true, items_start: true}
+        ),
+        Guppy.IR.text("Select a demo on the left. The detail panel on the right updates in place.")
       ],
       style: %{bg: :gray}
     )
@@ -407,7 +413,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("The main window stays anchored at the top; switch demos instead of scrolling."),
         Guppy.IR.div(items, id: "nav_items", style: %{flex: true, flex_col: true, w_full: true, gap_2: true})
       ],
-      style: %{w_64: true, h_full: true, flex_col: true, p_4: true, bg: :gray}
+      style: %{w_64: true, h_full: true, flex_col: true, items_start: true, p_4: true, bg: :gray}
     )
   end
 
@@ -544,7 +550,17 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
         Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
         Guppy.IR.text("5. Scroll: select the Scroll demo and verify the detail pane scrolls."),
-        Guppy.IR.text("6. Close the traffic-light button on any window to test window_closed handling.")
+        Guppy.IR.text("6. Close the traffic-light button on any window to test window_closed handling."),
+        Guppy.IR.div(
+          [
+            alignment_chip("justify_start", "start", %{flex: true, flex_row: true, justify_start: true, items_start: true, p_2: true, bg: :black}),
+            alignment_chip("justify_end", "end", %{flex: true, flex_row: true, justify_end: true, items_end: true, p_2: true, bg: :black}),
+            alignment_chip("justify_between", "between", %{flex: true, flex_row: true, justify_between: true, p_2: true, bg: :black}),
+            alignment_chip("justify_around", "around", %{flex: true, flex_row: true, justify_around: true, p_2: true, bg: :black})
+          ],
+          id: "alignment_examples",
+          style: %{flex: true, flex_col: true, gap_2: true, w_full: true}
+        )
       ],
       style: %{bg: :gray}
     )
@@ -582,6 +598,18 @@ defmodule Guppy.SuperDemo do
         cursor_pointer: true
       },
       events: %{click: "select_demo:#{demo_id}"}
+    )
+  end
+
+  defp alignment_chip(id, label, style) do
+    Guppy.IR.div(
+      [
+        Guppy.IR.text(label, id: "#{id}_left"),
+        Guppy.IR.text("•", id: "#{id}_middle"),
+        Guppy.IR.text(label, id: "#{id}_right")
+      ],
+      id: id,
+      style: Map.merge(%{border_1: true, border_color: :white, text_color: :white}, style)
     )
   end
 

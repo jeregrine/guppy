@@ -25,6 +25,7 @@ Guppy.IR currently supports:
 - style tokens:
   - `flex`
   - `flex_col`
+  - `flex_row`
   - `flex_1`
   - `size_full`
   - `w_full`
@@ -34,8 +35,14 @@ Guppy.IR currently supports:
   - `p_4`
   - `p_6`
   - `w_64`
+  - `items_start`
   - `items_center`
+  - `items_end`
+  - `justify_start`
   - `justify_center`
+  - `justify_end`
+  - `justify_between`
+  - `justify_around`
   - `cursor_pointer`
   - `rounded_md`
   - `border_1`
@@ -53,7 +60,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] `size_full`
 - [x] `w_full`
 - [x] `h_full`
-- [ ] `flex_row`
+- [x] `flex_row`
 - [ ] `flex_wrap`
 - [ ] `flex_nowrap`
 - [ ] `flex_none`
@@ -61,12 +68,12 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [ ] `flex_grow`
 - [ ] `flex_shrink`
 - [ ] `flex_shrink_0`
-- [ ] `items_start`
-- [ ] `items_end`
-- [ ] `justify_start`
-- [ ] `justify_end`
-- [ ] `justify_between`
-- [ ] `justify_around`
+- [x] `items_start`
+- [x] `items_end`
+- [x] `justify_start`
+- [x] `justify_end`
+- [x] `justify_between`
+- [x] `justify_around`
 - [ ] width tokens beyond `w_64`
 - [ ] height tokens
 - [ ] min width tokens

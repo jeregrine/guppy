@@ -24,14 +24,22 @@ defmodule GuppyTest do
                  style: %{
                    flex: true,
                    flex_col: true,
+                   flex_row: true,
                    flex_1: true,
                    size_full: true,
                    w_full: true,
                    h_full: true,
                    gap_2: true,
+                   items_start: true,
+                   items_end: true,
+                   justify_start: true,
                    bg: :gray,
                    border_1: true,
                    border_color: :white,
+                   justify_center: true,
+                   justify_end: true,
+                   justify_between: true,
+                   justify_around: true,
                    overflow_y_scroll: true
                  }
                )

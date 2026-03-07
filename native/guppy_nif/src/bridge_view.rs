@@ -130,6 +130,9 @@ where
     if style.flex_col {
         element = element.flex_col();
     }
+    if style.flex_row {
+        element = element.flex_row();
+    }
     if style.size_full {
         element = element.size_full();
     }
@@ -157,11 +160,29 @@ where
     if style.w_64 {
         element = element.w_64();
     }
+    if style.items_start {
+        element = element.items_start();
+    }
     if style.items_center {
         element = element.items_center();
     }
+    if style.items_end {
+        element = element.items_end();
+    }
+    if style.justify_start {
+        element = element.justify_start();
+    }
     if style.justify_center {
         element = element.justify_center();
+    }
+    if style.justify_end {
+        element = element.justify_end();
+    }
+    if style.justify_between {
+        element = element.justify_between();
+    }
+    if style.justify_around {
+        element = element.justify_around();
     }
     if style.cursor_pointer {
         element = element.cursor_pointer();
