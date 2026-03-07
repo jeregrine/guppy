@@ -24,6 +24,7 @@ defmodule Guppy.SuperDemo do
         mouse_moves: 0,
         scroll_wheels: 0,
         pointer_status: "none yet",
+        scroll_anchor_index: 1,
         timer_ticks: 0,
         timer_remaining: 0,
         timer_running: false,
@@ -230,6 +231,18 @@ defmodule Guppy.SuperDemo do
         state
         |> Map.update!(:text_clicks, &(&1 + 1))
         |> Map.put(:last_event, "text click via #{node_id}")
+        |> rerender!()
+
+      "scroll_anchor_prev" ->
+        state
+        |> Map.update!(:scroll_anchor_index, &max(&1 - 1, 1))
+        |> Map.put(:last_event, "moved scroll anchor up from #{node_id}")
+        |> rerender!()
+
+      "scroll_anchor_next" ->
+        state
+        |> Map.update!(:scroll_anchor_index, &min(&1 + 1, 24))
+        |> Map.put(:last_event, "moved scroll anchor down from #{node_id}")
         |> rerender!()
 
       "start_timer" ->
@@ -906,12 +919,76 @@ defmodule Guppy.SuperDemo do
         )
       end)
 
+    anchored_rows =
+      Enum.map(1..24, fn index ->
+        active? = index == state.scroll_anchor_index
+
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("tracked row #{index}", id: "tracked_row_#{index}_title"),
+            Guppy.IR.text(
+              "palette=#{palette_color(state)} timer_ticks=#{state.timer_ticks} div_clicks=#{state.div_clicks}",
+              id: "tracked_row_#{index}_body"
+            )
+          ],
+          id: "tracked_row_#{index}",
+          anchor_scroll: active?,
+          style: [
+            :flex,
+            :flex_col,
+            :gap_1,
+            :p_2,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, if(active?, do: :yellow, else: :gray)},
+            {:text_color, if(active?, do: :black, else: :white)}
+          ]
+        )
+      end)
+
     panel(
       "scroll_demo",
       [
         Guppy.IR.text("Scroll demo"),
-        Guppy.IR.text("This page exercises nested scroll regions and explicit scrollbar width values."),
+        Guppy.IR.text("This page exercises tracked scroll state, scroll anchoring, and explicit scrollbar width values."),
         Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored."),
+        Guppy.IR.div(
+          [
+            action_button("Anchor previous row", "scroll_anchor_prev_button", "scroll_anchor_prev", :white),
+            action_button("Anchor next row", "scroll_anchor_next_button", "scroll_anchor_next", :white),
+            Guppy.IR.text("active_anchor_row = #{state.scroll_anchor_index}", id: "active_anchor_row_label")
+          ],
+          id: "scroll_anchor_controls",
+          style: [:flex, :flex_row, :gap_2, :items_center, :w_full]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("tracked + anchored scroll box", id: "tracked_scroll_title"),
+            Guppy.IR.text("Scroll this box manually, then move the active row. The box should keep its position across rerenders and bring the highlighted row into view."),
+            Guppy.IR.div(
+              anchored_rows,
+              id: "tracked_scroll_box",
+              track_scroll: true,
+              style: [
+                :flex,
+                :flex_col,
+                :gap_2,
+                :w_full,
+                {:h_px, 280},
+                :overflow_y_scroll,
+                {:scrollbar_width_px, 10},
+                :p_2,
+                :rounded_md,
+                :border_1,
+                {:border_color, :white},
+                {:bg, :black}
+              ]
+            )
+          ],
+          id: "tracked_scroll_panel",
+          style: [:flex, :flex_col, :gap_2, :w_full, :min_h_0]
+        ),
         Guppy.IR.div(
           [
             Guppy.IR.div(
@@ -920,6 +997,7 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   narrow_lines,
                   id: "scroll_narrow_box",
+                  track_scroll: true,
                   style: [
                     :flex,
                     :flex_col,
@@ -945,6 +1023,7 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   wide_lines,
                   id: "scroll_wide_box",
+                  track_scroll: true,
                   style: [
                     :flex,
                     :flex_col,
@@ -983,7 +1062,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
         Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
         Guppy.IR.text("5. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),
-        Guppy.IR.text("6. Scroll: select the Scroll demo and verify the detail pane scrolls."),
+        Guppy.IR.text("6. Scroll: select the Scroll demo and verify tracked scroll state, scroll anchoring, and nested scrollbar widths."),
         Guppy.IR.text("7. Close the traffic-light button on any window to test window_closed handling."),
         Guppy.IR.div(
           [

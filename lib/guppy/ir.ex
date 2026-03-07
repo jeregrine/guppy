@@ -190,6 +190,8 @@ defmodule Guppy.IR do
           optional(:id) => node_id(),
           optional(:style) => style(),
           optional(:hover_style) => style(),
+          optional(:track_scroll) => boolean(),
+          optional(:anchor_scroll) => boolean(),
           optional(:events) => div_events()
         }
 
@@ -348,11 +350,15 @@ defmodule Guppy.IR do
     style = Keyword.get(opts, :style)
     events = Keyword.get(opts, :events)
     hover_style = Keyword.get(opts, :hover_style)
+    track_scroll = Keyword.get(opts, :track_scroll)
+    anchor_scroll = Keyword.get(opts, :anchor_scroll)
 
     %{kind: :div, children: children}
     |> maybe_put(:id, id)
     |> maybe_put(:style, style)
     |> maybe_put(:hover_style, hover_style)
+    |> maybe_put(:track_scroll, track_scroll)
+    |> maybe_put(:anchor_scroll, anchor_scroll)
     |> maybe_put(:events, events)
   end
 
@@ -368,6 +374,8 @@ defmodule Guppy.IR do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :track_scroll), :track_scroll),
+         :ok <- validate_optional_boolean(Map.get(node, :anchor_scroll), :anchor_scroll),
          :ok <-
            validate_events(Map.get(node, :events), [
              :click,
@@ -396,6 +404,10 @@ defmodule Guppy.IR do
   defp validate_id(nil), do: :ok
   defp validate_id(id) when is_binary(id), do: :ok
   defp validate_id(other), do: {:error, {:invalid_id, other}}
+
+  defp validate_optional_boolean(nil, _field), do: :ok
+  defp validate_optional_boolean(value, _field) when is_boolean(value), do: :ok
+  defp validate_optional_boolean(value, field), do: {:error, {field, value}}
 
   defp validate_style(nil), do: :ok
 

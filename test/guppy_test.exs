@@ -21,6 +21,8 @@ defmodule GuppyTest do
         [Guppy.IR.text("hello")],
         id: "root",
         hover_style: [{:bg_hex, "#101010"}, {:opacity, 0.9}, :cursor_pointer],
+        track_scroll: true,
+        anchor_scroll: true,
         events: %{
           hover: "hovered",
           click: "clicked",
@@ -319,6 +321,12 @@ defmodule GuppyTest do
 
     assert {:error, {:invalid_style_op, {:bg_hex, "#12"}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:bg_hex, "#12"}]))
+
+    assert {:error, {:track_scroll, "yes"}} =
+             Guppy.IR.validate(Guppy.IR.div([], track_scroll: "yes"))
+
+    assert {:error, {:anchor_scroll, 1}} =
+             Guppy.IR.validate(Guppy.IR.div([], anchor_scroll: 1))
   end
 
   test "native ping is wired through the server" do

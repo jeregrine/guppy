@@ -77,7 +77,13 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
                 window_min_size: Some(size(px(960.0), px(720.0))),
                 ..Default::default()
             },
-            move |_, cx| cx.new(|_| BridgeView { view_id, ir }),
+            move |_, cx| {
+                cx.new(|_| BridgeView {
+                    view_id,
+                    ir,
+                    scroll_handles: Default::default(),
+                })
+            },
         );
 
         match result {
@@ -202,6 +208,8 @@ fn handle_request(request: MainThreadRequest) {
                     id: None,
                     style: DivStyle::default(),
                     hover_style: DivStyle::default(),
+                    track_scroll: false,
+                    anchor_scroll: false,
                     children: vec![IrNode::text(format!("Hello from Guppy view {view_id}"))],
                     click: None,
                     hover: None,

@@ -1,10 +1,11 @@
 use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
     AnyElement, Context, FontWeight, InteractiveElement, InteractiveText, MouseButton,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta, ScrollWheelEvent, SharedString,
-    StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Window, div, prelude::*, px,
-    relative, rems, rgb,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollAnchor, ScrollDelta, ScrollHandle,
+    ScrollWheelEvent, SharedString, StatefulInteractiveElement, StyleRefinement, Styled,
+    StyledText, Window, div, prelude::*, px, relative, rems, rgb,
 };
+use std::collections::HashMap;
 
 unsafe extern "C" {
     fn guppy_c_send_click_event(
@@ -97,6 +98,7 @@ unsafe extern "C" {
 pub struct BridgeView {
     pub view_id: u64,
     pub ir: IrNode,
+    pub scroll_handles: HashMap<String, ScrollHandle>,
 }
 
 impl Render for BridgeView {
@@ -106,11 +108,23 @@ impl Render for BridgeView {
             .p_6()
             .bg(rgb(0x202020))
             .text_color(rgb(0xffffff))
-            .child(render_ir(self.view_id, "root", &self.ir))
+            .child(render_ir(
+                self.view_id,
+                "root",
+                &self.ir,
+                &mut self.scroll_handles,
+                None,
+            ))
     }
 }
 
-fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
+fn render_ir(
+    view_id: u64,
+    path: &str,
+    ir: &IrNode,
+    scroll_handles: &mut HashMap<String, ScrollHandle>,
+    parent_scroll_handle: Option<ScrollHandle>,
+) -> AnyElement {
     match ir {
         IrNode::Text { id, content, click } => {
             render_text(view_id, path, id.as_deref(), content, click.as_deref())
@@ -119,6 +133,8 @@ fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
             id,
             style,
             hover_style,
+            track_scroll,
+            anchor_scroll,
             children,
             click,
             hover,
@@ -132,6 +148,8 @@ fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
             id.as_deref(),
             style,
             hover_style,
+            *track_scroll,
+            *anchor_scroll,
             children,
             click.as_deref(),
             hover.as_deref(),
@@ -139,6 +157,8 @@ fn render_ir(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
             mouse_up.as_deref(),
             mouse_move.as_deref(),
             scroll_wheel.as_deref(),
+            scroll_handles,
+            parent_scroll_handle,
         ),
     }
 }
@@ -183,6 +203,8 @@ fn render_div(
     id: Option<&str>,
     style: &DivStyle,
     hover_style: &DivStyle,
+    track_scroll: bool,
+    anchor_scroll: bool,
     children: &[IrNode],
     click: Option<&str>,
     hover: Option<&str>,
@@ -190,20 +212,58 @@ fn render_div(
     mouse_up: Option<&str>,
     mouse_move: Option<&str>,
     scroll_wheel: Option<&str>,
+    scroll_handles: &mut HashMap<String, ScrollHandle>,
+    parent_scroll_handle: Option<ScrollHandle>,
 ) -> AnyElement {
+    let node_id = node_id(view_id, path, id);
+
+    let tracked_scroll_handle = if track_scroll {
+        Some(
+            scroll_handles
+                .entry(node_id.clone())
+                .or_insert_with(ScrollHandle::new)
+                .clone(),
+        )
+    } else {
+        None
+    };
+
+    let child_scroll_handle = tracked_scroll_handle.clone().or(parent_scroll_handle.clone());
+
     let child_elements = children
         .iter()
         .enumerate()
-        .map(|(index, child)| render_ir(view_id, &format!("{path}.{index}"), child))
+        .map(|(index, child)| {
+            render_ir(
+                view_id,
+                &format!("{path}.{index}"),
+                child,
+                scroll_handles,
+                child_scroll_handle.clone(),
+            )
+        })
         .collect::<Vec<_>>();
 
-    let node_id = node_id(view_id, path, id);
     let styled_div = apply_div_style(
         div()
             .id(SharedString::from(node_id.clone()))
             .children(child_elements),
         style,
     );
+
+    let styled_div = match tracked_scroll_handle.as_ref() {
+        Some(handle) => styled_div.track_scroll(handle),
+        None => styled_div,
+    };
+
+    let styled_div = if anchor_scroll {
+        match parent_scroll_handle.as_ref() {
+            Some(handle) => styled_div.anchor_scroll(Some(ScrollAnchor::for_handle(handle.clone()))),
+            None => styled_div,
+        }
+    } else {
+        styled_div
+    };
 
     let styled_div = if hover_style.is_empty() {
         styled_div

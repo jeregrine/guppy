@@ -29,6 +29,9 @@ Guppy.IR currently supports:
   - `mouse_up`
   - `mouse_move`
   - `scroll_wheel`
+- scroll behavior:
+  - `track_scroll`
+  - `anchor_scroll`
 - style tokens:
   - `flex`
   - `flex_col`
@@ -213,8 +216,8 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] `overflow_x_hidden`
 - [x] `overflow_y_hidden`
 - [x] `scrollbar_width`
-- [ ] tracked scrolling / `track_scroll`
-- [ ] scroll anchoring / `anchor_scroll`
+- [x] tracked scrolling / `track_scroll`
+- [x] scroll anchoring / `anchor_scroll`
 - [ ] explicit scroll-container semantics if style tokens are not enough
 
 ## 3. Spacing and positioning

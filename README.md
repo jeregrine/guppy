@@ -207,6 +207,10 @@ style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 
 `div` nodes can also carry an ordered `hover_style` list using the same style ops.
 
+`div` nodes also support:
+- `track_scroll: true` to preserve and reuse a GPUI `ScrollHandle` across rerenders
+- `anchor_scroll: true` to request scrolling the nearest tracked scroll container so that this div is brought into view
+
 Later tokens are applied after earlier tokens, so order is preserved across the bridge.
 
 Minimal `:div` style tokens currently supported:

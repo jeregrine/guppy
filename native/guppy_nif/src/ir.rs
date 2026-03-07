@@ -172,6 +172,8 @@ pub enum IrNode {
         id: Option<String>,
         style: DivStyle,
         hover_style: DivStyle,
+        track_scroll: bool,
+        anchor_scroll: bool,
         children: Vec<IrNode>,
         click: Option<String>,
         hover: Option<String>,
@@ -220,6 +222,8 @@ impl IrNode {
                     id,
                     style: get_div_style(map)?,
                     hover_style: get_div_hover_style(map)?,
+                    track_scroll: get_boolean_field(map, "track_scroll")?,
+                    anchor_scroll: get_boolean_field(map, "anchor_scroll")?,
                     children,
                     click: get_click_event(map)?,
                     hover: get_hover_event(map)?,
@@ -267,6 +271,15 @@ fn get_optional_string_field(
     match get_field(map, key) {
         Some(term) => term_to_string(term).map(Some),
         None => Ok(None),
+    }
+}
+
+fn get_boolean_field(map: &HashMap<Term, Term>, key: &str) -> Result<bool, String> {
+    match get_field(map, key) {
+        Some(Term::Atom(atom)) if atom.name == "true" => Ok(true),
+        Some(Term::Atom(atom)) if atom.name == "false" => Ok(false),
+        Some(other) => Err(format!("expected boolean field {key}, got {other}")),
+        None => Ok(false),
     }
 }
 
