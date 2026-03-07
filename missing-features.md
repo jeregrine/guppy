@@ -28,6 +28,13 @@ Guppy.IR currently supports:
   - `flex`
   - `flex_col`
   - `flex_row`
+  - `flex_wrap`
+  - `flex_nowrap`
+  - `flex_none`
+  - `flex_auto`
+  - `flex_grow`
+  - `flex_shrink`
+  - `flex_shrink_0`
   - `flex_1`
   - `size_full`
   - `w_full`
@@ -68,13 +75,13 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] `w_full`
 - [x] `h_full`
 - [x] `flex_row`
-- [ ] `flex_wrap`
-- [ ] `flex_nowrap`
-- [ ] `flex_none`
-- [ ] `flex_auto`
-- [ ] `flex_grow`
-- [ ] `flex_shrink`
-- [ ] `flex_shrink_0`
+- [x] `flex_wrap`
+- [x] `flex_nowrap`
+- [x] `flex_none`
+- [x] `flex_auto`
+- [x] `flex_grow`
+- [x] `flex_shrink`
+- [x] `flex_shrink_0`
 - [x] `items_start`
 - [x] `items_end`
 - [x] `justify_start`

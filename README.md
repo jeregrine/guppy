@@ -196,7 +196,7 @@ Later tokens are applied after earlier tokens, so order is preserved across the 
 
 Minimal `:div` style tokens currently supported:
 
-- flags: `flex`, `flex_col`, `flex_row`, `flex_1`, `size_full`, `w_full`, `h_full`, `gap_2`, `p_2`, `p_4`, `p_6`, `w_64`, `items_start`, `items_center`, `items_end`, `justify_start`, `justify_center`, `justify_end`, `justify_between`, `justify_around`, `cursor_pointer`, `rounded_md`, `border_1`, `overflow_scroll`, `overflow_x_scroll`, `overflow_y_scroll`, `overflow_hidden`, `overflow_x_hidden`, `overflow_y_hidden`
+- flags: `flex`, `flex_col`, `flex_row`, `flex_wrap`, `flex_nowrap`, `flex_none`, `flex_auto`, `flex_grow`, `flex_shrink`, `flex_shrink_0`, `flex_1`, `size_full`, `w_full`, `h_full`, `gap_2`, `p_2`, `p_4`, `p_6`, `w_64`, `items_start`, `items_center`, `items_end`, `justify_start`, `justify_center`, `justify_end`, `justify_between`, `justify_around`, `cursor_pointer`, `rounded_md`, `border_1`, `overflow_scroll`, `overflow_x_scroll`, `overflow_y_scroll`, `overflow_hidden`, `overflow_x_hidden`, `overflow_y_hidden`
 - color ops: `{:bg, color}`, `{:text_color, color}`, `{:border_color, color}`
 - color tokens: `:red`, `:green`, `:blue`, `:yellow`, `:black`, `:white`, `:gray`
 

@@ -21,6 +21,13 @@ defmodule Guppy.IR do
           :flex
           | :flex_col
           | :flex_row
+          | :flex_wrap
+          | :flex_nowrap
+          | :flex_none
+          | :flex_auto
+          | :flex_grow
+          | :flex_shrink
+          | :flex_shrink_0
           | :flex_1
           | :size_full
           | :w_full
@@ -79,6 +86,13 @@ defmodule Guppy.IR do
     :flex,
     :flex_col,
     :flex_row,
+    :flex_wrap,
+    :flex_nowrap,
+    :flex_none,
+    :flex_auto,
+    :flex_grow,
+    :flex_shrink,
+    :flex_shrink_0,
     :flex_1,
     :size_full,
     :w_full,

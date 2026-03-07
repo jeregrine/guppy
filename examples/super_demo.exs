@@ -2,7 +2,7 @@ defmodule Guppy.SuperDemo do
   @palette [:gray, :red, :green, :blue, :yellow]
   @timer_ticks 5
   @timer_interval_ms 1_000
-  @demo_ids [:runtime, :interactions, :windows, :styles, :scroll, :help]
+  @demo_ids [:runtime, :interactions, :windows, :styles, :layout, :scroll, :help]
 
   def run do
     Mix.Task.run("app.start")
@@ -433,6 +433,7 @@ defmodule Guppy.SuperDemo do
   defp detail_content(%{selected_demo: :interactions} = state), do: interactions_demo(state)
   defp detail_content(%{selected_demo: :windows} = state), do: windows_demo(state)
   defp detail_content(%{selected_demo: :styles} = state), do: styles_demo(state)
+  defp detail_content(%{selected_demo: :layout} = state), do: layout_demo(state)
   defp detail_content(%{selected_demo: :scroll} = state), do: scroll_demo(state)
   defp detail_content(%{selected_demo: :help} = state), do: help_demo(state)
 
@@ -520,6 +521,38 @@ defmodule Guppy.SuperDemo do
     )
   end
 
+  defp layout_demo(_state) do
+    panel(
+      "layout_demo",
+      [
+        Guppy.IR.text("Flex layout behavior tokens"),
+        Guppy.IR.text("This page exercises wrap/nowrap and grow/shrink-style tokens in the ordered style list."),
+        Guppy.IR.div(
+          [
+            flex_chip("wrap_1", "wrap-1", [:flex_none, {:bg, :blue}]),
+            flex_chip("wrap_2", "wrap-2", [:flex_none, {:bg, :green}]),
+            flex_chip("wrap_3", "wrap-3", [:flex_none, {:bg, :yellow}, {:text_color, :black}]),
+            flex_chip("wrap_4", "wrap-4", [:flex_none, {:bg, :red}])
+          ],
+          id: "wrap_row",
+          style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+        ),
+        Guppy.IR.div(
+          [
+            flex_chip("nowrap_fixed", "fixed", [:flex_none, {:bg, :gray}]),
+            flex_chip("nowrap_auto", "auto", [:flex_auto, {:bg, :blue}]),
+            flex_chip("nowrap_grow", "grow", [:flex_grow, {:bg, :green}, {:text_color, :black}]),
+            flex_chip("nowrap_shrink", "shrink", [:flex_shrink, {:bg, :yellow}, {:text_color, :black}]),
+            flex_chip("nowrap_shrink0", "shrink-0", [:flex_shrink_0, {:bg, :red}])
+          ],
+          id: "nowrap_row",
+          style: [:flex, :flex_row, :flex_nowrap, :overflow_x_scroll, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+        )
+      ],
+      style: [{:bg, :gray}]
+    )
+  end
+
   defp scroll_demo(state) do
     long_lines =
       Enum.map(1..24, fn index ->
@@ -549,8 +582,9 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("2. Interactions: click the div button and the text line, then start timer rerenders."),
         Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
         Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
-        Guppy.IR.text("5. Scroll: select the Scroll demo and verify the detail pane scrolls."),
-        Guppy.IR.text("6. Close the traffic-light button on any window to test window_closed handling."),
+        Guppy.IR.text("5. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),
+        Guppy.IR.text("6. Scroll: select the Scroll demo and verify the detail pane scrolls."),
+        Guppy.IR.text("7. Close the traffic-light button on any window to test window_closed handling."),
         Guppy.IR.div(
           [
             alignment_chip("justify_start", "start", [:flex, :flex_row, :justify_start, :items_start, :p_2, {:bg, :black}]),
@@ -596,6 +630,14 @@ defmodule Guppy.SuperDemo do
     )
   end
 
+  defp flex_chip(id, label, style) do
+    Guppy.IR.div(
+      [Guppy.IR.text(label, id: "#{id}_label")],
+      id: id,
+      style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:text_color, :white}] ++ style
+    )
+  end
+
   defp action_button(label, id, callback, color) do
     Guppy.IR.div(
       [Guppy.IR.text(label, id: "#{id}_label")],
@@ -617,6 +659,7 @@ defmodule Guppy.SuperDemo do
   defp demo_label(:interactions), do: "Interactions"
   defp demo_label(:windows), do: "Windows"
   defp demo_label(:styles), do: "Styles"
+  defp demo_label(:layout), do: "Layout"
   defp demo_label(:scroll), do: "Scroll"
   defp demo_label(:help), do: "Help"
 
