@@ -737,13 +737,15 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [
             Guppy.IR.text("Keyboard focus pad", id: "keyboard_pad_title"),
-            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation. Right click for a context-menu event.", id: "keyboard_pad_body")
+            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation. Right click for a context-menu event. Pressing the box also exercises active styling.", id: "keyboard_pad_body")
           ],
           id: "keyboard_pad",
           focusable: true,
           tab_stop: true,
           tab_index: 1,
           focus_style: [{:bg_hex, "#204060"}, {:border_color, :yellow}],
+          in_focus_style: [{:shadow_lg}],
+          active_style: [{:bg_hex, "#10263c"}, {:opacity, 0.92}],
           style: [
             :flex,
             :flex_col,
@@ -1406,6 +1408,7 @@ defmodule Guppy.SuperDemo do
       [Guppy.IR.text(label, id: "nav_#{demo_id}_label")],
       id: "nav_#{demo_id}",
       style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, bg}, {:text_color, :white}, :cursor_pointer],
+      active_style: [{:opacity, 0.82}],
       events: %{click: "select_demo:#{demo_id}"}
     )
   end
@@ -1443,6 +1446,7 @@ defmodule Guppy.SuperDemo do
         {:text_color, contrast_text_color(color)},
         :cursor_pointer
       ],
+      active_style: [{:opacity, 0.8}],
       events: %{click: callback}
     )
   end

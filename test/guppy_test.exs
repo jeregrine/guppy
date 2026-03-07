@@ -22,6 +22,8 @@ defmodule GuppyTest do
         id: "root",
         hover_style: [{:bg_hex, "#101010"}, {:opacity, 0.9}, :cursor_pointer],
         focus_style: [{:bg_hex, "#202020"}, {:text_color, :yellow}],
+        in_focus_style: [{:border_color, :yellow}, :shadow_md],
+        active_style: [{:opacity, 0.6}, {:bg_hex, "#303030"}],
         disabled_style: [{:opacity, 0.4}, {:bg, :black}],
         disabled: false,
         stack_priority: 7,
@@ -188,6 +190,8 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(styled_ir)
 
     assert styled_ir.focus_style == [{:bg_hex, "#202020"}, {:text_color, :yellow}]
+    assert styled_ir.in_focus_style == [{:border_color, :yellow}, :shadow_md]
+    assert styled_ir.active_style == [{:opacity, 0.6}, {:bg_hex, "#303030"}]
     assert styled_ir.disabled_style == [{:opacity, 0.4}, {:bg, :black}]
     assert styled_ir.disabled == false
     assert styled_ir.stack_priority == 7
@@ -346,6 +350,12 @@ defmodule GuppyTest do
 
     assert {:error, {:invalid_style_op, {:bg_hex, "#12"}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:bg_hex, "#12"}]))
+
+    assert {:error, {:invalid_style_op, :bogus}} =
+             Guppy.IR.validate(Guppy.IR.div([], active_style: [:bogus]))
+
+    assert {:error, {:invalid_style_op, :bogus}} =
+             Guppy.IR.validate(Guppy.IR.div([], in_focus_style: [:bogus]))
 
     assert {:error, {:invalid_style_op, :bogus}} =
              Guppy.IR.validate(Guppy.IR.div([], disabled_style: [:bogus]))

@@ -259,6 +259,8 @@ fn render_ir(
             style,
             hover_style,
             focus_style,
+            in_focus_style,
+            active_style,
             disabled_style,
             disabled,
             stack_priority,
@@ -290,6 +292,8 @@ fn render_ir(
             style,
             hover_style,
             focus_style,
+            in_focus_style,
+            active_style,
             disabled_style,
             *disabled,
             *stack_priority,
@@ -366,6 +370,8 @@ fn render_div(
     style: &DivStyle,
     hover_style: &DivStyle,
     focus_style: &DivStyle,
+    in_focus_style: &DivStyle,
+    active_style: &DivStyle,
     disabled_style: &DivStyle,
     disabled: bool,
     stack_priority: Option<usize>,
@@ -433,6 +439,7 @@ fn render_div(
             || tab_stop.is_some()
             || tab_index.is_some()
             || !focus_style.is_empty()
+            || !in_focus_style.is_empty()
             || focus.is_some()
             || blur.is_some()
             || key_down.is_some()
@@ -507,21 +514,32 @@ fn render_div(
         None => styled_div,
     };
 
-    let styled_div = if !disabled
-        && focus_handle
-            .as_ref()
-            .is_some_and(|handle| !focus_style.is_empty() && handle.is_focused(window))
-    {
-        apply_div_style(styled_div, focus_style)
-    } else {
+    let styled_div = if disabled || focus_style.is_empty() {
         styled_div
+    } else {
+        let focus_ops = focus_style.clone();
+        styled_div.focus(move |style| apply_refinement_style(style, &focus_ops))
+    };
+
+    let styled_div = if disabled || in_focus_style.is_empty() {
+        styled_div
+    } else {
+        let in_focus_ops = in_focus_style.clone();
+        styled_div.in_focus(move |style| apply_refinement_style(style, &in_focus_ops))
     };
 
     let styled_div = if disabled || hover_style.is_empty() {
         styled_div
     } else {
         let hover_ops = hover_style.clone();
-        styled_div.hover(move |style| apply_hover_style(style, &hover_ops))
+        styled_div.hover(move |style| apply_refinement_style(style, &hover_ops))
+    };
+
+    let styled_div = if disabled || active_style.is_empty() {
+        styled_div
+    } else {
+        let active_ops = active_style.clone();
+        styled_div.active(move |style| apply_refinement_style(style, &active_ops))
     };
 
     let styled_div = match hover {
@@ -864,7 +882,6 @@ fn render_div(
             let click_node_id = node_id.clone();
 
             styled_div
-                .active(|style| style.opacity(0.85))
                 .on_click(move |_, _, _| unsafe {
                     let _ = guppy_c_send_click_event(
                         view_id,
@@ -1039,8 +1056,8 @@ where
     element
 }
 
-fn apply_hover_style(mut style: StyleRefinement, hover_style: &DivStyle) -> StyleRefinement {
-    for op in hover_style {
+fn apply_refinement_style(mut style: StyleRefinement, ops: &DivStyle) -> StyleRefinement {
+    for op in ops {
         style = match op {
             StyleOp::Flex
             | StyleOp::FlexCol

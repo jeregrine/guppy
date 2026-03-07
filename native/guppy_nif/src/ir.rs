@@ -173,6 +173,8 @@ pub enum IrNode {
         style: DivStyle,
         hover_style: DivStyle,
         focus_style: DivStyle,
+        in_focus_style: DivStyle,
+        active_style: DivStyle,
         disabled_style: DivStyle,
         disabled: bool,
         stack_priority: Option<usize>,
@@ -239,6 +241,8 @@ impl IrNode {
                     style: get_div_style(map)?,
                     hover_style: get_div_hover_style(map)?,
                     focus_style: get_div_focus_style(map)?,
+                    in_focus_style: get_div_in_focus_style(map)?,
+                    active_style: get_div_active_style(map)?,
                     disabled_style: get_div_disabled_style(map)?,
                     disabled: get_boolean_field(map, "disabled")?,
                     stack_priority: get_optional_usize_field(map, "stack_priority")?,
@@ -371,6 +375,14 @@ fn get_div_hover_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
 
 fn get_div_focus_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     get_style_list_field(map, "focus_style")
+}
+
+fn get_div_in_focus_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
+    get_style_list_field(map, "in_focus_style")
+}
+
+fn get_div_active_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
+    get_style_list_field(map, "active_style")
 }
 
 fn get_div_disabled_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {

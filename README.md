@@ -210,6 +210,8 @@ Guppy.IR.div(
   tab_stop: true,
   tab_index: 1,
   focus_style: [{:bg, :blue}, {:border_color, :yellow}],
+  in_focus_style: [:shadow_lg],
+  active_style: [{:opacity, 0.8}],
   disabled: false,
   disabled_style: [{:opacity, 0.45}, {:bg, :gray}],
   stack_priority: 10,
@@ -230,13 +232,15 @@ Style tokens are represented as an ordered list, for example:
 style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 ```
 
-`div` nodes can also carry an ordered `hover_style` list using the same style ops.
+`div` nodes can also carry ordered `hover_style`, `focus_style`, `in_focus_style`, and `active_style` lists using the same style ops.
 
 `div` nodes also support:
 - `focusable: true` to opt into GPUI focus participation
 - `tab_stop: true | false` to control whether a focused node participates in tab navigation
 - `tab_index: integer` to influence tab order
-- ordered `focus_style` using the same style-op vocabulary as normal `style`
+- ordered `focus_style` for the element's focused state
+- ordered `in_focus_style` for the element while it is within a focused subtree
+- ordered `active_style` for the element's pressed/active state
 - `disabled: true | false` to suppress div interaction callbacks and focus participation
 - ordered `disabled_style` using the same style-op vocabulary as normal `style`
 - `stack_priority: non_neg_integer()` to defer painting of a div and control overlay ordering; higher priorities paint on top of lower ones
