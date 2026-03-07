@@ -79,6 +79,7 @@ What it does:
 - includes a dedicated Scroll demo so scroll behavior is easy to verify at the default/minimum window sizes
 - exercises div clicks and text clicks in one window
 - exercises pointer, keyboard, context-menu, and drag/drop interaction callbacks
+- exercises keyboard activation of clickable divs via Tab + Enter/Space
 - exercises full-tree replacement updates from both clicks and timers
 - exercises minimal style tokens and palette changes
 - opens/closes an auxiliary window owned by the main process
@@ -233,6 +234,8 @@ style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 ```
 
 `div` nodes can also carry ordered `hover_style`, `focus_style`, `in_focus_style`, and `active_style` lists using the same style ops.
+
+Clickable `div` nodes now participate in keyboard activation automatically: when focused, pressing `Enter` or `Space` emits the same `:click` callback as a mouse click. Guppy gives clickable divs a focus handle and default tab-stop participation unless you explicitly override `tab_stop: false`.
 
 `div` nodes also support:
 - `focusable: true` to opt into GPUI focus participation

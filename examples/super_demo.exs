@@ -686,6 +686,7 @@ defmodule Guppy.SuperDemo do
       "interactions_demo",
       [
         Guppy.IR.text("Clicks, pointer events, and rerenders"),
+        Guppy.IR.text("Use Tab to focus clickable cards and buttons, then press Enter or Space to activate them."),
         Guppy.IR.text("div_clicks = #{state.div_clicks}"),
         action_button("Increment div clicks", "div_button", "div_increment", :blue),
         Guppy.IR.text("Disabled button below should not increment div_clicks."),
@@ -1408,6 +1409,7 @@ defmodule Guppy.SuperDemo do
       [Guppy.IR.text(label, id: "nav_#{demo_id}_label")],
       id: "nav_#{demo_id}",
       style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, bg}, {:text_color, :white}, :cursor_pointer],
+      focus_style: [{:border_color, :yellow}],
       active_style: [{:opacity, 0.82}],
       events: %{click: "select_demo:#{demo_id}"}
     )
@@ -1446,6 +1448,7 @@ defmodule Guppy.SuperDemo do
         {:text_color, contrast_text_color(color)},
         :cursor_pointer
       ],
+      focus_style: [{:border_color, :yellow}],
       active_style: [{:opacity, 0.8}],
       events: %{click: callback}
     )

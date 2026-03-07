@@ -422,6 +422,12 @@ fn render_div(
     let focusable = focusable && !disabled;
     let tab_stop = if disabled { None } else { tab_stop };
     let tab_index = if disabled { None } else { tab_index };
+    let keyboard_clickable = click.is_some();
+    let tab_stop = if keyboard_clickable {
+        Some(tab_stop.unwrap_or(true))
+    } else {
+        tab_stop
+    };
 
     let tracked_scroll_handle = if track_scroll {
         Some(
@@ -435,7 +441,8 @@ fn render_div(
     };
 
     let needs_focus_handle =
-        focusable
+        keyboard_clickable
+            || focusable
             || tab_stop.is_some()
             || tab_index.is_some()
             || !focus_style.is_empty()
@@ -510,7 +517,15 @@ fn render_div(
     };
 
     let styled_div = match focus_handle.as_ref() {
-        Some(handle) => styled_div.track_focus(handle),
+        Some(handle) => {
+            let styled_div = styled_div.track_focus(handle);
+
+            if keyboard_clickable || focusable {
+                styled_div.focusable()
+            } else {
+                styled_div
+            }
+        }
         None => styled_div,
     };
 

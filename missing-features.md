@@ -109,7 +109,7 @@ The goal is to keep one checklist, check items off as they land, and continue fr
 - [x] `focusable`
 - [x] focus ring / focus styling hooks
 - [x] tab-order participation
-- [ ] keyboard activation semantics
+- [x] keyboard activation semantics
 - [ ] action dispatch / shortcuts
 
 ## 8. Additional node kinds and higher-level primitives
