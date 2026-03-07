@@ -739,7 +739,7 @@ defmodule Guppy.SuperDemo do
           style: [:relative, :flex, :flex_col, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         )
       ],
-      style: [:max_h_96, {:bg, :gray}]
+      style: [{:bg, :gray}]
     )
   end
 
