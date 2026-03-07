@@ -747,26 +747,31 @@ defmodule Guppy.SuperDemo do
             ),
             Guppy.IR.div(
               [
+                Guppy.IR.text("max width / full constraints", id: "constraint_box_label"),
+                Guppy.IR.div(
+                  [Guppy.IR.text("max_w_64", id: "constraint_small")],
+                  id: "constraint_small_box",
+                  style: [:max_w_64, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
+                ),
+                Guppy.IR.div(
+                  [Guppy.IR.text("max_w_96 + max_h_full", id: "constraint_large")],
+                  id: "constraint_large_box",
+                  style: [:max_w_96, :max_h_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                ),
                 Guppy.IR.div(
                   [
-                    Guppy.IR.text("max width / full constraints", id: "constraint_box_label"),
                     Guppy.IR.div(
-                      [Guppy.IR.text("max_w_64", id: "constraint_small")],
-                      id: "constraint_small_box",
-                      style: [:max_w_64, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
-                    ),
-                    Guppy.IR.div(
-                      [Guppy.IR.text("max_w_96 + max_h_full", id: "constraint_large")],
-                      id: "constraint_large_box",
-                      style: [:max_w_96, :max_h_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                      [Guppy.IR.text("min_h_full inside bounded frame", id: "constraint_fill_label")],
+                      id: "constraint_fill_inner",
+                      style: [:min_h_full, :w_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
                     )
                   ],
-                  id: "constraint_panel",
-                  style: [:min_h_full, :max_w_full, :w_full, :flex, :flex_col, :gap_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
+                  id: "constraint_fill_frame",
+                  style: [{:h_px, 160}, :w_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
                 )
               ],
-              id: "constraint_frame",
-              style: [:relative, :w_96, :h_32, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
+              id: "constraint_panel",
+              style: [:w_full, :flex, :flex_col, :gap_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
             )
           ],
           id: "position_examples",
