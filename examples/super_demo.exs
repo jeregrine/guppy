@@ -29,6 +29,10 @@ defmodule Guppy.SuperDemo do
         key_downs: 0,
         key_ups: 0,
         context_menus: 0,
+        drag_starts: 0,
+        drag_moves: 0,
+        drops: 0,
+        drag_status: "none yet",
         keyboard_status: "none yet",
         scroll_anchor_index: 1,
         timer_ticks: 0,
@@ -65,6 +69,12 @@ defmodule Guppy.SuperDemo do
       when type in [:focus, :blur, :key_down, :key_up, :context_menu] ->
         state
         |> handle_keyboard_event(view_id, event)
+        |> continue()
+
+      {:guppy_event, view_id, %{type: type} = event}
+      when type in [:drag_start, :drag_move, :drop] ->
+        state
+        |> handle_drag_event(view_id, event)
         |> continue()
 
       {:guppy_event, view_id, %{type: :window_closed}} ->
@@ -225,6 +235,27 @@ defmodule Guppy.SuperDemo do
     end
   end
 
+  defp handle_drag_event(state, view_id, %{type: type, id: node_id, callback: callback_id} = event) do
+    cond do
+      view_id == state.main_view_id ->
+        state
+        |> update_drag_counters(type)
+        |> Map.put(:drag_status, format_drag_event(type, event))
+        |> Map.put(:last_event, "#{type} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      view_id == state.aux_view_id ->
+        state
+        |> Map.put(:last_event, "aux #{type} #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      true ->
+        state
+        |> Map.put(:last_event, "#{type} from unknown view #{view_id}: #{node_id}/#{callback_id}")
+        |> rerender!()
+    end
+  end
+
   defp handle_main_click(state, node_id, callback_id) do
     cond do
       String.starts_with?(callback_id, "select_demo:") ->
@@ -361,6 +392,10 @@ defmodule Guppy.SuperDemo do
   defp update_keyboard_counters(state, :key_up), do: Map.update!(state, :key_ups, &(&1 + 1))
   defp update_keyboard_counters(state, :context_menu), do: Map.update!(state, :context_menus, &(&1 + 1))
 
+  defp update_drag_counters(state, :drag_start), do: Map.update!(state, :drag_starts, &(&1 + 1))
+  defp update_drag_counters(state, :drag_move), do: Map.update!(state, :drag_moves, &(&1 + 1))
+  defp update_drag_counters(state, :drop), do: Map.update!(state, :drops, &(&1 + 1))
+
   defp format_pointer_event(:mouse_down, event) do
     "down #{event.button} @ (#{format_number(event.x)}, #{format_number(event.y)}) clicks=#{event.click_count} mods=#{format_modifiers(event.modifiers)}"
   end
@@ -390,6 +425,18 @@ defmodule Guppy.SuperDemo do
 
   defp format_keyboard_event(:context_menu, event) do
     "context menu @ (#{format_number(event.x)}, #{format_number(event.y)}) mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_drag_event(:drag_start, event) do
+    "start source=#{event.source_id}"
+  end
+
+  defp format_drag_event(:drag_move, event) do
+    "move source=#{event.source_id} pressed=#{event.pressed_button} @ (#{format_number(event.x)}, #{format_number(event.y)}) mods=#{format_modifiers(event.modifiers)}"
+  end
+
+  defp format_drag_event(:drop, event) do
+    "drop source=#{event.source_id} on #{event.id}"
   end
 
   defp format_modifiers(modifiers) do
@@ -709,6 +756,69 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [Guppy.IR.text("keyboard_status = #{state.keyboard_status}", id: "keyboard_status_label")],
           id: "keyboard_status_panel",
+          style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Drag source", id: "drag_source_title"),
+                Guppy.IR.text("Drag this box into the drop zone.", id: "drag_source_body")
+              ],
+              id: "drag_source",
+              style: [
+                :flex,
+                :flex_col,
+                :justify_center,
+                :items_center,
+                :text_center,
+                :gap_2,
+                :flex_1,
+                {:h_px, 160},
+                :rounded_md,
+                :border_2,
+                {:border_color, :white},
+                {:bg, :blue},
+                :cursor_pointer
+              ],
+              hover_style: [{:bg_hex, "#335fdd"}],
+              events: %{
+                drag_start: "drag_source_start",
+                drag_move: "drag_source_move"
+              }
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Drop target", id: "drop_target_title"),
+                Guppy.IR.text("Release the drag here to emit a drop event.", id: "drop_target_body")
+              ],
+              id: "drop_target",
+              style: [
+                :flex,
+                :flex_col,
+                :justify_center,
+                :items_center,
+                :text_center,
+                :gap_2,
+                :flex_1,
+                {:h_px, 160},
+                :rounded_md,
+                :border_2,
+                {:border_color, :yellow},
+                {:bg, :black}
+              ],
+              events: %{drop: "drag_target_drop"}
+            )
+          ],
+          id: "drag_demo_row",
+          style: [:flex, :flex_row, :w_full, :gap_2]
+        ),
+        Guppy.IR.text("drag_starts = #{state.drag_starts}"),
+        Guppy.IR.text("drag_moves = #{state.drag_moves}"),
+        Guppy.IR.text("drops = #{state.drops}"),
+        Guppy.IR.div(
+          [Guppy.IR.text("drag_status = #{state.drag_status}", id: "drag_status_label")],
+          id: "drag_status_panel",
           style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
         ),
         action_button("Start timer rerender demo", "timer_button", "start_timer", :green),

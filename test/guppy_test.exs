@@ -35,6 +35,9 @@ defmodule GuppyTest do
           key_down: "keyed_down",
           key_up: "keyed_up",
           context_menu: "contexted",
+          drag_start: "dragged_start",
+          drag_move: "dragged_move",
+          drop: "dropped",
           mouse_down: "down",
           mouse_up: "up",
           mouse_move: "move",
@@ -544,6 +547,77 @@ defmodule GuppyTest do
                           x: 128.0,
                           y: 72.0,
                           modifiers: %{platform: true}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :drag_start,
+          %{
+            id: "drag_source",
+            callback: "dragged_start",
+            source_id: "drag_source"
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :drag_start,
+                          id: "drag_source",
+                          callback: "dragged_start",
+                          source_id: "drag_source"
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :drag_move,
+          %{
+            id: "drag_source",
+            callback: "dragged_move",
+            source_id: "drag_source",
+            pressed_button: :left,
+            x: 136.0,
+            y: 84.0,
+            modifiers: %{
+              control: true,
+              alt: false,
+              shift: false,
+              platform: false,
+              function: false
+            }
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :drag_move,
+                          id: "drag_source",
+                          callback: "dragged_move",
+                          source_id: "drag_source",
+                          pressed_button: :left,
+                          x: 136.0,
+                          y: 84.0,
+                          modifiers: %{control: true}
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :drop,
+          %{
+            id: "drop_target",
+            callback: "dropped",
+            source_id: "drag_source"
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :drop,
+                          id: "drop_target",
+                          callback: "dropped",
+                          source_id: "drag_source"
                         }}
 
         send(Guppy.server(), {

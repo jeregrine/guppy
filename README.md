@@ -78,6 +78,7 @@ What it does:
 - uses a scrollable detail panel so individual demos can grow without pushing the whole UI off-screen
 - includes a dedicated Scroll demo so scroll behavior is easy to verify at the default/minimum window sizes
 - exercises div clicks and text clicks in one window
+- exercises pointer, keyboard, context-menu, and drag/drop interaction callbacks
 - exercises full-tree replacement updates from both clicks and timers
 - exercises minimal style tokens and palette changes
 - opens/closes an auxiliary window owned by the main process
@@ -172,6 +173,9 @@ Minimal native events are delivered to the owning Elixir process as:
 {:guppy_event, view_id, %{type: :key_down, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, is_held: boolean, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :key_up, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :context_menu, id: node_id, callback: callback_id, x: number, y: number, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :drag_start, id: node_id, callback: callback_id, source_id: node_id}}
+{:guppy_event, view_id, %{type: :drag_move, id: node_id, callback: callback_id, source_id: node_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
+{:guppy_event, view_id, %{type: :drop, id: node_id, callback: callback_id, source_id: String.t()}}
 {:guppy_event, view_id, %{type: :mouse_down, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, first_mouse: boolean, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_up, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :mouse_move, id: node_id, callback: callback_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
@@ -194,6 +198,9 @@ Guppy.IR.div(
     key_down: "keyed_down",
     key_up: "keyed_up",
     context_menu: "contexted",
+    drag_start: "dragged_start",
+    drag_move: "dragged_move",
+    drop: "dropped",
     mouse_down: "pointer_down",
     mouse_up: "pointer_up",
     mouse_move: "pointer_move",

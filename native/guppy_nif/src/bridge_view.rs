@@ -1,6 +1,6 @@
 use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
-    AnyElement, Context, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
+    AnyElement, Context, Empty, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
     KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     ScrollAnchor, ScrollDelta, ScrollHandle, ScrollWheelEvent, SharedString,
     StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Subscription, Window, div,
@@ -94,6 +94,44 @@ unsafe extern "C" {
         function: i32,
     ) -> i32;
 
+    fn guppy_c_send_drag_start_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        source_id_ptr: *const u8,
+        source_id_len: usize,
+    ) -> i32;
+
+    fn guppy_c_send_drag_move_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        source_id_ptr: *const u8,
+        source_id_len: usize,
+        pressed_button_code: i32,
+        x: f64,
+        y: f64,
+        control: i32,
+        alt: i32,
+        shift: i32,
+        platform: i32,
+        function: i32,
+    ) -> i32;
+
+    fn guppy_c_send_drop_event(
+        view_id: u64,
+        node_id_ptr: *const u8,
+        node_id_len: usize,
+        callback_id_ptr: *const u8,
+        callback_id_len: usize,
+        source_id_ptr: *const u8,
+        source_id_len: usize,
+    ) -> i32;
+
     fn guppy_c_send_mouse_down_event(
         view_id: u64,
         node_id_ptr: *const u8,
@@ -173,6 +211,11 @@ pub struct BridgeView {
     pub focus_subscriptions: Vec<Subscription>,
 }
 
+#[derive(Clone, Debug)]
+struct BridgeDragState {
+    source_id: String,
+}
+
 impl Render for BridgeView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
@@ -229,6 +272,9 @@ fn render_ir(
             key_down,
             key_up,
             context_menu,
+            drag_start,
+            drag_move,
+            drop,
             mouse_down,
             mouse_up,
             mouse_move,
@@ -253,6 +299,9 @@ fn render_ir(
             key_down.as_deref(),
             key_up.as_deref(),
             context_menu.as_deref(),
+            drag_start.as_deref(),
+            drag_move.as_deref(),
+            drop.as_deref(),
             mouse_down.as_deref(),
             mouse_up.as_deref(),
             mouse_move.as_deref(),
@@ -322,6 +371,9 @@ fn render_div(
     key_down: Option<&str>,
     key_up: Option<&str>,
     context_menu: Option<&str>,
+    drag_start: Option<&str>,
+    drag_move: Option<&str>,
+    drop: Option<&str>,
     mouse_down: Option<&str>,
     mouse_up: Option<&str>,
     mouse_move: Option<&str>,
@@ -560,6 +612,96 @@ fn render_div(
                     function,
                 );
             })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match drop {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let drop_node_id = node_id.clone();
+
+            styled_div.on_drop::<BridgeDragState>(move |drag, _, _| unsafe {
+                let _ = guppy_c_send_drop_event(
+                    view_id,
+                    drop_node_id.as_ptr(),
+                    drop_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    drag.source_id.as_ptr(),
+                    drag.source_id.len(),
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match drag_move {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let drag_move_node_id = node_id.clone();
+
+            styled_div.on_drag_move::<BridgeDragState>(move |event, _, cx| unsafe {
+                let drag = event.drag(cx);
+                let (control, alt, shift, platform, function) = modifier_flags(&event.event.modifiers);
+                let _ = guppy_c_send_drag_move_event(
+                    view_id,
+                    drag_move_node_id.as_ptr(),
+                    drag_move_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                    drag.source_id.as_ptr(),
+                    drag.source_id.len(),
+                    optional_mouse_button_code(event.event.pressed_button),
+                    pixel_to_f64(event.event.position.x),
+                    pixel_to_f64(event.event.position.y),
+                    control,
+                    alt,
+                    shift,
+                    platform,
+                    function,
+                );
+            })
+        }
+        None => styled_div,
+    };
+
+    let styled_div = match drag_start {
+        Some(callback_id) => {
+            let callback_id = callback_id.to_owned();
+            let drag_start_node_id = node_id.clone();
+            let drag_source_id = node_id.clone();
+
+            styled_div.on_drag(
+                BridgeDragState {
+                    source_id: drag_source_id,
+                },
+                move |drag, _, _, cx| {
+                    unsafe {
+                        let _ = guppy_c_send_drag_start_event(
+                            view_id,
+                            drag_start_node_id.as_ptr(),
+                            drag_start_node_id.len(),
+                            callback_id.as_ptr(),
+                            callback_id.len(),
+                            drag.source_id.as_ptr(),
+                            drag.source_id.len(),
+                        );
+                    }
+
+                    cx.new(|_| Empty)
+                },
+            )
+        }
+        None if drag_move.is_some() => {
+            let drag_source_id = node_id.clone();
+
+            styled_div.on_drag(
+                BridgeDragState {
+                    source_id: drag_source_id,
+                },
+                move |_, _, _, cx| cx.new(|_| Empty),
+            )
         }
         None => styled_div,
     };

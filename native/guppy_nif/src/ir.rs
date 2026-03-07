@@ -186,6 +186,9 @@ pub enum IrNode {
         key_down: Option<String>,
         key_up: Option<String>,
         context_menu: Option<String>,
+        drag_start: Option<String>,
+        drag_move: Option<String>,
+        drop: Option<String>,
         mouse_down: Option<String>,
         mouse_up: Option<String>,
         mouse_move: Option<String>,
@@ -245,6 +248,9 @@ impl IrNode {
                     key_down: get_key_down_event(map)?,
                     key_up: get_key_up_event(map)?,
                     context_menu: get_context_menu_event(map)?,
+                    drag_start: get_drag_start_event(map)?,
+                    drag_move: get_drag_move_event(map)?,
+                    drop: get_drop_event(map)?,
                     mouse_down: get_mouse_down_event(map)?,
                     mouse_up: get_mouse_up_event(map)?,
                     mouse_move: get_mouse_move_event(map)?,
@@ -573,6 +579,18 @@ fn get_key_up_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String>
 
 fn get_context_menu_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
     get_optional_event(map, "context_menu")
+}
+
+fn get_drag_start_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "drag_start")
+}
+
+fn get_drag_move_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "drag_move")
+}
+
+fn get_drop_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "drop")
 }
 
 fn get_mouse_down_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
