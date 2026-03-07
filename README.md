@@ -62,6 +62,25 @@ Expected output after a successful build/install is roughly:
 
 ## Examples
 
+### Super demo (recommended)
+
+```bash
+cd guppy
+mix guppy.native.build
+mix run examples/super_demo.exs
+```
+
+What it does:
+
+- shows native bridge/runtime status inside the UI instead of printing it to the terminal
+- opens in a larger resizable window so the full demo fits more comfortably
+- exercises div clicks and text clicks in one window
+- exercises full-tree replacement updates from both clicks and timers
+- exercises minimal style tokens and palette changes
+- opens/closes an auxiliary window owned by the main process
+- spawns and kills a child-owner window to test owner `DOWN` cleanup
+- lets you manually close the main window to test `window_closed`
+
 ### Hello world
 
 ```bash
@@ -107,6 +126,36 @@ What it does:
 - receives `{:guppy_event, view_id, %{type: :click, id: "increment_button", callback: "increment"}}`
 - updates the window from Elixir when clicked
 - stops cleanly when the window is manually closed
+
+### Text clicks
+
+```bash
+cd guppy
+mix guppy.native.build
+mix run examples/text_clicks.exs
+```
+
+What it does:
+
+- opens a real GPUI window
+- mounts clickable text nodes
+- distinguishes click events by text node id
+- rerenders from Elixir based on which text was clicked
+
+### Style gallery
+
+```bash
+cd guppy
+mix guppy.native.build
+mix run examples/style_gallery.exs
+```
+
+What it does:
+
+- opens a real GPUI window
+- renders a few styled clickable swatches
+- updates a preview block using the current minimal style token support
+- demonstrates full-tree replacement driven by click events
 
 ## Event shape today
 
@@ -197,7 +246,12 @@ mix guppy.native.build
 mix test
 mix run examples/hello_world.exs
 mix run examples/counter.exs
+mix run examples/super_demo.exs
+mix run examples/hello_world.exs
+mix run examples/counter.exs
 mix run examples/click_counter.exs
+mix run examples/text_clicks.exs
+mix run examples/style_gallery.exs
 ```
 
 If you change native code under `native/guppy_nif/`, rebuild before testing.
