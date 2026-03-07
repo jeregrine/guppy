@@ -133,6 +133,12 @@ where
     if style.size_full {
         element = element.size_full();
     }
+    if style.w_full {
+        element = element.w_full();
+    }
+    if style.h_full {
+        element = element.h_full();
+    }
     if style.flex_1 {
         element = element.flex_1();
     }

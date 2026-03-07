@@ -374,7 +374,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [nav_panel(state), detail_panel(state)],
           id: "main_split",
-          style: %{flex: true, flex_1: true, gap_2: true}
+          style: %{flex: true, flex_1: true, w_full: true, h_full: true, gap_2: true}
         )
       ],
       id: "super_demo_root",
@@ -405,9 +405,9 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("Demos", id: "nav_title"),
         Guppy.IR.text("The main window stays anchored at the top; switch demos instead of scrolling."),
-        Guppy.IR.div(items, id: "nav_items", style: %{flex: true, flex_col: true, gap_2: true})
+        Guppy.IR.div(items, id: "nav_items", style: %{flex: true, flex_col: true, w_full: true, gap_2: true})
       ],
-      style: %{w_64: true, flex_col: true, p_4: true, bg: :gray}
+      style: %{w_64: true, h_full: true, flex_col: true, p_4: true, bg: :gray}
     )
   end
 
@@ -419,7 +419,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}"),
         detail_content(state)
       ],
-      style: %{flex: true, flex_col: true, flex_1: true, gap_2: true, p_4: true, overflow_y_scroll: true}
+      style: %{flex: true, flex_col: true, flex_1: true, w_full: true, h_full: true, gap_2: true, p_4: true, overflow_y_scroll: true}
     )
   end
 

@@ -27,6 +27,8 @@ Guppy.IR currently supports:
   - `flex_col`
   - `flex_1`
   - `size_full`
+  - `w_full`
+  - `h_full`
   - `gap_2`
   - `p_2`
   - `p_4`
@@ -49,8 +51,8 @@ The rough order below is chosen to improve layout correctness first, then text/l
 ## 1. Core sizing and layout constraints
 
 - [x] `size_full`
-- [ ] `w_full`
-- [ ] `h_full`
+- [x] `w_full`
+- [x] `h_full`
 - [ ] `flex_row`
 - [ ] `flex_wrap`
 - [ ] `flex_nowrap`

@@ -26,6 +26,8 @@ defmodule GuppyTest do
                    flex_col: true,
                    flex_1: true,
                    size_full: true,
+                   w_full: true,
+                   h_full: true,
                    gap_2: true,
                    bg: :gray,
                    border_1: true,
