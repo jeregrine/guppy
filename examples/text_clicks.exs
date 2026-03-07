@@ -1,4 +1,4 @@
-Mix.Task.run("app.start")
+{:ok, _} = Application.ensure_all_started(:guppy)
 
 IO.puts("Guppy text clicks example")
 IO.inspect(Guppy.Native.Nif.load_status(), label: "load_status")

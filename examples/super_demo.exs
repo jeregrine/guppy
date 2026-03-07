@@ -5,7 +5,7 @@ defmodule Guppy.SuperDemo do
   @demo_ids [:runtime, :interactions, :windows, :styles, :layout, :scroll, :help]
 
   def run do
-    Mix.Task.run("app.start")
+    {:ok, _} = Application.ensure_all_started(:guppy)
 
     {:ok, main_view_id} = Guppy.open_window(self())
 
