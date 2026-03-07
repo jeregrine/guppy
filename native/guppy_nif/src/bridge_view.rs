@@ -196,6 +196,7 @@ where
             StyleOp::W96 => element.w_96(),
             StyleOp::H32 => element.h_32(),
             StyleOp::MinW32 => element.min_w_32(),
+            StyleOp::MinH0 => element.min_h_0(),
             StyleOp::MinHFull => element.min_h_full(),
             StyleOp::MaxW64 => element.max_w_64(),
             StyleOp::MaxW96 => element.max_w_96(),
@@ -344,6 +345,7 @@ fn apply_hover_style(mut style: StyleRefinement, hover_style: &DivStyle) -> Styl
             | StyleOp::W96
             | StyleOp::H32
             | StyleOp::MinW32
+            | StyleOp::MinH0
             | StyleOp::MinHFull
             | StyleOp::MaxW64
             | StyleOp::MaxW96

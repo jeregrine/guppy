@@ -37,6 +37,7 @@ defmodule Guppy.IR do
           | :w_96
           | :h_32
           | :min_w_32
+          | :min_h_0
           | :min_h_full
           | :max_w_64
           | :max_w_96
@@ -204,6 +205,7 @@ defmodule Guppy.IR do
     :w_96,
     :h_32,
     :min_w_32,
+    :min_h_0,
     :min_h_full,
     :max_w_64,
     :max_w_96,
