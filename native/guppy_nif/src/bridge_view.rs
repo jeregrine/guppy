@@ -1,7 +1,7 @@
 use crate::ir::{ColorToken, DivStyle, IrNode, StyleOp};
 use gpui::{
     AnyElement, Context, Empty, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
-    KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+    KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels,
     ScrollAnchor, ScrollDelta, ScrollHandle, ScrollWheelEvent, SharedString,
     StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Subscription, Window,
     deferred, div, prelude::*, px, relative, rems, rgb,
@@ -417,7 +417,7 @@ fn render_div(
     let tab_stop = if disabled { None } else { tab_stop };
     let tab_index = if disabled { None } else { tab_index };
 
-    let tracked_scroll_handle = if track_scroll {
+    let tracked_scroll_handle = if track_scroll || has_vertical_scrollbar(style) {
         Some(
             scroll_handles
                 .entry(node_id.clone())
@@ -460,7 +460,7 @@ fn render_div(
 
     let child_scroll_handle = tracked_scroll_handle.clone().or(parent_scroll_handle.clone());
 
-    let child_elements = children
+    let mut child_elements = children
         .iter()
         .enumerate()
         .map(|(index, child)| {
@@ -479,6 +479,12 @@ fn render_div(
         })
         .collect::<Vec<_>>();
 
+    if let Some(handle) = tracked_scroll_handle.as_ref()
+        && let Some(scrollbar) = render_vertical_scrollbar(handle, node_id.as_str(), style, window)
+    {
+        child_elements.push(scrollbar);
+    }
+
     let styled_div = apply_div_style(
         div()
             .id(SharedString::from(node_id.clone()))
@@ -487,6 +493,12 @@ fn render_div(
     );
 
     let styled_div = if occlude { styled_div.occlude() } else { styled_div };
+
+    let styled_div = if has_vertical_scrollbar(style) {
+        styled_div.relative()
+    } else {
+        styled_div
+    };
 
     let styled_div = match tracked_scroll_handle.as_ref() {
         Some(handle) => styled_div.track_scroll(handle),
@@ -883,6 +895,75 @@ fn render_div(
         Some(priority) => deferred(element).with_priority(priority).into_any_element(),
         None => element,
     }
+}
+
+fn has_vertical_scrollbar(style: &DivStyle) -> bool {
+    vertical_scrollbar_width(style, Pixels::ZERO).is_some()
+        && style.iter().any(|op| matches!(op, StyleOp::OverflowScroll | StyleOp::OverflowYScroll))
+}
+
+fn vertical_scrollbar_width(style: &DivStyle, rem_size: Pixels) -> Option<Pixels> {
+    style.iter().fold(None, |width, op| match op {
+        StyleOp::ScrollbarWidthPx(value) if *value > 0.0 => Some(px(*value)),
+        StyleOp::ScrollbarWidthRem(value) if *value > 0.0 && rem_size != Pixels::ZERO => Some(rem_size * *value),
+        StyleOp::ScrollbarWidthRem(value) if *value > 0.0 => Some(px(*value * 16.0)),
+        _ => width,
+    })
+}
+
+fn render_vertical_scrollbar(
+    handle: &ScrollHandle,
+    node_id: &str,
+    style: &DivStyle,
+    window: &Window,
+) -> Option<AnyElement> {
+    if !style.iter().any(|op| matches!(op, StyleOp::OverflowScroll | StyleOp::OverflowYScroll)) {
+        return None;
+    }
+
+    let width = vertical_scrollbar_width(style, window.rem_size())?;
+    let viewport_height = handle.bounds().size.height;
+    let max_offset = handle.max_offset().height;
+
+    if width <= Pixels::ZERO || viewport_height <= Pixels::ZERO || max_offset <= Pixels::ZERO {
+        return None;
+    }
+
+    let content_height = viewport_height + max_offset;
+    let thumb_height = (viewport_height * (viewport_height / content_height))
+        .max(px(24.0))
+        .min(viewport_height);
+    let travel = (viewport_height - thumb_height).max(Pixels::ZERO);
+    let thumb_top = if max_offset == Pixels::ZERO {
+        Pixels::ZERO
+    } else {
+        travel * (handle.offset().y / max_offset)
+    };
+    let thumb_width = (width - px(4.0)).max(px(2.0));
+
+    Some(
+        div()
+            .id(SharedString::from(format!("{node_id}__scrollbar_overlay")))
+            .absolute()
+            .top_0()
+            .right_0()
+            .h_full()
+            .w(width)
+            .child(
+                div()
+                    .absolute()
+                    .top(thumb_top)
+                    .right(px(2.0))
+                    .w(thumb_width)
+                    .h(thumb_height)
+                    .rounded_full()
+                    .bg(rgb(0x9a9a9a))
+                    .border_1()
+                    .border_color(rgb(0xdedede))
+                    .opacity(0.95),
+            )
+            .into_any_element(),
+    )
 }
 
 fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
