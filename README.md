@@ -75,6 +75,8 @@ What it does:
 - shows native bridge/runtime status inside the UI instead of printing it to the terminal
 - opens in a larger resizable window so the full demo fits more comfortably
 - shows a demo list on the left and the selected demo content on the right
+- uses a scrollable detail panel so individual demos can grow without pushing the whole UI off-screen
+- includes a dedicated Scroll demo so scroll behavior is easy to verify at the default/minimum window sizes
 - exercises div clicks and text clicks in one window
 - exercises full-tree replacement updates from both clicks and timers
 - exercises minimal style tokens and palette changes
@@ -186,7 +188,7 @@ Identity rules today:
 
 Minimal `:div` style tokens currently supported:
 
-- booleans: `flex`, `flex_col`, `gap_2`, `p_2`, `p_4`, `p_6`, `w_64`, `items_center`, `justify_center`, `cursor_pointer`, `rounded_md`, `border_1`
+- booleans: `flex`, `flex_col`, `flex_1`, `size_full`, `gap_2`, `p_2`, `p_4`, `p_6`, `w_64`, `items_center`, `justify_center`, `cursor_pointer`, `rounded_md`, `border_1`, `overflow_y_scroll`
 - colors: `bg`, `text_color`, `border_color`
 - color tokens: `:red`, `:green`, `:blue`, `:yellow`, `:black`, `:white`, `:gray`
 

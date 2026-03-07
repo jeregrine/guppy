@@ -17,6 +17,8 @@ defmodule Guppy.IR do
   @type style :: %{
           optional(:flex) => boolean(),
           optional(:flex_col) => boolean(),
+          optional(:flex_1) => boolean(),
+          optional(:size_full) => boolean(),
           optional(:gap_2) => boolean(),
           optional(:p_2) => boolean(),
           optional(:p_4) => boolean(),
@@ -27,6 +29,7 @@ defmodule Guppy.IR do
           optional(:cursor_pointer) => boolean(),
           optional(:rounded_md) => boolean(),
           optional(:border_1) => boolean(),
+          optional(:overflow_y_scroll) => boolean(),
           optional(:bg) => color_token(),
           optional(:text_color) => color_token(),
           optional(:border_color) => color_token()
@@ -54,6 +57,8 @@ defmodule Guppy.IR do
   @style_boolean_keys [
     :flex,
     :flex_col,
+    :flex_1,
+    :size_full,
     :gap_2,
     :p_2,
     :p_4,
@@ -63,7 +68,8 @@ defmodule Guppy.IR do
     :justify_center,
     :cursor_pointer,
     :rounded_md,
-    :border_1
+    :border_1,
+    :overflow_y_scroll
   ]
 
   @style_color_keys [:bg, :text_color, :border_color]

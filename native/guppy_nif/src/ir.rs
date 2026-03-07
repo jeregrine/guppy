@@ -6,6 +6,8 @@ use std::io::Cursor;
 pub struct DivStyle {
     pub flex: bool,
     pub flex_col: bool,
+    pub flex_1: bool,
+    pub size_full: bool,
     pub gap_2: bool,
     pub p_2: bool,
     pub p_4: bool,
@@ -16,6 +18,7 @@ pub struct DivStyle {
     pub cursor_pointer: bool,
     pub rounded_md: bool,
     pub border_1: bool,
+    pub overflow_y_scroll: bool,
     pub bg: Option<ColorToken>,
     pub text_color: Option<ColorToken>,
     pub border_color: Option<ColorToken>,
@@ -139,6 +142,8 @@ fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     Ok(DivStyle {
         flex: get_bool_style(style_map, "flex")?,
         flex_col: get_bool_style(style_map, "flex_col")?,
+        flex_1: get_bool_style(style_map, "flex_1")?,
+        size_full: get_bool_style(style_map, "size_full")?,
         gap_2: get_bool_style(style_map, "gap_2")?,
         p_2: get_bool_style(style_map, "p_2")?,
         p_4: get_bool_style(style_map, "p_4")?,
@@ -149,6 +154,7 @@ fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
         cursor_pointer: get_bool_style(style_map, "cursor_pointer")?,
         rounded_md: get_bool_style(style_map, "rounded_md")?,
         border_1: get_bool_style(style_map, "border_1")?,
+        overflow_y_scroll: get_bool_style(style_map, "overflow_y_scroll")?,
         bg: get_color_style(style_map, "bg")?,
         text_color: get_color_style(style_map, "text_color")?,
         border_color: get_color_style(style_map, "border_color")?,

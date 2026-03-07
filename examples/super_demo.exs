@@ -2,7 +2,7 @@ defmodule Guppy.SuperDemo do
   @palette [:gray, :red, :green, :blue, :yellow]
   @timer_ticks 5
   @timer_interval_ms 1_000
-  @demo_ids [:runtime, :interactions, :windows, :styles, :help]
+  @demo_ids [:runtime, :interactions, :windows, :styles, :scroll, :help]
 
   def run do
     Mix.Task.run("app.start")
@@ -374,11 +374,11 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [nav_panel(state), detail_panel(state)],
           id: "main_split",
-          style: %{flex: true, gap_2: true}
+          style: %{flex: true, flex_1: true, gap_2: true}
         )
       ],
       id: "super_demo_root",
-      style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+      style: %{size_full: true, flex: true, flex_col: true, gap_2: true, p_4: true}
     )
   end
 
@@ -419,7 +419,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}"),
         detail_content(state)
       ],
-      style: %{flex: true, flex_col: true, gap_2: true, p_4: true}
+      style: %{flex: true, flex_col: true, flex_1: true, gap_2: true, p_4: true, overflow_y_scroll: true}
     )
   end
 
@@ -427,6 +427,7 @@ defmodule Guppy.SuperDemo do
   defp detail_content(%{selected_demo: :interactions} = state), do: interactions_demo(state)
   defp detail_content(%{selected_demo: :windows} = state), do: windows_demo(state)
   defp detail_content(%{selected_demo: :styles} = state), do: styles_demo(state)
+  defp detail_content(%{selected_demo: :scroll} = state), do: scroll_demo(state)
   defp detail_content(%{selected_demo: :help} = state), do: help_demo(state)
 
   defp runtime_demo(state) do
@@ -513,6 +514,26 @@ defmodule Guppy.SuperDemo do
     )
   end
 
+  defp scroll_demo(state) do
+    long_lines =
+      Enum.map(1..24, fn index ->
+        Guppy.IR.text(
+          "Scroll line #{index}: palette=#{palette_color(state)} div_clicks=#{state.div_clicks} text_clicks=#{state.text_clicks} timer_ticks=#{state.timer_ticks}",
+          id: "scroll_line_#{index}"
+        )
+      end)
+
+    panel(
+      "scroll_demo",
+      [
+        Guppy.IR.text("Scroll demo"),
+        Guppy.IR.text("This panel is intentionally taller than the available area."),
+        Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored.")
+      ] ++ long_lines,
+      style: %{bg: :gray}
+    )
+  end
+
   defp help_demo(_state) do
     panel(
       "help_demo",
@@ -522,7 +543,8 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("2. Interactions: click the div button and the text line, then start timer rerenders."),
         Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
         Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
-        Guppy.IR.text("5. Close the traffic-light button on any window to test window_closed handling.")
+        Guppy.IR.text("5. Scroll: select the Scroll demo and verify the detail pane scrolls."),
+        Guppy.IR.text("6. Close the traffic-light button on any window to test window_closed handling.")
       ],
       style: %{bg: :gray}
     )
@@ -584,6 +606,7 @@ defmodule Guppy.SuperDemo do
   defp demo_label(:interactions), do: "Interactions"
   defp demo_label(:windows), do: "Windows"
   defp demo_label(:styles), do: "Styles"
+  defp demo_label(:scroll), do: "Scroll"
   defp demo_label(:help), do: "Help"
 
   defp palette_color(state), do: Enum.at(@palette, state.palette_index)

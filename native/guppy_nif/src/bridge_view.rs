@@ -1,6 +1,6 @@
 use crate::ir::{ColorToken, DivStyle, IrNode};
 use gpui::{
-    AnyElement, Context, InteractiveElement, InteractiveText, SharedString, Styled, StyledText,
+    AnyElement, Context, InteractiveElement, InteractiveText, SharedString, StatefulInteractiveElement, Styled, StyledText,
     Window, div, prelude::*, rgb,
 };
 
@@ -122,13 +122,19 @@ fn render_div(
 
 fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
 where
-    E: Styled + InteractiveElement,
+    E: Styled + InteractiveElement + StatefulInteractiveElement,
 {
     if style.flex {
         element = element.flex();
     }
     if style.flex_col {
         element = element.flex_col();
+    }
+    if style.size_full {
+        element = element.size_full();
+    }
+    if style.flex_1 {
+        element = element.flex_1();
     }
     if style.gap_2 {
         element = element.gap_2();
@@ -159,6 +165,9 @@ where
     }
     if style.border_1 {
         element = element.border_1();
+    }
+    if style.overflow_y_scroll {
+        element = element.overflow_y_scroll();
     }
     if let Some(color) = style.bg {
         element = element.bg(color_token_to_color(color));
