@@ -579,7 +579,7 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("badge", id: "position_badge_label")],
                   id: "position_badge",
-                  style: [:absolute, :top_1, :right_1, :p_1, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
+                  style: [:absolute, :top_1, :right_1, :p_1, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}, :shadow_sm]
                 ),
                 Guppy.IR.div(
                   [Guppy.IR.text("inset overlay", id: "position_overlay_label")],
@@ -588,12 +588,19 @@ defmodule Guppy.SuperDemo do
                 )
               ],
               id: "position_box",
-              style: [:relative, :w_96, :h_32, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+              style: [:relative, :w_96, :h_32, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}, :shadow_md]
             ),
             Guppy.IR.div(
-              [Guppy.IR.text("offset frame", id: "offset_frame_label")],
+              [
+                Guppy.IR.text("offset frame", id: "offset_frame_label"),
+                Guppy.IR.div(
+                  [Guppy.IR.text("anchored", id: "offset_anchor_label")],
+                  id: "offset_anchor",
+                  style: [:absolute, :top_2, :right_2, :p_1, :rounded_md, :border_t_1, :border_r_1, :border_b_1, :border_l_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}, :shadow_sm]
+                )
+              ],
               id: "offset_frame",
-              style: [:relative, :w_96, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}],
+              style: [:relative, :w_96, :h_32, :rounded_md, :border_t_1, :border_r_1, :border_b_1, :border_l_1, {:border_color, :white}, {:bg, :gray}, :shadow_lg],
               events: %{click: "div_increment"}
             ),
             Guppy.IR.div(

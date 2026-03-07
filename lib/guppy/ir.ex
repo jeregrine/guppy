@@ -84,6 +84,13 @@ defmodule Guppy.IR do
           | :cursor_pointer
           | :rounded_md
           | :border_1
+          | :border_t_1
+          | :border_r_1
+          | :border_b_1
+          | :border_l_1
+          | :shadow_sm
+          | :shadow_md
+          | :shadow_lg
           | :overflow_scroll
           | :overflow_x_scroll
           | :overflow_y_scroll
@@ -185,6 +192,13 @@ defmodule Guppy.IR do
     :cursor_pointer,
     :rounded_md,
     :border_1,
+    :border_t_1,
+    :border_r_1,
+    :border_b_1,
+    :border_l_1,
+    :shadow_sm,
+    :shadow_md,
+    :shadow_lg,
     :overflow_scroll,
     :overflow_x_scroll,
     :overflow_y_scroll,

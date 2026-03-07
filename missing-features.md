@@ -80,6 +80,13 @@ Guppy.IR currently supports:
   - `right_2`
   - `bottom_2`
   - `left_2`
+  - `border_t_1`
+  - `border_r_1`
+  - `border_b_1`
+  - `border_l_1`
+  - `shadow_sm`
+  - `shadow_md`
+  - `shadow_lg`
   - `items_start`
   - `items_center`
   - `items_end`
@@ -177,11 +184,11 @@ The rough order below is chosen to improve layout correctness first, then text/l
 ## 5. Visual styling
 
 - [ ] more border width tokens
-- [ ] side-specific borders
+- [x] side-specific borders
 - [ ] border style tokens
 - [ ] more radius tokens
 - [ ] opacity
-- [ ] box shadow / shadow tokens
+- [x] box shadow / shadow tokens
 - [ ] richer color space / arbitrary colors
 - [ ] theme/token-based colors beyond the current atoms
 
