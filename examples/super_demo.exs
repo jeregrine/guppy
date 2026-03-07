@@ -33,6 +33,9 @@ defmodule Guppy.SuperDemo do
         drag_moves: 0,
         drops: 0,
         drag_status: "none yet",
+        underlay_clicks: 0,
+        overlay_clicks: 0,
+        stack_status: "none yet",
         keyboard_status: "none yet",
         scroll_anchor_index: 1,
         timer_ticks: 0,
@@ -295,6 +298,20 @@ defmodule Guppy.SuperDemo do
         state
         |> Map.update!(:text_clicks, &(&1 + 1))
         |> Map.put(:last_event, "text click via #{node_id}")
+        |> rerender!()
+
+      "underlay_click" ->
+        state
+        |> Map.update!(:underlay_clicks, &(&1 + 1))
+        |> Map.put(:stack_status, "underlay clicked via #{node_id}")
+        |> Map.put(:last_event, "underlay click via #{node_id}")
+        |> rerender!()
+
+      "overlay_click" ->
+        state
+        |> Map.update!(:overlay_clicks, &(&1 + 1))
+        |> Map.put(:stack_status, "overlay clicked via #{node_id}")
+        |> Map.put(:last_event, "overlay click via #{node_id}")
         |> rerender!()
 
       "scroll_anchor_prev" ->
@@ -821,6 +838,68 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [Guppy.IR.text("drag_status = #{state.drag_status}", id: "drag_status_label")],
           id: "drag_status_panel",
+          style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
+        ),
+        Guppy.IR.text("Stacking / overlay demo"),
+        Guppy.IR.text("The blue card is deferred above the yellow card and occludes clicks underneath it."),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Underlay card", id: "underlay_title"),
+                Guppy.IR.text("Try clicking the visible uncovered area.", id: "underlay_body")
+              ],
+              id: "underlay_card",
+              style: [
+                :absolute,
+                :top_2,
+                :left_2,
+                {:w_px, 260},
+                {:h_px, 140},
+                :p_4,
+                :rounded_md,
+                :border_2,
+                {:border_color, :black},
+                {:bg, :yellow},
+                {:text_color, :black}
+              ],
+              events: %{click: "underlay_click"}
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Overlay card", id: "overlay_title"),
+                Guppy.IR.text("This card uses stack_priority + occlude.", id: "overlay_body")
+              ],
+              id: "overlay_card",
+              stack_priority: 10,
+              occlude: true,
+              style: [
+                :absolute,
+                :top_1,
+                :right_2,
+                {:w_px, 260},
+                {:h_px, 140},
+                :p_4,
+                :rounded_md,
+                :border_2,
+                {:border_color, :white},
+                {:bg, :blue},
+                {:text_color, :white},
+                :cursor_pointer,
+                :shadow_lg
+              ],
+              hover_style: [{:bg_hex, "#295ee5"}],
+              events: %{click: "overlay_click"}
+            )
+          ],
+          id: "stack_demo_frame",
+          style: [:relative, :w_full, {:h_px, 190}, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :overflow_hidden]
+        ),
+        Guppy.IR.text("underlay_clicks = #{state.underlay_clicks}"),
+        Guppy.IR.text("overlay_clicks = #{state.overlay_clicks}"),
+        Guppy.IR.div(
+          [Guppy.IR.text("stack_status = #{state.stack_status}", id: "stack_status_label")],
+          id: "stack_status_panel",
           style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
         ),
         action_button("Start timer rerender demo", "timer_button", "start_timer", :green),

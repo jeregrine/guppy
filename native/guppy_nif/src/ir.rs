@@ -175,6 +175,8 @@ pub enum IrNode {
         focus_style: DivStyle,
         disabled_style: DivStyle,
         disabled: bool,
+        stack_priority: Option<usize>,
+        occlude: bool,
         focusable: bool,
         tab_stop: Option<bool>,
         tab_index: Option<isize>,
@@ -239,6 +241,8 @@ impl IrNode {
                     focus_style: get_div_focus_style(map)?,
                     disabled_style: get_div_disabled_style(map)?,
                     disabled: get_boolean_field(map, "disabled")?,
+                    stack_priority: get_optional_usize_field(map, "stack_priority")?,
+                    occlude: get_boolean_field(map, "occlude")?,
                     focusable: get_boolean_field(map, "focusable")?,
                     tab_stop: get_optional_boolean_field(map, "tab_stop")?,
                     tab_index: get_optional_integer_field(map, "tab_index")?,
@@ -335,6 +339,24 @@ fn get_optional_integer_field(
             .map(Some)
             .map_err(|error| format!("invalid integer field {key}: {error}")),
         Some(other) => Err(format!("expected optional integer field {key}, got {other}")),
+        None => Ok(None),
+    }
+}
+
+fn get_optional_usize_field(
+    map: &HashMap<Term, Term>,
+    key: &str,
+) -> Result<Option<usize>, String> {
+    match get_field(map, key) {
+        Some(Term::FixInteger(value)) => usize::try_from(value.value)
+            .map(Some)
+            .map_err(|error| format!("invalid usize field {key}: {error}")),
+        Some(Term::BigInteger(value)) => value
+            .to_string()
+            .parse::<usize>()
+            .map(Some)
+            .map_err(|error| format!("invalid usize field {key}: {error}")),
+        Some(other) => Err(format!("expected optional usize field {key}, got {other}")),
         None => Ok(None),
     }
 }

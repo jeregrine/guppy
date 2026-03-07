@@ -24,6 +24,8 @@ defmodule GuppyTest do
         focus_style: [{:bg_hex, "#202020"}, {:text_color, :yellow}],
         disabled_style: [{:opacity, 0.4}, {:bg, :black}],
         disabled: false,
+        stack_priority: 7,
+        occlude: true,
         focusable: true,
         tab_stop: true,
         tab_index: 3,
@@ -188,6 +190,8 @@ defmodule GuppyTest do
     assert styled_ir.focus_style == [{:bg_hex, "#202020"}, {:text_color, :yellow}]
     assert styled_ir.disabled_style == [{:opacity, 0.4}, {:bg, :black}]
     assert styled_ir.disabled == false
+    assert styled_ir.stack_priority == 7
+    assert styled_ir.occlude == true
     assert styled_ir.focusable == true
     assert styled_ir.tab_stop == true
     assert styled_ir.tab_index == 3
@@ -354,6 +358,12 @@ defmodule GuppyTest do
 
     assert {:error, {:disabled, "yes"}} =
              Guppy.IR.validate(Guppy.IR.div([], disabled: "yes"))
+
+    assert {:error, {:stack_priority, -1}} =
+             Guppy.IR.validate(Guppy.IR.div([], stack_priority: -1))
+
+    assert {:error, {:occlude, "yes"}} =
+             Guppy.IR.validate(Guppy.IR.div([], occlude: "yes"))
 
     assert {:error, {:focusable, "yes"}} =
              Guppy.IR.validate(Guppy.IR.div([], focusable: "yes"))

@@ -3,8 +3,8 @@ use gpui::{
     AnyElement, Context, Empty, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
     KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     ScrollAnchor, ScrollDelta, ScrollHandle, ScrollWheelEvent, SharedString,
-    StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Subscription, Window, div,
-    prelude::*, px, relative, rems, rgb,
+    StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Subscription, Window,
+    deferred, div, prelude::*, px, relative, rems, rgb,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -261,6 +261,8 @@ fn render_ir(
             focus_style,
             disabled_style,
             disabled,
+            stack_priority,
+            occlude,
             focusable,
             tab_stop,
             tab_index,
@@ -290,6 +292,8 @@ fn render_ir(
             focus_style,
             disabled_style,
             *disabled,
+            *stack_priority,
+            *occlude,
             *focusable,
             *tab_stop,
             *tab_index,
@@ -364,6 +368,8 @@ fn render_div(
     focus_style: &DivStyle,
     disabled_style: &DivStyle,
     disabled: bool,
+    stack_priority: Option<usize>,
+    occlude: bool,
     focusable: bool,
     tab_stop: Option<bool>,
     tab_index: Option<isize>,
@@ -479,6 +485,8 @@ fn render_div(
             .children(child_elements),
         style,
     );
+
+    let styled_div = if occlude { styled_div.occlude() } else { styled_div };
 
     let styled_div = match tracked_scroll_handle.as_ref() {
         Some(handle) => styled_div.track_scroll(handle),
@@ -850,7 +858,7 @@ fn render_div(
         styled_div
     };
 
-    match click {
+    let element = match click {
         Some(callback_id) => {
             let callback_id = callback_id.to_owned();
             let click_node_id = node_id.clone();
@@ -869,6 +877,11 @@ fn render_div(
                 .into_any_element()
         }
         None => styled_div.into_any_element(),
+    };
+
+    match stack_priority {
+        Some(priority) => deferred(element).with_priority(priority).into_any_element(),
+        None => element,
     }
 }
 

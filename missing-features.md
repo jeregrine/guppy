@@ -48,6 +48,9 @@ Guppy.IR currently supports:
 - disabled behavior:
   - `disabled`
   - `disabled_style`
+- stacking behavior:
+  - `stack_priority`
+  - `occlude`
 - style tokens:
   - `flex`
   - `flex_col`
@@ -248,7 +251,7 @@ The rough order below is chosen to improve layout correctness first, then text/l
 - [x] `relative`
 - [x] `absolute`
 - [x] top/right/bottom/left inset tokens
-- [ ] z-index / stacking controls
+- [x] z-index / stacking controls
 
 ## 4. Text styling
 

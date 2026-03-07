@@ -201,6 +201,8 @@ defmodule Guppy.IR do
           optional(:focus_style) => style(),
           optional(:disabled_style) => style(),
           optional(:disabled) => boolean(),
+          optional(:stack_priority) => non_neg_integer(),
+          optional(:occlude) => boolean(),
           optional(:focusable) => boolean(),
           optional(:tab_stop) => boolean(),
           optional(:tab_index) => integer(),
@@ -367,6 +369,8 @@ defmodule Guppy.IR do
     focus_style = Keyword.get(opts, :focus_style)
     disabled_style = Keyword.get(opts, :disabled_style)
     disabled = Keyword.get(opts, :disabled)
+    stack_priority = Keyword.get(opts, :stack_priority)
+    occlude = Keyword.get(opts, :occlude)
     focusable = Keyword.get(opts, :focusable)
     tab_stop = Keyword.get(opts, :tab_stop)
     tab_index = Keyword.get(opts, :tab_index)
@@ -380,6 +384,8 @@ defmodule Guppy.IR do
     |> maybe_put(:focus_style, focus_style)
     |> maybe_put(:disabled_style, disabled_style)
     |> maybe_put(:disabled, disabled)
+    |> maybe_put(:stack_priority, stack_priority)
+    |> maybe_put(:occlude, occlude)
     |> maybe_put(:focusable, focusable)
     |> maybe_put(:tab_stop, tab_stop)
     |> maybe_put(:tab_index, tab_index)
@@ -403,6 +409,8 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :focus_style)),
          :ok <- validate_style(Map.get(node, :disabled_style)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_optional_non_neg_integer(Map.get(node, :stack_priority), :stack_priority),
+         :ok <- validate_optional_boolean(Map.get(node, :occlude), :occlude),
          :ok <- validate_optional_boolean(Map.get(node, :focusable), :focusable),
          :ok <- validate_optional_boolean(Map.get(node, :tab_stop), :tab_stop),
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
@@ -452,6 +460,13 @@ defmodule Guppy.IR do
   defp validate_optional_integer(nil, _field), do: :ok
   defp validate_optional_integer(value, _field) when is_integer(value), do: :ok
   defp validate_optional_integer(value, field), do: {:error, {field, value}}
+
+  defp validate_optional_non_neg_integer(nil, _field), do: :ok
+
+  defp validate_optional_non_neg_integer(value, _field) when is_integer(value) and value >= 0,
+    do: :ok
+
+  defp validate_optional_non_neg_integer(value, field), do: {:error, {field, value}}
 
   defp validate_style(nil), do: :ok
 

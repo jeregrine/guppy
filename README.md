@@ -211,7 +211,9 @@ Guppy.IR.div(
   tab_index: 1,
   focus_style: [{:bg, :blue}, {:border_color, :yellow}],
   disabled: false,
-  disabled_style: [{:opacity, 0.45}, {:bg, :gray}]
+  disabled_style: [{:opacity, 0.45}, {:bg, :gray}],
+  stack_priority: 10,
+  occlude: true
 )
 ```
 
@@ -237,10 +239,14 @@ style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 - ordered `focus_style` using the same style-op vocabulary as normal `style`
 - `disabled: true | false` to suppress div interaction callbacks and focus participation
 - ordered `disabled_style` using the same style-op vocabulary as normal `style`
+- `stack_priority: non_neg_integer()` to defer painting of a div and control overlay ordering; higher priorities paint on top of lower ones
+- `occlude: true | false` to block mouse interaction from reaching elements behind this div's hitbox
 - `track_scroll: true` to preserve and reuse a GPUI `ScrollHandle` across rerenders
 - `anchor_scroll: true` to request scrolling the nearest tracked scroll container so that this div is brought into view
 
 Later tokens are applied after earlier tokens, so order is preserved across the bridge.
+
+For overlay behavior, Guppy currently maps stacking to GPUI deferred drawing plus priority rather than CSS-style z-index.
 
 Minimal `:div` style tokens currently supported:
 

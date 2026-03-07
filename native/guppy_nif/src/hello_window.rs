@@ -214,6 +214,8 @@ fn handle_request(request: MainThreadRequest) {
                     focus_style: DivStyle::default(),
                     disabled_style: DivStyle::default(),
                     disabled: false,
+                    stack_priority: None,
+                    occlude: false,
                     focusable: false,
                     tab_stop: None,
                     tab_index: None,
