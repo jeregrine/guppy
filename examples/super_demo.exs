@@ -657,28 +657,46 @@ defmodule Guppy.SuperDemo do
             flex_chip("nowrap_shrink0", "shrink-0", [:flex_shrink_0, :w_96, {:bg, :red}])
           ],
           id: "nowrap_row",
-          style: [:flex, :flex_row, :flex_nowrap, :overflow_x_scroll, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+          style: [:flex, :flex_row, :flex_nowrap, :items_start, :overflow_x_scroll, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         ),
         Guppy.IR.div(
           [
             Guppy.IR.div(
-              [Guppy.IR.text("p_1 + px_2 + py_2", id: "spacing_one_label")],
-              id: "spacing_one",
-              style: [:p_1, :px_2, :py_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+              [
+                Guppy.IR.div(
+                  [Guppy.IR.text("p_1 + px_2 + py_2", id: "spacing_one_label")],
+                  id: "spacing_one",
+                  style: [:p_1, :px_2, :py_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                )
+              ],
+              id: "spacing_one_frame",
+              style: [:h_32, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
             ),
             Guppy.IR.div(
-              [Guppy.IR.text("pt/pr/pb/pl + m_2", id: "spacing_two_label")],
-              id: "spacing_two",
-              style: [:pt_2, :pr_2, :pb_2, :pl_2, :m_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+              [
+                Guppy.IR.div(
+                  [Guppy.IR.text("pt/pr/pb/pl + m_2", id: "spacing_two_label")],
+                  id: "spacing_two",
+                  style: [:pt_2, :pr_2, :pb_2, :pl_2, :m_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+                )
+              ],
+              id: "spacing_two_frame",
+              style: [:h_32, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
             ),
             Guppy.IR.div(
-              [Guppy.IR.text("mx/my/mt/mr/mb/ml", id: "spacing_three_label")],
-              id: "spacing_three",
-              style: [:mx_2, :my_2, :mt_2, :mr_2, :mb_2, :ml_2, :p_8, :rounded_md, :border_1, {:border_color, :white}, {:bg, :yellow}, {:text_color, :black}]
+              [
+                Guppy.IR.div(
+                  [Guppy.IR.text("mx/my/mt/mr/mb/ml", id: "spacing_three_label")],
+                  id: "spacing_three",
+                  style: [:mx_2, :my_2, :mt_2, :mr_2, :mb_2, :ml_2, :p_8, :rounded_md, :border_1, {:border_color, :white}, {:bg, :yellow}, {:text_color, :black}]
+                )
+              ],
+              id: "spacing_three_frame",
+              style: [:h_32, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
             )
           ],
           id: "spacing_examples",
-          style: [:flex, :flex_col, :gap_1, :gap_4, :w_full, :border_1, {:border_color, :white}, :p_2]
+          style: [:flex, :flex_col, :gap_4, :w_full, :border_1, {:border_color, :white}, :p_2]
         ),
         Guppy.IR.div(
           [
@@ -725,24 +743,30 @@ defmodule Guppy.SuperDemo do
             ),
             Guppy.IR.div(
               [
-                Guppy.IR.text("max width / full constraints", id: "constraint_box_label"),
                 Guppy.IR.div(
-                  [Guppy.IR.text("max_w_64", id: "constraint_small")],
-                  id: "constraint_small_box",
-                  style: [:max_w_64, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
-                ),
-                Guppy.IR.div(
-                  [Guppy.IR.text("max_w_96 + max_h_full", id: "constraint_large")],
-                  id: "constraint_large_box",
-                  style: [:max_w_96, :max_h_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                  [
+                    Guppy.IR.text("max width / full constraints", id: "constraint_box_label"),
+                    Guppy.IR.div(
+                      [Guppy.IR.text("max_w_64", id: "constraint_small")],
+                      id: "constraint_small_box",
+                      style: [:max_w_64, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
+                    ),
+                    Guppy.IR.div(
+                      [Guppy.IR.text("max_w_96 + max_h_full", id: "constraint_large")],
+                      id: "constraint_large_box",
+                      style: [:max_w_96, :max_h_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                    )
+                  ],
+                  id: "constraint_panel",
+                  style: [:min_h_full, :max_w_full, :w_full, :flex, :flex_col, :gap_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
                 )
               ],
-              id: "constraint_panel",
-              style: [:min_h_full, :max_w_full, :w_full, :flex, :flex_col, :gap_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
+              id: "constraint_frame",
+              style: [:relative, :w_96, :h_32, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
             )
           ],
           id: "position_examples",
-          style: [:relative, :flex, :flex_col, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+          style: [:flex, :flex_col, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         )
       ],
       style: [{:bg, :gray}]
