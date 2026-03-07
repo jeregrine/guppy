@@ -657,7 +657,7 @@ defmodule Guppy.SuperDemo do
             flex_chip("nowrap_shrink0", "shrink-0", [:flex_shrink_0, :w_96, {:bg, :red}])
           ],
           id: "nowrap_row",
-          style: [:flex, :flex_row, :flex_nowrap, :overflow_x_scroll, :max_h_32, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+          style: [:flex, :flex_row, :flex_nowrap, :overflow_x_scroll, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         ),
         Guppy.IR.div(
           [
@@ -713,9 +713,15 @@ defmodule Guppy.SuperDemo do
               events: %{click: "div_increment"}
             ),
             Guppy.IR.div(
-              [Guppy.IR.text("corner note", id: "corner_note_label")],
-              id: "corner_note",
-              style: [:absolute, :top_2, :right_2, :bottom_2, :left_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+              [
+                Guppy.IR.div(
+                  [Guppy.IR.text("corner note", id: "corner_note_label")],
+                  id: "corner_note",
+                  style: [:absolute, :top_2, :right_2, :bottom_2, :left_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+                )
+              ],
+              id: "corner_note_frame",
+              style: [:relative, :w_96, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
             ),
             Guppy.IR.div(
               [
