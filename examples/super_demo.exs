@@ -841,21 +841,21 @@ defmodule Guppy.SuperDemo do
           style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
         ),
         Guppy.IR.text("Stacking / overlay demo"),
-        Guppy.IR.text("The blue card is deferred above the yellow card and occludes clicks underneath it."),
+        Guppy.IR.text("The blue card is deferred above the yellow card, overlaps it, and occludes clicks underneath it."),
         Guppy.IR.div(
           [
             Guppy.IR.div(
               [
                 Guppy.IR.text("Underlay card", id: "underlay_title"),
-                Guppy.IR.text("Try clicking the visible uncovered area.", id: "underlay_body")
+                Guppy.IR.text("Click the exposed yellow edge; the blue card should sit on top.", id: "underlay_body")
               ],
               id: "underlay_card",
               style: [
                 :absolute,
                 :top_2,
                 :left_2,
-                {:w_px, 260},
-                {:h_px, 140},
+                {:w_px, 320},
+                {:h_px, 160},
                 :p_4,
                 :rounded_md,
                 :border_2,
@@ -868,7 +868,7 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.div(
               [
                 Guppy.IR.text("Overlay card", id: "overlay_title"),
-                Guppy.IR.text("This card uses stack_priority + occlude.", id: "overlay_body")
+                Guppy.IR.text("This card uses stack_priority + occlude and should block clicks below it.", id: "overlay_body")
               ],
               id: "overlay_card",
               stack_priority: 10,
@@ -876,9 +876,9 @@ defmodule Guppy.SuperDemo do
               style: [
                 :absolute,
                 :top_1,
-                :right_2,
-                {:w_px, 260},
-                {:h_px, 140},
+                :left_2,
+                {:w_px, 240},
+                {:h_px, 120},
                 :p_4,
                 :rounded_md,
                 :border_2,
