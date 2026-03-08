@@ -264,6 +264,28 @@ defmodule Guppy.IR do
           optional(:events) => div_events()
         }
 
+  @type checkbox_events :: %{
+          optional(:change) => String.t(),
+          optional(:focus) => String.t(),
+          optional(:blur) => String.t()
+        }
+
+  @type checkbox_node :: %{
+          required(:kind) => :checkbox,
+          required(:label) => String.t(),
+          required(:checked) => boolean(),
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:hover_style) => style(),
+          optional(:focus_style) => style(),
+          optional(:in_focus_style) => style(),
+          optional(:active_style) => style(),
+          optional(:disabled_style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => checkbox_events()
+        }
+
   @type spacer_node :: %{
           required(:kind) => :spacer,
           optional(:id) => node_id(),
@@ -289,6 +311,7 @@ defmodule Guppy.IR do
           | scroll_node()
           | image_node()
           | button_node()
+          | checkbox_node()
           | spacer_node()
           | text_input_node()
 
@@ -517,6 +540,33 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
   end
 
+  @spec checkbox(String.t(), boolean(), keyword()) :: checkbox_node()
+  def checkbox(label, checked, opts \\ [])
+      when is_binary(label) and is_boolean(checked) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    events = Keyword.get(opts, :events)
+    hover_style = Keyword.get(opts, :hover_style)
+    focus_style = Keyword.get(opts, :focus_style)
+    in_focus_style = Keyword.get(opts, :in_focus_style)
+    active_style = Keyword.get(opts, :active_style)
+    disabled_style = Keyword.get(opts, :disabled_style)
+    disabled = Keyword.get(opts, :disabled)
+    tab_index = Keyword.get(opts, :tab_index)
+
+    %{kind: :checkbox, label: label, checked: checked}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+    |> maybe_put(:hover_style, hover_style)
+    |> maybe_put(:focus_style, focus_style)
+    |> maybe_put(:in_focus_style, in_focus_style)
+    |> maybe_put(:active_style, active_style)
+    |> maybe_put(:disabled_style, disabled_style)
+    |> maybe_put(:disabled, disabled)
+    |> maybe_put(:tab_index, tab_index)
+    |> maybe_put(:events, events)
+  end
+
   @spec button(String.t(), keyword()) :: button_node()
   def button(label, opts \\ []) when is_binary(label) and is_list(opts) do
     id = Keyword.get(opts, :id)
@@ -642,6 +692,22 @@ defmodule Guppy.IR do
   defp validate_node(%{kind: :spacer} = node) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)) do
+      :ok
+    end
+  end
+
+  defp validate_node(%{kind: :checkbox, label: label, checked: checked} = node)
+       when is_binary(label) and is_boolean(checked) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :hover_style)),
+         :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :in_focus_style)),
+         :ok <- validate_style(Map.get(node, :active_style)),
+         :ok <- validate_style(Map.get(node, :disabled_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
+         :ok <- validate_events(Map.get(node, :events), [:change, :focus, :blur]) do
       :ok
     end
   end

@@ -10,6 +10,7 @@ defmodule Guppy.Component do
   - `<div>`
   - `<text>`
   - `<button>`
+  - `<checkbox />`
   - `<scroll>`
   - `<image />`
   - `<spacer />`

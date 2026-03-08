@@ -121,7 +121,7 @@ The goal is to keep one checklist, check items off as they land, and continue fr
 - [x] button node
 - [x] text input node
 - [ ] textarea/editor node
-- [ ] checkbox node
+- [x] checkbox node
 - [ ] radio/select primitives
 - [ ] list / uniform list primitive
 - [ ] tooltip / popover primitives

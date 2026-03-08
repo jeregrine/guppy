@@ -41,6 +41,9 @@ defmodule Guppy.TemplateExample do
       <button id="save_button" click="save" class="p-2 rounded-lg border-1 border-blue bg-blue text-[#ffffff]">
         Save
       </button>
+      <checkbox id="tos_checkbox" checked="true" change="toggle_tos" class="gap-2 items-center">
+        Accept terms
+      </checkbox>
       <image id="hero_image" uri="https://example.com/demo.png" object_fit="cover" grayscale="true" class="w-[240px] h-[120px] rounded-lg" />
       <scroll id="items" axis="y" class="flex-1 gap-2">
         <div :for={item <- @items} id={"item_#{item.id}"} class="rounded-md border-1 border-white p-2">
@@ -175,6 +178,27 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(image_ir)
     assert image_ir.object_fit == :cover
     assert image_ir.grayscale == true
+
+    checkbox_ir =
+      Guppy.IR.checkbox(
+        "Ship release notes",
+        true,
+        id: "ship_checkbox",
+        style: [:gap_2],
+        hover_style: [{:opacity, 0.9}],
+        focus_style: [{:border_color, :yellow}],
+        in_focus_style: [:shadow_md],
+        active_style: [{:opacity, 0.7}],
+        disabled_style: [{:opacity, 0.3}],
+        disabled: false,
+        tab_index: 5,
+        events: %{change: "toggle_ship", focus: "focus_ship", blur: "blur_ship"}
+      )
+
+    assert :ok = Guppy.IR.validate(checkbox_ir)
+    assert checkbox_ir.checked == true
+    assert checkbox_ir.tab_index == 5
+    assert checkbox_ir.events == %{change: "toggle_ship", focus: "focus_ship", blur: "blur_ship"}
 
     button_ir =
       Guppy.IR.button(
@@ -655,6 +679,15 @@ defmodule GuppyTest do
 
     assert {:error, {:grayscale, "yes"}} =
              Guppy.IR.validate(Guppy.IR.image("logo.png", grayscale: "yes"))
+
+    assert {:error, {:disabled, "yes"}} =
+             Guppy.IR.validate(Guppy.IR.checkbox("Ship", true, disabled: "yes"))
+
+    assert {:error, {:tab_index, "fifth"}} =
+             Guppy.IR.validate(Guppy.IR.checkbox("Ship", true, tab_index: "fifth"))
+
+    assert {:error, {:invalid_event, :click, "toggle"}} =
+             Guppy.IR.validate(Guppy.IR.checkbox("Ship", true, events: %{click: "toggle"}))
   end
 
   test "native ping is wired through the server" do
@@ -684,7 +717,7 @@ defmodule GuppyTest do
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
-    [title_wrapper, button, image, scroll, text_input, footer] = ir.children
+    [title_wrapper, button, checkbox, image, scroll, text_input, footer] = ir.children
 
     assert title_wrapper.kind == :div
     assert title_wrapper.children == [%{kind: :text, content: "Template demo", id: "title"}]
@@ -695,6 +728,12 @@ defmodule GuppyTest do
     assert button.id == "save_button"
     assert button.label == "Save"
     assert button.events == %{click: "save"}
+
+    assert checkbox.kind == :checkbox
+    assert checkbox.id == "tos_checkbox"
+    assert checkbox.label == "Accept terms"
+    assert checkbox.checked == true
+    assert checkbox.events == %{change: "toggle_tos"}
 
     assert image.kind == :image
     assert image.id == "hero_image"

@@ -54,6 +54,7 @@ defmodule Guppy.Component.Compiler do
     "scroll_wheel"
   ]
   @text_events ["click"]
+  @checkbox_events ["change", "focus", "blur"]
   @text_input_events ["change"]
 
   @style_attr_pairs [
@@ -141,6 +142,7 @@ defmodule Guppy.Component.Compiler do
         "div" -> compile_div(attrs, xmlElement(element, :content), caller)
         "scroll" -> compile_scroll(attrs, xmlElement(element, :content), caller)
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
+        "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
         "text_input" -> compile_text_input(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
         "image" -> compile_image(attrs, xmlElement(element, :content), caller)
@@ -197,6 +199,30 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.text_input(unquote(value), unquote(opts))
+    end
+  end
+
+  defp compile_checkbox(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, checkbox_allowed_attrs(), "checkbox", caller)
+    checked = fetch_required_attr!(attrs, "checked", :boolean, caller)
+    label = build_checkbox_label_ast(attrs, content, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "hover_class", "hover_style", :hover_style),
+        style_entry(attrs, "focus_class", "focus_style", :focus_style),
+        style_entry(attrs, "in_focus_class", "in_focus_style", :in_focus_style),
+        style_entry(attrs, "active_class", "active_style", :active_style),
+        style_entry(attrs, "disabled_class", "disabled_style", :disabled_style),
+        maybe_attr_entry(attrs, "disabled", :boolean, caller),
+        maybe_attr_entry(attrs, "tab_index", :integer, caller),
+        events_entry(attrs, @checkbox_events, caller)
+      ])
+
+    quote do
+      Guppy.IR.checkbox(unquote(label), unquote(checked), unquote(opts))
     end
   end
 
@@ -329,6 +355,28 @@ defmodule Guppy.Component.Compiler do
           caller,
           "image accepts exactly one source attribute: src, path, uri, or embedded"
         )
+    end
+  end
+
+  defp build_checkbox_label_ast(attrs, content, caller) do
+    has_label_attr? = Map.has_key?(attrs, "label")
+    has_content? = has_non_empty_content?(content)
+
+    cond do
+      has_label_attr? and has_content? ->
+        raise_compile_error!(
+          caller,
+          "checkbox accepts either a label attribute or child text, not both"
+        )
+
+      has_label_attr? ->
+        parse_attribute_value(Map.fetch!(attrs, "label"), :string_or_expr, caller)
+
+      has_content? ->
+        build_string_content_ast(content, caller)
+
+      true ->
+        raise_compile_error!(caller, "checkbox requires a label attribute or child text")
     end
   end
 
@@ -876,18 +924,22 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp assert_empty_element!(content, tag, caller) do
-    if Enum.any?(content, fn
-         node when elem(node, 0) == :xmlElement ->
-           true
-
-         node when elem(node, 0) == :xmlText ->
-           node |> xmlText(:value) |> List.to_string() |> normalize_template_text() != ""
-
-         _ ->
-           false
-       end) do
+    if has_non_empty_content?(content) do
       raise_compile_error!(caller, "<#{tag}> cannot have child content")
     end
+  end
+
+  defp has_non_empty_content?(content) do
+    Enum.any?(content, fn
+      node when elem(node, 0) == :xmlElement ->
+        true
+
+      node when elem(node, 0) == :xmlText ->
+        node |> xmlText(:value) |> List.to_string() |> normalize_template_text() != ""
+
+      _ ->
+        false
+    end)
   end
 
   defp assert_allowed_attrs!(attrs, allowed, tag, caller) do
@@ -936,6 +988,11 @@ defmodule Guppy.Component.Compiler do
       "class",
       "style"
     ]
+  end
+
+  defp checkbox_allowed_attrs do
+    [":if", ":for", "id", "label", "checked", "disabled", "tab_index"] ++
+      Enum.map(@style_attr_pairs, &elem(&1, 0)) ++ @checkbox_events
   end
 
   defp spacer_allowed_attrs do
