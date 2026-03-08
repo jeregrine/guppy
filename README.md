@@ -197,7 +197,6 @@ The intended shape is:
 ```elixir
 defmodule CounterWindow do
   use Guppy.Window
-  import Guppy.Window, only: [assign: 3, update: 3, put_window_opts: 2]
 
   def mount(_arg, window) do
     {:ok,
@@ -237,6 +236,72 @@ This is still intentionally minimal, but it is now explicitly shaped like a Live
 - `handle_info/2`
 - `render/1`
 - assign/update helpers on the window struct
+
+## Templates and components
+
+`Guppy.Component` provides the `~G` sigil and a first-pass function component model.
+
+A local lower-case tag calls a function in the current module with an assigns map:
+
+```elixir
+defmodule DashboardWindow do
+  use Guppy.Window
+
+  def render(window) do
+    assigns = %{stats: [%{id: "open", label: "Open", value: 12}]}
+
+    ~G"""
+    <div class="flex flex-col gap-2 p-2 bg-[#0f172a] text-[#f8fafc]">
+      <stat_badge :for={stat <- @stats} stat={stat} />
+    </div>
+    """
+  end
+
+  defp stat_badge(assigns) do
+    ~G"""
+    <div id={@stat.id} class="rounded-md border-1 border-blue p-2">
+      <text id={@stat.id <> "_label"}>{@stat.label}</text>
+      <text id={@stat.id <> "_value"}>{@stat.value}</text>
+    </div>
+    """
+  end
+end
+```
+
+A remote component tag calls `render/1` on the referenced module:
+
+```elixir
+<Guppy.UI.Badge id="release_badge" label="Beta ready" />
+```
+
+Component children are passed through as `@children`, so wrapper components can render nested content.
+
+Components can also declare props for validation and defaults:
+
+```elixir
+defmodule Guppy.UI.Badge do
+  use Guppy.Component
+
+  prop :render, :id, :string, required: true
+  prop :render, :label, :string, required: true
+  prop :render, :tone, {:one_of, [:info, :warning]}, default: :info
+
+  def render(assigns) do
+    ~G"""
+    <div id={@id} class="rounded-md border-1 border-blue p-2">
+      <text id={@id <> "_label"}>{@label}</text>
+      <text id={@id <> "_tone"}>{@tone}</text>
+    </div>
+    """
+  end
+end
+```
+
+For local function components, use the function name instead of `:render`:
+
+```elixir
+prop :stat_badge, :stat, :map, required: true
+```
 
 ## Window options
 

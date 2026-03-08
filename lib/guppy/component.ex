@@ -13,15 +13,27 @@ defmodule Guppy.Component do
   - `<scroll>`
   - `<text_input />`
 
+  It also supports first-pass function components:
+
+  - local lower-case tags call a function in the current module with an assigns map
+  - remote module tags call `render/1` on that module
+  - nested component content is passed as `@children`
+  - `prop/4` can declare required props, defaults, and simple validations
+
   Expressions use `{...}` syntax. Assign lookups use `@name`, which expects an
   `assigns` variable to be available in scope, similar to HEEx.
   """
 
   defmacro __using__(_opts) do
     quote do
+      Module.register_attribute(__MODULE__, :guppy_component_prop_declarations, accumulate: true)
+      @before_compile Guppy.Component
+
       import Guppy.Component,
         only: [
           sigil_G: 2,
+          prop: 3,
+          prop: 4,
           assign: 2,
           assign: 3,
           update: 3,
@@ -31,12 +43,61 @@ defmodule Guppy.Component do
     end
   end
 
+  defmacro __before_compile__(env) do
+    declarations =
+      Module.get_attribute(env.module, :guppy_component_prop_declarations) |> Enum.reverse()
+
+    grouped =
+      Enum.group_by(declarations, fn {component, _name, _type, _opts} -> component end, fn {_,
+                                                                                            name,
+                                                                                            type,
+                                                                                            opts} ->
+        %{
+          name: name,
+          type: type,
+          required: Keyword.get(opts, :required, false),
+          default: Keyword.get(opts, :default, :__guppy_no_default__)
+        }
+      end)
+
+    quote do
+      def __guppy_component_props__(component_name) do
+        Map.get(unquote(Macro.escape(grouped)), component_name, [])
+      end
+    end
+  end
+
   defmacro sigil_G({:<<>>, _meta, [template]}, _modifiers) when is_binary(template) do
     Guppy.Component.Compiler.compile!(template, __CALLER__)
   end
 
+  defmacro prop(component, name, type, opts \\ []) do
+    quote bind_quoted: [component: component, name: name, type: type, opts: opts] do
+      @guppy_component_prop_declarations {component, name, type, opts}
+    end
+  end
+
   def fetch_assign!(assigns, key) when is_map(assigns) and is_atom(key) do
     Map.fetch!(assigns, key)
+  end
+
+  def build_component_assigns(entries) do
+    Map.new(entries)
+  end
+
+  def validate_props!(module, component_name, assigns)
+      when is_atom(module) and is_atom(component_name) and is_map(assigns) do
+    schema = component_schema(module, component_name)
+
+    if schema == [] do
+      assigns
+    else
+      assigns
+      |> apply_prop_defaults(schema)
+      |> validate_required_props!(module, component_name, schema)
+      |> validate_unknown_props!(module, component_name, schema)
+      |> validate_prop_types!(module, component_name, schema)
+    end
   end
 
   def assign(window, key, value), do: Guppy.Window.assign(window, key, value)
@@ -47,6 +108,92 @@ defmodule Guppy.Component do
 
   def maybe_entry(_key, nil), do: nil
   def maybe_entry(key, value), do: {key, value}
+
+  defp component_schema(module, component_name) do
+    if function_exported?(module, :__guppy_component_props__, 1) do
+      module.__guppy_component_props__(component_name)
+    else
+      []
+    end
+  end
+
+  defp apply_prop_defaults(assigns, schema) do
+    Enum.reduce(schema, assigns, fn %{name: name, default: default}, acc ->
+      case {Map.has_key?(acc, name), default} do
+        {true, _} -> acc
+        {false, :__guppy_no_default__} -> acc
+        {false, value} -> Map.put(acc, name, value)
+      end
+    end)
+  end
+
+  defp validate_required_props!(assigns, module, component_name, schema) do
+    missing =
+      schema
+      |> Enum.filter(fn %{required: required, name: name} ->
+        required and missing_prop?(assigns, name)
+      end)
+      |> Enum.map(& &1.name)
+
+    case missing do
+      [] ->
+        assigns
+
+      names ->
+        raise ArgumentError,
+              "missing required props for #{component_label(module, component_name)}: #{inspect(names)}"
+    end
+  end
+
+  defp validate_unknown_props!(assigns, module, component_name, schema) do
+    allowed = MapSet.new(Enum.map(schema, & &1.name) ++ [:children])
+
+    unknown =
+      assigns
+      |> Map.keys()
+      |> Enum.reject(&MapSet.member?(allowed, &1))
+
+    case unknown do
+      [] ->
+        assigns
+
+      names ->
+        raise ArgumentError,
+              "unknown props for #{component_label(module, component_name)}: #{inspect(names)}"
+    end
+  end
+
+  defp validate_prop_types!(assigns, module, component_name, schema) do
+    Enum.each(schema, fn %{name: name, type: type} ->
+      value = Map.get(assigns, name)
+
+      if not is_nil(value) and not valid_prop_type?(value, type) do
+        raise ArgumentError,
+              "invalid value for prop #{inspect(name)} on #{component_label(module, component_name)}: expected #{inspect(type)}, got #{inspect(value)}"
+      end
+    end)
+
+    assigns
+  end
+
+  defp valid_prop_type?(_value, :any), do: true
+  defp valid_prop_type?(value, :string), do: is_binary(value)
+  defp valid_prop_type?(value, :integer), do: is_integer(value)
+  defp valid_prop_type?(value, :number), do: is_number(value)
+  defp valid_prop_type?(value, :boolean), do: is_boolean(value)
+  defp valid_prop_type?(value, :atom), do: is_atom(value)
+  defp valid_prop_type?(value, :list), do: is_list(value)
+  defp valid_prop_type?(value, :map), do: is_map(value)
+  defp valid_prop_type?(value, :keyword), do: Keyword.keyword?(value)
+  defp valid_prop_type?(value, :children), do: is_list(value)
+  defp valid_prop_type?(value, {:one_of, values}), do: value in values
+  defp valid_prop_type?(_value, _type), do: false
+
+  defp missing_prop?(assigns, name),
+    do: not Map.has_key?(assigns, name) or is_nil(Map.get(assigns, name))
+
+  defp component_label(module, component_name),
+    do: inspect(module) <> "." <> Atom.to_string(component_name) <> "/1"
 
   def build_keyword(entries) do
     entries

@@ -53,6 +53,86 @@ defmodule Guppy.TemplateExample do
   end
 end
 
+defmodule Guppy.RemoteBadgeComponent do
+  use Guppy.Component
+
+  prop(:render, :id, :string, required: true)
+  prop(:render, :label, :string, required: true)
+
+  def render(assigns) do
+    ~G"""
+    <div id={@id} class="rounded-md border-1 border-blue p-2 bg-[#172554] text-[#dbeafe]">
+      <text id={@id <> "_label"}>{@label}</text>
+    </div>
+    """
+  end
+end
+
+defmodule Guppy.FunctionComponentExample do
+  use Guppy.Component
+
+  prop(:render, :items, :list, required: true)
+  prop(:stat_card, :id, :string, required: true)
+  prop(:stat_card, :title, :string, required: true)
+  prop(:stat_card, :value, :string, required: true)
+  prop(:panel, :id, :string, required: true)
+
+  def render(assigns) do
+    ~G"""
+    <div id="component_root" class="flex flex-col gap-2 p-2 bg-[#0f172a] text-[#f8fafc]">
+      <stat_card :for={item <- @items} id={"stat_#{item.id}"} title={item.title} value={item.value} />
+      <panel id="activity_panel">
+        <text id="activity_text">Inner activity feed</text>
+      </panel>
+      <Guppy.RemoteBadgeComponent id="release_badge" label="Beta ready" />
+    </div>
+    """
+  end
+
+  defp stat_card(assigns) do
+    ~G"""
+    <div id={@id} class="rounded-md border-1 border-white p-2">
+      <text id={@id <> "_title"} class="text-sm font-bold">{@title}</text>
+      <text id={@id <> "_value"}>{@value}</text>
+    </div>
+    """
+  end
+
+  defp panel(assigns) do
+    ~G"""
+    <div id={@id} class="rounded-md border-1 border-gray p-2">
+      {@children}
+    </div>
+    """
+  end
+end
+
+defmodule Guppy.ComponentPropsExample do
+  use Guppy.Component
+
+  prop(:render, :title, :string, required: true)
+  prop(:render, :tone, {:one_of, [:info, :warning]}, default: :info)
+
+  def render(assigns) do
+    ~G"""
+    <div id="props_root" class="flex flex-col gap-2 p-2 bg-[#0f172a] text-[#f8fafc]">
+      <text id="props_title">{@title}</text>
+      <text id="props_tone">{@tone}</text>
+    </div>
+    """
+  end
+end
+
+defmodule Guppy.ComponentPropsTagCaller do
+  use Guppy.Component
+
+  def render(assigns) do
+    ~G"""
+    <Guppy.ComponentPropsExample title={@title} />
+    """
+  end
+end
+
 defmodule GuppyTest do
   use ExUnit.Case
 
@@ -604,6 +684,77 @@ defmodule GuppyTest do
     assert text_input.events == %{change: "name_changed"}
 
     assert footer == %{kind: :text, content: "Footer ready", id: "footer"}
+  end
+
+  test "Guppy.Component supports local and remote function components with props and children" do
+    ir =
+      Guppy.FunctionComponentExample.render(%{
+        items: [
+          %{id: 1, title: "Open", value: "12"},
+          %{id: 2, title: "Blocked", value: "3"}
+        ]
+      })
+
+    assert :ok = Guppy.IR.validate(ir)
+    assert ir.id == "component_root"
+
+    [first_stat, second_stat, panel, badge] = ir.children
+
+    assert first_stat.id == "stat_1"
+    [first_title_wrapper, first_value] = first_stat.children
+    assert first_title_wrapper.kind == :div
+    assert first_title_wrapper.children == [%{kind: :text, id: "stat_1_title", content: "Open"}]
+    assert first_value == %{kind: :text, id: "stat_1_value", content: "12"}
+
+    assert second_stat.id == "stat_2"
+    [second_title_wrapper, second_value] = second_stat.children
+
+    assert second_title_wrapper.children == [
+             %{kind: :text, id: "stat_2_title", content: "Blocked"}
+           ]
+
+    assert second_value == %{kind: :text, id: "stat_2_value", content: "3"}
+
+    assert panel.id == "activity_panel"
+    assert panel.children == [%{kind: :text, id: "activity_text", content: "Inner activity feed"}]
+
+    assert badge.id == "release_badge"
+    assert badge.children == [%{kind: :text, id: "release_badge_label", content: "Beta ready"}]
+  end
+
+  test "Guppy.Component prop declarations apply defaults and validate required and typed props" do
+    assigns =
+      Guppy.Component.validate_props!(Guppy.ComponentPropsExample, :render, %{
+        title: "Release board"
+      })
+
+    ir = Guppy.ComponentPropsExample.render(assigns)
+
+    assert :ok = Guppy.IR.validate(ir)
+    assert ir.id == "props_root"
+    assert Enum.map(ir.children, & &1.content) == ["Release board", "info"]
+
+    tag_ir = Guppy.ComponentPropsTagCaller.render(%{title: "Roadmap"})
+    assert :ok = Guppy.IR.validate(tag_ir)
+    assert Enum.map(tag_ir.children, & &1.content) == ["Roadmap", "info"]
+
+    assert_raise ArgumentError, ~r/missing required props/, fn ->
+      Guppy.Component.validate_props!(Guppy.ComponentPropsExample, :render, %{})
+    end
+
+    assert_raise ArgumentError, ~r/unknown props/, fn ->
+      Guppy.Component.validate_props!(Guppy.ComponentPropsExample, :render, %{
+        title: "Release board",
+        extra: true
+      })
+    end
+
+    assert_raise ArgumentError, ~r/invalid value for prop :tone/, fn ->
+      Guppy.Component.validate_props!(Guppy.ComponentPropsExample, :render, %{
+        title: "Release board",
+        tone: :bad
+      })
+    end
   end
 
   test "window option validation accepts supported shapes and rejects invalid ones" do

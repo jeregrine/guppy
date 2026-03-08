@@ -143,7 +143,7 @@ defmodule Guppy.Component.Compiler do
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "text_input" -> compile_text_input(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
-        other -> raise_compile_error!(caller, "unsupported ~G tag: <#{other}>")
+        other -> compile_component(other, attrs, xmlElement(element, :content), caller)
       end
 
     apply_directives(base, directives, caller)
@@ -214,6 +214,30 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
+  defp compile_component(tag, attrs, content, caller) do
+    assert_component_attrs!(tag, attrs, caller)
+    props = build_component_props_ast(attrs, content, caller)
+    validated_assigns = Macro.unique_var(:component_assigns, __MODULE__)
+
+    case component_target_ast(tag) do
+      {:local, function_name} ->
+        quote do
+          unquote(validated_assigns) =
+            Guppy.Component.validate_props!(__MODULE__, unquote(function_name), unquote(props))
+
+          unquote({function_name, [], [validated_assigns]})
+        end
+
+      {:remote, module_ast} ->
+        quote do
+          unquote(validated_assigns) =
+            Guppy.Component.validate_props!(unquote(module_ast), :render, unquote(props))
+
+          unquote(module_ast).render(unquote(validated_assigns))
+        end
+    end
+  end
+
   defp compile_text_node(attrs, content, caller) do
     text = build_string_content_ast(content, caller)
 
@@ -236,6 +260,28 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.Component.flatten_children([unquote_splicing(child_exprs)])
+    end
+  end
+
+  defp build_component_props_ast(attrs, content, caller) do
+    entries =
+      attrs
+      |> Enum.map(fn {name, value} ->
+        value_ast = parse_attribute_value(value, :string_or_expr, caller)
+        key = String.to_atom(name)
+
+        quote do
+          {unquote(key), unquote(value_ast)}
+        end
+      end)
+
+    children_ast = build_children_ast(content, caller)
+
+    quote do
+      Guppy.Component.build_component_assigns([
+        unquote_splicing(entries),
+        {:children, unquote(children_ast)}
+      ])
     end
   end
 
@@ -416,6 +462,23 @@ defmodule Guppy.Component.Compiler do
     quote do
       Guppy.Component.maybe_entry(unquote(key), unquote(value_ast))
     end
+  end
+
+  defp component_target_ast(tag) do
+    if String.contains?(tag, ".") do
+      module_ast = tag |> String.split(".") |> Module.concat()
+      {:remote, module_ast}
+    else
+      {:local, tag |> String.replace("-", "_") |> String.to_atom()}
+    end
+  end
+
+  defp assert_component_attrs!(tag, attrs, caller) do
+    if Map.has_key?(attrs, "children") do
+      raise_compile_error!(caller, "component <#{tag}> cannot accept a children attribute")
+    end
+
+    :ok
   end
 
   defp events_entry(attrs, allowed_events, caller) do

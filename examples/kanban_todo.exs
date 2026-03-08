@@ -121,10 +121,7 @@ defmodule Examples.KanbanTodoWindow do
           </div>
 
           <div id="header_metrics" class="flex flex-row items-center gap-2">
-            <div :for={metric <- @header_metrics} id={metric.id} class={metric.class}>
-              <text id={metric.id <> "_label"} class="text-xs text-[#94a3b8]">{metric.label}</text>
-              <text id={metric.id <> "_value"} class="text-sm font-bold">{metric.value}</text>
-            </div>
+            <metric_badge :for={metric <- @header_metrics} metric={metric} />
           </div>
         </div>
 
@@ -168,79 +165,7 @@ defmodule Examples.KanbanTodoWindow do
       <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-xl border-1 border-[#1e293b] bg-[#0d1526] shadow-md p-2">
         <scroll id="board_scroll" axis="x" class="flex-1 min-h-0 scrollbar-w-[10px]">
           <div id="board_columns" class={@board_columns_class}>
-            <div
-              :for={column <- @columns}
-              id={column.id}
-              drop={column.drop_event}
-              class={column.class}
-            >
-              <div id={column.header_id} class="flex flex-row items-center justify-between gap-2 p-1">
-                <div id={column.title_id <> "_wrap"} class="flex flex-row items-center gap-2 flex-1">
-                  <div id={column.accent_id} class={column.accent_class}></div>
-                  <text id={column.title_id} class="text-sm font-bold">{column.title}</text>
-                </div>
-
-                <div id={column.count_badge_id} class={column.count_badge_class}>
-                  <text id={column.count_id} class="text-xs font-semibold">{column.count}</text>
-                </div>
-              </div>
-
-              <scroll id={column.scroll_id} axis="y" class="flex-1 min-h-0 scrollbar-w-[8px]">
-                <div id={column.stack_id} class="flex flex-col gap-2 pr-2">
-                  <div :if={column.empty?} id={column.empty_id} class={column.empty_class}>
-                    <text id={column.empty_text_id} class="text-xs text-[#94a3b8]">
-                      No work items in this stage.
-                    </text>
-                  </div>
-
-                  <div
-                    :for={task <- column.tasks}
-                    id={task.card_id}
-                    drag_start="drag_started"
-                    drag_move="drag_moved"
-                    class={task.card_class}
-                    hover_class="bg-[#162033]"
-                  >
-                    <div id={task.top_id} class="flex flex-row items-center justify-between gap-2">
-                      <div id={task.team_badge_id} class={task.team_badge_class}>
-                        <text id={task.team_text_id} class="text-xs font-semibold">{task.team}</text>
-                      </div>
-
-                      <text id={task.updated_id} class="text-xs text-[#64748b]">{task.updated_at}</text>
-                    </div>
-
-                    <div id={task.body_id} class="flex flex-col gap-1">
-                      <text id={task.title_id} class="text-sm font-semibold leading-snug">{task.title}</text>
-                      <text id={task.summary_id} class="text-xs text-[#94a3b8] leading-snug line-clamp-2 whitespace-normal">
-                        {task.summary}
-                      </text>
-                    </div>
-
-                    <div id={task.footer_id} class="flex flex-row items-center justify-between gap-2">
-                      <div id={task.assignee_wrap_id} class="flex flex-col gap-1 flex-1">
-                        <text id={task.assignee_label_id} class="text-xs text-[#64748b]">OWNER</text>
-                        <text id={task.assignee_id} class="text-xs font-medium text-[#cbd5e1]">{task.assignee}</text>
-                      </div>
-
-                      <div id={task.priority_badge_id} class={task.priority_badge_class}>
-                        <text id={task.priority_text_id} class="text-xs font-semibold">{task.priority_label}</text>
-                      </div>
-                    </div>
-
-                    <div :if={task.done?} id={task.actions_id} class="flex flex-row justify-end">
-                      <button
-                        id={task.archive_button_id}
-                        click={task.archive_click}
-                        class="p-2 rounded-lg border-1 border-[#166534] bg-[#14532d] text-[#dcfce7]"
-                        hover_class="bg-[#166534]"
-                      >
-                        Archive
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </scroll>
-            </div>
+            <kanban_lane :for={column <- @columns} lane={column} />
           </div>
         </scroll>
       </div>
@@ -455,7 +380,7 @@ defmodule Examples.KanbanTodoWindow do
       stack_id: "#{status}_stack",
       empty_id: "#{status}_empty",
       empty_text_id: "#{status}_empty_text",
-      empty?: column_tasks == [],
+      empty: column_tasks == [],
       class:
         "flex flex-col flex-none w-[264px] h-full gap-2 p-2 rounded-xl border-1 bg-[#0b1220] border-[#{meta.accent}] shadow-sm",
       accent_class: "w-[8px] h-[8px] rounded-full bg-[#{meta.accent}]",
@@ -492,12 +417,99 @@ defmodule Examples.KanbanTodoWindow do
       team: task.team,
       updated_at: task.updated_at,
       priority_label: String.upcase(to_string(task.priority)),
-      done?: task.status == :done,
+      done: task.status == :done,
       card_class:
         "flex flex-col gap-2 p-2 rounded-lg border-1 border-[#1e293b] bg-[#111827] shadow-sm cursor-pointer",
       team_badge_class: team_badge_class(task.team),
       priority_badge_class: priority_badge_class(task.priority)
     }
+  end
+
+  defp metric_badge(assigns) do
+    ~G"""
+    <div id={@metric.id} class={@metric.class}>
+      <text id={@metric.id <> "_label"} class="text-xs text-[#94a3b8]">{@metric.label}</text>
+      <text id={@metric.id <> "_value"} class="text-sm font-bold">{@metric.value}</text>
+    </div>
+    """
+  end
+
+  defp kanban_lane(assigns) do
+    ~G"""
+    <div id={@lane.id} drop={@lane.drop_event} class={@lane.class}>
+      <div id={@lane.header_id} class="flex flex-row items-center justify-between gap-2 p-1">
+        <div id={@lane.title_id <> "_wrap"} class="flex flex-row items-center gap-2 flex-1">
+          <div id={@lane.accent_id} class={@lane.accent_class}></div>
+          <text id={@lane.title_id} class="text-sm font-bold">{@lane.title}</text>
+        </div>
+
+        <div id={@lane.count_badge_id} class={@lane.count_badge_class}>
+          <text id={@lane.count_id} class="text-xs font-semibold">{@lane.count}</text>
+        </div>
+      </div>
+
+      <scroll id={@lane.scroll_id} axis="y" class="flex-1 min-h-0 scrollbar-w-[8px]">
+        <div id={@lane.stack_id} class="flex flex-col gap-2 pr-2">
+          <div :if={@lane.empty} id={@lane.empty_id} class={@lane.empty_class}>
+            <text id={@lane.empty_text_id} class="text-xs text-[#94a3b8]">
+              No work items in this stage.
+            </text>
+          </div>
+
+          <kanban_card :for={task <- @lane.tasks} task={task} />
+        </div>
+      </scroll>
+    </div>
+    """
+  end
+
+  defp kanban_card(assigns) do
+    ~G"""
+    <div
+      id={@task.card_id}
+      drag_start="drag_started"
+      drag_move="drag_moved"
+      class={@task.card_class}
+      hover_class="bg-[#162033]"
+    >
+      <div id={@task.top_id} class="flex flex-row items-center justify-between gap-2">
+        <div id={@task.team_badge_id} class={@task.team_badge_class}>
+          <text id={@task.team_text_id} class="text-xs font-semibold">{@task.team}</text>
+        </div>
+
+        <text id={@task.updated_id} class="text-xs text-[#64748b]">{@task.updated_at}</text>
+      </div>
+
+      <div id={@task.body_id} class="flex flex-col gap-1">
+        <text id={@task.title_id} class="text-sm font-semibold leading-snug">{@task.title}</text>
+        <text id={@task.summary_id} class="text-xs text-[#94a3b8] leading-snug line-clamp-2 whitespace-normal">
+          {@task.summary}
+        </text>
+      </div>
+
+      <div id={@task.footer_id} class="flex flex-row items-center justify-between gap-2">
+        <div id={@task.assignee_wrap_id} class="flex flex-col gap-1 flex-1">
+          <text id={@task.assignee_label_id} class="text-xs text-[#64748b]">OWNER</text>
+          <text id={@task.assignee_id} class="text-xs font-medium text-[#cbd5e1]">{@task.assignee}</text>
+        </div>
+
+        <div id={@task.priority_badge_id} class={@task.priority_badge_class}>
+          <text id={@task.priority_text_id} class="text-xs font-semibold">{@task.priority_label}</text>
+        </div>
+      </div>
+
+      <div :if={@task.done} id={@task.actions_id} class="flex flex-row justify-end">
+        <button
+          id={@task.archive_button_id}
+          click={@task.archive_click}
+          class="p-2 rounded-lg border-1 border-[#166534] bg-[#14532d] text-[#dcfce7]"
+          hover_class="bg-[#166534]"
+        >
+          Archive
+        </button>
+      </div>
+    </div>
+    """
   end
 
   defp handle_drop(window, source_id, status) do
