@@ -141,9 +141,8 @@ pub extern "C" fn guppy_rust_runtime_status() -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_run_main_thread_runtime(arg: *mut c_void) -> *mut c_void {
-    let open_bootstrap_window = !arg.is_null();
-    main_thread_runtime::run_app(open_bootstrap_window);
+pub extern "C" fn guppy_rust_run_main_thread_runtime(_arg: *mut c_void) -> *mut c_void {
+    main_thread_runtime::run_app();
     std::ptr::null_mut()
 }
 

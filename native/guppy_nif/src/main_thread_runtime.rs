@@ -51,7 +51,7 @@ pub(crate) enum MainThreadRequest {
     },
 }
 
-pub fn run_app(open_bootstrap_window: bool) {
+pub fn run_app() {
     init_request_queue();
 
     Application::new().run(move |cx: &mut App| {
@@ -63,10 +63,6 @@ pub fn run_app(open_bootstrap_window: bool) {
         register_main_thread_dispatcher(cx);
 
         unsafe { guppy_c_gui_started(1) };
-
-        if open_bootstrap_window {
-            let _ = open_window(0, IrNode::text("Hello from Guppy NIF + GPUI"));
-        }
     });
 }
 
@@ -152,10 +148,6 @@ pub fn close_window(view_id: u64) -> i32 {
             Err(_) => -1,
         }
     })
-}
-
-pub fn mount_ir(view_id: u64, ir: IrNode) -> i32 {
-    update_ir(view_id, ir)
 }
 
 pub fn update_ir(view_id: u64, ir: IrNode) -> i32 {
@@ -274,7 +266,7 @@ fn handle_request(request: MainThreadRequest) {
             ));
         }
         MainThreadRequest::MountIr { view_id, ir, reply } => {
-            let _ = reply.send(mount_ir(view_id, ir));
+            let _ = reply.send(update_ir(view_id, ir));
         }
         MainThreadRequest::UpdateIr { view_id, ir, reply } => {
             let _ = reply.send(update_ir(view_id, ir));

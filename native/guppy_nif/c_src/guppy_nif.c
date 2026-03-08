@@ -1062,15 +1062,9 @@ int guppy_c_send_window_closed_event(uint64_t view_id) {
   return sent;
 }
 
-static int should_bootstrap_runtime_window(void) {
-  const char *value = getenv("GUPPY_BOOTSTRAP_RUNTIME_WINDOW");
-  return value != NULL && strcmp(value, "1") == 0;
-}
-
 static int maybe_start_main_thread_runtime(void) {
 #ifdef __APPLE__
   int result;
-  void *arg = should_bootstrap_runtime_window() ? (void *)1 : NULL;
 
   if (guppy_gui_started) {
     return 1;
@@ -1082,7 +1076,7 @@ static int maybe_start_main_thread_runtime(void) {
 
   result = erl_drv_steal_main_thread((char *)"guppy_gpui", &guppy_gui_thread,
                                      guppy_rust_run_main_thread_runtime,
-                                     arg, NULL);
+                                     NULL, NULL);
 
   if (result != 0) {
     return 0;
