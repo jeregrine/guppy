@@ -33,8 +33,6 @@ void guppy_c_nif_link_anchor(void) {}
 static ErlNifMutex *guppy_gui_status_mutex = NULL;
 static ErlNifCond *guppy_gui_status_cond = NULL;
 static ErlNifMutex *guppy_event_target_mutex = NULL;
-static ErlNifMutex *guppy_event_env_mutex = NULL;
-static ErlNifEnv *guppy_event_env = NULL;
 static ErlNifTid guppy_gui_thread;
 static ErlNifPid guppy_event_target_pid;
 static int guppy_gui_status = 0;
@@ -104,36 +102,6 @@ static int send_native_event(ErlNifEnv *msg_env, uint64_t view_id,
   return sent;
 }
 
-static ErlNifEnv *acquire_event_env(void) {
-  if (guppy_event_env_mutex == NULL) {
-    return NULL;
-  }
-
-  enif_mutex_lock(guppy_event_env_mutex);
-
-  if (guppy_event_env == NULL) {
-    guppy_event_env = enif_alloc_env();
-  } else {
-    enif_clear_env(guppy_event_env);
-  }
-
-  if (guppy_event_env == NULL) {
-    enif_mutex_unlock(guppy_event_env_mutex);
-    return NULL;
-  }
-
-  return guppy_event_env;
-}
-
-static void release_event_env(ErlNifEnv *env) {
-  if (env != NULL) {
-    enif_clear_env(env);
-  }
-
-  if (guppy_event_env_mutex != NULL) {
-    enif_mutex_unlock(guppy_event_env_mutex);
-  }
-}
 
 static ERL_NIF_TERM make_bool(ErlNifEnv *env, int value) {
   return value ? make_atom(env, "true") : make_atom(env, "false");
@@ -219,7 +187,7 @@ int guppy_c_send_click_event(uint64_t view_id, const unsigned char *node_id_ptr,
   unsigned char *callback_id_bytes;
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
 
   if (msg_env == NULL) {
     return 0;
@@ -228,7 +196,7 @@ int guppy_c_send_click_event(uint64_t view_id, const unsigned char *node_id_ptr,
   node_id_bytes = enif_make_new_binary(msg_env, node_id_len, &node_id_term);
 
   if (node_id_bytes == NULL) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -238,7 +206,7 @@ int guppy_c_send_click_event(uint64_t view_id, const unsigned char *node_id_ptr,
       enif_make_new_binary(msg_env, callback_id_len, &callback_id_term);
 
   if (callback_id_bytes == NULL) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -250,13 +218,13 @@ int guppy_c_send_click_event(uint64_t view_id, const unsigned char *node_id_ptr,
   values[1] = callback_id_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 2, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "click"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -274,7 +242,7 @@ int guppy_c_send_hover_event(uint64_t view_id, const unsigned char *node_id_ptr,
   unsigned char *callback_id_bytes;
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
 
   if (msg_env == NULL) {
     return 0;
@@ -283,7 +251,7 @@ int guppy_c_send_hover_event(uint64_t view_id, const unsigned char *node_id_ptr,
   node_id_bytes = enif_make_new_binary(msg_env, node_id_len, &node_id_term);
 
   if (node_id_bytes == NULL) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -293,7 +261,7 @@ int guppy_c_send_hover_event(uint64_t view_id, const unsigned char *node_id_ptr,
       enif_make_new_binary(msg_env, callback_id_len, &callback_id_term);
 
   if (callback_id_bytes == NULL) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -307,13 +275,13 @@ int guppy_c_send_hover_event(uint64_t view_id, const unsigned char *node_id_ptr,
   values[2] = hovered ? make_atom(msg_env, "true") : make_atom(msg_env, "false");
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 3, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "hover"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -344,7 +312,7 @@ int guppy_c_send_change_event(uint64_t view_id, const unsigned char *node_id_ptr
   ERL_NIF_TERM values[3];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -353,7 +321,7 @@ int guppy_c_send_change_event(uint64_t view_id, const unsigned char *node_id_ptr
                               callback_id_ptr, callback_id_len,
                               &node_id_term, &callback_id_term) ||
       !make_binary_term(msg_env, value_ptr, value_len, &value_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -365,13 +333,13 @@ int guppy_c_send_change_event(uint64_t view_id, const unsigned char *node_id_ptr
   values[2] = value_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 3, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "change"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -388,7 +356,7 @@ int guppy_c_send_checkbox_change_event(uint64_t view_id,
   ERL_NIF_TERM values[3];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -396,7 +364,7 @@ int guppy_c_send_checkbox_change_event(uint64_t view_id,
   if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
                               callback_id_ptr, callback_id_len,
                               &node_id_term, &callback_id_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -408,13 +376,13 @@ int guppy_c_send_checkbox_change_event(uint64_t view_id,
   values[2] = make_bool(msg_env, checked);
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 3, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "change"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -430,7 +398,7 @@ int guppy_c_send_focus_event(uint64_t view_id, const unsigned char *node_id_ptr,
   ERL_NIF_TERM values[2];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -438,7 +406,7 @@ int guppy_c_send_focus_event(uint64_t view_id, const unsigned char *node_id_ptr,
   if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
                               callback_id_ptr, callback_id_len,
                               &node_id_term, &callback_id_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -448,13 +416,13 @@ int guppy_c_send_focus_event(uint64_t view_id, const unsigned char *node_id_ptr,
   values[1] = callback_id_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 2, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "focus"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -470,7 +438,7 @@ int guppy_c_send_blur_event(uint64_t view_id, const unsigned char *node_id_ptr,
   ERL_NIF_TERM values[2];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -478,7 +446,7 @@ int guppy_c_send_blur_event(uint64_t view_id, const unsigned char *node_id_ptr,
   if (!make_id_callback_terms(msg_env, node_id_ptr, node_id_len,
                               callback_id_ptr, callback_id_len,
                               &node_id_term, &callback_id_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -488,13 +456,13 @@ int guppy_c_send_blur_event(uint64_t view_id, const unsigned char *node_id_ptr,
   values[1] = callback_id_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 2, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "blur"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -515,7 +483,7 @@ int guppy_c_send_key_down_event(
   ERL_NIF_TERM values[6];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -526,13 +494,13 @@ int guppy_c_send_key_down_event(
       !make_binary_term(msg_env, key_ptr, key_len, &key_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   if (has_key_char) {
     if (!make_binary_term(msg_env, key_char_ptr, key_char_len, &key_char_term)) {
-      release_event_env(msg_env);
+      enif_free_env(msg_env);
       return 0;
     }
   } else {
@@ -554,13 +522,13 @@ int guppy_c_send_key_down_event(
   values[5] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 6, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "key_down"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -581,7 +549,7 @@ int guppy_c_send_key_up_event(
   ERL_NIF_TERM values[5];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -592,13 +560,13 @@ int guppy_c_send_key_up_event(
       !make_binary_term(msg_env, key_ptr, key_len, &key_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   if (has_key_char) {
     if (!make_binary_term(msg_env, key_char_ptr, key_char_len, &key_char_term)) {
-      release_event_env(msg_env);
+      enif_free_env(msg_env);
       return 0;
     }
   } else {
@@ -618,13 +586,13 @@ int guppy_c_send_key_up_event(
   values[4] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 5, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "key_up"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -649,7 +617,7 @@ int guppy_c_send_action_event(
   ERL_NIF_TERM values[7];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -662,13 +630,13 @@ int guppy_c_send_action_event(
       !make_binary_term(msg_env, key_ptr, key_len, &key_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   if (has_key_char) {
     if (!make_binary_term(msg_env, key_char_ptr, key_char_len, &key_char_term)) {
-      release_event_env(msg_env);
+      enif_free_env(msg_env);
       return 0;
     }
   } else {
@@ -692,13 +660,13 @@ int guppy_c_send_action_event(
   values[6] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 7, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "action"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -716,7 +684,7 @@ int guppy_c_send_context_menu_event(
   ERL_NIF_TERM values[5];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -726,7 +694,7 @@ int guppy_c_send_context_menu_event(
                               &node_id_term, &callback_id_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -743,13 +711,13 @@ int guppy_c_send_context_menu_event(
   values[4] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 5, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id,
                            make_atom(msg_env, "context_menu"), payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -766,7 +734,7 @@ int guppy_c_send_drag_start_event(
   ERL_NIF_TERM values[3];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -776,7 +744,7 @@ int guppy_c_send_drag_start_event(
                               &node_id_term, &callback_id_term) ||
       !make_binary_term(msg_env, source_id_ptr, source_id_len,
                         &source_id_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -789,13 +757,13 @@ int guppy_c_send_drag_start_event(
   values[2] = source_id_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 3, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "drag_start"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -815,7 +783,7 @@ int guppy_c_send_drag_move_event(
   ERL_NIF_TERM values[7];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -827,7 +795,7 @@ int guppy_c_send_drag_move_event(
                         &source_id_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -848,13 +816,13 @@ int guppy_c_send_drag_move_event(
   values[6] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 7, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "drag_move"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -871,7 +839,7 @@ int guppy_c_send_drop_event(
   ERL_NIF_TERM values[3];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -881,7 +849,7 @@ int guppy_c_send_drop_event(
                               &node_id_term, &callback_id_term) ||
       !make_binary_term(msg_env, source_id_ptr, source_id_len,
                         &source_id_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -894,13 +862,13 @@ int guppy_c_send_drop_event(
   values[2] = source_id_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 3, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "drop"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -918,7 +886,7 @@ int guppy_c_send_mouse_down_event(
   ERL_NIF_TERM values[8];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -928,7 +896,7 @@ int guppy_c_send_mouse_down_event(
                               &node_id_term, &callback_id_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -951,13 +919,13 @@ int guppy_c_send_mouse_down_event(
   values[7] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 8, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "mouse_down"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -975,7 +943,7 @@ int guppy_c_send_mouse_up_event(
   ERL_NIF_TERM values[7];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -985,7 +953,7 @@ int guppy_c_send_mouse_up_event(
                               &node_id_term, &callback_id_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -1006,13 +974,13 @@ int guppy_c_send_mouse_up_event(
   values[6] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 7, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "mouse_up"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -1030,7 +998,7 @@ int guppy_c_send_mouse_move_event(
   ERL_NIF_TERM values[6];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -1040,7 +1008,7 @@ int guppy_c_send_mouse_move_event(
                               &node_id_term, &callback_id_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -1059,13 +1027,13 @@ int guppy_c_send_mouse_move_event(
   values[5] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 6, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "mouse_move"),
                            payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -1083,7 +1051,7 @@ int guppy_c_send_scroll_wheel_event(
   ERL_NIF_TERM values[8];
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
   if (msg_env == NULL) {
     return 0;
   }
@@ -1093,7 +1061,7 @@ int guppy_c_send_scroll_wheel_event(
                               &node_id_term, &callback_id_term) ||
       !make_modifiers_map(msg_env, control, alt, shift, platform, function,
                           &modifiers_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
@@ -1117,13 +1085,13 @@ int guppy_c_send_scroll_wheel_event(
   values[7] = modifiers_term;
 
   if (!enif_make_map_from_arrays(msg_env, keys, values, 8, &payload_term)) {
-    release_event_env(msg_env);
+    enif_free_env(msg_env);
     return 0;
   }
 
   sent = send_native_event(msg_env, view_id,
                            make_atom(msg_env, "scroll_wheel"), payload_term);
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -1131,7 +1099,7 @@ int guppy_c_send_window_closed_event(uint64_t view_id) {
   ErlNifEnv *msg_env;
   int sent;
 
-  msg_env = acquire_event_env();
+  msg_env = enif_alloc_env();
 
   if (msg_env == NULL) {
     return 0;
@@ -1139,7 +1107,7 @@ int guppy_c_send_window_closed_event(uint64_t view_id) {
 
   sent = send_native_event(msg_env, view_id, make_atom(msg_env, "window_closed"),
                            make_atom(msg_env, "undefined"));
-  release_event_env(msg_env);
+  enif_free_env(msg_env);
   return sent;
 }
 
@@ -1354,10 +1322,6 @@ static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
     guppy_event_target_mutex = enif_mutex_create((char *)"guppy_event_target_mutex");
   }
 
-  if (guppy_event_env_mutex == NULL) {
-    guppy_event_env_mutex = enif_mutex_create((char *)"guppy_event_env_mutex");
-  }
-
   if (guppy_rust_runtime_start() != 1) {
     return 1;
   }
@@ -1381,16 +1345,6 @@ static int upgrade(ErlNifEnv *env, void **priv_data, void **old_priv_data,
 static void unload(ErlNifEnv *env, void *priv_data) {
   guppy_rust_runtime_shutdown();
   maybe_stop_main_thread_runtime();
-
-  if (guppy_event_env != NULL) {
-    enif_free_env(guppy_event_env);
-    guppy_event_env = NULL;
-  }
-
-  if (guppy_event_env_mutex != NULL) {
-    enif_mutex_destroy(guppy_event_env_mutex);
-    guppy_event_env_mutex = NULL;
-  }
 }
 
 static ErlNifFunc nif_funcs[] = {
