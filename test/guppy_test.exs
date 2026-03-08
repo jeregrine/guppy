@@ -522,16 +522,21 @@ defmodule GuppyTest do
         {:ok, view_id} = Guppy.open_window()
         on_exit(fn -> maybe_close(view_id) end)
 
-        assert :ok = Guppy.mount(view_id, Guppy.IR.text("owned by caller"))
+        assert :ok = Guppy.render(view_id, Guppy.IR.text("owned by caller"))
 
         spawn(fn ->
-          send(parent, {:foreign_mount, Guppy.mount(view_id, Guppy.IR.text("nope"))})
-          send(parent, {:foreign_update, Guppy.update(view_id, Guppy.IR.text("still nope"))})
+          send(parent, {:foreign_render, Guppy.render(view_id, Guppy.IR.text("nope"))})
+
+          send(
+            parent,
+            {:foreign_render_again, Guppy.render(view_id, Guppy.IR.text("still nope"))}
+          )
+
           send(parent, {:foreign_close, Guppy.close_window(view_id)})
         end)
 
-        assert_receive {:foreign_mount, {:error, :not_view_owner}}
-        assert_receive {:foreign_update, {:error, :not_view_owner}}
+        assert_receive {:foreign_render, {:error, :not_view_owner}}
+        assert_receive {:foreign_render_again, {:error, :not_view_owner}}
         assert_receive {:foreign_close, {:error, :not_view_owner}}
 
         assert :ok = Guppy.close_window(view_id)
@@ -550,7 +555,7 @@ defmodule GuppyTest do
         on_exit(fn -> maybe_close(view_id) end)
 
         assert :ok =
-                 Guppy.mount(
+                 Guppy.render(
                    view_id,
                    Guppy.IR.div(
                      [
@@ -563,7 +568,7 @@ defmodule GuppyTest do
                  )
 
         assert :ok =
-                 Guppy.update(
+                 Guppy.render(
                    view_id,
                    Guppy.IR.scroll(
                      [
@@ -578,7 +583,7 @@ defmodule GuppyTest do
                  )
 
         assert :ok =
-                 Guppy.update(
+                 Guppy.render(
                    view_id,
                    Guppy.IR.button(
                      "Save via button node",
@@ -589,7 +594,7 @@ defmodule GuppyTest do
                  )
 
         assert :ok =
-                 Guppy.update(
+                 Guppy.render(
                    view_id,
                    Guppy.IR.div(
                      [
@@ -993,7 +998,7 @@ defmodule GuppyTest do
 
         assert delta_x == 0.0
 
-        assert :ok = Guppy.update_window_text(view_id, "Hello again from Elixir")
+        assert :ok = Guppy.render(view_id, Guppy.IR.text("Hello again from Elixir"))
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
 
         send(Guppy.server(), {:guppy_native_event, view_id, :window_closed, :undefined})

@@ -42,12 +42,7 @@ enum Command {
         view_id: u64,
         reply: Sender<i32>,
     },
-    MountIr {
-        view_id: u64,
-        ir: IrNode,
-        reply: Sender<i32>,
-    },
-    UpdateIr {
+    SetIr {
         view_id: u64,
         ir: IrNode,
         reply: Sender<i32>,
@@ -152,24 +147,13 @@ pub extern "C" fn guppy_rust_open_window(view_id: u64) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_mount_ir_window(
+pub extern "C" fn guppy_rust_render_ir_window(
     view_id: u64,
     ir_ptr: *const u8,
     ir_len: usize,
 ) -> i32 {
     request_ir(view_id, ir_ptr, ir_len, |view_id, ir, reply| {
-        Command::MountIr { view_id, ir, reply }
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_update_ir_window(
-    view_id: u64,
-    ir_ptr: *const u8,
-    ir_len: usize,
-) -> i32 {
-    request_ir(view_id, ir_ptr, ir_len, |view_id, ir, reply| {
-        Command::UpdateIr { view_id, ir, reply }
+        Command::SetIr { view_id, ir, reply }
     })
 }
 
@@ -250,11 +234,8 @@ fn runtime_loop(receiver: mpsc::Receiver<Command>) {
             Command::OpenWindow { view_id, reply } => main_thread_runtime::enqueue_request(
                 main_thread_runtime::MainThreadRequest::OpenWindow { view_id, reply },
             ),
-            Command::MountIr { view_id, ir, reply } => main_thread_runtime::enqueue_request(
-                main_thread_runtime::MainThreadRequest::MountIr { view_id, ir, reply },
-            ),
-            Command::UpdateIr { view_id, ir, reply } => main_thread_runtime::enqueue_request(
-                main_thread_runtime::MainThreadRequest::UpdateIr { view_id, ir, reply },
+            Command::SetIr { view_id, ir, reply } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply },
             ),
             Command::CloseWindow { view_id, reply } => main_thread_runtime::enqueue_request(
                 main_thread_runtime::MainThreadRequest::CloseWindow { view_id, reply },

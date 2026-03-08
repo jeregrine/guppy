@@ -27,7 +27,7 @@ render_counter = fn count ->
   )
 end
 
-:ok = Guppy.mount(view_id, render_counter.(0))
+:ok = Guppy.render(view_id, render_counter.(0))
 
 Process.send_after(self(), :tick, 1_000)
 
@@ -36,7 +36,7 @@ loop = fn loop, count ->
     :tick when count < 5 ->
       next_count = count + 1
 
-      case Guppy.update(view_id, render_counter.(next_count)) do
+      case Guppy.render(view_id, render_counter.(next_count)) do
         :ok ->
           IO.puts("updated count to #{next_count}")
           Process.send_after(self(), :tick, 1_000)

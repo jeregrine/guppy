@@ -22,17 +22,17 @@ render = fn status ->
   )
 end
 
-:ok = Guppy.mount(view_id, render.("waiting"))
+:ok = Guppy.render(view_id, render.("waiting"))
 
 loop = fn loop ->
   receive do
     {:guppy_event, ^view_id, %{type: :click, id: "line_one", callback: "line_one"}} ->
-      :ok = Guppy.update(view_id, render.("clicked line one"))
+      :ok = Guppy.render(view_id, render.("clicked line one"))
       IO.puts("clicked line one")
       loop.(loop)
 
     {:guppy_event, ^view_id, %{type: :click, id: "line_two", callback: "line_two"}} ->
-      :ok = Guppy.update(view_id, render.("clicked line two"))
+      :ok = Guppy.render(view_id, render.("clicked line two"))
       IO.puts("clicked line two")
       loop.(loop)
 

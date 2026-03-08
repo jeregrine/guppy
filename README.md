@@ -21,7 +21,7 @@ Today Guppy can:
 - load a Cargo-built NIF
 - bootstrap a GPUI app on macOS via a wx-style main-thread handoff
 - open and close real native windows from Elixir
-- mount and replace a full IR tree per window
+- render and replace a full IR tree per window
 - render native trees through `BridgeView`
 - preserve retained native state where needed across rerenders
 - send native events back to the owning Elixir process
@@ -135,8 +135,8 @@ mix run examples/hello_world.exs
 This verifies the basic happy path:
 
 - open window
-- mount IR
-- update IR
+- render IR
+- rerender IR
 - close window
 
 ## Public API surface worth knowing
@@ -144,8 +144,7 @@ This verifies the basic happy path:
 Window lifecycle:
 
 - `Guppy.open_window/0`
-- `Guppy.mount/2`
-- `Guppy.update/2`
+- `Guppy.render/2`
 - `Guppy.close_window/1`
 
 Native status / diagnostics:

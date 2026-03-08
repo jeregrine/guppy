@@ -112,12 +112,8 @@ defmodule Guppy.Native.Nif do
     {:reply, with_loaded(state, fn -> normalize_status(native_set_event_target(pid)) end), state}
   end
 
-  def handle_call({:request, {:mount, [view_id, ir]}}, _from, state) do
-    {:reply, with_loaded(state, fn -> normalize_status(native_mount(view_id, ir)) end), state}
-  end
-
-  def handle_call({:request, {:update, [view_id, ir]}}, _from, state) do
-    {:reply, with_loaded(state, fn -> normalize_status(native_update(view_id, ir)) end), state}
+  def handle_call({:request, {:render, [view_id, ir]}}, _from, state) do
+    {:reply, with_loaded(state, fn -> normalize_status(native_render(view_id, ir)) end), state}
   end
 
   def handle_call({:request, {:close_window, [view_id]}}, _from, state) do
@@ -161,11 +157,7 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
-  def native_mount(_view_id, _ir) do
-    {:error, :nif_not_loaded}
-  end
-
-  def native_update(_view_id, _ir) do
+  def native_render(_view_id, _ir) do
     {:error, :nif_not_loaded}
   end
 

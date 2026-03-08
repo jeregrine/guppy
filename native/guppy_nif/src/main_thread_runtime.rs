@@ -32,12 +32,7 @@ pub(crate) enum MainThreadRequest {
         view_id: u64,
         reply: Sender<i32>,
     },
-    MountIr {
-        view_id: u64,
-        ir: IrNode,
-        reply: Sender<i32>,
-    },
-    UpdateIr {
+    SetIr {
         view_id: u64,
         ir: IrNode,
         reply: Sender<i32>,
@@ -265,10 +260,7 @@ fn handle_request(request: MainThreadRequest) {
                 })),
             ));
         }
-        MainThreadRequest::MountIr { view_id, ir, reply } => {
-            let _ = reply.send(update_ir(view_id, ir));
-        }
-        MainThreadRequest::UpdateIr { view_id, ir, reply } => {
+        MainThreadRequest::SetIr { view_id, ir, reply } => {
             let _ = reply.send(update_ir(view_id, ir));
         }
         MainThreadRequest::CloseWindow { view_id, reply } => {

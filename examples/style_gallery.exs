@@ -75,7 +75,7 @@ render = fn selected ->
   )
 end
 
-:ok = Guppy.mount(view_id, render.(:gray))
+:ok = Guppy.render(view_id, render.(:gray))
 
 loop = fn loop, selected ->
   receive do
@@ -88,7 +88,7 @@ loop = fn loop, selected ->
           "select_blue" -> :blue
         end
 
-      :ok = Guppy.update(view_id, render.(next_selected))
+      :ok = Guppy.render(view_id, render.(next_selected))
       IO.puts("selected #{next_selected}")
       loop.(loop, next_selected)
 

@@ -17,7 +17,10 @@ render = fn count ->
       Guppy.IR.div(
         [
           Guppy.IR.text("count = #{count}", id: "count_label"),
-          Guppy.IR.text("Click this text to increment", id: "increment_text", events: %{click: "increment"})
+          Guppy.IR.text("Click this text to increment",
+            id: "increment_text",
+            events: %{click: "increment"}
+          )
         ],
         id: "increment_button",
         style: [:p_4, {:bg, :blue}, :rounded_md, :cursor_pointer],
@@ -30,7 +33,7 @@ render = fn count ->
   )
 end
 
-:ok = Guppy.mount(view_id, render.(0))
+:ok = Guppy.render(view_id, render.(0))
 
 loop = fn loop, count ->
   receive do
@@ -38,7 +41,7 @@ loop = fn loop, count ->
     when clicked_id in ["increment_button", "increment_text"] ->
       next_count = count + 1
 
-      case Guppy.update(view_id, render.(next_count)) do
+      case Guppy.render(view_id, render.(next_count)) do
         :ok ->
           IO.puts("incremented to #{next_count}")
           loop.(loop, next_count)

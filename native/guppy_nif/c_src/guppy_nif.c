@@ -18,9 +18,8 @@ extern int guppy_rust_runtime_shutdown(void);
 extern const char *guppy_rust_runtime_status(void);
 extern void *guppy_rust_run_main_thread_runtime(void *arg);
 extern int guppy_rust_open_window(uint64_t view_id);
-extern int guppy_rust_mount_ir_window(uint64_t view_id, const unsigned char *ir_ptr,
-                                      size_t ir_len);
-extern int guppy_rust_update_ir_window(uint64_t view_id, const unsigned char *ir_ptr,
+extern int guppy_rust_render_ir_window(uint64_t view_id,
+                                       const unsigned char *ir_ptr,
                                        size_t ir_len);
 extern int guppy_rust_close_window(uint64_t view_id);
 extern uint64_t guppy_rust_view_count(void);
@@ -1197,36 +1196,7 @@ static int encode_term(ErlNifEnv *env, ERL_NIF_TERM term, ErlNifBinary *binary) 
   return enif_term_to_binary(env, term, binary);
 }
 
-static ERL_NIF_TERM native_mount(ErlNifEnv *env, int argc,
-                                 const ERL_NIF_TERM argv[]) {
-  uint64_t view_id;
-  ErlNifBinary ir;
-  int result;
-
-  if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
-      !encode_term(env, argv[1], &ir)) {
-    return enif_make_badarg(env);
-  }
-
-  result = guppy_rust_mount_ir_window(view_id, ir.data, ir.size);
-  enif_release_binary(&ir);
-
-  if (result == 1) {
-    return make_atom(env, "ok");
-  }
-
-  if (result == 0) {
-    return make_error(env, "unknown_view_id");
-  }
-
-  if (result == -2) {
-    return enif_make_badarg(env);
-  }
-
-  return make_error(env, "runtime_unavailable");
-}
-
-static ERL_NIF_TERM native_update(ErlNifEnv *env, int argc,
+static ERL_NIF_TERM native_render(ErlNifEnv *env, int argc,
                                   const ERL_NIF_TERM argv[]) {
   uint64_t view_id;
   ErlNifBinary ir;
@@ -1237,7 +1207,7 @@ static ERL_NIF_TERM native_update(ErlNifEnv *env, int argc,
     return enif_make_badarg(env);
   }
 
-  result = guppy_rust_update_ir_window(view_id, ir.data, ir.size);
+  result = guppy_rust_render_ir_window(view_id, ir.data, ir.size);
   enif_release_binary(&ir);
 
   if (result == 1) {
@@ -1325,8 +1295,7 @@ static ErlNifFunc nif_funcs[] = {
     {"native_gui_status", 0, native_gui_status, 0},
     {"native_open_window", 1, native_open_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_set_event_target", 1, native_set_event_target, 0},
-    {"native_mount", 2, native_mount, ERL_NIF_DIRTY_JOB_IO_BOUND},
-    {"native_update", 2, native_update, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"native_render", 2, native_render, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_close_window", 1, native_close_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_view_count", 0, native_view_count, ERL_NIF_DIRTY_JOB_IO_BOUND},
 };

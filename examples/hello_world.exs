@@ -13,7 +13,7 @@ IO.inspect(Guppy.native_view_count(), label: "native_view_count")
 IO.puts("opened and asked GPUI to activate/focus the window")
 
 :ok =
-  Guppy.mount(
+  Guppy.render(
     view_id,
     Guppy.IR.div(
       [
@@ -25,7 +25,7 @@ IO.puts("opened and asked GPUI to activate/focus the window")
     )
   )
 
-IO.puts("mounted IR tree")
+IO.puts("rendered IR tree")
 
 Process.send_after(self(), :update_text, 1_000)
 Process.send_after(self(), :close_window, 5_000)
@@ -33,7 +33,7 @@ Process.send_after(self(), :close_window, 5_000)
 receive_loop = fn receive_loop ->
   receive do
     :update_text ->
-      case Guppy.update(
+      case Guppy.render(
              view_id,
              Guppy.IR.div(
                [

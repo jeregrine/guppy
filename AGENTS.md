@@ -74,9 +74,7 @@ Useful APIs today:
 
 - `Guppy.ping/0`
 - `Guppy.open_window/0`
-- `Guppy.mount/2`
-- `Guppy.update/2`
-- `Guppy.update_window_text/2`
+- `Guppy.render/2`
 - `Guppy.close_window/1`
 - `Guppy.native_view_count/0`
 - `Guppy.native_build_info/0`

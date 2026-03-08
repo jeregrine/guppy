@@ -49,12 +49,8 @@ defmodule Guppy.Server do
     GenServer.call(server, {:open_window, owner}, timeout)
   end
 
-  def mount(server \\ __MODULE__, view_id, ir, timeout \\ 5_000) do
-    GenServer.call(server, {:mount, view_id, ir}, timeout)
-  end
-
-  def update(server \\ __MODULE__, view_id, ir, timeout \\ 5_000) do
-    GenServer.call(server, {:update, view_id, ir}, timeout)
+  def render(server \\ __MODULE__, view_id, ir, timeout \\ 5_000) do
+    GenServer.call(server, {:render, view_id, ir}, timeout)
   end
 
   def close_window(server \\ __MODULE__, view_id, timeout \\ 5_000) do
@@ -122,21 +118,10 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:mount, view_id, ir}, {caller, _tag}, state) do
+  def handle_call({:render, view_id, ir}, {caller, _tag}, state) do
     case validate_owned_view_ir(state, caller, view_id, ir) do
       :ok ->
-        reply = state.native.request(state.native_server, {:mount, [view_id, ir]})
-        {:reply, normalize_native_reply(reply), state}
-
-      error ->
-        {:reply, error, state}
-    end
-  end
-
-  def handle_call({:update, view_id, ir}, {caller, _tag}, state) do
-    case validate_owned_view_ir(state, caller, view_id, ir) do
-      :ok ->
-        reply = state.native.request(state.native_server, {:update, [view_id, ir]})
+        reply = state.native.request(state.native_server, {:render, [view_id, ir]})
         {:reply, normalize_native_reply(reply), state}
 
       error ->

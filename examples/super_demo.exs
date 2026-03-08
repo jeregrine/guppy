@@ -49,7 +49,7 @@ defmodule Guppy.SuperDemo do
         statuses: capture_statuses()
       }
 
-    :ok = Guppy.mount(main_view_id, render(state))
+    :ok = Guppy.render(main_view_id, render(state))
     loop(state)
   end
 
@@ -189,12 +189,18 @@ defmodule Guppy.SuperDemo do
     cond do
       view_id == state.main_view_id ->
         state
-        |> Map.put(:last_event, "hover #{if hovered, do: "enter", else: "leave"} #{node_id}/#{callback_id}")
+        |> Map.put(
+          :last_event,
+          "hover #{if hovered, do: "enter", else: "leave"} #{node_id}/#{callback_id}"
+        )
         |> rerender!()
 
       view_id == state.aux_view_id ->
         state
-        |> Map.put(:last_event, "aux hover #{if hovered, do: "enter", else: "leave"} #{node_id}/#{callback_id}")
+        |> Map.put(
+          :last_event,
+          "aux hover #{if hovered, do: "enter", else: "leave"} #{node_id}/#{callback_id}"
+        )
         |> rerender!()
 
       true ->
@@ -225,7 +231,11 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_pointer_event(state, view_id, %{type: type, id: node_id, callback: callback_id} = event) do
+  defp handle_pointer_event(
+         state,
+         view_id,
+         %{type: type, id: node_id, callback: callback_id} = event
+       ) do
     cond do
       view_id == state.main_view_id ->
         state
@@ -246,7 +256,11 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_keyboard_event(state, view_id, %{type: type, id: node_id, callback: callback_id} = event) do
+  defp handle_keyboard_event(
+         state,
+         view_id,
+         %{type: type, id: node_id, callback: callback_id} = event
+       ) do
     cond do
       view_id == state.main_view_id ->
         state
@@ -267,7 +281,11 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_drag_event(state, view_id, %{type: type, id: node_id, callback: callback_id} = event) do
+  defp handle_drag_event(
+         state,
+         view_id,
+         %{type: type, id: node_id, callback: callback_id} = event
+       ) do
     cond do
       view_id == state.main_view_id ->
         state
@@ -291,7 +309,8 @@ defmodule Guppy.SuperDemo do
   defp handle_main_click(state, node_id, callback_id) do
     cond do
       String.starts_with?(callback_id, "select_demo:") ->
-        demo_id = callback_id |> String.split(":", parts: 2) |> List.last() |> String.to_existing_atom()
+        demo_id =
+          callback_id |> String.split(":", parts: 2) |> List.last() |> String.to_existing_atom()
 
         state
         |> Map.put(:selected_demo, demo_id)
@@ -427,16 +446,25 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp update_pointer_counters(state, :mouse_down), do: Map.update!(state, :mouse_downs, &(&1 + 1))
+  defp update_pointer_counters(state, :mouse_down),
+    do: Map.update!(state, :mouse_downs, &(&1 + 1))
+
   defp update_pointer_counters(state, :mouse_up), do: Map.update!(state, :mouse_ups, &(&1 + 1))
-  defp update_pointer_counters(state, :mouse_move), do: Map.update!(state, :mouse_moves, &(&1 + 1))
-  defp update_pointer_counters(state, :scroll_wheel), do: Map.update!(state, :scroll_wheels, &(&1 + 1))
+
+  defp update_pointer_counters(state, :mouse_move),
+    do: Map.update!(state, :mouse_moves, &(&1 + 1))
+
+  defp update_pointer_counters(state, :scroll_wheel),
+    do: Map.update!(state, :scroll_wheels, &(&1 + 1))
 
   defp update_keyboard_counters(state, :focus), do: Map.update!(state, :focus_events, &(&1 + 1))
   defp update_keyboard_counters(state, :blur), do: Map.update!(state, :blur_events, &(&1 + 1))
   defp update_keyboard_counters(state, :key_down), do: Map.update!(state, :key_downs, &(&1 + 1))
   defp update_keyboard_counters(state, :key_up), do: Map.update!(state, :key_ups, &(&1 + 1))
-  defp update_keyboard_counters(state, :context_menu), do: Map.update!(state, :context_menus, &(&1 + 1))
+
+  defp update_keyboard_counters(state, :context_menu),
+    do: Map.update!(state, :context_menus, &(&1 + 1))
+
   defp update_keyboard_counters(state, :action), do: Map.update!(state, :action_events, &(&1 + 1))
 
   defp update_drag_counters(state, :drag_start), do: Map.update!(state, :drag_starts, &(&1 + 1))
@@ -504,7 +532,9 @@ defmodule Guppy.SuperDemo do
   end
 
   defp format_number(number) when is_integer(number), do: Integer.to_string(number)
-  defp format_number(number) when is_float(number), do: :erlang.float_to_binary(number, decimals: 1)
+
+  defp format_number(number) when is_float(number),
+    do: :erlang.float_to_binary(number, decimals: 1)
 
   defp open_aux_window(%{aux_view_id: view_id} = state, _node_id) when not is_nil(view_id) do
     state
@@ -515,7 +545,7 @@ defmodule Guppy.SuperDemo do
   defp open_aux_window(state, node_id) do
     case Guppy.open_window(self()) do
       {:ok, aux_view_id} ->
-        :ok = Guppy.mount(aux_view_id, aux_window_ir())
+        :ok = Guppy.render(aux_view_id, aux_window_ir())
 
         state
         |> Map.put(:aux_view_id, aux_view_id)
@@ -605,7 +635,7 @@ defmodule Guppy.SuperDemo do
   end
 
   defp rerender!(state) do
-    case Guppy.update(state.main_view_id, render(state)) do
+    case Guppy.render(state.main_view_id, render(state)) do
       :ok -> state
       {:error, :unknown_view_id} -> {:stop, state}
       {:error, reason} -> raise "failed to update super demo: #{inspect(reason)}"
@@ -654,7 +684,9 @@ defmodule Guppy.SuperDemo do
           id: "header_row",
           style: [:flex, :flex_row, :w_full, :justify_between, :items_start]
         ),
-        Guppy.IR.text("Select a demo on the left. The detail panel on the right updates in place.")
+        Guppy.IR.text(
+          "Select a demo on the left. The detail panel on the right updates in place."
+        )
       ],
       style: [
         {:bg, accent},
@@ -676,7 +708,9 @@ defmodule Guppy.SuperDemo do
       "nav_panel",
       [
         Guppy.IR.text("Demos", id: "nav_title"),
-        Guppy.IR.text("The main window stays anchored at the top; switch demos instead of scrolling."),
+        Guppy.IR.text(
+          "The main window stays anchored at the top; switch demos instead of scrolling."
+        ),
         Guppy.IR.div(items, id: "nav_items", style: [:flex, :flex_col, :w_full, :gap_2])
       ],
       style: [:w_64, :min_h_0, :max_h_full, :flex_col, :items_start, :p_4, {:bg, :gray}]
@@ -695,7 +729,17 @@ defmodule Guppy.SuperDemo do
           style: [:flex_1, :w_full, :min_h_0, :max_h_full]
         )
       ],
-      style: [:flex, :flex_col, :flex_1, :w_full, :min_h_0, :max_h_full, :overflow_hidden, :gap_2, :p_4]
+      style: [
+        :flex,
+        :flex_col,
+        :flex_1,
+        :w_full,
+        :min_h_0,
+        :max_h_full,
+        :overflow_hidden,
+        :gap_2,
+        :p_4
+      ]
     )
   end
 
@@ -728,7 +772,9 @@ defmodule Guppy.SuperDemo do
       "interactions_demo",
       [
         Guppy.IR.text("Clicks, pointer events, and rerenders"),
-        Guppy.IR.text("Use Tab to focus clickable cards and buttons, then press Enter or Space to activate them."),
+        Guppy.IR.text(
+          "Use Tab to focus clickable cards and buttons, then press Enter or Space to activate them."
+        ),
         Guppy.IR.text("div_clicks = #{state.div_clicks}"),
         action_button("Increment div clicks", "div_button", "div_increment", :blue),
         Guppy.IR.text("Disabled button below should not increment div_clicks."),
@@ -751,7 +797,9 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [
             Guppy.IR.text("Pointer pad", id: "pointer_pad_title"),
-            Guppy.IR.text("Move, press, release, and use the wheel inside this box.", id: "pointer_pad_body")
+            Guppy.IR.text("Move, press, release, and use the wheel inside this box.",
+              id: "pointer_pad_body"
+            )
           ],
           id: "pointer_pad",
           style: [
@@ -789,7 +837,10 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [
             Guppy.IR.text("Keyboard focus pad", id: "keyboard_pad_title"),
-            Guppy.IR.text("Click here, then press keys. Use Tab to test focus participation. Right click for a context-menu event. Pressing the box also exercises active styling. While focused, press ctrl-j or ctrl-k to dispatch shortcut actions.", id: "keyboard_pad_body")
+            Guppy.IR.text(
+              "Click here, then press keys. Use Tab to test focus participation. Right click for a context-menu event. Pressing the box also exercises active styling. While focused, press ctrl-j or ctrl-k to dispatch shortcut actions.",
+              id: "keyboard_pad_body"
+            )
           ],
           id: "keyboard_pad",
           focusable: true,
@@ -833,7 +884,11 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("context_menus = #{state.context_menus}"),
         Guppy.IR.text("action_events = #{state.action_events}"),
         Guppy.IR.div(
-          [Guppy.IR.text("keyboard_status = #{state.keyboard_status}", id: "keyboard_status_label")],
+          [
+            Guppy.IR.text("keyboard_status = #{state.keyboard_status}",
+              id: "keyboard_status_label"
+            )
+          ],
           id: "keyboard_status_panel",
           style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
         ),
@@ -869,7 +924,9 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.div(
               [
                 Guppy.IR.text("Drop target", id: "drop_target_title"),
-                Guppy.IR.text("Release the drag here to emit a drop event.", id: "drop_target_body")
+                Guppy.IR.text("Release the drag here to emit a drop event.",
+                  id: "drop_target_body"
+                )
               ],
               id: "drop_target",
               style: [
@@ -901,13 +958,17 @@ defmodule Guppy.SuperDemo do
           style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
         ),
         Guppy.IR.text("Stacking / overlay demo"),
-        Guppy.IR.text("The blue card is deferred above the yellow card, overlaps it, and occludes clicks underneath it."),
+        Guppy.IR.text(
+          "The blue card is deferred above the yellow card, overlaps it, and occludes clicks underneath it."
+        ),
         Guppy.IR.div(
           [
             Guppy.IR.div(
               [
                 Guppy.IR.text("Underlay card", id: "underlay_title"),
-                Guppy.IR.text("Click the exposed yellow edge; the blue card should sit on top.", id: "underlay_body")
+                Guppy.IR.text("Click the exposed yellow edge; the blue card should sit on top.",
+                  id: "underlay_body"
+                )
               ],
               id: "underlay_card",
               style: [
@@ -928,7 +989,10 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.div(
               [
                 Guppy.IR.text("Overlay card", id: "overlay_title"),
-                Guppy.IR.text("This card uses stack_priority + occlude and should block clicks below it.", id: "overlay_body")
+                Guppy.IR.text(
+                  "This card uses stack_priority + occlude and should block clicks below it.",
+                  id: "overlay_body"
+                )
               ],
               id: "overlay_card",
               stack_priority: 10,
@@ -953,7 +1017,16 @@ defmodule Guppy.SuperDemo do
             )
           ],
           id: "stack_demo_frame",
-          style: [:relative, :w_full, {:h_px, 190}, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :overflow_hidden]
+          style: [
+            :relative,
+            :w_full,
+            {:h_px, 190},
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :gray},
+            :overflow_hidden
+          ]
         ),
         Guppy.IR.text("underlay_clicks = #{state.underlay_clicks}"),
         Guppy.IR.text("overlay_clicks = #{state.overlay_clicks}"),
@@ -982,8 +1055,18 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("child_view_id = #{inspect(state.child_view_id)}"),
         action_button("Open auxiliary window", "open_aux_button", "open_aux_window", :yellow),
         action_button("Close auxiliary window", "close_aux_button", "close_aux_window", :yellow),
-        action_button("Spawn child-owner window", "spawn_child_button", "spawn_child_owner", :green),
-        action_button("Kill child owner (tests DOWN cleanup)", "kill_child_button", "kill_child_owner", :red)
+        action_button(
+          "Spawn child-owner window",
+          "spawn_child_button",
+          "spawn_child_owner",
+          :green
+        ),
+        action_button(
+          "Kill child owner (tests DOWN cleanup)",
+          "kill_child_button",
+          "kill_child_owner",
+          :red
+        )
       ],
       style: [{:bg, :gray}]
     )
@@ -995,7 +1078,9 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("Style tokens and palette changes"),
         Guppy.IR.text("palette = #{palette_color(state)}"),
-        Guppy.IR.text("Toggle palette now recolors the header, the selected nav button, the preview card, and the swatches below."),
+        Guppy.IR.text(
+          "Toggle palette now recolors the header, the selected nav button, the preview card, and the swatches below."
+        ),
         Guppy.IR.div(
           Enum.map(@palette, fn color ->
             palette_swatch(color, color == palette_color(state))
@@ -1024,8 +1109,13 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.div(
               [
                 Guppy.IR.text("Palette impact", id: "palette_impact_title"),
-                Guppy.IR.text("Header chrome and the selected nav item also follow the current palette now.", id: "palette_impact_body"),
-                Guppy.IR.text("current accent = #{palette_color(state)}", id: "palette_impact_value")
+                Guppy.IR.text(
+                  "Header chrome and the selected nav item also follow the current palette now.",
+                  id: "palette_impact_body"
+                ),
+                Guppy.IR.text("current accent = #{palette_color(state)}",
+                  id: "palette_impact_value"
+                )
               ],
               id: "palette_impact_panel",
               style: [
@@ -1045,89 +1135,308 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [
             Guppy.IR.text("Centered large italic text", id: "text_style_centered"),
-            Guppy.IR.text("This container uses inherited text styling tokens.", id: "text_style_centered_body")
+            Guppy.IR.text("This container uses inherited text styling tokens.",
+              id: "text_style_centered_body"
+            )
           ],
           id: "text_style_panel",
-          style: [:text_center, :text_lg, :italic, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
+          style: [
+            :text_center,
+            :text_lg,
+            :italic,
+            :p_4,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :gray}
+          ]
         ),
         Guppy.IR.div(
           [
-            Guppy.IR.div([Guppy.IR.text("Thin", id: "font_weight_thin")], id: "font_weight_thin_row", style: [:font_thin]),
-            Guppy.IR.div([Guppy.IR.text("Light", id: "font_weight_light")], id: "font_weight_light_row", style: [:font_light]),
-            Guppy.IR.div([Guppy.IR.text("Normal", id: "font_weight_normal")], id: "font_weight_normal_row", style: [:font_normal]),
-            Guppy.IR.div([Guppy.IR.text("Medium", id: "font_weight_medium")], id: "font_weight_medium_row", style: [:font_medium]),
-            Guppy.IR.div([Guppy.IR.text("Semibold", id: "font_weight_semibold")], id: "font_weight_semibold_row", style: [:font_semibold]),
-            Guppy.IR.div([Guppy.IR.text("Bold", id: "font_weight_bold")], id: "font_weight_bold_row", style: [:font_bold]),
-            Guppy.IR.div([Guppy.IR.text("Black", id: "font_weight_black")], id: "font_weight_black_row", style: [:font_black])
+            Guppy.IR.div([Guppy.IR.text("Thin", id: "font_weight_thin")],
+              id: "font_weight_thin_row",
+              style: [:font_thin]
+            ),
+            Guppy.IR.div([Guppy.IR.text("Light", id: "font_weight_light")],
+              id: "font_weight_light_row",
+              style: [:font_light]
+            ),
+            Guppy.IR.div([Guppy.IR.text("Normal", id: "font_weight_normal")],
+              id: "font_weight_normal_row",
+              style: [:font_normal]
+            ),
+            Guppy.IR.div([Guppy.IR.text("Medium", id: "font_weight_medium")],
+              id: "font_weight_medium_row",
+              style: [:font_medium]
+            ),
+            Guppy.IR.div([Guppy.IR.text("Semibold", id: "font_weight_semibold")],
+              id: "font_weight_semibold_row",
+              style: [:font_semibold]
+            ),
+            Guppy.IR.div([Guppy.IR.text("Bold", id: "font_weight_bold")],
+              id: "font_weight_bold_row",
+              style: [:font_bold]
+            ),
+            Guppy.IR.div([Guppy.IR.text("Black", id: "font_weight_black")],
+              id: "font_weight_black_row",
+              style: [:font_black]
+            )
           ],
           id: "font_weight_panel",
-          style: [:flex, :flex_col, :gap_1, :text_base, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
+          style: [
+            :flex,
+            :flex_col,
+            :gap_1,
+            :text_base,
+            :p_4,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :black}
+          ]
         ),
         Guppy.IR.div(
           [
-            Guppy.IR.div([Guppy.IR.text("xl", id: "text_size_xl")], id: "text_size_xl_row", style: [:text_xl]),
-            Guppy.IR.div([Guppy.IR.text("2xl", id: "text_size_2xl")], id: "text_size_2xl_row", style: [:text_2xl]),
-            Guppy.IR.div([Guppy.IR.text("3xl", id: "text_size_3xl")], id: "text_size_3xl_row", style: [:text_3xl])
+            Guppy.IR.div([Guppy.IR.text("xl", id: "text_size_xl")],
+              id: "text_size_xl_row",
+              style: [:text_xl]
+            ),
+            Guppy.IR.div([Guppy.IR.text("2xl", id: "text_size_2xl")],
+              id: "text_size_2xl_row",
+              style: [:text_2xl]
+            ),
+            Guppy.IR.div([Guppy.IR.text("3xl", id: "text_size_3xl")],
+              id: "text_size_3xl_row",
+              style: [:text_3xl]
+            )
           ],
           id: "text_size_panel",
-          style: [:flex, :flex_col, :gap_2, :p_4, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :gray}]
+          style: [
+            :flex,
+            :flex_col,
+            :gap_2,
+            :p_4,
+            :rounded_lg,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :gray}
+          ]
         ),
         Guppy.IR.div(
           [
-            Guppy.IR.div([Guppy.IR.text("leading-none sample line one\nline two", id: "leading_none_text")], id: "leading_none_row", style: [:leading_none]),
-            Guppy.IR.div([Guppy.IR.text("leading-relaxed sample line one\nline two", id: "leading_relaxed_text")], id: "leading_relaxed_row", style: [:leading_relaxed])
+            Guppy.IR.div(
+              [Guppy.IR.text("leading-none sample line one\nline two", id: "leading_none_text")],
+              id: "leading_none_row",
+              style: [:leading_none]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("leading-relaxed sample line one\nline two",
+                  id: "leading_relaxed_text"
+                )
+              ], id: "leading_relaxed_row", style: [:leading_relaxed])
           ],
           id: "line_height_panel",
-          style: [:flex, :flex_col, :gap_2, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+          style: [
+            :flex,
+            :flex_col,
+            :gap_2,
+            :p_4,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :blue}
+          ]
         ),
         Guppy.IR.div(
           [
-            Guppy.IR.text("This is a long line that should truncate inside a constrained width block to show ordered text overflow styling in the IR bridge.", id: "truncate_demo_label")
+            Guppy.IR.text(
+              "This is a long line that should truncate inside a constrained width block to show ordered text overflow styling in the IR bridge.",
+              id: "truncate_demo_label"
+            )
           ],
           id: "truncate_demo",
-          style: [:max_w_64, :overflow_x_hidden, :truncate, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+          style: [
+            :max_w_64,
+            :overflow_x_hidden,
+            :truncate,
+            :p_2,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :blue}
+          ]
         ),
         Guppy.IR.div(
           [
-            Guppy.IR.text("This is a longer paragraph intended to demonstrate line clamping in the bridge. It should stop after a small number of lines instead of expanding forever when the width is constrained.", id: "line_clamp_demo_label")
+            Guppy.IR.text(
+              "This is a longer paragraph intended to demonstrate line clamping in the bridge. It should stop after a small number of lines instead of expanding forever when the width is constrained.",
+              id: "line_clamp_demo_label"
+            )
           ],
           id: "line_clamp_demo",
-          style: [:max_w_64, :line_clamp_2, :text_sm, :underline, :line_through, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
+          style: [
+            :max_w_64,
+            :line_clamp_2,
+            :text_sm,
+            :underline,
+            :line_through,
+            :p_2,
+            :rounded_md,
+            :border_1,
+            {:border_color, :white},
+            {:bg, :gray}
+          ]
         ),
         Guppy.IR.div(
           [
-            Guppy.IR.div([Guppy.IR.text("sm", id: "radius_sm_label")], id: "radius_sm", style: [:p_2, :rounded_sm, :border_2, :border_dashed, {:border_color, :white}, {:bg, :blue}]),
-            Guppy.IR.div([Guppy.IR.text("lg", id: "radius_lg_label")], id: "radius_lg", style: [:p_2, :rounded_lg, :border_2, :border_dashed, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]),
-            Guppy.IR.div([Guppy.IR.text("xl", id: "radius_xl_label")], id: "radius_xl", style: [:p_2, :rounded_xl, :border_2, :border_dashed, {:border_color, :white}, {:bg, :yellow}, {:text_color, :black}]),
-            Guppy.IR.div([Guppy.IR.text("2xl", id: "radius_2xl_label")], id: "radius_2xl", style: [:p_2, :rounded_2xl, :border_2, :border_dashed, {:border_color, :white}, {:bg, :red}]),
-            Guppy.IR.div([Guppy.IR.text("full", id: "radius_full_label")], id: "radius_full", style: [:p_2, :rounded_full, :border_2, :border_dashed, {:border_color, :white}, {:bg, :gray}])
+            Guppy.IR.div([Guppy.IR.text("sm", id: "radius_sm_label")],
+              id: "radius_sm",
+              style: [
+                :p_2,
+                :rounded_sm,
+                :border_2,
+                :border_dashed,
+                {:border_color, :white},
+                {:bg, :blue}
+              ]
+            ),
+            Guppy.IR.div([Guppy.IR.text("lg", id: "radius_lg_label")],
+              id: "radius_lg",
+              style: [
+                :p_2,
+                :rounded_lg,
+                :border_2,
+                :border_dashed,
+                {:border_color, :white},
+                {:bg, :green},
+                {:text_color, :black}
+              ]
+            ),
+            Guppy.IR.div([Guppy.IR.text("xl", id: "radius_xl_label")],
+              id: "radius_xl",
+              style: [
+                :p_2,
+                :rounded_xl,
+                :border_2,
+                :border_dashed,
+                {:border_color, :white},
+                {:bg, :yellow},
+                {:text_color, :black}
+              ]
+            ),
+            Guppy.IR.div([Guppy.IR.text("2xl", id: "radius_2xl_label")],
+              id: "radius_2xl",
+              style: [
+                :p_2,
+                :rounded_2xl,
+                :border_2,
+                :border_dashed,
+                {:border_color, :white},
+                {:bg, :red}
+              ]
+            ),
+            Guppy.IR.div([Guppy.IR.text("full", id: "radius_full_label")],
+              id: "radius_full",
+              style: [
+                :p_2,
+                :rounded_full,
+                :border_2,
+                :border_dashed,
+                {:border_color, :white},
+                {:bg, :gray}
+              ]
+            )
           ],
           id: "radius_border_gallery",
           style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
         ),
         Guppy.IR.div(
           [
-            Guppy.IR.div([Guppy.IR.text("320px × 180px @ 75% opacity", id: "custom_px_box_label")], id: "custom_px_box", style: [{:w_px, 320}, {:h_px, 180}, {:opacity, 0.75}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :blue}]),
-            Guppy.IR.div([Guppy.IR.text("24rem × 12rem", id: "custom_rem_box_label")], id: "custom_rem_box", style: [{:w_rem, 24.0}, {:h_rem, 12.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]),
+            Guppy.IR.div(
+              [Guppy.IR.text("320px × 180px @ 75% opacity", id: "custom_px_box_label")],
+              id: "custom_px_box",
+              style: [
+                {:w_px, 320},
+                {:h_px, 180},
+                {:opacity, 0.75},
+                :p_2,
+                :rounded_lg,
+                :border_1,
+                {:border_color, :white},
+                {:bg, :blue}
+              ]
+            ),
+            Guppy.IR.div([Guppy.IR.text("24rem × 12rem", id: "custom_rem_box_label")],
+              id: "custom_rem_box",
+              style: [
+                {:w_rem, 24.0},
+                {:h_rem, 12.0},
+                :p_2,
+                :rounded_lg,
+                :border_1,
+                {:border_color, :white},
+                {:bg, :green},
+                {:text_color, :black}
+              ]
+            ),
             Guppy.IR.div(
               [Guppy.IR.text("hex colors + hover", id: "custom_hex_box_label")],
               id: "custom_hex_box",
-              style: [{:w_px, 220}, {:h_px, 120}, :p_2, :rounded_lg, {:bg_hex, "#663399"}, {:text_color_hex, "#f8f8f2"}, {:border_color_hex, "#ff79c6"}, :border_2],
-              hover_style: [{:bg_hex, "#7c3aed"}, {:border_color_hex, "#facc15"}, {:opacity, 0.9}, :cursor_pointer],
+              style: [
+                {:w_px, 220},
+                {:h_px, 120},
+                :p_2,
+                :rounded_lg,
+                {:bg_hex, "#663399"},
+                {:text_color_hex, "#f8f8f2"},
+                {:border_color_hex, "#ff79c6"},
+                :border_2
+              ],
+              hover_style: [
+                {:bg_hex, "#7c3aed"},
+                {:border_color_hex, "#facc15"},
+                {:opacity, 0.9},
+                :cursor_pointer
+              ],
               events: %{hover: "style_hover"}
             ),
             Guppy.IR.div(
               [
-                Guppy.IR.div([Guppy.IR.text("50% × 100%", id: "custom_frac_box_label")], id: "custom_frac_box", style: [{:w_frac, 0.5}, {:h_frac, 1.0}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :gray}])
+                Guppy.IR.div([Guppy.IR.text("50% × 100%", id: "custom_frac_box_label")],
+                  id: "custom_frac_box",
+                  style: [
+                    {:w_frac, 0.5},
+                    {:h_frac, 1.0},
+                    :p_2,
+                    :rounded_lg,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :gray}
+                  ]
+                )
               ],
               id: "custom_frac_frame",
-              style: [{:w_px, 320}, {:h_px, 180}, :p_2, :rounded_lg, :border_1, {:border_color, :white}, {:bg, :black}]
+              style: [
+                {:w_px, 320},
+                {:h_px, 180},
+                :p_2,
+                :rounded_lg,
+                :border_1,
+                {:border_color, :white},
+                {:bg, :black}
+              ]
             )
           ],
           id: "custom_value_gallery",
           style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
         ),
-        action_button("Toggle palette", "toggle_palette_button", "toggle_palette", palette_color(state)),
+        action_button(
+          "Toggle palette",
+          "toggle_palette_button",
+          "toggle_palette",
+          palette_color(state)
+        ),
         action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
       ],
       style: [{:bg, :gray}]
@@ -1139,29 +1448,66 @@ defmodule Guppy.SuperDemo do
       "layout_demo",
       [
         Guppy.IR.text("Flex layout behavior tokens"),
-        Guppy.IR.text("This page exercises wrap/nowrap, grow/shrink, and spacing tokens in the ordered style list."),
+        Guppy.IR.text(
+          "This page exercises wrap/nowrap, grow/shrink, and spacing tokens in the ordered style list."
+        ),
         Guppy.IR.div(
           [
             flex_chip("wrap_1", "wrap-1", [:flex_none, :w_32, {:bg, :blue}]),
             flex_chip("wrap_2", "wrap-2", [:flex_none, :w_32, {:bg, :green}]),
-            flex_chip("wrap_3", "wrap-3", [:flex_none, :w_32, {:bg, :yellow}, {:text_color, :black}]),
+            flex_chip("wrap_3", "wrap-3", [
+              :flex_none,
+              :w_32,
+              {:bg, :yellow},
+              {:text_color, :black}
+            ]),
             flex_chip("wrap_4", "wrap-4", [:flex_none, :w_32, {:bg, :red}]),
             flex_chip("wrap_5", "wrap-5", [:flex_none, :w_32, {:bg, :gray}]),
             flex_chip("wrap_6", "wrap-6", [:flex_none, :w_32, {:bg, :blue}])
           ],
           id: "wrap_row",
-          style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+          style: [
+            :flex,
+            :flex_row,
+            :flex_wrap,
+            :gap_2,
+            :w_full,
+            :border_1,
+            {:border_color, :white},
+            :p_2
+          ]
         ),
         Guppy.IR.div(
           [
             flex_chip("nowrap_fixed", "fixed", [:flex_none, :min_w_32, {:bg, :gray}]),
             flex_chip("nowrap_auto", "auto", [:flex_auto, :w_32, {:bg, :blue}]),
-            flex_chip("nowrap_grow", "grow", [:flex_grow, :w_32, {:bg, :green}, {:text_color, :black}]),
-            flex_chip("nowrap_shrink", "shrink", [:flex_shrink, :w_32, {:bg, :yellow}, {:text_color, :black}]),
+            flex_chip("nowrap_grow", "grow", [
+              :flex_grow,
+              :w_32,
+              {:bg, :green},
+              {:text_color, :black}
+            ]),
+            flex_chip("nowrap_shrink", "shrink", [
+              :flex_shrink,
+              :w_32,
+              {:bg, :yellow},
+              {:text_color, :black}
+            ]),
             flex_chip("nowrap_shrink0", "shrink-0", [:flex_shrink_0, :w_96, {:bg, :red}])
           ],
           id: "nowrap_row",
-          style: [:flex, :flex_row, :flex_nowrap, :items_start, :overflow_x_scroll, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
+          style: [
+            :flex,
+            :flex_row,
+            :flex_nowrap,
+            :items_start,
+            :overflow_x_scroll,
+            :gap_2,
+            :w_full,
+            :border_1,
+            {:border_color, :white},
+            :p_2
+          ]
         ),
         Guppy.IR.div(
           [
@@ -1170,7 +1516,15 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("p_1 + px_2 + py_2", id: "spacing_one_label")],
                   id: "spacing_one",
-                  style: [:p_1, :px_2, :py_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                  style: [
+                    :p_1,
+                    :px_2,
+                    :py_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :blue}
+                  ]
                 )
               ],
               id: "spacing_one_frame",
@@ -1181,7 +1535,18 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("pt/pr/pb/pl + m_2", id: "spacing_two_label")],
                   id: "spacing_two",
-                  style: [:pt_2, :pr_2, :pb_2, :pl_2, :m_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+                  style: [
+                    :pt_2,
+                    :pr_2,
+                    :pb_2,
+                    :pl_2,
+                    :m_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :green},
+                    {:text_color, :black}
+                  ]
                 )
               ],
               id: "spacing_two_frame",
@@ -1192,7 +1557,20 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("mx/my/mt/mr/mb/ml", id: "spacing_three_label")],
                   id: "spacing_three",
-                  style: [:mx_2, :my_2, :mt_2, :mr_2, :mb_2, :ml_2, :p_8, :rounded_md, :border_1, {:border_color, :white}, {:bg, :yellow}, {:text_color, :black}]
+                  style: [
+                    :mx_2,
+                    :my_2,
+                    :mt_2,
+                    :mr_2,
+                    :mb_2,
+                    :ml_2,
+                    :p_8,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :yellow},
+                    {:text_color, :black}
+                  ]
                 )
               ],
               id: "spacing_three_frame",
@@ -1210,16 +1588,45 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("badge", id: "position_badge_label")],
                   id: "position_badge",
-                  style: [:absolute, :top_1, :right_1, :p_1, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}, :shadow_sm]
+                  style: [
+                    :absolute,
+                    :top_1,
+                    :right_1,
+                    :p_1,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :red},
+                    :shadow_sm
+                  ]
                 ),
                 Guppy.IR.div(
                   [Guppy.IR.text("inset overlay", id: "position_overlay_label")],
                   id: "position_overlay",
-                  style: [:absolute, :inset_0, :flex, :items_center, :justify_center, :overflow_hidden, {:text_color, :black}, {:bg, :yellow}]
+                  style: [
+                    :absolute,
+                    :inset_0,
+                    :flex,
+                    :items_center,
+                    :justify_center,
+                    :overflow_hidden,
+                    {:text_color, :black},
+                    {:bg, :yellow}
+                  ]
                 )
               ],
               id: "position_box",
-              style: [:relative, :w_96, :h_32, :p_4, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}, :shadow_md]
+              style: [
+                :relative,
+                :w_96,
+                :h_32,
+                :p_4,
+                :rounded_md,
+                :border_1,
+                {:border_color, :white},
+                {:bg, :blue},
+                :shadow_md
+              ]
             ),
             Guppy.IR.div(
               [
@@ -1227,11 +1634,37 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("anchored", id: "offset_anchor_label")],
                   id: "offset_anchor",
-                  style: [:absolute, :top_2, :right_2, :p_1, :rounded_md, :border_t_1, :border_r_1, :border_b_1, :border_l_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}, :shadow_sm]
+                  style: [
+                    :absolute,
+                    :top_2,
+                    :right_2,
+                    :p_1,
+                    :rounded_md,
+                    :border_t_1,
+                    :border_r_1,
+                    :border_b_1,
+                    :border_l_1,
+                    {:border_color, :white},
+                    {:bg, :green},
+                    {:text_color, :black},
+                    :shadow_sm
+                  ]
                 )
               ],
               id: "offset_frame",
-              style: [:relative, :w_96, :h_32, :rounded_md, :border_t_1, :border_r_1, :border_b_1, :border_l_1, {:border_color, :white}, {:bg, :gray}, :shadow_lg],
+              style: [
+                :relative,
+                :w_96,
+                :h_32,
+                :rounded_md,
+                :border_t_1,
+                :border_r_1,
+                :border_b_1,
+                :border_l_1,
+                {:border_color, :white},
+                {:bg, :gray},
+                :shadow_lg
+              ],
               events: %{click: "div_increment"}
             ),
             Guppy.IR.div(
@@ -1239,11 +1672,31 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("corner note", id: "corner_note_label")],
                   id: "corner_note",
-                  style: [:absolute, :top_2, :right_2, :bottom_2, :left_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+                  style: [
+                    :absolute,
+                    :top_2,
+                    :right_2,
+                    :bottom_2,
+                    :left_2,
+                    :p_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :green},
+                    {:text_color, :black}
+                  ]
                 )
               ],
               id: "corner_note_frame",
-              style: [:relative, :w_96, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
+              style: [
+                :relative,
+                :w_96,
+                :h_32,
+                :rounded_md,
+                :border_1,
+                {:border_color, :white},
+                {:bg, :black}
+              ]
             ),
             Guppy.IR.div(
               [
@@ -1251,27 +1704,73 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.div(
                   [Guppy.IR.text("max_w_64", id: "constraint_small")],
                   id: "constraint_small_box",
-                  style: [:max_w_64, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :red}]
+                  style: [
+                    :max_w_64,
+                    :p_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :red}
+                  ]
                 ),
                 Guppy.IR.div(
                   [Guppy.IR.text("max_w_96 + max_h_full", id: "constraint_large")],
                   id: "constraint_large_box",
-                  style: [:max_w_96, :max_h_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :blue}]
+                  style: [
+                    :max_w_96,
+                    :max_h_full,
+                    :p_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :blue}
+                  ]
                 ),
                 Guppy.IR.div(
                   [
                     Guppy.IR.div(
-                      [Guppy.IR.text("min_h_full inside bounded frame", id: "constraint_fill_label")],
+                      [
+                        Guppy.IR.text("min_h_full inside bounded frame",
+                          id: "constraint_fill_label"
+                        )
+                      ],
                       id: "constraint_fill_inner",
-                      style: [:min_h_full, :w_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :green}, {:text_color, :black}]
+                      style: [
+                        :min_h_full,
+                        :w_full,
+                        :p_2,
+                        :rounded_md,
+                        :border_1,
+                        {:border_color, :white},
+                        {:bg, :green},
+                        {:text_color, :black}
+                      ]
                     )
                   ],
                   id: "constraint_fill_frame",
-                  style: [{:h_px, 160}, :w_full, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :black}]
+                  style: [
+                    {:h_px, 160},
+                    :w_full,
+                    :p_2,
+                    :rounded_md,
+                    :border_1,
+                    {:border_color, :white},
+                    {:bg, :black}
+                  ]
                 )
               ],
               id: "constraint_panel",
-              style: [:w_full, :flex, :flex_col, :gap_2, :p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}]
+              style: [
+                :w_full,
+                :flex,
+                :flex_col,
+                :gap_2,
+                :p_2,
+                :rounded_md,
+                :border_1,
+                {:border_color, :white},
+                {:bg, :gray}
+              ]
             )
           ],
           id: "position_examples",
@@ -1355,14 +1854,32 @@ defmodule Guppy.SuperDemo do
       "scroll_demo",
       [
         Guppy.IR.text("Scroll demo"),
-        Guppy.IR.text("This page exercises the explicit scroll node, tracked scroll state, scroll anchoring, and explicit scrollbar width values."),
-        Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored."),
-        Guppy.IR.text("The narrow/wide boxes intentionally overflow so scrollbar width differences should be easy to see while scrolling."),
+        Guppy.IR.text(
+          "This page exercises the explicit scroll node, tracked scroll state, scroll anchoring, and explicit scrollbar width values."
+        ),
+        Guppy.IR.text(
+          "Use it to verify the right-hand detail panel scrolls while the left nav stays anchored."
+        ),
+        Guppy.IR.text(
+          "The narrow/wide boxes intentionally overflow so scrollbar width differences should be easy to see while scrolling."
+        ),
         Guppy.IR.div(
           [
-            action_button("Anchor previous row", "scroll_anchor_prev_button", "scroll_anchor_prev", :white),
-            action_button("Anchor next row", "scroll_anchor_next_button", "scroll_anchor_next", :white),
-            Guppy.IR.text("active_anchor_row = #{state.scroll_anchor_index}", id: "active_anchor_row_label")
+            action_button(
+              "Anchor previous row",
+              "scroll_anchor_prev_button",
+              "scroll_anchor_prev",
+              :white
+            ),
+            action_button(
+              "Anchor next row",
+              "scroll_anchor_next_button",
+              "scroll_anchor_next",
+              :white
+            ),
+            Guppy.IR.text("active_anchor_row = #{state.scroll_anchor_index}",
+              id: "active_anchor_row_label"
+            )
           ],
           id: "scroll_anchor_controls",
           style: [:flex, :flex_row, :gap_2, :items_center, :w_full]
@@ -1370,7 +1887,9 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.div(
           [
             Guppy.IR.text("tracked + anchored scroll box", id: "tracked_scroll_title"),
-            Guppy.IR.text("Scroll this box manually, then move the active row. The box should keep its position across rerenders and bring the highlighted row into view."),
+            Guppy.IR.text(
+              "Scroll this box manually, then move the active row. The box should keep its position across rerenders and bring the highlighted row into view."
+            ),
             Guppy.IR.scroll(
               anchored_rows,
               id: "tracked_scroll_box",
@@ -1457,18 +1976,50 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("What to try"),
         Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
-        Guppy.IR.text("2. Interactions: click the div button, the text line, the pointer pad, and the keyboard pad, then start timer rerenders."),
+        Guppy.IR.text(
+          "2. Interactions: click the div button, the text line, the pointer pad, and the keyboard pad, then start timer rerenders."
+        ),
         Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
         Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
         Guppy.IR.text("5. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),
-        Guppy.IR.text("6. Scroll: select the Scroll demo and verify tracked scroll state, scroll anchoring, and nested scrollbar widths."),
-        Guppy.IR.text("7. Close the traffic-light button on any window to test window_closed handling."),
+        Guppy.IR.text(
+          "6. Scroll: select the Scroll demo and verify tracked scroll state, scroll anchoring, and nested scrollbar widths."
+        ),
+        Guppy.IR.text(
+          "7. Close the traffic-light button on any window to test window_closed handling."
+        ),
         Guppy.IR.div(
           [
-            alignment_chip("justify_start", "start", [:flex, :flex_row, :justify_start, :items_start, :p_2, {:bg, :black}]),
-            alignment_chip("justify_end", "end", [:flex, :flex_row, :justify_end, :items_end, :p_2, {:bg, :black}]),
-            alignment_chip("justify_between", "between", [:flex, :flex_row, :justify_between, :p_2, {:bg, :black}]),
-            alignment_chip("justify_around", "around", [:flex, :flex_row, :justify_around, :p_2, {:bg, :black}])
+            alignment_chip("justify_start", "start", [
+              :flex,
+              :flex_row,
+              :justify_start,
+              :items_start,
+              :p_2,
+              {:bg, :black}
+            ]),
+            alignment_chip("justify_end", "end", [
+              :flex,
+              :flex_row,
+              :justify_end,
+              :items_end,
+              :p_2,
+              {:bg, :black}
+            ]),
+            alignment_chip("justify_between", "between", [
+              :flex,
+              :flex_row,
+              :justify_between,
+              :p_2,
+              {:bg, :black}
+            ]),
+            alignment_chip("justify_around", "around", [
+              :flex,
+              :flex_row,
+              :justify_around,
+              :p_2,
+              {:bg, :black}
+            ])
           ],
           id: "alignment_examples",
           style: [:flex, :flex_col, :gap_2, :w_full]
@@ -1524,7 +2075,9 @@ defmodule Guppy.SuperDemo do
     Guppy.IR.div(
       [Guppy.IR.text(label, id: "#{id}_label")],
       id: id,
-      style: [:p_2, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:text_color, :white}] ++ style
+      style:
+        [:p_2, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:text_color, :white}] ++
+          style
     )
   end
 
@@ -1618,7 +2171,7 @@ defmodule Guppy.SuperDemo do
     {:ok, view_id} = Guppy.open_window(self())
 
     :ok =
-      Guppy.mount(
+      Guppy.render(
         view_id,
         Guppy.IR.div(
           [

@@ -43,19 +43,9 @@ defmodule Guppy do
     Server.open_window(Server, owner, timeout)
   end
 
-  @doc "Mounts minimal IR into an open native window."
-  def mount(view_id, ir, timeout \\ 5_000) do
-    Server.mount(Server, view_id, ir, timeout)
-  end
-
-  @doc "Replaces the current IR for an open native window."
-  def update(view_id, ir, timeout \\ 5_000) do
-    Server.update(Server, view_id, ir, timeout)
-  end
-
-  @doc "Convenience wrapper that updates a window with `Guppy.IR.text/2`."
-  def update_window_text(view_id, text, timeout \\ 5_000) when is_binary(text) do
-    update(view_id, Guppy.IR.text(text), timeout)
+  @doc "Renders a full IR tree into an open native window."
+  def render(view_id, ir, timeout \\ 5_000) do
+    Server.render(Server, view_id, ir, timeout)
   end
 
   @doc "Closes a previously opened native window."
