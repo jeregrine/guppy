@@ -788,7 +788,7 @@ defmodule Guppy.SuperDemo do
           tab_stop: true,
           tab_index: 1,
           focus_style: [{:bg_hex, "#204060"}, {:border_color, :yellow}],
-          in_focus_style: [{:shadow_lg}],
+          in_focus_style: [:shadow_lg],
           active_style: [{:bg_hex, "#10263c"}, {:opacity, 0.92}],
           actions: %{
             "primary" => "shortcut_primary",
