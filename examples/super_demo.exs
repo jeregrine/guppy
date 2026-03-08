@@ -641,6 +641,8 @@ defmodule Guppy.SuperDemo do
   end
 
   defp header_panel(state) do
+    accent = palette_color(state)
+
     panel(
       "header_panel",
       [
@@ -654,14 +656,20 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.text("Select a demo on the left. The detail panel on the right updates in place.")
       ],
-      style: [{:bg, :gray}]
+      style: [
+        {:bg, accent},
+        {:border_color, contrast_border_color(accent)},
+        {:text_color, contrast_text_color(accent)}
+      ]
     )
   end
 
   defp nav_panel(state) do
+    accent = palette_color(state)
+
     items =
       Enum.map(@demo_ids, fn demo_id ->
-        nav_button(demo_id, state.selected_demo == demo_id)
+        nav_button(demo_id, state.selected_demo == demo_id, accent)
       end)
 
     panel(
@@ -987,20 +995,52 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("Style tokens and palette changes"),
         Guppy.IR.text("palette = #{palette_color(state)}"),
+        Guppy.IR.text("Toggle palette now recolors the header, the selected nav button, the preview card, and the swatches below."),
+        Guppy.IR.div(
+          Enum.map(@palette, fn color ->
+            palette_swatch(color, color == palette_color(state))
+          end),
+          id: "palette_swatch_row",
+          style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
+        ),
         Guppy.IR.div(
           [
-            Guppy.IR.text("Preview area", id: "preview_title"),
-            Guppy.IR.text("Click the button below to rotate colors.", id: "preview_text")
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Preview area", id: "preview_title"),
+                Guppy.IR.text("Click the button below to rotate colors.", id: "preview_text")
+              ],
+              id: "preview_panel",
+              style: [
+                :flex_1,
+                :p_6,
+                :rounded_md,
+                :border_1,
+                {:border_color, contrast_border_color(palette_color(state))},
+                {:bg, palette_color(state)},
+                {:text_color, contrast_text_color(palette_color(state))}
+              ]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Palette impact", id: "palette_impact_title"),
+                Guppy.IR.text("Header chrome and the selected nav item also follow the current palette now.", id: "palette_impact_body"),
+                Guppy.IR.text("current accent = #{palette_color(state)}", id: "palette_impact_value")
+              ],
+              id: "palette_impact_panel",
+              style: [
+                :flex_1,
+                :p_6,
+                :rounded_md,
+                :border_1,
+                {:border_color, contrast_border_color(palette_color(state))},
+                {:bg, palette_color(state)},
+                {:text_color, contrast_text_color(palette_color(state))}
+              ]
+            )
           ],
-          id: "preview_panel",
-          style: [
-            :p_6,
-            :rounded_md,
-            :border_1,
-            {:border_color, contrast_border_color(palette_color(state))},
-            {:bg, palette_color(state)},
-            {:text_color, contrast_text_color(palette_color(state))}
-          ]
+          id: "palette_preview_row",
+          style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
         ),
         Guppy.IR.div(
           [
@@ -1087,7 +1127,7 @@ defmodule Guppy.SuperDemo do
           id: "custom_value_gallery",
           style: [:flex, :flex_row, :flex_wrap, :gap_2, :w_full]
         ),
-        action_button("Toggle palette", "toggle_palette_button", "toggle_palette", :white),
+        action_button("Toggle palette", "toggle_palette_button", "toggle_palette", palette_color(state)),
         action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
       ],
       style: [{:bg, :gray}]
@@ -1444,14 +1484,24 @@ defmodule Guppy.SuperDemo do
     Guppy.IR.div(children, id: id, style: merged_style)
   end
 
-  defp nav_button(demo_id, selected?) do
+  defp nav_button(demo_id, selected?, accent) do
     label = demo_label(demo_id)
-    bg = if selected?, do: :blue, else: :gray
+
+    style =
+      if selected? do
+        [
+          {:bg, accent},
+          {:border_color, contrast_border_color(accent)},
+          {:text_color, contrast_text_color(accent)}
+        ]
+      else
+        [{:bg, :gray}, {:text_color, :white}]
+      end
 
     Guppy.IR.button(
       label,
       id: "nav_#{demo_id}",
-      style: [{:bg, bg}, {:text_color, :white}],
+      style: style,
       focus_style: [{:border_color, :yellow}],
       active_style: [{:opacity, 0.82}],
       events: %{click: "select_demo:#{demo_id}"}
@@ -1490,6 +1540,29 @@ defmodule Guppy.SuperDemo do
       focus_style: [{:border_color, :yellow}],
       active_style: [{:opacity, 0.8}],
       events: %{click: callback}
+    )
+  end
+
+  defp palette_swatch(color, selected?) do
+    style =
+      [
+        :flex,
+        :items_center,
+        :justify_center,
+        :w_32,
+        :p_2,
+        :rounded_md,
+        {:bg, color},
+        {:text_color, contrast_text_color(color)},
+        {:border_color, if(selected?, do: :yellow, else: contrast_border_color(color))}
+      ] ++ if(selected?, do: [:border_2, :shadow_md], else: [:border_1])
+
+    label = if selected?, do: "#{color} ✓", else: Atom.to_string(color)
+
+    Guppy.IR.div(
+      [Guppy.IR.text(label, id: "palette_swatch_#{color}_label")],
+      id: "palette_swatch_#{color}",
+      style: style
     )
   end
 
