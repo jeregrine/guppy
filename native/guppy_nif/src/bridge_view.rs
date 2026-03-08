@@ -1,4 +1,4 @@
-use crate::ir::{ColorToken, DivStyle, IrNode, ShortcutBinding, StyleOp};
+use crate::ir::{ColorToken, DivStyle, IrNode, ScrollAxis, ShortcutBinding, StyleOp};
 use gpui::{
     AnyElement, Context, Empty, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
     KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
@@ -276,6 +276,26 @@ fn render_ir(
         IrNode::Text { id, content, click } => {
             render_text(view_id, path, id.as_deref(), content, click.as_deref())
         }
+        IrNode::Scroll {
+            id,
+            axis,
+            style,
+            children,
+        } => render_scroll(
+            view_id,
+            path,
+            id.as_deref(),
+            *axis,
+            style,
+            children,
+            scroll_handles,
+            focus_handles,
+            focus_registered,
+            focus_subscriptions,
+            parent_scroll_handle,
+            window,
+            cx,
+        ),
         IrNode::Div {
             id,
             style,
@@ -385,6 +405,63 @@ fn render_text(
         }
         _ => interactive_text.into_any_element(),
     }
+}
+
+fn render_scroll(
+    view_id: u64,
+    path: &str,
+    id: Option<&str>,
+    axis: ScrollAxis,
+    style: &DivStyle,
+    children: &[IrNode],
+    scroll_handles: &mut HashMap<String, ScrollHandle>,
+    focus_handles: &mut HashMap<String, FocusHandle>,
+    focus_registered: &mut HashSet<String>,
+    focus_subscriptions: &mut Vec<Subscription>,
+    parent_scroll_handle: Option<ScrollHandle>,
+    window: &mut Window,
+    cx: &mut Context<BridgeView>,
+) -> AnyElement {
+    let node_id = node_id(view_id, path, id);
+    let scroll_handle = scroll_handles
+        .entry(node_id.clone())
+        .or_insert_with(ScrollHandle::new)
+        .clone();
+
+    let child_elements = children
+        .iter()
+        .enumerate()
+        .map(|(index, child)| {
+            render_ir(
+                view_id,
+                &format!("{path}.{index}"),
+                child,
+                scroll_handles,
+                focus_handles,
+                focus_registered,
+                focus_subscriptions,
+                Some(scroll_handle.clone()).or(parent_scroll_handle.clone()),
+                window,
+                cx,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let element = apply_div_style(
+        div()
+            .id(SharedString::from(node_id))
+            .children(child_elements)
+            .track_scroll(&scroll_handle),
+        style,
+    );
+
+    let element = match axis {
+        ScrollAxis::X => element.overflow_x_scroll(),
+        ScrollAxis::Y => element.overflow_y_scroll(),
+        ScrollAxis::Both => element.overflow_scroll(),
+    };
+
+    element.into_any_element()
 }
 
 fn render_div(

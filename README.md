@@ -26,6 +26,7 @@ The current tracer-shot API is intentionally small:
 - `Guppy.close_window/1`
 - `Guppy.IR.text/2`
 - `Guppy.IR.div/2`
+- `Guppy.IR.scroll/2`
 
 ## Native build
 
@@ -75,7 +76,7 @@ What it does:
 - shows native bridge/runtime status inside the UI instead of printing it to the terminal
 - opens in a larger resizable window so the full demo fits more comfortably
 - shows a demo list on the left and the selected demo content on the right
-- uses a scrollable detail panel so individual demos can grow without pushing the whole UI off-screen
+- uses an explicit scroll node for the detail panel so individual demos can grow without pushing the whole UI off-screen
 - includes a dedicated Scroll demo so scroll behavior is easy to verify at the default/minimum window sizes
 - exercises div clicks and text clicks in one window
 - exercises pointer, keyboard, context-menu, and drag/drop interaction callbacks
@@ -246,6 +247,8 @@ Clickable `div` nodes now participate in keyboard activation automatically: when
 
 `div` nodes can also declare semantic `actions` plus `shortcuts`. Shortcut handlers dispatch `:action` events from the focused element or the nearest focused ancestor that declares the matching shortcut, and propagation stops at the first match.
 
+Guppy also has an explicit `scroll` node for scroll-container semantics when a plain `div` plus overflow tokens is not the right abstraction. `scroll` nodes accept `id`, `axis: :x | :y | :both` (default `:y`), `style`, and `children`, and always behave as tracked scroll containers across rerenders.
+
 `div` nodes also support:
 - `focusable: true` to opt into GPUI focus participation
 - `tab_stop: true | false` to control whether a focused node participates in tab navigation
@@ -314,8 +317,8 @@ Useful references while developing:
 The tracer shot is real, but still intentionally narrow:
 
 - native rendering only supports a minimal IR shape today
-- supported nodes are effectively `:div` and `:text`
-- only a minimal click event path exists today (`:div` and `:text` click)
+- supported nodes are currently `:div`, `:text`, and `:scroll`
+- event and style coverage is still intentionally partial even though the bridge now supports a broader interaction surface
 - style mapping exists, but only for a small explicit subset on `:div`
 - explicit node ids are supported, but there is not yet broader keyed/stateful UI behavior built on top of them
 - `update_window_text/2` is now just a convenience wrapper over `update(view_id, Guppy.IR.text(text))`

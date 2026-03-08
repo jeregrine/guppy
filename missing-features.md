@@ -44,7 +44,7 @@ The goal is to keep one checklist, check items off as they land, and continue fr
 - [x] `scrollbar_width`
 - [x] tracked scrolling / `track_scroll`
 - [x] scroll anchoring / `anchor_scroll`
-- [ ] explicit scroll-container semantics if style tokens are not enough
+- [x] explicit scroll-container semantics if style tokens are not enough
 
 ## 3. Spacing and positioning
 
@@ -117,7 +117,7 @@ The goal is to keep one checklist, check items off as they land, and continue fr
 - [ ] image node
 - [ ] icon node
 - [ ] spacer node
-- [ ] explicit scroll node
+- [x] explicit scroll node
 - [ ] button node
 - [ ] text input node
 - [ ] textarea/editor node

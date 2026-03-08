@@ -160,6 +160,13 @@ pub enum StyleOp {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScrollAxis {
+    X,
+    Y,
+    Both,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ColorToken {
     Red,
     Green,
@@ -176,6 +183,12 @@ pub enum IrNode {
         id: Option<String>,
         content: String,
         click: Option<String>,
+    },
+    Scroll {
+        id: Option<String>,
+        axis: ScrollAxis,
+        style: DivStyle,
+        children: Vec<IrNode>,
     },
     Div {
         id: Option<String>,
@@ -237,6 +250,22 @@ impl IrNode {
                 content: get_string_field(map, "content")?,
                 click: get_click_event(map)?,
             }),
+            "scroll" => {
+                let children = match get_field(map, "children") {
+                    Some(term) => get_list(term)?
+                        .iter()
+                        .map(Self::from_term)
+                        .collect::<Result<Vec<_>, _>>()?,
+                    None => Vec::new(),
+                };
+
+                Ok(Self::Scroll {
+                    id,
+                    axis: get_scroll_axis_field(map)?,
+                    style: get_div_style(map)?,
+                    children,
+                })
+            }
             "div" => {
                 let children = match get_field(map, "children") {
                     Some(term) => get_list(term)?
@@ -303,6 +332,16 @@ fn get_atom_field(map: &HashMap<Term, Term>, key: &str) -> Result<String, String
         Some(Term::Atom(atom)) => Ok(atom.name.clone()),
         Some(other) => Err(format!("expected atom field {key}, got {other}")),
         None => Err(format!("missing required field: {key}")),
+    }
+}
+
+fn get_scroll_axis_field(map: &HashMap<Term, Term>) -> Result<ScrollAxis, String> {
+    match get_field(map, "axis") {
+        Some(Term::Atom(atom)) if atom.name == "x" => Ok(ScrollAxis::X),
+        Some(Term::Atom(atom)) if atom.name == "y" => Ok(ScrollAxis::Y),
+        Some(Term::Atom(atom)) if atom.name == "both" => Ok(ScrollAxis::Both),
+        Some(other) => Err(format!("expected scroll axis atom, got {other}")),
+        None => Ok(ScrollAxis::Y),
     }
 }
 

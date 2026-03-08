@@ -653,10 +653,10 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("selected_demo = #{state.selected_demo}", id: "selected_demo_label"),
         Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}"),
-        Guppy.IR.div(
+        Guppy.IR.scroll(
           [detail_content(state)],
           id: "detail_scroll",
-          style: [:flex_1, :w_full, :min_h_0, :max_h_full, :overflow_y_scroll]
+          style: [:flex_1, :w_full, :min_h_0, :max_h_full]
         )
       ],
       style: [:flex, :flex_col, :flex_1, :w_full, :min_h_0, :max_h_full, :overflow_hidden, :gap_2, :p_4]
@@ -1278,7 +1278,7 @@ defmodule Guppy.SuperDemo do
       "scroll_demo",
       [
         Guppy.IR.text("Scroll demo"),
-        Guppy.IR.text("This page exercises tracked scroll state, scroll anchoring, and explicit scrollbar width values."),
+        Guppy.IR.text("This page exercises the explicit scroll node, tracked scroll state, scroll anchoring, and explicit scrollbar width values."),
         Guppy.IR.text("Use it to verify the right-hand detail panel scrolls while the left nav stays anchored."),
         Guppy.IR.text("The narrow/wide boxes intentionally overflow so scrollbar width differences should be easy to see while scrolling."),
         Guppy.IR.div(
@@ -1294,17 +1294,15 @@ defmodule Guppy.SuperDemo do
           [
             Guppy.IR.text("tracked + anchored scroll box", id: "tracked_scroll_title"),
             Guppy.IR.text("Scroll this box manually, then move the active row. The box should keep its position across rerenders and bring the highlighted row into view."),
-            Guppy.IR.div(
+            Guppy.IR.scroll(
               anchored_rows,
               id: "tracked_scroll_box",
-              track_scroll: true,
               style: [
                 :flex,
                 :flex_col,
                 :gap_2,
                 :w_full,
                 {:h_px, 280},
-                :overflow_y_scroll,
                 {:scrollbar_width_px, 10},
                 :p_2,
                 :rounded_md,
@@ -1322,17 +1320,15 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.div(
               [
                 Guppy.IR.text("narrow scrollbar width", id: "scroll_narrow_title"),
-                Guppy.IR.div(
+                Guppy.IR.scroll(
                   narrow_lines,
                   id: "scroll_narrow_box",
-                  track_scroll: true,
                   style: [
                     :flex,
                     :flex_col,
                     :gap_2,
                     :w_full,
                     {:h_px, 180},
-                    :overflow_y_scroll,
                     {:scrollbar_width_px, 8},
                     :p_2,
                     :rounded_md,
@@ -1348,17 +1344,15 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.div(
               [
                 Guppy.IR.text("wide scrollbar width", id: "scroll_wide_title"),
-                Guppy.IR.div(
+                Guppy.IR.scroll(
                   wide_lines,
                   id: "scroll_wide_box",
-                  track_scroll: true,
                   style: [
                     :flex,
                     :flex_col,
                     :gap_2,
                     :w_full,
                     {:h_px, 180},
-                    :overflow_y_scroll,
                     {:scrollbar_width_rem, 1.0},
                     :p_2,
                     :rounded_md,

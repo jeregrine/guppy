@@ -16,6 +16,17 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))
 
+    scroll_ir =
+      Guppy.IR.scroll(
+        [Guppy.IR.text("inside scroll")],
+        id: "scroll_root",
+        axis: :both,
+        style: [{:h_px, 180}, {:scrollbar_width_px, 12}, :p_2, :rounded_md]
+      )
+
+    assert :ok = Guppy.IR.validate(scroll_ir)
+    assert scroll_ir.axis == :both
+
     styled_ir =
       Guppy.IR.div(
         [Guppy.IR.text("hello")],
@@ -364,6 +375,9 @@ defmodule GuppyTest do
     assert {:error, {:invalid_style_op, :bogus}} =
              Guppy.IR.validate(Guppy.IR.div([], disabled_style: [:bogus]))
 
+    assert {:error, {:invalid_scroll_axis, :diagonal}} =
+             Guppy.IR.validate(Guppy.IR.scroll([], axis: :diagonal))
+
     assert {:error, {:invalid_actions, [:nope]}} =
              Guppy.IR.validate(Guppy.IR.div([], actions: [:nope]))
 
@@ -442,12 +456,16 @@ defmodule GuppyTest do
         assert :ok =
                  Guppy.update(
                    view_id,
-                   Guppy.IR.div([
-                     Guppy.IR.text("Hello again from IR"),
-                     Guppy.IR.div([
-                       Guppy.IR.text("Nested div rerender")
-                     ])
-                   ])
+                   Guppy.IR.scroll(
+                     [
+                       Guppy.IR.text("Hello again from IR"),
+                       Guppy.IR.div([
+                         Guppy.IR.text("Nested div rerender")
+                       ])
+                     ],
+                     id: "scroll_root",
+                     style: [{:h_px, 180}, :p_2, :rounded_md, :border_1, {:border_color, :white}]
+                   )
                  )
 
         assert :ok =

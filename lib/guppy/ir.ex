@@ -220,7 +220,17 @@ defmodule Guppy.IR do
           optional(:events) => div_events()
         }
 
-  @type ir_node :: text_node() | div_node()
+  @type scroll_axis :: :x | :y | :both
+
+  @type scroll_node :: %{
+          required(:kind) => :scroll,
+          required(:children) => [ir_node()],
+          optional(:id) => node_id(),
+          optional(:axis) => scroll_axis(),
+          optional(:style) => style()
+        }
+
+  @type ir_node :: text_node() | div_node() | scroll_node()
 
   @style_flag_tokens [
     :flex,
@@ -411,6 +421,18 @@ defmodule Guppy.IR do
     |> maybe_put(:events, events)
   end
 
+  @spec scroll([ir_node()], keyword()) :: scroll_node()
+  def scroll(children, opts \\ []) when is_list(children) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    axis = Keyword.get(opts, :axis)
+    style = Keyword.get(opts, :style)
+
+    %{kind: :scroll, children: children}
+    |> maybe_put(:id, id)
+    |> maybe_put(:axis, axis)
+    |> maybe_put(:style, style)
+  end
+
   @spec validate(ir_node()) :: :ok | {:error, term()}
   def validate(%{kind: :text, content: content} = node) when is_binary(content) do
     with :ok <- validate_id(Map.get(node, :id)),
@@ -459,6 +481,15 @@ defmodule Guppy.IR do
     end
   end
 
+  def validate(%{kind: :scroll, children: children} = node) when is_list(children) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_scroll_axis(Map.get(node, :axis)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_children(children) do
+      :ok
+    end
+  end
+
   def validate(other), do: {:error, {:invalid_ir, other}}
 
   defp validate_children(children) do
@@ -488,6 +519,10 @@ defmodule Guppy.IR do
     do: :ok
 
   defp validate_optional_non_neg_integer(value, field), do: {:error, {field, value}}
+
+  defp validate_scroll_axis(nil), do: :ok
+  defp validate_scroll_axis(axis) when axis in [:x, :y, :both], do: :ok
+  defp validate_scroll_axis(axis), do: {:error, {:invalid_scroll_axis, axis}}
 
   defp validate_style(nil), do: :ok
 
