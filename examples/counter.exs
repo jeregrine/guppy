@@ -1,14 +1,18 @@
 defmodule Examples.TimerCounterWindow do
   use Guppy.Window
 
+  import Guppy.Window, only: [assign: 3, update: 3]
+
   @impl Guppy.Window
-  def mount(initial_count) do
+  def mount(initial_count, window) do
     Process.send_after(self(), :tick, 1_000)
-    {:ok, initial_count}
+    {:ok, assign(window, :count, initial_count)}
   end
 
   @impl Guppy.Window
-  def render(count) do
+  def render(window) do
+    count = window.assigns.count
+
     Guppy.IR.div(
       [
         Guppy.IR.text("Counter example", id: "title"),
@@ -27,23 +31,17 @@ defmodule Examples.TimerCounterWindow do
   end
 
   @impl Guppy.Window
-  def handle_message(:tick, count) when count < 5 do
-    next_count = count + 1
-    IO.puts("updated count to #{next_count}")
+  def handle_info(:tick, window) when window.assigns.count < 5 do
+    next_window = update(window, :count, &(&1 + 1))
+    IO.puts("updated count to #{next_window.assigns.count}")
     Process.send_after(self(), :tick, 1_000)
-    {:noreply, next_count}
+    {:noreply, next_window}
   end
 
   @impl Guppy.Window
-  def handle_message(:tick, count) do
+  def handle_info(:tick, window) do
     IO.puts("stopping window process after 5 updates")
-    {:stop, :normal, count}
-  end
-
-  @impl Guppy.Window
-  def handle_event(%{type: :window_closed}, count) do
-    IO.puts("window was closed manually")
-    {:noreply, count, :skip_render}
+    {:stop, :normal, window}
   end
 end
 

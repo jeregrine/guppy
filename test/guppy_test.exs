@@ -1,13 +1,17 @@
 defmodule Guppy.TestCounterWindow do
   use Guppy.Window
 
+  import Guppy.Window, only: [assign: 3, update: 3]
+
   @impl Guppy.Window
-  def mount(initial_count) do
-    {:ok, initial_count}
+  def mount(initial_count, window) do
+    {:ok, assign(window, :count, initial_count)}
   end
 
   @impl Guppy.Window
-  def render(count) do
+  def render(window) do
+    count = window.assigns.count
+
     Guppy.IR.div(
       [
         Guppy.IR.text("count = #{count}", id: "count_label"),
@@ -19,13 +23,13 @@ defmodule Guppy.TestCounterWindow do
   end
 
   @impl Guppy.Window
-  def handle_event(%{type: :click, callback: "increment"}, count) do
-    {:noreply, count + 1}
+  def handle_event("increment", _event_data, window) do
+    {:noreply, update(window, :count, &(&1 + 1))}
   end
 
   @impl Guppy.Window
-  def handle_message({:set_count, count}, _state) do
-    {:noreply, count}
+  def handle_info({:set_count, count}, window) do
+    {:noreply, assign(window, :count, count)}
   end
 end
 
@@ -1082,7 +1086,7 @@ defmodule GuppyTest do
         on_exit(fn -> if Process.alive?(pid), do: GenServer.stop(pid, :normal) end)
 
         view_id = Guppy.Window.view_id(pid)
-        assert Guppy.Window.state(pid) == 0
+        assert Guppy.Window.state(pid).assigns.count == 0
         assert Map.get(Guppy.info().views, view_id) == pid
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
 
@@ -1093,10 +1097,10 @@ defmodule GuppyTest do
           %{id: "increment_button", callback: "increment"}
         })
 
-        wait_until(fn -> Guppy.Window.state(pid) == 1 end)
+        wait_until(fn -> Guppy.Window.state(pid).assigns.count == 1 end)
 
         send(pid, {:set_count, 5})
-        wait_until(fn -> Guppy.Window.state(pid) == 5 end)
+        wait_until(fn -> Guppy.Window.state(pid).assigns.count == 5 end)
 
         send(Guppy.server(), {:guppy_native_event, view_id, :window_closed, :undefined})
         wait_until(fn -> not Process.alive?(pid) end)

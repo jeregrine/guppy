@@ -124,6 +124,21 @@ This is the best current overview of the bridge. It exercises:
 - full-tree rerendering from Elixir
 - multiple windows and owner cleanup
 
+### Kanban todo board (`Guppy.Window`)
+
+```bash
+cd guppy
+mix guppy.native.build
+mix run examples/kanban_todo.exs
+```
+
+This demonstrates a more app-like `Guppy.Window` flow:
+
+- a window struct with assigns
+- event names routed into `handle_event/3`
+- full-tree rerendering from assign updates
+- a multi-column board rendered from Elixir-owned state
+
 ### Small bring-up example (`Guppy.Window`)
 
 ```bash
@@ -171,29 +186,34 @@ Guppy now also has a minimal per-window process abstraction via `Guppy.Window`.
 
 A window module can:
 
-- own its own Elixir state
-- open its native window with initial IR during `mount/1`
-- receive native events in `handle_event/2`
-- receive normal process messages in `handle_message/2`
-- rerender automatically after returning `{:noreply, new_state}`
+- own its own window struct with assigns
+- open its native window with initial IR during `mount/2`
+- receive native events in `handle_event/3`
+- receive normal process messages in `handle_info/2`
+- rerender automatically after returning `{:noreply, window}`
 
 The intended shape is:
 
 ```elixir
 defmodule CounterWindow do
   use Guppy.Window
+  import Guppy.Window, only: [assign: 3, update: 3]
 
-  def mount(_arg), do: {:ok, 0}
+  def mount(_arg, window) do
+    {:ok, assign(window, :count, 0)}
+  end
 
-  def render(count) do
+  def render(window) do
+    count = window.assigns.count
+
     Guppy.IR.div([
       Guppy.IR.text("count = #{count}"),
       Guppy.IR.text("increment", events: %{click: "increment"})
     ])
   end
 
-  def handle_event(%{type: :click, callback: "increment"}, count) do
-    {:noreply, count + 1}
+  def handle_event("increment", _event_data, window) do
+    {:noreply, update(window, :count, &(&1 + 1))}
   end
 end
 ```
@@ -204,7 +224,13 @@ Start it like any other process:
 {:ok, pid} = CounterWindow.start_link(:ok)
 ```
 
-This is still intentionally minimal, but it is the first step toward a real Elixir-side window runtime model instead of ad hoc event loops in scripts.
+This is still intentionally minimal, but it is now explicitly shaped like a LiveView-style loop:
+
+- `mount/2`
+- `handle_event/3`
+- `handle_info/2`
+- `render/1`
+- assign/update helpers on the window struct
 
 ## Identity and retained state
 

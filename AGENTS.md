@@ -46,7 +46,7 @@ What matters more than breadth right now:
 - simple full-tree replacement semantics
 - correct owner/event routing
 - clean native runtime structure
-- proving a minimal per-window Elixir process model
+- proving a minimal LiveView-style per-window Elixir process model
 
 ## Current architecture
 
@@ -186,11 +186,12 @@ When extending the bridge:
 
 Good next steps:
 
-1. keep improving native renderer decomposition when files grow large
-2. add high-value tests around retained state and event behavior
-3. expand widget/style/event support carefully, not broadly
-4. keep tracer-shot naming and structure moving toward runtime-oriented naming
-5. preserve the simplicity of the full-tree replacement model
+1. evolve `Guppy.Window` toward a clearer assign-based window/socket abstraction
+2. keep improving native renderer decomposition when files grow large
+3. add high-value tests around retained state and event behavior
+4. expand widget/style/event support carefully, not broadly
+5. keep tracer-shot naming and structure moving toward runtime-oriented naming
+6. preserve the simplicity of the full-tree replacement model
 
 Things to avoid unless explicitly requested:
 

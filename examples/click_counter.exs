@@ -1,13 +1,17 @@
 defmodule Examples.ClickCounterWindow do
   use Guppy.Window
 
+  import Guppy.Window, only: [assign: 3, update: 3]
+
   @impl Guppy.Window
-  def mount(initial_count) do
-    {:ok, initial_count}
+  def mount(initial_count, window) do
+    {:ok, assign(window, :count, initial_count)}
   end
 
   @impl Guppy.Window
-  def render(count) do
+  def render(window) do
+    count = window.assigns.count
+
     Guppy.IR.div(
       [
         Guppy.IR.text("Click counter", id: "title"),
@@ -31,16 +35,10 @@ defmodule Examples.ClickCounterWindow do
   end
 
   @impl Guppy.Window
-  def handle_event(%{type: :click, callback: "increment"}, count) do
-    next_count = count + 1
-    IO.puts("incremented to #{next_count}")
-    {:noreply, next_count}
-  end
-
-  @impl Guppy.Window
-  def handle_event(%{type: :window_closed}, count) do
-    IO.puts("window was closed manually")
-    {:noreply, count, :skip_render}
+  def handle_event("increment", _event_data, window) do
+    next_window = update(window, :count, &(&1 + 1))
+    IO.puts("incremented to #{next_window.assigns.count}")
+    {:noreply, next_window}
   end
 end
 

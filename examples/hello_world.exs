@@ -1,54 +1,50 @@
 defmodule Examples.HelloWorldWindow do
   use Guppy.Window
 
+  import Guppy.Window, only: [assign: 3]
+
   @impl Guppy.Window
-  def mount(:ok) do
+  def mount(:ok, window) do
     Process.send_after(self(), :update_text, 1_000)
     Process.send_after(self(), :shutdown, 5_000)
-    {:ok, :initial}
+    {:ok, assign(window, :phase, :initial)}
   end
 
   @impl Guppy.Window
-  def render(:initial) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.text("Hello from examples/hello_world.exs", id: "title"),
-        Guppy.IR.text("Rendered through BridgeView IR")
-      ],
-      id: "hello_root",
-      style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}, :rounded_md]
-    )
+  def render(window) do
+    case window.assigns.phase do
+      :initial ->
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("Hello from examples/hello_world.exs", id: "title"),
+            Guppy.IR.text("Rendered through BridgeView IR")
+          ],
+          id: "hello_root",
+          style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}, :rounded_md]
+        )
+
+      :updated ->
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("Hello from examples/hello_world.exs (updated)", id: "title"),
+            Guppy.IR.text("Full-tree replacement rerender worked")
+          ],
+          id: "hello_root",
+          style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :blue}, :rounded_md]
+        )
+    end
   end
 
   @impl Guppy.Window
-  def render(:updated) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.text("Hello from examples/hello_world.exs (updated)", id: "title"),
-        Guppy.IR.text("Full-tree replacement rerender worked")
-      ],
-      id: "hello_root",
-      style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :blue}, :rounded_md]
-    )
-  end
-
-  @impl Guppy.Window
-  def handle_message(:update_text, _state) do
+  def handle_info(:update_text, window) do
     IO.puts("updated window via IR")
-    {:noreply, :updated}
+    {:noreply, assign(window, :phase, :updated)}
   end
 
   @impl Guppy.Window
-  def handle_message(:shutdown, state) do
+  def handle_info(:shutdown, window) do
     IO.puts("stopping window process")
-    {:stop, :normal, state}
-  end
-
-  @impl Guppy.Window
-  def handle_event(%{type: :window_closed}, state) do
-    IO.puts("window was closed manually")
-    IO.inspect(Guppy.native_view_count(), label: "native_view_count")
-    {:noreply, state, :skip_render}
+    {:stop, :normal, window}
   end
 end
 
