@@ -98,10 +98,7 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
                 cx.new(|_| BridgeView {
                     view_id,
                     ir,
-                    scroll_handles: Default::default(),
-                    focus_handles: Default::default(),
-                    focus_subscriptions: Default::default(),
-                    text_inputs: Default::default(),
+                    retained: Default::default(),
                 })
             },
         );
