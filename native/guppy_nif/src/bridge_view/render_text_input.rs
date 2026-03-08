@@ -70,3 +70,69 @@ pub(crate) fn render(
     )
     .into_any_element()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{TextInputSpec, upsert_text_input_entity};
+    use crate::{bridge_view::BridgeView, ir::IrNode};
+
+    #[gpui::test]
+    fn upsert_text_input_reuses_existing_entity_and_syncs_state(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 11,
+            ir: IrNode::text("hello"),
+            retained: Default::default(),
+        });
+
+        view.update_in(cx, |view, _window, view_cx| {
+            let mut pass = super::RenderPass::new(view.view_id, &mut view.retained);
+            let style = Vec::new();
+
+            let first = upsert_text_input_entity(
+                &mut pass,
+                "name_input",
+                &TextInputSpec {
+                    path: "root.0",
+                    id: Some("name_input"),
+                    value: "Jason",
+                    placeholder: "Name",
+                    style: &style,
+                    disabled: false,
+                    tab_index: Some(1),
+                    change: Some("name_changed"),
+                },
+                view_cx,
+            );
+
+            let second = upsert_text_input_entity(
+                &mut pass,
+                "name_input",
+                &TextInputSpec {
+                    path: "root.0",
+                    id: Some("name_input"),
+                    value: "Jason Stiebs",
+                    placeholder: "Full name",
+                    style: &style,
+                    disabled: true,
+                    tab_index: Some(3),
+                    change: Some("person_changed"),
+                },
+                view_cx,
+            );
+
+            let state = pass.finish();
+
+            assert_eq!(first, second);
+            assert_eq!(view.retained.text_inputs.len(), 1);
+            assert!(state.live_text_input_ids.contains("name_input"));
+
+            second.read_with(view_cx, |input, _| {
+                assert_eq!(input.value.as_ref(), "Jason Stiebs");
+                assert_eq!(input.placeholder.as_ref(), "Full name");
+                assert_eq!(input.change.as_deref(), Some("person_changed"));
+                assert!(input.disabled);
+                assert_eq!(input.tab_index, Some(3));
+            });
+        });
+    }
+}

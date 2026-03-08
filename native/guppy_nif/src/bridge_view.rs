@@ -67,7 +67,7 @@ impl BridgeView {
 mod tests {
     use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
     use crate::ir::IrNode;
-    use gpui::ScrollHandle;
+    use gpui::{Render, ScrollHandle};
 
     #[test]
     fn prune_retained_state_drops_dead_scroll_handles() {
@@ -93,5 +93,31 @@ mod tests {
 
         assert!(view.retained.scroll_handles.contains_key("keep"));
         assert!(!view.retained.scroll_handles.contains_key("drop"));
+    }
+
+    #[gpui::test]
+    fn render_prunes_dead_text_input_entities(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 9,
+            ir: IrNode::TextInput {
+                id: Some("name_input".into()),
+                value: "Jason".into(),
+                placeholder: "Name".into(),
+                style: Vec::new(),
+                disabled: false,
+                tab_index: None,
+                change: Some("name_changed".into()),
+            },
+            retained: BridgeRetainedState::default(),
+        });
+
+        view.update_in(cx, |view, window, view_cx| {
+            let _ = view.render(window, view_cx);
+            assert_eq!(view.retained.text_inputs.len(), 1);
+
+            view.ir = IrNode::text("no input anymore");
+            let _ = view.render(window, view_cx);
+            assert!(view.retained.text_inputs.is_empty());
+        });
     }
 }

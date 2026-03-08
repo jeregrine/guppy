@@ -208,3 +208,45 @@ impl<'a> RenderPass<'a> {
         self.retained.text_inputs.insert(node_id.to_owned(), entity);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::RenderPass;
+    use crate::{bridge_view::BridgeView, ir::IrNode};
+
+    #[gpui::test]
+    fn register_focus_callbacks_dedupes_per_node(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 7,
+            ir: IrNode::text("hello"),
+            retained: Default::default(),
+        });
+
+        view.update_in(cx, |view, window, view_cx| {
+            let focus_handle = view_cx.focus_handle();
+            let mut pass = RenderPass::new(view.view_id, &mut view.retained);
+
+            pass.register_focus_callbacks(
+                "field",
+                &focus_handle,
+                Some("focused"),
+                Some("blurred"),
+                window,
+                view_cx,
+            );
+            pass.register_focus_callbacks(
+                "field",
+                &focus_handle,
+                Some("focused"),
+                Some("blurred"),
+                window,
+                view_cx,
+            );
+
+            let state = pass.finish();
+
+            assert_eq!(view.retained.focus_subscriptions.len(), 2);
+            assert!(state.registered_focus_callbacks.contains("field"));
+        });
+    }
+}
