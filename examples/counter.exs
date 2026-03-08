@@ -1,3 +1,52 @@
+defmodule Examples.TimerCounterWindow do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(initial_count) do
+    Process.send_after(self(), :tick, 1_000)
+    {:ok, initial_count}
+  end
+
+  @impl Guppy.Window
+  def render(count) do
+    Guppy.IR.div(
+      [
+        Guppy.IR.text("Counter example", id: "title"),
+        Guppy.IR.text("count = #{count}", id: "count_label"),
+        Guppy.IR.div(
+          [
+            Guppy.IR.text("This window is rerendered from Elixir state."),
+            Guppy.IR.text("Each tick sends a full replacement IR tree.")
+          ],
+          style: [:p_2, {:bg, :gray}, :rounded_md]
+        )
+      ],
+      id: "counter_root",
+      style: [:flex, :flex_col, :gap_2, :p_4]
+    )
+  end
+
+  @impl Guppy.Window
+  def handle_message(:tick, count) when count < 5 do
+    next_count = count + 1
+    IO.puts("updated count to #{next_count}")
+    Process.send_after(self(), :tick, 1_000)
+    {:noreply, next_count}
+  end
+
+  @impl Guppy.Window
+  def handle_message(:tick, count) do
+    IO.puts("stopping window process after 5 updates")
+    {:stop, :normal, count}
+  end
+
+  @impl Guppy.Window
+  def handle_event(%{type: :window_closed}, count) do
+    IO.puts("window was closed manually")
+    {:noreply, count, :skip_render}
+  end
+end
+
 {:ok, _} = Application.ensure_all_started(:guppy)
 
 IO.puts("Guppy counter example")
@@ -6,61 +55,12 @@ IO.inspect(Guppy.native_build_info(), label: "native_build_info")
 IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
 IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
 
-render_counter = fn count ->
-  Guppy.IR.div(
-    [
-      Guppy.IR.text("Counter example", id: "title"),
-      Guppy.IR.text("count = #{count}", id: "count_label"),
-      Guppy.IR.div(
-        [
-          Guppy.IR.text("This window is rerendered from Elixir state."),
-          Guppy.IR.text("Each tick sends a full replacement IR tree.")
-        ],
-        style: [:p_2, {:bg, :gray}, :rounded_md]
-      )
-    ],
-    id: "counter_root",
-    style: [:flex, :flex_col, :gap_2, :p_4]
-  )
+{:ok, pid} = Examples.TimerCounterWindow.start_link(0)
+IO.inspect(Guppy.Window.view_id(pid), label: "opened_view_id")
+
+Process.monitor(pid)
+
+receive do
+  {:DOWN, _ref, :process, ^pid, _reason} ->
+    :ok
 end
-
-{:ok, view_id} = Guppy.open_window(render_counter.(0))
-IO.inspect(view_id, label: "opened_view_id")
-
-Process.send_after(self(), :tick, 1_000)
-
-loop = fn loop, count ->
-  receive do
-    :tick when count < 5 ->
-      next_count = count + 1
-
-      case Guppy.render(view_id, render_counter.(next_count)) do
-        :ok ->
-          IO.puts("updated count to #{next_count}")
-          Process.send_after(self(), :tick, 1_000)
-          loop.(loop, next_count)
-
-        {:error, :unknown_view_id} ->
-          IO.puts("window already closed before next tick")
-
-        other ->
-          IO.inspect(other, label: "unexpected_update_result")
-      end
-
-    :tick ->
-      case Guppy.close_window(view_id) do
-        :ok -> IO.puts("closed window after 5 updates")
-        {:error, :unknown_view_id} -> IO.puts("window already closed")
-        other -> IO.inspect(other, label: "unexpected_close_result")
-      end
-
-    {:guppy_event, ^view_id, %{type: :window_closed}} ->
-      IO.puts("window was closed manually")
-
-    other ->
-      IO.inspect(other, label: "unexpected_message")
-      loop.(loop, count)
-  end
-end
-
-loop.(loop, 0)

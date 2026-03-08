@@ -124,7 +124,7 @@ This is the best current overview of the bridge. It exercises:
 - full-tree rerendering from Elixir
 - multiple windows and owner cleanup
 
-### Small bring-up example
+### Small bring-up example (`Guppy.Window`)
 
 ```bash
 cd guppy
@@ -132,11 +132,12 @@ mix guppy.native.build
 mix run examples/hello_world.exs
 ```
 
-This verifies the basic happy path:
+This verifies the basic happy path through `Guppy.Window`:
 
+- start a window process
 - open a window with initial IR
 - rerender with a replacement IR tree
-- close the window
+- stop the process and let ownership cleanup close the window
 
 ## Public API surface worth knowing
 
@@ -146,6 +147,7 @@ Window lifecycle:
 - `Guppy.open_window/2`
 - `Guppy.render/2`
 - `Guppy.close_window/1`
+- `use Guppy.Window`
 
 Native status / diagnostics:
 
@@ -162,6 +164,47 @@ IR helpers:
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.button/2`
 - `Guppy.IR.text_input/2`
+
+## Window processes
+
+Guppy now also has a minimal per-window process abstraction via `Guppy.Window`.
+
+A window module can:
+
+- own its own Elixir state
+- open its native window with initial IR during `mount/1`
+- receive native events in `handle_event/2`
+- receive normal process messages in `handle_message/2`
+- rerender automatically after returning `{:noreply, new_state}`
+
+The intended shape is:
+
+```elixir
+defmodule CounterWindow do
+  use Guppy.Window
+
+  def mount(_arg), do: {:ok, 0}
+
+  def render(count) do
+    Guppy.IR.div([
+      Guppy.IR.text("count = #{count}"),
+      Guppy.IR.text("increment", events: %{click: "increment"})
+    ])
+  end
+
+  def handle_event(%{type: :click, callback: "increment"}, count) do
+    {:noreply, count + 1}
+  end
+end
+```
+
+Start it like any other process:
+
+```elixir
+{:ok, pid} = CounterWindow.start_link(:ok)
+```
+
+This is still intentionally minimal, but it is the first step toward a real Elixir-side window runtime model instead of ad hoc event loops in scripts.
 
 ## Identity and retained state
 

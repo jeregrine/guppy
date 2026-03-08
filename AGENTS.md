@@ -46,6 +46,7 @@ What matters more than breadth right now:
 - simple full-tree replacement semantics
 - correct owner/event routing
 - clean native runtime structure
+- proving a minimal per-window Elixir process model
 
 ## Current architecture
 
@@ -78,6 +79,7 @@ Useful APIs today:
 - `Guppy.render/2`
 - `Guppy.close_window/1`
 - `Guppy.native_view_count/0`
+- `use Guppy.Window`
 - `Guppy.native_build_info/0`
 - `Guppy.native_runtime_status/0`
 - `Guppy.native_gui_status/0`

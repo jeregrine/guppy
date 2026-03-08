@@ -1,3 +1,34 @@
+defmodule Guppy.TestCounterWindow do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(initial_count) do
+    {:ok, initial_count}
+  end
+
+  @impl Guppy.Window
+  def render(count) do
+    Guppy.IR.div(
+      [
+        Guppy.IR.text("count = #{count}", id: "count_label"),
+        Guppy.IR.text("increment", id: "increment_text", events: %{click: "increment"})
+      ],
+      id: "increment_button",
+      events: %{click: "increment"}
+    )
+  end
+
+  @impl Guppy.Window
+  def handle_event(%{type: :click, callback: "increment"}, count) do
+    {:noreply, count + 1}
+  end
+
+  @impl Guppy.Window
+  def handle_message({:set_count, count}, _state) do
+    {:noreply, count}
+  end
+end
+
 defmodule GuppyTest do
   use ExUnit.Case
 
@@ -1040,6 +1071,39 @@ defmodule GuppyTest do
 
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} = Guppy.open_window(Guppy.IR.text("hello"))
+    end
+  end
+
+  test "Guppy.Window owns a window process and rerenders from events/messages" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        starting_count = native_view_count!()
+        {:ok, pid} = Guppy.TestCounterWindow.start_link(0)
+        on_exit(fn -> if Process.alive?(pid), do: GenServer.stop(pid, :normal) end)
+
+        view_id = Guppy.Window.view_id(pid)
+        assert Guppy.Window.state(pid) == 0
+        assert Map.get(Guppy.info().views, view_id) == pid
+        assert Guppy.native_view_count() == {:ok, starting_count + 1}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :click,
+          %{id: "increment_button", callback: "increment"}
+        })
+
+        wait_until(fn -> Guppy.Window.state(pid) == 1 end)
+
+        send(pid, {:set_count, 5})
+        wait_until(fn -> Guppy.Window.state(pid) == 5 end)
+
+        send(Guppy.server(), {:guppy_native_event, view_id, :window_closed, :undefined})
+        wait_until(fn -> not Process.alive?(pid) end)
+        refute Map.has_key?(Guppy.info().views, view_id)
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.TestCounterWindow.start_link(0)
     end
   end
 
