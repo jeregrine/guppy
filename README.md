@@ -197,10 +197,16 @@ The intended shape is:
 ```elixir
 defmodule CounterWindow do
   use Guppy.Window
-  import Guppy.Window, only: [assign: 3, update: 3]
+  import Guppy.Window, only: [assign: 3, update: 3, put_window_opts: 2]
 
   def mount(_arg, window) do
-    {:ok, assign(window, :count, 0)}
+    {:ok,
+     window
+     |> put_window_opts(
+       window_bounds: [width: 760, height: 560],
+       titlebar: [title: "Counter"]
+     )
+     |> assign(:count, 0)}
   end
 
   def render(window) do
@@ -231,6 +237,58 @@ This is still intentionally minimal, but it is now explicitly shaped like a Live
 - `handle_info/2`
 - `render/1`
 - assign/update helpers on the window struct
+
+## Window options
+
+Window processes can configure native GPUI window behavior during `mount/2` with `Guppy.Window.put_window_opts/2`.
+
+Example:
+
+```elixir
+def mount(_arg, window) do
+  {:ok,
+   window
+   |> Guppy.Window.put_window_opts(
+     window_bounds: [width: 960, height: 760],
+     window_min_size: [width: 760, height: 560],
+     titlebar: [title: "Style gallery"],
+     focus: true,
+     show: true,
+     is_resizable: true,
+     is_movable: true,
+     is_minimizable: true,
+     kind: :normal,
+     window_background: :opaque,
+     window_decorations: :server
+   )
+   |> assign(:selected, :blue)}
+end
+```
+
+Current supported window options map directly onto the `gpui = 0.2.2` surface Guppy is using:
+
+- `window_bounds: [width: integer, height: integer, x: integer, y: integer, state: :windowed | :maximized | :fullscreen]`
+- `titlebar: false | [title: String.t(), appears_transparent: boolean, traffic_light_position: [x: non_neg_integer, y: non_neg_integer]]`
+- `focus: boolean`
+- `show: boolean`
+- `kind: :normal | :popup | :floating`
+- `is_movable: boolean`
+- `is_resizable: boolean`
+- `is_minimizable: boolean`
+- `display_id: non_neg_integer`
+- `window_background: :opaque | :transparent | :blurred`
+- `app_id: String.t()`
+- `window_min_size: [width: integer, height: integer]`
+- `window_decorations: :server | :client`
+- `tabbing_identifier: String.t()`
+
+Notes:
+
+- omitted options use GPUI defaults
+- Guppy validates window options on the Elixir side before going native
+- Guppy currently exposes the options available in `gpui = 0.2.2`, not newer options from the local `../zed` checkout
+
+You can also pass the same keyword-list window options directly to `Guppy.open_window/3` or `Guppy.open_window/4`.
 
 ## Identity and retained state
 

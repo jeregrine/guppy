@@ -47,7 +47,15 @@ defmodule Guppy.SuperDemo do
         statuses: capture_statuses()
       }
 
-    {:ok, main_view_id} = Guppy.open_window(render(initial_state), self())
+    {:ok, main_view_id} =
+      Guppy.open_window(
+        render(initial_state),
+        self(),
+        window_bounds: [width: 1320, height: 920],
+        window_min_size: [width: 1120, height: 760],
+        titlebar: [title: "Guppy super demo"]
+      )
+
     state = %{initial_state | main_view_id: main_view_id}
     :ok = Guppy.render(main_view_id, render(state))
     loop(state)
@@ -543,7 +551,12 @@ defmodule Guppy.SuperDemo do
   end
 
   defp open_aux_window(state, node_id) do
-    case Guppy.open_window(aux_window_ir(), self()) do
+    case Guppy.open_window(
+           aux_window_ir(),
+           self(),
+           window_bounds: [width: 560, height: 420],
+           titlebar: [title: "Guppy super demo auxiliary window"]
+         ) do
       {:ok, aux_view_id} ->
         state
         |> Map.put(:aux_view_id, aux_view_id)
@@ -2178,9 +2191,20 @@ defmodule Guppy.SuperDemo do
             Guppy.IR.text("Or close this window manually with the traffic-light button.")
           ],
           id: "child_root",
-          style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}, :rounded_md]
+          style: [
+            :flex,
+            :flex_col,
+            :w_full,
+            :h_full,
+            :gap_4,
+            :p_6,
+            {:bg_hex, "#0f172a"},
+            {:text_color_hex, "#f8fafc"}
+          ]
         ),
-        self()
+        self(),
+        window_bounds: [width: 640, height: 420],
+        titlebar: [title: "Guppy child owner window"]
       )
 
     send(parent, {:child_owner_ready, self(), view_id})

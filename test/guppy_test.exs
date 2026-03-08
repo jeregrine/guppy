@@ -543,6 +543,70 @@ defmodule GuppyTest do
     end
   end
 
+  test "window option validation accepts supported shapes and rejects invalid ones" do
+    assert {:ok, %{}} = Guppy.Server.validate_window_options_for_test([])
+
+    assert {:ok, %{window_bounds: %{width: 960, height: 720, state: :windowed}}} =
+             Guppy.Server.validate_window_options_for_test(
+               window_bounds: [width: 960, height: 720]
+             )
+
+    assert {:ok,
+            %{
+              titlebar: %{
+                title: "Example",
+                appears_transparent: true,
+                traffic_light_position: %{x: 12, y: 18}
+              },
+              focus: false,
+              show: true,
+              kind: :floating,
+              is_movable: false,
+              is_resizable: true,
+              is_minimizable: false,
+              display_id: 2,
+              window_background: :transparent,
+              app_id: "dev.example.guppy",
+              window_min_size: %{width: 640, height: 480},
+              window_decorations: :client,
+              tabbing_identifier: "example-tab-group"
+            }} =
+             Guppy.Server.validate_window_options_for_test(
+               titlebar: [
+                 title: "Example",
+                 appears_transparent: true,
+                 traffic_light_position: [x: 12, y: 18]
+               ],
+               focus: false,
+               show: true,
+               kind: :floating,
+               is_movable: false,
+               is_resizable: true,
+               is_minimizable: false,
+               display_id: 2,
+               window_background: :transparent,
+               app_id: "dev.example.guppy",
+               window_min_size: [width: 640, height: 480],
+               window_decorations: :client,
+               tabbing_identifier: "example-tab-group"
+             )
+
+    assert {:error, :invalid_window_options} =
+             Guppy.Server.validate_window_options_for_test(window_bounds: [width: 960])
+
+    assert {:error, :invalid_window_options} =
+             Guppy.Server.validate_window_options_for_test(window_min_size: [width: 640])
+
+    assert {:error, :invalid_window_options} =
+             Guppy.Server.validate_window_options_for_test(titlebar: [unknown: true])
+
+    assert {:error, :invalid_window_options} =
+             Guppy.Server.validate_window_options_for_test(unknown_key: true)
+
+    assert {:error, :invalid_window_options} =
+             Guppy.Server.validate_window_options_for_test(kind: :dialog)
+  end
+
   test "view ownership is enforced by the server" do
     parent = self()
 

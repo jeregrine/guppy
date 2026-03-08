@@ -61,6 +61,8 @@ defmodule Guppy.Server do
     GenServer.call(server, :view_count, timeout)
   end
 
+  def validate_window_options_for_test(opts), do: validate_window_options(opts)
+
   @impl true
   def init(opts) do
     native = Keyword.get(opts, :native, Application.get_env(:guppy, :native))
