@@ -33,6 +33,28 @@ defmodule Guppy.TestCounterWindow do
   end
 end
 
+defmodule Guppy.TemplateExample do
+  use Guppy.Component
+
+  def render(assigns) do
+    ~G"""
+    <div id="root" class="flex flex-col gap-4 p-4 bg-[#0f172a] text-[#f8fafc]">
+      <text id="title" class="text-3xl font-black">{@title}</text>
+      <button id="save_button" click="save" class="p-2 rounded-lg border-1 border-blue bg-blue text-[#ffffff]">
+        Save
+      </button>
+      <scroll id="items" axis="y" class="flex-1 gap-2">
+        <div :for={item <- @items} id={"item_#{item.id}"} class="rounded-md border-1 border-white p-2">
+          <text>{item.label}</text>
+        </div>
+      </scroll>
+      <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" />
+      {if @show_footer, do: Guppy.IR.text("Footer ready", id: "footer")}
+    </div>
+    """
+  end
+end
+
 defmodule GuppyTest do
   use ExUnit.Case
 
@@ -541,6 +563,49 @@ defmodule GuppyTest do
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} = Guppy.ping()
     end
+  end
+
+  test "Guppy.Component compiles ~G templates into valid IR" do
+    ir =
+      Guppy.TemplateExample.render(%{
+        title: "Template demo",
+        items: [%{id: 1, label: "One"}, %{id: 2, label: "Two"}],
+        value: "Jason",
+        show_footer: true
+      })
+
+    assert :ok = Guppy.IR.validate(ir)
+    assert ir.kind == :div
+    assert ir.id == "root"
+    assert :flex in ir.style
+    assert {:bg_hex, "#0f172a"} in ir.style
+
+    [title_wrapper, button, scroll, text_input, footer] = ir.children
+
+    assert title_wrapper.kind == :div
+    assert title_wrapper.children == [%{kind: :text, content: "Template demo", id: "title"}]
+    assert :text_3xl in title_wrapper.style
+    assert :font_black in title_wrapper.style
+
+    assert button.kind == :button
+    assert button.id == "save_button"
+    assert button.label == "Save"
+    assert button.events == %{click: "save"}
+
+    assert scroll.kind == :scroll
+    assert scroll.id == "items"
+    assert scroll.axis == :y
+    assert length(scroll.children) == 2
+
+    assert Enum.map(scroll.children, & &1.id) == ["item_1", "item_2"]
+
+    assert text_input.kind == :text_input
+    assert text_input.id == "name_input"
+    assert text_input.value == "Jason"
+    assert text_input.placeholder == "Type here"
+    assert text_input.events == %{change: "name_changed"}
+
+    assert footer == %{kind: :text, content: "Footer ready", id: "footer"}
   end
 
   test "window option validation accepts supported shapes and rejects invalid ones" do

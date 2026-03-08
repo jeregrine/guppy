@@ -1,5 +1,6 @@
 defmodule Examples.ClickCounterWindow do
   use Guppy.Window
+  use Guppy.Component
 
   import Guppy.Window, only: [assign: 3, update: 3, put_window_opts: 2]
 
@@ -30,139 +31,54 @@ defmodule Examples.ClickCounterWindow do
   def render(window) do
     count = window.assigns.count
 
-    Guppy.IR.div(
-      [
-        panel(
-          [
-            Guppy.IR.div([Guppy.IR.text("Click counter", id: "title")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(
-                  "Buttons dispatch native click events back into the window process, which updates assigns and rerenders.",
-                  id: "subtitle"
-                )
-              ],
-              style: [:text_base, {:text_color_hex, "#94a3b8"}]
-            )
-          ],
-          id: "header_panel"
-        ),
-        Guppy.IR.div(
-          [
-            Guppy.IR.div([Guppy.IR.text("Clicks", id: "count_heading")],
-              style: [:text_sm, :font_semibold, {:text_color_hex, "#bfdbfe"}]
-            ),
-            Guppy.IR.div([Guppy.IR.text(Integer.to_string(count), id: "count_label")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [Guppy.IR.text(summary_text(count), id: "summary_text")],
-              style: [:text_base, {:text_color_hex, "#dbeafe"}]
-            )
-          ],
-          id: "count_panel",
-          style: [
-            :flex,
-            :flex_col,
-            :items_center,
-            :gap_2,
-            :p_6,
-            :rounded_xl,
-            :border_1,
-            {:border_color_hex, "#2563eb"},
-            {:bg_hex, "#172554"},
-            :shadow_md,
-            :text_center
-          ]
-        ),
-        Guppy.IR.div(
-          [
-            action_button("Increment", "increment", "#2563eb", "#1d4ed8"),
-            action_button("Reset", "reset", "#334155", "#475569")
-          ],
-          id: "controls",
-          style: [:flex, :flex_row, :gap_2]
-        ),
-        panel(
-          [
-            info_row("Use the primary button to send click events", "info_primary"),
-            info_row("Reset is wired through the same window callback path", "info_reset"),
-            info_row("Close the window when you are done", "info_close")
-          ],
-          id: "info_panel"
-        )
-      ],
-      id: "click_counter_root",
-      style: [
-        :flex,
-        :flex_col,
-        :w_full,
-        :h_full,
-        :gap_4,
-        :p_6,
-        {:bg_hex, "#0f172a"},
-        {:text_color_hex, "#f8fafc"}
-      ]
-    )
+    assigns =
+      Map.merge(window.assigns, %{
+        count_text: Integer.to_string(count),
+        summary_text: summary_text(count),
+        info_rows: [
+          %{id: "info_primary", label: "Use the primary button to send click events"},
+          %{id: "info_reset", label: "Reset is wired through the same window callback path"},
+          %{id: "info_close", label: "Close the window when you are done"}
+        ]
+      })
+
+    ~G"""
+    <div id="click_counter_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <div id="header_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <text id="title" class="text-3xl font-black">Click counter</text>
+        <text id="subtitle" class="text-base text-[#94a3b8]">
+          Buttons dispatch native click events back into the window process, which updates assigns and rerenders.
+        </text>
+      </div>
+
+      <div id="count_panel" class="flex flex-col items-center gap-2 p-6 rounded-xl border-1 border-[#2563eb] bg-[#172554] shadow-md text-center">
+        <text id="count_heading" class="text-sm font-semibold text-[#bfdbfe]">Clicks</text>
+        <text id="count_label" class="text-3xl font-black">{@count_text}</text>
+        <text id="summary_text" class="text-base text-[#dbeafe]">{@summary_text}</text>
+      </div>
+
+      <div id="controls" class="flex flex-row gap-2">
+        <button id="increment_button" click="increment" class="flex-1 p-4 rounded-lg border-1 border-[#2563eb] bg-[#2563eb] text-[#f8fafc] shadow-sm">
+          Increment
+        </button>
+        <button id="reset_button" click="reset" class="flex-1 p-4 rounded-lg border-1 border-[#334155] bg-[#334155] text-[#f8fafc] shadow-sm">
+          Reset
+        </button>
+      </div>
+
+      <div id="info_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <div :for={row <- @info_rows} id={row.id <> "_row"} class="flex flex-row items-center gap-2">
+          <div id={row.id <> "_dot"} class="w-[10px] h-[10px] rounded-full bg-[#60a5fa]"></div>
+          <text id={row.id} class="flex-1 text-base">{row.label}</text>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   defp summary_text(0), do: "No clicks yet — press the button to start."
   defp summary_text(1), do: "One click recorded."
   defp summary_text(count), do: "#{count} clicks recorded."
-
-  defp panel(children, opts) do
-    id = Keyword.get(opts, :id)
-
-    Guppy.IR.div(
-      children,
-      id: id,
-      style: [
-        :flex,
-        :flex_col,
-        :gap_2,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#334155"},
-        {:bg_hex, "#111827"},
-        :shadow_md
-      ]
-    )
-  end
-
-  defp action_button(label, callback, bg_hex, hover_hex) do
-    Guppy.IR.button(label,
-      id: "#{callback}_button",
-      style: [
-        :flex_1,
-        :p_4,
-        :rounded_lg,
-        :border_1,
-        {:border_color_hex, bg_hex},
-        {:bg_hex, bg_hex},
-        {:text_color_hex, "#f8fafc"},
-        :shadow_sm
-      ],
-      hover_style: [{:bg_hex, hover_hex}],
-      events: %{click: callback}
-    )
-  end
-
-  defp info_row(label, id) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.div([],
-          id: "#{id}_dot",
-          style: [{:w_px, 10}, {:h_px, 10}, :rounded_full, {:bg_hex, "#60a5fa"}]
-        ),
-        Guppy.IR.div([Guppy.IR.text(label, id: id)], style: [:flex_1, :text_base])
-      ],
-      id: "#{id}_row",
-      style: [:flex, :flex_row, :items_center, :gap_2]
-    )
-  end
 end
 
 {:ok, _} = Application.ensure_all_started(:guppy)

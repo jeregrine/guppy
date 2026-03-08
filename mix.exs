@@ -14,7 +14,7 @@ defmodule Guppy.MixProject do
   def application do
     [
       mod: {Guppy.Application, []},
-      extra_applications: [:logger]
+      extra_applications: [:logger, :xmerl]
     ]
   end
 

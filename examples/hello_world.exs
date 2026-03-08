@@ -1,5 +1,6 @@
 defmodule Examples.HelloWorldWindow do
   use Guppy.Window
+  use Guppy.Component
 
   import Guppy.Window, only: [assign: 3, put_window_opts: 2]
 
@@ -21,88 +22,50 @@ defmodule Examples.HelloWorldWindow do
   def render(window) do
     {accent_bg, accent_border, status_label, message} = phase_content(window.assigns.phase)
 
-    Guppy.IR.div(
-      [
-        surface(
-          [
-            Guppy.IR.div(
-              [Guppy.IR.text("Guppy hello world", id: "title")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(
-                  "A small window process renders a full replacement IR tree and updates itself after a timer.",
-                  id: "subtitle"
-                )
-              ],
-              style: [:text_base, {:text_color_hex, "#94a3b8"}]
-            )
-          ],
-          id: "hero_panel"
-        ),
-        Guppy.IR.div(
-          [
-            Guppy.IR.div(
-              [Guppy.IR.text("Window lifecycle", id: "status_heading")],
-              style: [:text_sm, :font_semibold, {:text_color_hex, "#cbd5e1"}]
-            ),
-            Guppy.IR.div(
-              [Guppy.IR.text(status_label, id: "status_label")],
-              style: [
-                :p_2,
-                :rounded_lg,
-                :border_1,
-                {:border_color_hex, accent_border},
-                {:bg_hex, accent_bg},
-                :shadow_sm,
-                :text_lg,
-                :font_semibold
-              ]
-            ),
-            Guppy.IR.div(
-              [Guppy.IR.text(message, id: "status_message")],
-              style: [:text_base, {:text_color_hex, "#e2e8f0"}]
-            )
-          ],
-          id: "status_panel",
-          style: [
-            :flex,
-            :flex_col,
-            :gap_2,
-            :p_4,
-            :rounded_xl,
-            :border_1,
-            {:border_color_hex, accent_border},
-            {:bg_hex, accent_bg},
-            :shadow_md
-          ]
-        ),
-        surface(
-          [
-            Guppy.IR.div(
-              [Guppy.IR.text("What this example shows", id: "details_heading")],
-              style: [:text_sm, :font_semibold, {:text_color_hex, "#cbd5e1"}]
-            ),
-            feature_row("Window process owns assigns and timers", "feature_process"),
-            feature_row("Render returns a declarative tree each time", "feature_render"),
-            feature_row("Native side swaps the visible UI from that tree", "feature_native")
-          ],
-          id: "details_panel"
-        )
-      ],
-      id: "hello_root",
-      style: [
-        :flex,
-        :flex_col,
-        :w_full,
-        :h_full,
-        :gap_4,
-        :p_6,
-        {:bg_hex, "#0f172a"},
-        {:text_color_hex, "#f8fafc"}
-      ]
-    )
+    assigns =
+      Map.merge(window.assigns, %{
+        accent_bg: accent_bg,
+        accent_border: accent_border,
+        status_label: status_label,
+        message: message,
+        status_panel_class:
+          "flex flex-col gap-2 p-4 rounded-xl border-1 shadow-md border-[#{accent_border}] bg-[#{accent_bg}]",
+        status_badge_class:
+          "p-2 rounded-lg border-1 shadow-sm text-lg font-semibold border-[#{accent_border}] bg-[#{accent_bg}]",
+        features: [
+          %{id: "feature_process", label: "Window process owns assigns and timers"},
+          %{id: "feature_render", label: "Render returns a declarative tree each time"},
+          %{id: "feature_native", label: "Native side swaps the visible UI from that tree"}
+        ]
+      })
+
+    ~G"""
+    <div id="hello_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <div id="hero_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <text id="title" class="text-3xl font-black">Guppy hello world</text>
+        <text id="subtitle" class="text-base text-[#94a3b8]">
+          A small window process renders a full replacement IR tree and updates itself after a timer.
+        </text>
+      </div>
+
+      <div id="status_panel" class={@status_panel_class}>
+        <text id="status_heading" class="text-sm font-semibold text-[#cbd5e1]">Window lifecycle</text>
+        <text id="status_label" class={@status_badge_class}>{@status_label}</text>
+        <text id="status_message" class="text-base text-[#e2e8f0]">{@message}</text>
+      </div>
+
+      <div id="details_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <text id="details_heading" class="text-sm font-semibold text-[#cbd5e1]">
+          What this example shows
+        </text>
+
+        <div :for={feature <- @features} id={feature.id <> "_row"} class="flex flex-row items-center gap-2">
+          <div id={feature.id <> "_dot"} class="w-[10px] h-[10px] rounded-full bg-[#38bdf8]"></div>
+          <text id={feature.id} class="flex-1 text-base">{feature.label}</text>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   @impl Guppy.Window
@@ -125,40 +88,6 @@ defmodule Examples.HelloWorldWindow do
   defp phase_content(:updated) do
     {"#14532d", "#22c55e", "Updated render",
      "A timer fired, the assign changed, and the whole tree rerendered cleanly."}
-  end
-
-  defp surface(children, opts) do
-    id = Keyword.get(opts, :id)
-
-    Guppy.IR.div(
-      children,
-      id: id,
-      style: [
-        :flex,
-        :flex_col,
-        :gap_2,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#334155"},
-        {:bg_hex, "#111827"},
-        :shadow_md
-      ]
-    )
-  end
-
-  defp feature_row(label, id) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.div([],
-          id: "#{id}_dot",
-          style: [{:w_px, 10}, {:h_px, 10}, :rounded_full, {:bg_hex, "#38bdf8"}]
-        ),
-        Guppy.IR.div([Guppy.IR.text(label, id: id)], style: [:flex_1, :text_base])
-      ],
-      id: "#{id}_row",
-      style: [:flex, :flex_row, :items_center, :gap_2]
-    )
   end
 end
 
