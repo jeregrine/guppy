@@ -184,6 +184,15 @@ pub enum IrNode {
         content: String,
         click: Option<String>,
     },
+    TextInput {
+        id: Option<String>,
+        value: String,
+        placeholder: String,
+        style: DivStyle,
+        disabled: bool,
+        tab_index: Option<isize>,
+        change: Option<String>,
+    },
     Scroll {
         id: Option<String>,
         axis: ScrollAxis,
@@ -249,6 +258,15 @@ impl IrNode {
                 id,
                 content: get_string_field(map, "content")?,
                 click: get_click_event(map)?,
+            }),
+            "text_input" => Ok(Self::TextInput {
+                id,
+                value: get_string_field(map, "value")?,
+                placeholder: get_optional_string_field(map, "placeholder")?.unwrap_or_default(),
+                style: get_div_style(map)?,
+                disabled: get_boolean_field(map, "disabled")?,
+                tab_index: get_optional_integer_field(map, "tab_index")?,
+                change: get_change_event(map)?,
             }),
             "scroll" => {
                 let children = match get_field(map, "children") {
@@ -797,6 +815,10 @@ fn get_focus_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> 
 
 fn get_blur_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
     get_optional_event(map, "blur")
+}
+
+fn get_change_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "change")
 }
 
 fn get_key_down_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {

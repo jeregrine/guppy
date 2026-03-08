@@ -119,7 +119,7 @@ The goal is to keep one checklist, check items off as they land, and continue fr
 - [ ] spacer node
 - [x] explicit scroll node
 - [x] button node
-- [ ] text input node
+- [x] text input node
 - [ ] textarea/editor node
 - [ ] checkbox node
 - [ ] radio/select primitives

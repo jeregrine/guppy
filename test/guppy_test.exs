@@ -57,6 +57,21 @@ defmodule GuppyTest do
     assert button_ir.actions == %{"save" => "save_action"}
     assert button_ir.shortcuts == [{"ctrl-s", "save"}]
 
+    text_input_ir =
+      Guppy.IR.text_input(
+        "Jason",
+        id: "name_input",
+        placeholder: "Type a name",
+        style: [{:w_px, 240}],
+        disabled: false,
+        tab_index: 4,
+        events: %{change: "name_changed"}
+      )
+
+    assert :ok = Guppy.IR.validate(text_input_ir)
+    assert text_input_ir.placeholder == "Type a name"
+    assert text_input_ir.tab_index == 4
+
     styled_ir =
       Guppy.IR.div(
         [Guppy.IR.text("hello")],
@@ -411,8 +426,23 @@ defmodule GuppyTest do
     assert {:error, {:invalid_ir, %{kind: :button, label: 123}}} =
              Guppy.IR.validate(%{kind: :button, label: 123})
 
+    assert {:error, {:invalid_ir, %{kind: :text_input, value: 123}}} =
+             Guppy.IR.validate(%{kind: :text_input, value: 123})
+
     assert {:error, {:invalid_event, :drag_start, "nope"}} =
              Guppy.IR.validate(Guppy.IR.button("Save", events: %{drag_start: "nope"}))
+
+    assert {:error, {:invalid_event, :click, "nope"}} =
+             Guppy.IR.validate(Guppy.IR.text_input("Jason", events: %{click: "nope"}))
+
+    assert {:error, {:placeholder, 123}} =
+             Guppy.IR.validate(Guppy.IR.text_input("Jason", placeholder: 123))
+
+    assert {:error, {:tab_index, "first"}} =
+             Guppy.IR.validate(Guppy.IR.text_input("Jason", tab_index: "first"))
+
+    assert {:error, {:disabled, "yes"}} =
+             Guppy.IR.validate(Guppy.IR.text_input("Jason", disabled: "yes"))
 
     assert {:error, {:invalid_actions, [:nope]}} =
              Guppy.IR.validate(Guppy.IR.div([], actions: [:nope]))
@@ -540,6 +570,21 @@ defmodule GuppyTest do
 
         assert_receive {:guppy_event, ^view_id,
                         %{type: :click, id: "increment_text", callback: "increment"}}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :change,
+          %{id: "name_input", callback: "name_changed", value: "Jason"}
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :change,
+                          id: "name_input",
+                          callback: "name_changed",
+                          value: "Jason"
+                        }}
 
         send(Guppy.server(), {
           :guppy_native_event,

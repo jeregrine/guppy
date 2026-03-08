@@ -28,6 +28,7 @@ The current tracer-shot API is intentionally small:
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.button/2`
+- `Guppy.IR.text_input/2`
 
 ## Native build
 
@@ -174,6 +175,7 @@ Minimal native events are delivered to the owning Elixir process as:
 {:guppy_event, view_id, %{type: :hover, id: node_id, callback: callback_id, hovered: boolean}}
 {:guppy_event, view_id, %{type: :focus, id: node_id, callback: callback_id}}
 {:guppy_event, view_id, %{type: :blur, id: node_id, callback: callback_id}}
+{:guppy_event, view_id, %{type: :change, id: node_id, callback: callback_id, value: String.t()}}
 {:guppy_event, view_id, %{type: :key_down, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, is_held: boolean, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :key_up, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
 {:guppy_event, view_id, %{type: :action, id: node_id, callback: callback_id, action: String.t(), shortcut: String.t(), key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
@@ -242,6 +244,18 @@ Guppy.IR.button(
 )
 ```
 
+For single-line text entry, you can now use a text input node directly:
+
+```elixir
+Guppy.IR.text_input(
+  "Jason",
+  id: "name_input",
+  placeholder: "Type a name",
+  style: [{:w_px, 240}],
+  events: %{change: "name_changed"}
+)
+```
+
 `text` nodes currently support `click` only.
 
 Identity rules today:
@@ -264,6 +278,8 @@ Clickable `div` nodes now participate in keyboard activation automatically: when
 Guppy also has an explicit `scroll` node for scroll-container semantics when a plain `div` plus overflow tokens is not the right abstraction. `scroll` nodes accept `id`, `axis: :x | :y | :both` (default `:y`), `style`, and `children`, and always behave as tracked scroll containers across rerenders.
 
 Guppy also has a `button` node for common button semantics. Buttons render as interactive controls with a text label, default focus participation, keyboard activation, and basic default button styling that later style ops can override.
+
+Guppy also has a single-line `text_input` node for controlled text entry. Text inputs accept a `value`, optional `placeholder`, optional `style`, optional `disabled`, optional `tab_index`, and currently emit `change` events carrying the latest value.
 
 `div` nodes also support:
 - `focusable: true` to opt into GPUI focus participation
@@ -333,7 +349,7 @@ Useful references while developing:
 The tracer shot is real, but still intentionally narrow:
 
 - native rendering only supports a minimal IR shape today
-- supported nodes are currently `:div`, `:text`, `:scroll`, and `:button`
+- supported nodes are currently `:div`, `:text`, `:scroll`, `:button`, and `:text_input`
 - event and style coverage is still intentionally partial even though the bridge now supports a broader interaction surface
 - style mapping exists, but only for a small explicit subset on `:div`
 - explicit node ids are supported, but there is not yet broader keyed/stateful UI behavior built on top of them

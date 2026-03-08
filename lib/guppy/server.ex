@@ -165,6 +165,7 @@ defmodule Guppy.Server do
                :hover,
                :focus,
                :blur,
+               :change,
                :key_down,
                :key_up,
                :action,

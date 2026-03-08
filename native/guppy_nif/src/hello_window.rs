@@ -1,3 +1,4 @@
+use crate::bridge_text_input;
 use crate::bridge_view::BridgeView;
 use crate::ir::{DivStyle, IrNode};
 use gpui::{App, AppContext, Application, AsyncApp, Bounds, WindowBounds, WindowOptions, px, size};
@@ -44,6 +45,7 @@ pub fn run_app(open_boot_window: bool) {
             *app.borrow_mut() = Some(cx.to_async());
         });
 
+        bridge_text_input::bind_keys(cx);
         start_request_poller(cx);
 
         unsafe { guppy_c_gui_started(1) };
@@ -85,6 +87,7 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
                     focus_handles: Default::default(),
                     focus_registered: Default::default(),
                     focus_subscriptions: Default::default(),
+                    text_inputs: Default::default(),
                 })
             },
         );

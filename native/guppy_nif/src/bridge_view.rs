@@ -1,6 +1,7 @@
+use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::{ColorToken, DivStyle, IrNode, ScrollAxis, ShortcutBinding, StyleOp};
 use gpui::{
-    AnyElement, Context, Empty, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
+    AnyElement, Context, Empty, Entity, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
     KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     ScrollAnchor, ScrollDelta, ScrollHandle, ScrollWheelEvent, SharedString,
     StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Subscription, Window,
@@ -231,6 +232,7 @@ pub struct BridgeView {
     pub focus_handles: HashMap<String, FocusHandle>,
     pub focus_registered: HashSet<String>,
     pub focus_subscriptions: Vec<Subscription>,
+    pub text_inputs: HashMap<String, Entity<BridgeTextInput>>,
 }
 
 #[derive(Clone, Debug)]
@@ -253,6 +255,7 @@ impl Render for BridgeView {
                 &mut self.focus_handles,
                 &mut self.focus_registered,
                 &mut self.focus_subscriptions,
+                &mut self.text_inputs,
                 None,
                 window,
                 cx,
@@ -268,6 +271,7 @@ fn render_ir(
     focus_handles: &mut HashMap<String, FocusHandle>,
     focus_registered: &mut HashSet<String>,
     focus_subscriptions: &mut Vec<Subscription>,
+    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
     parent_scroll_handle: Option<ScrollHandle>,
     window: &mut Window,
     cx: &mut Context<BridgeView>,
@@ -276,6 +280,27 @@ fn render_ir(
         IrNode::Text { id, content, click } => {
             render_text(view_id, path, id.as_deref(), content, click.as_deref())
         }
+        IrNode::TextInput {
+            id,
+            value,
+            placeholder,
+            style,
+            disabled,
+            tab_index,
+            change,
+        } => render_text_input(
+            view_id,
+            path,
+            id.as_deref(),
+            value,
+            placeholder,
+            style,
+            *disabled,
+            *tab_index,
+            change.as_deref(),
+            text_inputs,
+            cx,
+        ),
         IrNode::Scroll {
             id,
             axis,
@@ -292,6 +317,7 @@ fn render_ir(
             focus_handles,
             focus_registered,
             focus_subscriptions,
+            text_inputs,
             parent_scroll_handle,
             window,
             cx,
@@ -366,6 +392,7 @@ fn render_ir(
             focus_handles,
             focus_registered,
             focus_subscriptions,
+            text_inputs,
             parent_scroll_handle,
             window,
             cx,
@@ -407,6 +434,44 @@ fn render_text(
     }
 }
 
+fn render_text_input(
+    view_id: u64,
+    path: &str,
+    id: Option<&str>,
+    value: &str,
+    placeholder: &str,
+    style: &DivStyle,
+    disabled: bool,
+    tab_index: Option<isize>,
+    change: Option<&str>,
+    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
+    cx: &mut Context<BridgeView>,
+) -> AnyElement {
+    let node_id = node_id(view_id, path, id);
+
+    let entity = text_inputs
+        .entry(node_id.clone())
+        .or_insert_with(|| {
+            BridgeTextInput::new(
+                cx,
+                view_id,
+                node_id.clone(),
+                value.to_owned(),
+                placeholder.to_owned(),
+                change.map(str::to_owned),
+                disabled,
+                tab_index,
+            )
+        })
+        .clone();
+
+    entity.update(cx, |input, _cx| {
+        input.sync_from_ir(value, placeholder, change, disabled, tab_index);
+    });
+
+    apply_div_style(div().id(SharedString::from(node_id)).child(entity), style).into_any_element()
+}
+
 fn render_scroll(
     view_id: u64,
     path: &str,
@@ -418,6 +483,7 @@ fn render_scroll(
     focus_handles: &mut HashMap<String, FocusHandle>,
     focus_registered: &mut HashSet<String>,
     focus_subscriptions: &mut Vec<Subscription>,
+    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
     parent_scroll_handle: Option<ScrollHandle>,
     window: &mut Window,
     cx: &mut Context<BridgeView>,
@@ -440,6 +506,7 @@ fn render_scroll(
                 focus_handles,
                 focus_registered,
                 focus_subscriptions,
+                text_inputs,
                 Some(scroll_handle.clone()).or(parent_scroll_handle.clone()),
                 window,
                 cx,
@@ -502,6 +569,7 @@ fn render_div(
     focus_handles: &mut HashMap<String, FocusHandle>,
     focus_registered: &mut HashSet<String>,
     focus_subscriptions: &mut Vec<Subscription>,
+    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
     parent_scroll_handle: Option<ScrollHandle>,
     window: &mut Window,
     cx: &mut Context<BridgeView>,
@@ -589,6 +657,7 @@ fn render_div(
                 focus_handles,
                 focus_registered,
                 focus_subscriptions,
+                text_inputs,
                 child_scroll_handle.clone(),
                 window,
                 cx,

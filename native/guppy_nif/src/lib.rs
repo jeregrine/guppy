@@ -3,6 +3,7 @@
 //! The C shim owns `ERL_NIF_INIT` and low-level bootstrap concerns,
 //! while this Rust crate grows into the GPUI runtime core.
 
+mod bridge_text_input;
 mod bridge_view;
 mod hello_window;
 mod ir;

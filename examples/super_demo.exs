@@ -19,6 +19,8 @@ defmodule Guppy.SuperDemo do
         selected_demo: :runtime,
         div_clicks: 0,
         text_clicks: 0,
+        text_input_value: "Type here",
+        text_input_changes: 0,
         mouse_downs: 0,
         mouse_ups: 0,
         mouse_moves: 0,
@@ -61,6 +63,11 @@ defmodule Guppy.SuperDemo do
       {:guppy_event, view_id, %{type: :hover} = event} ->
         state
         |> handle_hover(view_id, event)
+        |> continue()
+
+      {:guppy_event, view_id, %{type: :change} = event} ->
+        state
+        |> handle_change(view_id, event)
         |> continue()
 
       {:guppy_event, view_id, %{type: type} = event}
@@ -193,6 +200,27 @@ defmodule Guppy.SuperDemo do
       true ->
         state
         |> Map.put(:last_event, "hover from unknown view #{view_id}: #{node_id}/#{callback_id}")
+        |> rerender!()
+    end
+  end
+
+  defp handle_change(state, view_id, %{id: node_id, callback: callback_id, value: value}) do
+    cond do
+      view_id == state.main_view_id ->
+        state
+        |> Map.put(:text_input_value, value)
+        |> Map.update!(:text_input_changes, &(&1 + 1))
+        |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      view_id == state.aux_view_id ->
+        state
+        |> Map.put(:last_event, "aux change #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      true ->
+        state
+        |> Map.put(:last_event, "change from unknown view #{view_id}: #{node_id}/#{callback_id}")
         |> rerender!()
     end
   end
@@ -703,6 +731,15 @@ defmodule Guppy.SuperDemo do
           events: %{click: "text_increment"}
         ),
         Guppy.IR.text("text_clicks = #{state.text_clicks}"),
+        Guppy.IR.text_input(
+          state.text_input_value,
+          id: "demo_text_input",
+          placeholder: "Type in this field",
+          style: [:w_full],
+          events: %{change: "demo_text_input_changed"}
+        ),
+        Guppy.IR.text("text_input_value = #{inspect(state.text_input_value)}"),
+        Guppy.IR.text("text_input_changes = #{state.text_input_changes}"),
         Guppy.IR.div(
           [
             Guppy.IR.text("Pointer pad", id: "pointer_pad_title"),

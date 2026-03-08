@@ -247,7 +247,20 @@ defmodule Guppy.IR do
           optional(:events) => div_events()
         }
 
-  @type ir_node :: text_node() | div_node() | scroll_node() | button_node()
+  @type text_input_events :: %{optional(:change) => String.t()}
+
+  @type text_input_node :: %{
+          required(:kind) => :text_input,
+          required(:value) => String.t(),
+          optional(:id) => node_id(),
+          optional(:placeholder) => String.t(),
+          optional(:style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => text_input_events()
+        }
+
+  @type ir_node :: text_node() | div_node() | scroll_node() | button_node() | text_input_node()
 
   @style_flag_tokens [
     :flex,
@@ -480,6 +493,24 @@ defmodule Guppy.IR do
     |> maybe_put(:events, events)
   end
 
+  @spec text_input(String.t(), keyword()) :: text_input_node()
+  def text_input(value, opts \\ []) when is_binary(value) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    placeholder = Keyword.get(opts, :placeholder)
+    style = Keyword.get(opts, :style)
+    disabled = Keyword.get(opts, :disabled)
+    tab_index = Keyword.get(opts, :tab_index)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :text_input, value: value}
+    |> maybe_put(:id, id)
+    |> maybe_put(:placeholder, placeholder)
+    |> maybe_put(:style, style)
+    |> maybe_put(:disabled, disabled)
+    |> maybe_put(:tab_index, tab_index)
+    |> maybe_put(:events, events)
+  end
+
   @spec validate(ir_node()) :: :ok | {:error, term()}
   def validate(%{kind: :text, content: content} = node) when is_binary(content) do
     with :ok <- validate_id(Map.get(node, :id)),
@@ -566,6 +597,17 @@ defmodule Guppy.IR do
     end
   end
 
+  def validate(%{kind: :text_input, value: value} = node) when is_binary(value) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_optional_string(Map.get(node, :placeholder), :placeholder),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
+         :ok <- validate_events(Map.get(node, :events), [:change]) do
+      :ok
+    end
+  end
+
   def validate(other), do: {:error, {:invalid_ir, other}}
 
   defp validate_children(children) do
@@ -588,6 +630,10 @@ defmodule Guppy.IR do
   defp validate_optional_integer(nil, _field), do: :ok
   defp validate_optional_integer(value, _field) when is_integer(value), do: :ok
   defp validate_optional_integer(value, field), do: {:error, {field, value}}
+
+  defp validate_optional_string(nil, _field), do: :ok
+  defp validate_optional_string(value, _field) when is_binary(value), do: :ok
+  defp validate_optional_string(value, field), do: {:error, {field, value}}
 
   defp validate_optional_non_neg_integer(nil, _field), do: :ok
 

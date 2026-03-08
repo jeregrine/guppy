@@ -2326,6 +2326,7 @@ dependencies = [
  "cc",
  "eetf",
  "gpui",
+ "unicode-segmentation",
 ]
 
 [[package]]
