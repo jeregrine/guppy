@@ -7,6 +7,7 @@ use gpui::{App, AppContext, Application, AsyncApp, PlatformDispatcher};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Mutex, OnceLock};
 
@@ -24,6 +25,7 @@ static REQUEST_TX: OnceLock<Sender<MainThreadRequest>> = OnceLock::new();
 static REQUEST_RX: OnceLock<Mutex<Receiver<MainThreadRequest>>> = OnceLock::new();
 static MAIN_THREAD_DISPATCHER: OnceLock<Mutex<Option<Arc<dyn PlatformDispatcher>>>> =
     OnceLock::new();
+static REQUEST_DRAIN_SCHEDULED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) enum MainThreadRequest {
     OpenWindow {
@@ -172,7 +174,7 @@ pub fn view_count() -> u64 {
     WINDOWS.with(|windows| windows.borrow().len() as u64)
 }
 
-fn init_request_queue() {
+pub(crate) fn init_request_queue() {
     if REQUEST_TX.get().is_none() {
         let (tx, rx) = mpsc::channel();
         let _ = REQUEST_TX.set(tx);
@@ -192,6 +194,16 @@ fn register_main_thread_dispatcher(cx: &mut App) {
 }
 
 fn schedule_request_drain() -> Result<(), ()> {
+    if REQUEST_DRAIN_SCHEDULED.swap(true, Ordering::AcqRel) {
+        return Ok(());
+    }
+
+    dispatch_request_drain().inspect_err(|_| {
+        REQUEST_DRAIN_SCHEDULED.store(false, Ordering::Release);
+    })
+}
+
+fn dispatch_request_drain() -> Result<(), ()> {
     let dispatcher = {
         let slot = MAIN_THREAD_DISPATCHER.get().ok_or(())?;
         let slot = slot.lock().map_err(|_| ())?;
@@ -208,7 +220,18 @@ fn schedule_request_drain() -> Result<(), ()> {
 }
 
 fn drain_requests() {
-    while let Some(request) = try_next_request() {
+    loop {
+        while let Some(request) = try_next_request() {
+            handle_request(request);
+        }
+
+        REQUEST_DRAIN_SCHEDULED.store(false, Ordering::Release);
+
+        let Some(request) = try_next_request() else {
+            break;
+        };
+
+        let _ = REQUEST_DRAIN_SCHEDULED.swap(true, Ordering::AcqRel);
         handle_request(request);
     }
 }

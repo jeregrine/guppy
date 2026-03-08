@@ -101,7 +101,7 @@ mod tests {
                 id: Some("name_input".into()),
                 value: "Jason".into(),
                 placeholder: "Name".into(),
-                style: Vec::new(),
+                style: Vec::new().into(),
                 disabled: false,
                 tab_index: None,
                 change: Some("name_changed".into()),

@@ -9,7 +9,6 @@ defmodule Guppy.Native do
   @type command :: term()
   @type response :: {:ok, term()} | {:error, term()}
 
-  @callback start_link(keyword()) :: GenServer.on_start()
   @callback request(GenServer.server(), command(), timeout()) :: response()
   @callback cast(GenServer.server(), command()) :: :ok
   @callback connected?(GenServer.server()) :: boolean()

@@ -9,45 +9,35 @@ defmodule Guppy.Native.Nif do
   - a Rust core linked into the same final native library
   """
 
-  use GenServer
-
   @behaviour Guppy.Native
   @on_load :load_nif
 
   @load_status_key {__MODULE__, :load_status}
 
-  defstruct nif_path: nil, status: :not_loaded, load_status: {:error, :not_loaded}
-
   @type load_status :: :ok | {:error, term()}
 
-  @type state :: %__MODULE__{
-          nif_path: String.t() | nil,
-          status: :not_loaded | :loaded,
-          load_status: load_status()
-        }
-
   @impl Guppy.Native
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
-  end
-
-  @impl Guppy.Native
-  def request(server \\ __MODULE__, command, timeout \\ 5_000) do
-    GenServer.call(server, {:request, command}, timeout)
+  def request(_server \\ __MODULE__, command, _timeout \\ 5_000) do
+    dispatch(command)
   end
 
   @impl Guppy.Native
   def cast(server \\ __MODULE__, command) do
-    GenServer.cast(server, {:cast, command})
+    _ = request(server, command)
+    :ok
   end
 
   @impl Guppy.Native
-  def connected?(server \\ __MODULE__) do
-    GenServer.call(server, :connected?)
+  def connected?(_server \\ __MODULE__) do
+    loaded?()
   end
 
-  def info(server \\ __MODULE__) do
-    GenServer.call(server, :info)
+  def info(_server \\ __MODULE__) do
+    %{
+      nif_path: Application.get_env(:guppy, :nif_path),
+      status: status_from_load_status(load_status()),
+      load_status: load_status()
+    }
   end
 
   def load_status do
@@ -76,62 +66,6 @@ defmodule Guppy.Native.Nif do
 
     :persistent_term.put(@load_status_key, status)
     :ok
-  end
-
-  @impl true
-  def init(opts) do
-    load_status = load_status()
-
-    state = %__MODULE__{
-      nif_path: Keyword.get(opts, :nif_path, Application.get_env(:guppy, :nif_path)),
-      status: status_from_load_status(load_status),
-      load_status: load_status
-    }
-
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_call(:connected?, _from, state) do
-    {:reply, state.status == :loaded, state}
-  end
-
-  def handle_call(:info, _from, state) do
-    {:reply, state, state}
-  end
-
-  def handle_call({:request, {:ping, []}}, _from, state) do
-    {:reply, with_loaded(state, fn -> {:ok, native_ping()} end), state}
-  end
-
-  def handle_call({:request, {:open_window, [view_id, ir, opts]}}, _from, state) do
-    {:reply,
-     with_loaded(state, fn -> normalize_status(native_open_window(view_id, ir, opts)) end), state}
-  end
-
-  def handle_call({:request, {:set_event_target, [pid]}}, _from, state) when is_pid(pid) do
-    {:reply, with_loaded(state, fn -> normalize_status(native_set_event_target(pid)) end), state}
-  end
-
-  def handle_call({:request, {:render, [view_id, ir]}}, _from, state) do
-    {:reply, with_loaded(state, fn -> normalize_status(native_render(view_id, ir)) end), state}
-  end
-
-  def handle_call({:request, {:close_window, [view_id]}}, _from, state) do
-    {:reply, with_loaded(state, fn -> normalize_status(native_close_window(view_id)) end), state}
-  end
-
-  def handle_call({:request, {:view_count, []}}, _from, state) do
-    {:reply, with_loaded(state, fn -> {:ok, native_view_count()} end), state}
-  end
-
-  def handle_call({:request, _command}, _from, state) do
-    {:reply, {:error, :unsupported_command}, state}
-  end
-
-  @impl true
-  def handle_cast({:cast, _command}, state) do
-    {:noreply, state}
   end
 
   def native_ping do
@@ -191,8 +125,40 @@ defmodule Guppy.Native.Nif do
     end
   end
 
-  defp with_loaded(%__MODULE__{status: :loaded}, fun), do: fun.()
-  defp with_loaded(%__MODULE__{status: :not_loaded}, _fun), do: {:error, :nif_not_loaded}
+  defp dispatch({:ping, []}) do
+    with_loaded(fn -> {:ok, native_ping()} end)
+  end
+
+  defp dispatch({:open_window, [view_id, ir, opts]}) do
+    with_loaded(fn -> normalize_status(native_open_window(view_id, ir, opts)) end)
+  end
+
+  defp dispatch({:set_event_target, [pid]}) when is_pid(pid) do
+    with_loaded(fn -> normalize_status(native_set_event_target(pid)) end)
+  end
+
+  defp dispatch({:render, [view_id, ir]}) do
+    with_loaded(fn -> normalize_status(native_render(view_id, ir)) end)
+  end
+
+  defp dispatch({:close_window, [view_id]}) do
+    with_loaded(fn -> normalize_status(native_close_window(view_id)) end)
+  end
+
+  defp dispatch({:view_count, []}) do
+    with_loaded(fn -> {:ok, native_view_count()} end)
+  end
+
+  defp dispatch(_command) do
+    {:error, :unsupported_command}
+  end
+
+  defp with_loaded(fun) do
+    case load_status() do
+      :ok -> fun.()
+      {:error, _reason} -> {:error, :nif_not_loaded}
+    end
+  end
 
   defp normalize_status({:error, reason}), do: {:error, reason}
   defp normalize_status(status) when is_atom(status), do: status

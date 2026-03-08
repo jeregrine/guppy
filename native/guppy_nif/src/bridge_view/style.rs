@@ -7,7 +7,7 @@ pub(crate) fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
 where
     E: Styled + StatefulInteractiveElement,
 {
-    for op in style {
+    for op in style.iter() {
         element = match op {
             StyleOp::Flex => element.flex(),
             StyleOp::FlexCol => element.flex_col(),
@@ -136,21 +136,23 @@ where
             StyleOp::OverflowHidden => element.overflow_hidden(),
             StyleOp::OverflowXHidden => element.overflow_x_hidden(),
             StyleOp::OverflowYHidden => element.overflow_y_hidden(),
-            StyleOp::Bg(color) => element.bg(color_token_to_color(*color)),
-            StyleOp::TextColor(color) => element.text_color(color_token_to_color(*color)),
-            StyleOp::BorderColor(color) => element.border_color(color_token_to_color(*color)),
+            StyleOp::Bg(color) => element.bg(color_token_to_color(color.to_owned())),
+            StyleOp::TextColor(color) => element.text_color(color_token_to_color(color.to_owned())),
+            StyleOp::BorderColor(color) => {
+                element.border_color(color_token_to_color(color.to_owned()))
+            }
             StyleOp::BgHex(value) => element.bg(hex_color_to_color(value)),
             StyleOp::TextColorHex(value) => element.text_color(hex_color_to_color(value)),
             StyleOp::BorderColorHex(value) => element.border_color(hex_color_to_color(value)),
-            StyleOp::Opacity(value) => element.opacity(*value),
-            StyleOp::WPx(value) => element.w(px(*value)),
-            StyleOp::WRem(value) => element.w(rems(*value)),
-            StyleOp::WFrac(value) => element.w(relative(*value)),
-            StyleOp::HPx(value) => element.h(px(*value)),
-            StyleOp::HRem(value) => element.h(rems(*value)),
-            StyleOp::HFrac(value) => element.h(relative(*value)),
-            StyleOp::ScrollbarWidthPx(value) => element.scrollbar_width(px(*value)),
-            StyleOp::ScrollbarWidthRem(value) => element.scrollbar_width(rems(*value)),
+            StyleOp::Opacity(value) => element.opacity(value.to_owned()),
+            StyleOp::WPx(value) => element.w(px(value.to_owned())),
+            StyleOp::WRem(value) => element.w(rems(value.to_owned())),
+            StyleOp::WFrac(value) => element.w(relative(value.to_owned())),
+            StyleOp::HPx(value) => element.h(px(value.to_owned())),
+            StyleOp::HRem(value) => element.h(rems(value.to_owned())),
+            StyleOp::HFrac(value) => element.h(relative(value.to_owned())),
+            StyleOp::ScrollbarWidthPx(value) => element.scrollbar_width(px(value.to_owned())),
+            StyleOp::ScrollbarWidthRem(value) => element.scrollbar_width(rems(value.to_owned())),
         };
     }
 
@@ -161,7 +163,7 @@ pub(crate) fn apply_refinement_style(
     mut style: StyleRefinement,
     ops: &DivStyle,
 ) -> StyleRefinement {
-    for op in ops {
+    for op in ops.iter() {
         style = match op {
             StyleOp::Flex
             | StyleOp::FlexCol
@@ -290,19 +292,21 @@ pub(crate) fn apply_refinement_style(
             StyleOp::ShadowSm => style.shadow_sm(),
             StyleOp::ShadowMd => style.shadow_md(),
             StyleOp::ShadowLg => style.shadow_lg(),
-            StyleOp::Bg(color) => style.bg(color_token_to_color(*color)),
-            StyleOp::TextColor(color) => style.text_color(color_token_to_color(*color)),
-            StyleOp::BorderColor(color) => style.border_color(color_token_to_color(*color)),
+            StyleOp::Bg(color) => style.bg(color_token_to_color(color.to_owned())),
+            StyleOp::TextColor(color) => style.text_color(color_token_to_color(color.to_owned())),
+            StyleOp::BorderColor(color) => {
+                style.border_color(color_token_to_color(color.to_owned()))
+            }
             StyleOp::BgHex(value) => style.bg(hex_color_to_color(value)),
             StyleOp::TextColorHex(value) => style.text_color(hex_color_to_color(value)),
             StyleOp::BorderColorHex(value) => style.border_color(hex_color_to_color(value)),
-            StyleOp::Opacity(value) => style.opacity(*value),
-            StyleOp::WPx(value) => style.w(px(*value)),
-            StyleOp::WRem(value) => style.w(rems(*value)),
-            StyleOp::WFrac(value) => style.w(relative(*value)),
-            StyleOp::HPx(value) => style.h(px(*value)),
-            StyleOp::HRem(value) => style.h(rems(*value)),
-            StyleOp::HFrac(value) => style.h(relative(*value)),
+            StyleOp::Opacity(value) => style.opacity(value.to_owned()),
+            StyleOp::WPx(value) => style.w(px(value.to_owned())),
+            StyleOp::WRem(value) => style.w(rems(value.to_owned())),
+            StyleOp::WFrac(value) => style.w(relative(value.to_owned())),
+            StyleOp::HPx(value) => style.h(px(value.to_owned())),
+            StyleOp::HRem(value) => style.h(rems(value.to_owned())),
+            StyleOp::HFrac(value) => style.h(relative(value.to_owned())),
             StyleOp::ScrollbarWidthPx(_) => style,
             StyleOp::ScrollbarWidthRem(_) => style,
         };

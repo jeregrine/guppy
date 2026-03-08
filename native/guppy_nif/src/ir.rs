@@ -2,8 +2,117 @@ use eetf::{Atom, Binary, ByteList, List, Map, Term, Tuple};
 use gpui::{KeybindingKeystroke, Keystroke};
 use std::collections::HashMap;
 use std::io::Cursor;
+use std::sync::{Arc, OnceLock};
 
-pub type DivStyle = Vec<StyleOp>;
+pub type DivStyle = Arc<[StyleOp]>;
+
+static IR_FIELD_KEYS: OnceLock<IrFieldKeys> = OnceLock::new();
+
+struct IrFieldKeys {
+    kind: Term,
+    id: Term,
+    content: Term,
+    value: Term,
+    placeholder: Term,
+    children: Term,
+    axis: Term,
+    style: Term,
+    hover_style: Term,
+    focus_style: Term,
+    in_focus_style: Term,
+    active_style: Term,
+    disabled_style: Term,
+    disabled: Term,
+    tab_index: Term,
+    actions: Term,
+    shortcuts: Term,
+    label: Term,
+    events: Term,
+    click: Term,
+    hover: Term,
+    focus: Term,
+    blur: Term,
+    change: Term,
+    key_down: Term,
+    key_up: Term,
+    context_menu: Term,
+    drag_start: Term,
+    drag_move: Term,
+    drop: Term,
+    mouse_down: Term,
+    mouse_up: Term,
+    mouse_move: Term,
+    scroll_wheel: Term,
+    stack_priority: Term,
+    occlude: Term,
+    focusable: Term,
+    tab_stop: Term,
+    track_scroll: Term,
+    anchor_scroll: Term,
+    source: Term,
+    object_fit: Term,
+    grayscale: Term,
+    checked: Term,
+}
+
+impl IrFieldKeys {
+    fn new() -> Self {
+        Self {
+            kind: atom_term("kind"),
+            id: atom_term("id"),
+            content: atom_term("content"),
+            value: atom_term("value"),
+            placeholder: atom_term("placeholder"),
+            children: atom_term("children"),
+            axis: atom_term("axis"),
+            style: atom_term("style"),
+            hover_style: atom_term("hover_style"),
+            focus_style: atom_term("focus_style"),
+            in_focus_style: atom_term("in_focus_style"),
+            active_style: atom_term("active_style"),
+            disabled_style: atom_term("disabled_style"),
+            disabled: atom_term("disabled"),
+            tab_index: atom_term("tab_index"),
+            actions: atom_term("actions"),
+            shortcuts: atom_term("shortcuts"),
+            label: atom_term("label"),
+            events: atom_term("events"),
+            click: atom_term("click"),
+            hover: atom_term("hover"),
+            focus: atom_term("focus"),
+            blur: atom_term("blur"),
+            change: atom_term("change"),
+            key_down: atom_term("key_down"),
+            key_up: atom_term("key_up"),
+            context_menu: atom_term("context_menu"),
+            drag_start: atom_term("drag_start"),
+            drag_move: atom_term("drag_move"),
+            drop: atom_term("drop"),
+            mouse_down: atom_term("mouse_down"),
+            mouse_up: atom_term("mouse_up"),
+            mouse_move: atom_term("mouse_move"),
+            scroll_wheel: atom_term("scroll_wheel"),
+            stack_priority: atom_term("stack_priority"),
+            occlude: atom_term("occlude"),
+            focusable: atom_term("focusable"),
+            tab_stop: atom_term("tab_stop"),
+            track_scroll: atom_term("track_scroll"),
+            anchor_scroll: atom_term("anchor_scroll"),
+            source: atom_term("source"),
+            object_fit: atom_term("object_fit"),
+            grayscale: atom_term("grayscale"),
+            checked: atom_term("checked"),
+        }
+    }
+}
+
+fn atom_term(name: &str) -> Term {
+    Term::Atom(Atom::from(name))
+}
+
+fn field_keys() -> &'static IrFieldKeys {
+    IR_FIELD_KEYS.get_or_init(IrFieldKeys::new)
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ShortcutBinding {
@@ -468,7 +577,59 @@ fn expect_map(term: &Term) -> Result<&HashMap<Term, Term>, String> {
 }
 
 fn get_field<'a>(map: &'a HashMap<Term, Term>, key: &str) -> Option<&'a Term> {
-    map.get(&Term::Atom(Atom::from(key)))
+    map.get(field_key(key)?)
+}
+
+fn field_key(key: &str) -> Option<&'static Term> {
+    let keys = field_keys();
+
+    Some(match key {
+        "kind" => &keys.kind,
+        "id" => &keys.id,
+        "content" => &keys.content,
+        "value" => &keys.value,
+        "placeholder" => &keys.placeholder,
+        "children" => &keys.children,
+        "axis" => &keys.axis,
+        "style" => &keys.style,
+        "hover_style" => &keys.hover_style,
+        "focus_style" => &keys.focus_style,
+        "in_focus_style" => &keys.in_focus_style,
+        "active_style" => &keys.active_style,
+        "disabled_style" => &keys.disabled_style,
+        "disabled" => &keys.disabled,
+        "tab_index" => &keys.tab_index,
+        "actions" => &keys.actions,
+        "shortcuts" => &keys.shortcuts,
+        "label" => &keys.label,
+        "events" => &keys.events,
+        "click" => &keys.click,
+        "hover" => &keys.hover,
+        "focus" => &keys.focus,
+        "blur" => &keys.blur,
+        "change" => &keys.change,
+        "key_down" => &keys.key_down,
+        "key_up" => &keys.key_up,
+        "context_menu" => &keys.context_menu,
+        "drag_start" => &keys.drag_start,
+        "drag_move" => &keys.drag_move,
+        "drop" => &keys.drop,
+        "mouse_down" => &keys.mouse_down,
+        "mouse_up" => &keys.mouse_up,
+        "mouse_move" => &keys.mouse_move,
+        "scroll_wheel" => &keys.scroll_wheel,
+        "stack_priority" => &keys.stack_priority,
+        "occlude" => &keys.occlude,
+        "focusable" => &keys.focusable,
+        "tab_stop" => &keys.tab_stop,
+        "track_scroll" => &keys.track_scroll,
+        "anchor_scroll" => &keys.anchor_scroll,
+        "source" => &keys.source,
+        "object_fit" => &keys.object_fit,
+        "grayscale" => &keys.grayscale,
+        "checked" => &keys.checked,
+        _ => return None,
+    })
 }
 
 fn get_atom_field(map: &HashMap<Term, Term>, key: &str) -> Result<String, String> {
@@ -627,23 +788,28 @@ fn default_button_style() -> DivStyle {
         StyleOp::TextColor(ColorToken::White),
         StyleOp::CursorPointer,
     ]
+    .into()
 }
 
 fn default_button_focus_style() -> DivStyle {
-    vec![StyleOp::BorderColor(ColorToken::Yellow)]
+    vec![StyleOp::BorderColor(ColorToken::Yellow)].into()
 }
 
 fn default_button_active_style() -> DivStyle {
-    vec![StyleOp::Opacity(0.85)]
+    vec![StyleOp::Opacity(0.85)].into()
 }
 
 fn default_button_disabled_style() -> DivStyle {
-    vec![StyleOp::Opacity(0.45)]
+    vec![StyleOp::Opacity(0.45)].into()
 }
 
-fn prepend_style(mut defaults: DivStyle, mut style: DivStyle) -> DivStyle {
-    defaults.append(&mut style);
+fn prepend_style(defaults: DivStyle, style: DivStyle) -> DivStyle {
     defaults
+        .iter()
+        .cloned()
+        .chain(style.iter().cloned())
+        .collect::<Vec<_>>()
+        .into()
 }
 
 fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
@@ -736,11 +902,15 @@ fn parse_shortcut_binding(
 
 fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle, String> {
     let Some(style_term) = get_field(map, key) else {
-        return Ok(Vec::new());
+        return Ok(Vec::new().into());
     };
 
     let style_list = get_list(style_term)?;
-    style_list.iter().map(parse_style_op).collect()
+    let ops = style_list
+        .iter()
+        .map(parse_style_op)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(ops.into())
 }
 
 fn parse_style_op(term: &Term) -> Result<StyleOp, String> {

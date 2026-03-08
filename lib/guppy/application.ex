@@ -7,12 +7,8 @@ defmodule Guppy.Application do
   def start(_type, _args) do
     native = Application.get_env(:guppy, :native, Guppy.Native.Nif)
 
-    children = [
-      {native, name: native},
-      {Guppy.Server, native: native, native_server: native}
-    ]
-
-    Supervisor.start_link(children,
+    Supervisor.start_link(
+      [{Guppy.Server, native: native, native_server: native}],
       strategy: :one_for_one,
       name: Guppy.Supervisor
     )
