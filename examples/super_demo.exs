@@ -1,4 +1,6 @@
 defmodule Guppy.SuperDemo do
+  use Guppy.Component
+
   @palette [:gray, :red, :green, :blue, :yellow]
   @timer_ticks 5
   @timer_interval_ms 1_000
@@ -2165,43 +2167,21 @@ defmodule Guppy.SuperDemo do
   defp contrast_border_color(_color), do: :white
 
   defp aux_window_ir do
-    Guppy.IR.div(
-      [
-        Guppy.IR.text("Auxiliary window", id: "aux_title"),
-        Guppy.IR.text("This window is owned by the main demo process."),
-        Guppy.IR.div(
-          [Guppy.IR.text("Close this window", id: "aux_close_label")],
-          id: "aux_close_button",
-          style: [:p_4, {:bg, :yellow}, {:text_color, :black}, :rounded_md, :cursor_pointer],
-          events: %{click: "close_aux_window"}
-        )
-      ],
-      id: "aux_root",
-      style: [:flex, :flex_col, :gap_2, :p_4]
-    )
+    ~G"""
+    <div id="aux_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <text id="aux_title" class="text-2xl font-black">Auxiliary window</text>
+      <text>This window is owned by the main demo process.</text>
+      <div id="aux_close_button" click="close_aux_window" class="p-4 rounded-md bg-yellow text-black cursor-pointer">
+        <text id="aux_close_label">Close this window</text>
+      </div>
+    </div>
+    """
   end
 
   defp child_owner_loop(parent) do
     {:ok, view_id} =
       Guppy.open_window(
-        Guppy.IR.div(
-          [
-            Guppy.IR.text("Child owner window", id: "child_title"),
-            Guppy.IR.text("Kill the owner from the main demo to test DOWN cleanup."),
-            Guppy.IR.text("Or close this window manually with the traffic-light button.")
-          ],
-          id: "child_root",
-          style: [
-            :flex,
-            :flex_col,
-            :w_full,
-            :h_full,
-            :gap_4,
-            :p_6,
-            {:bg_hex, "#0f172a"},
-            {:text_color_hex, "#f8fafc"}
-          ]
-        ),
+        child_owner_ir(),
         self(),
         window_bounds: [width: 640, height: 420],
         titlebar: [title: "Guppy child owner window"]
@@ -2209,6 +2189,16 @@ defmodule Guppy.SuperDemo do
 
     send(parent, {:child_owner_ready, self(), view_id})
     child_owner_receive(parent, view_id)
+  end
+
+  defp child_owner_ir do
+    ~G"""
+    <div id="child_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <text id="child_title" class="text-2xl font-black">Child owner window</text>
+      <text>Kill the owner from the main demo to test DOWN cleanup.</text>
+      <text>Or close this window manually with the traffic-light button.</text>
+    </div>
+    """
   end
 
   defp child_owner_receive(parent, view_id) do

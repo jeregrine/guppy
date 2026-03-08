@@ -1,5 +1,6 @@
 defmodule Examples.TimerCounterWindow do
   use Guppy.Window
+  use Guppy.Component
 
   import Guppy.Window, only: [assign: 3, update: 3, put_window_opts: 2]
 
@@ -20,76 +21,40 @@ defmodule Examples.TimerCounterWindow do
   def render(window) do
     count = window.assigns.count
 
-    Guppy.IR.div(
-      [
-        panel(
-          [
-            Guppy.IR.div([Guppy.IR.text("Timer counter", id: "title")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(
-                  "This window rerenders from Elixir state once per second and stops after five updates.",
-                  id: "subtitle"
-                )
-              ],
-              style: [:text_base, {:text_color_hex, "#94a3b8"}]
-            )
-          ],
-          id: "header_panel"
-        ),
-        Guppy.IR.div(
-          [
-            Guppy.IR.div(
-              [Guppy.IR.text("Current count", id: "count_heading")],
-              style: [:text_sm, :font_semibold, {:text_color_hex, "#bfdbfe"}]
-            ),
-            Guppy.IR.div(
-              [Guppy.IR.text(Integer.to_string(count), id: "count_label")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [Guppy.IR.text(progress_text(count), id: "progress_text")],
-              style: [:text_base, {:text_color_hex, "#dbeafe"}]
-            )
-          ],
-          id: "count_panel",
-          style: [
-            :flex,
-            :flex_col,
-            :items_center,
-            :gap_2,
-            :p_6,
-            :rounded_xl,
-            :border_1,
-            {:border_color_hex, "#2563eb"},
-            {:bg_hex, "#172554"},
-            :shadow_md,
-            :text_center
-          ]
-        ),
-        panel(
-          [
-            info_row("State lives in the window process", "info_state"),
-            info_row("Each tick updates assigns and triggers a fresh render", "info_tick"),
-            info_row("The example exits once the count reaches five", "info_stop")
-          ],
-          id: "info_panel"
-        )
-      ],
-      id: "counter_root",
-      style: [
-        :flex,
-        :flex_col,
-        :w_full,
-        :h_full,
-        :gap_4,
-        :p_6,
-        {:bg_hex, "#0f172a"},
-        {:text_color_hex, "#f8fafc"}
-      ]
-    )
+    assigns =
+      Map.merge(window.assigns, %{
+        count_text: Integer.to_string(count),
+        progress_text: progress_text(count),
+        info_rows: [
+          %{id: "info_state", label: "State lives in the window process"},
+          %{id: "info_tick", label: "Each tick updates assigns and triggers a fresh render"},
+          %{id: "info_stop", label: "The example exits once the count reaches five"}
+        ]
+      })
+
+    ~G"""
+    <div id="counter_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <div id="header_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <text id="title" class="text-3xl font-black">Timer counter</text>
+        <text id="subtitle" class="text-base text-[#94a3b8]">
+          This window rerenders from Elixir state once per second and stops after five updates.
+        </text>
+      </div>
+
+      <div id="count_panel" class="flex flex-col items-center gap-2 p-6 rounded-xl border-1 border-[#2563eb] bg-[#172554] shadow-md text-center">
+        <text id="count_heading" class="text-sm font-semibold text-[#bfdbfe]">Current count</text>
+        <text id="count_label" class="text-3xl font-black">{@count_text}</text>
+        <text id="progress_text" class="text-base text-[#dbeafe]">{@progress_text}</text>
+      </div>
+
+      <div id="info_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <div :for={row <- @info_rows} id={row.id <> "_row"} class="flex flex-row items-center gap-2">
+          <div id={row.id <> "_dot"} class="w-[10px] h-[10px] rounded-full bg-[#60a5fa]"></div>
+          <text id={row.id} class="flex-1 text-base">{row.label}</text>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   @impl Guppy.Window
@@ -108,40 +73,6 @@ defmodule Examples.TimerCounterWindow do
 
   defp progress_text(count) when count < 5, do: "Waiting for the next timer tick..."
   defp progress_text(_count), do: "Done. The process will shut down now."
-
-  defp panel(children, opts) do
-    id = Keyword.get(opts, :id)
-
-    Guppy.IR.div(
-      children,
-      id: id,
-      style: [
-        :flex,
-        :flex_col,
-        :gap_2,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#334155"},
-        {:bg_hex, "#111827"},
-        :shadow_md
-      ]
-    )
-  end
-
-  defp info_row(label, id) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.div([],
-          id: "#{id}_dot",
-          style: [{:w_px, 10}, {:h_px, 10}, :rounded_full, {:bg_hex, "#60a5fa"}]
-        ),
-        Guppy.IR.div([Guppy.IR.text(label, id: id)], style: [:flex_1, :text_base])
-      ],
-      id: "#{id}_row",
-      style: [:flex, :flex_row, :items_center, :gap_2]
-    )
-  end
 end
 
 {:ok, _} = Application.ensure_all_started(:guppy)

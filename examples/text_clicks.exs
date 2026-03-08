@@ -1,5 +1,6 @@
 defmodule Examples.TextClicksWindow do
   use Guppy.Window
+  use Guppy.Component
 
   import Guppy.Window, only: [assign: 3, put_window_opts: 2]
 
@@ -27,130 +28,47 @@ defmodule Examples.TextClicksWindow do
 
   @impl Guppy.Window
   def render(window) do
-    Guppy.IR.div(
-      [
-        panel(
-          [
-            Guppy.IR.div([Guppy.IR.text("Text clicks", id: "title")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(
-                  "Text nodes can emit click events, and the surrounding layout can still look like a proper sample app.",
-                  id: "subtitle"
-                )
-              ],
-              style: [:text_base, {:text_color_hex, "#94a3b8"}]
-            )
-          ],
-          id: "header_panel"
-        ),
-        Guppy.IR.div(
-          [
-            Guppy.IR.div([Guppy.IR.text("Status", id: "status_heading")],
-              style: [:text_sm, :font_semibold, {:text_color_hex, "#bfdbfe"}]
-            ),
-            Guppy.IR.div([Guppy.IR.text(window.assigns.status, id: "status")],
-              style: [:text_2xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text("Click either row below to update this state label.",
-                  id: "status_help"
-                )
-              ],
-              style: [:text_base, {:text_color_hex, "#dbeafe"}]
-            )
-          ],
-          id: "status_panel",
-          style: [
-            :flex,
-            :flex_col,
-            :gap_2,
-            :p_4,
-            :rounded_xl,
-            :border_1,
-            {:border_color_hex, "#2563eb"},
-            {:bg_hex, "#172554"},
-            :shadow_md
-          ]
-        ),
-        Guppy.IR.div(
-          [
-            clickable_row(
-              "line_one",
-              "First line",
-              "Use a clickable text node as the primary action."
-            ),
-            clickable_row(
-              "line_two",
-              "Second line",
-              "Wire a different callback through the same window process."
-            )
-          ],
-          id: "choices",
-          style: [:flex, :flex_col, :gap_2]
-        )
-      ],
-      id: "text_click_root",
-      style: [
-        :flex,
-        :flex_col,
-        :w_full,
-        :h_full,
-        :gap_4,
-        :p_6,
-        {:bg_hex, "#0f172a"},
-        {:text_color_hex, "#f8fafc"}
-      ]
-    )
-  end
+    assigns =
+      Map.merge(window.assigns, %{
+        rows: [
+          %{
+            id: "line_one",
+            title: "First line",
+            body: "Use a clickable text node as the primary action."
+          },
+          %{
+            id: "line_two",
+            title: "Second line",
+            body: "Wire a different callback through the same window process."
+          }
+        ]
+      })
 
-  defp clickable_row(callback, title, body) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.div([Guppy.IR.text(title, id: "#{callback}_title")],
-          style: [:text_lg, :font_bold]
-        ),
-        Guppy.IR.text(body, id: callback, events: %{click: callback})
-      ],
-      id: "#{callback}_row",
-      style: [
-        :flex,
-        :flex_col,
-        :gap_1,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#334155"},
-        {:bg_hex, "#111827"},
-        :shadow_md,
-        :cursor_pointer
-      ],
-      hover_style: [{:bg_hex, "#1e293b"}],
-      events: %{click: callback}
-    )
-  end
+    ~G"""
+    <div id="text_click_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <div id="header_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <text id="title" class="text-3xl font-black">Text clicks</text>
+        <text id="subtitle" class="text-base text-[#94a3b8]">
+          Text nodes can emit click events, and the surrounding layout can still look like a proper sample app.
+        </text>
+      </div>
 
-  defp panel(children, opts) do
-    id = Keyword.get(opts, :id)
+      <div id="status_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#2563eb] bg-[#172554] shadow-md">
+        <text id="status_heading" class="text-sm font-semibold text-[#bfdbfe]">Status</text>
+        <text id="status" class="text-2xl font-black">{@status}</text>
+        <text id="status_help" class="text-base text-[#dbeafe]">
+          Click either row below to update this state label.
+        </text>
+      </div>
 
-    Guppy.IR.div(
-      children,
-      id: id,
-      style: [
-        :flex,
-        :flex_col,
-        :gap_2,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#334155"},
-        {:bg_hex, "#111827"},
-        :shadow_md
-      ]
-    )
+      <div id="choices" class="flex flex-col gap-2">
+        <div :for={row <- @rows} id={row.id <> "_row"} click={row.id} class="flex flex-col gap-1 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md cursor-pointer" hover_class="bg-[#1e293b]">
+          <text id={row.id <> "_title"} class="text-lg font-bold">{row.title}</text>
+          <text id={row.id} click={row.id}>{row.body}</text>
+        </div>
+      </div>
+    </div>
+    """
   end
 end
 

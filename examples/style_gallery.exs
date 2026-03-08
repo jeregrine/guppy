@@ -1,5 +1,6 @@
 defmodule Examples.StyleGalleryWindow do
   use Guppy.Window
+  use Guppy.Component
 
   import Guppy.Window, only: [assign: 3, put_window_opts: 2]
 
@@ -33,126 +34,78 @@ defmodule Examples.StyleGalleryWindow do
   def render(window) do
     {label, bg_hex, text_hex, border_hex} = selected_palette(window.assigns.selected)
 
-    Guppy.IR.div(
-      [
-        panel(
-          [
-            Guppy.IR.div([Guppy.IR.text("Style gallery", id: "title")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(
-                  "A consistent sample shell, clickable swatches, and a preview surface driven by window assigns.",
-                  id: "subtitle"
-                )
-              ],
-              style: [:text_base, {:text_color_hex, "#94a3b8"}]
-            )
-          ],
-          id: "header_panel"
-        ),
-        Guppy.IR.div(
-          Enum.map(@swatches, &swatch_card(&1, window.assigns.selected)),
-          id: "swatch_list",
-          style: [:flex, :flex_row, :flex_wrap, :gap_2]
-        ),
-        Guppy.IR.div(
-          [
-            Guppy.IR.div([Guppy.IR.text("Preview", id: "preview_heading")],
-              style: [:text_sm, :font_semibold]
-            ),
-            Guppy.IR.div([Guppy.IR.text(label, id: "selected_label")],
-              style: [:text_2xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(
-                  "This panel inherits the selected swatch colors and rerenders immediately on click.",
-                  id: "preview_text"
-                )
-              ],
-              style: [:text_base]
-            )
-          ],
-          id: "preview",
-          style: [
-            :flex,
-            :flex_col,
-            :gap_2,
-            :p_6,
-            :rounded_xl,
-            :border_1,
-            {:border_color_hex, border_hex},
-            {:bg_hex, bg_hex},
-            {:text_color_hex, text_hex},
-            :shadow_md
-          ]
-        ),
-        panel(
-          [
-            info_row(
-              "Swatches use the same spacing and surface language as the other samples",
-              "info_consistency"
-            ),
-            info_row("The preview uses the selected color as a panel theme", "info_preview"),
-            info_row(
-              "This example now uses Guppy.Window instead of a manual receive loop",
-              "info_window"
-            )
-          ],
-          id: "info_panel"
-        )
-      ],
-      id: "style_gallery_root",
-      style: [
-        :flex,
-        :flex_col,
-        :w_full,
-        :h_full,
-        :gap_4,
-        :p_6,
-        {:bg_hex, "#0f172a"},
-        {:text_color_hex, "#f8fafc"}
-      ]
-    )
-  end
+    swatches =
+      Enum.map(@swatches, fn {name, swatch_label, swatch_bg, swatch_text, swatch_border} ->
+        selected? = name == window.assigns.selected
 
-  defp swatch_card({name, label, bg_hex, text_hex, border_hex}, selected) do
-    selected? = name == selected
-
-    Guppy.IR.div(
-      [
-        Guppy.IR.div([Guppy.IR.text(label, id: "swatch_label_#{name}")],
-          style: [:text_lg, :font_bold]
-        ),
-        Guppy.IR.div(
-          [
-            Guppy.IR.text(if(selected?, do: "Selected", else: "Click to preview"),
-              id: "swatch_hint_#{name}"
+        %{
+          name: name,
+          label: swatch_label,
+          hint: if(selected?, do: "Selected", else: "Click to preview"),
+          card_class:
+            Enum.join(
+              [
+                "flex flex-col gap-1 p-4 rounded-xl border-2 shadow-sm cursor-pointer w-[156px]",
+                "bg-[#{swatch_bg}]",
+                "text-[#{swatch_text}]",
+                "border-[#{if(selected?, do: "#f8fafc", else: swatch_border)}]"
+              ],
+              " "
             )
-          ],
-          style: [:text_sm]
-        )
-      ],
-      id: "swatch_#{name}",
-      style: [
-        :flex,
-        :flex_col,
-        :gap_1,
-        :p_4,
-        :rounded_xl,
-        :border_2,
-        {:border_color_hex, if(selected?, do: "#f8fafc", else: border_hex)},
-        {:bg_hex, bg_hex},
-        {:text_color_hex, text_hex},
-        :shadow_sm,
-        :cursor_pointer,
-        {:w_px, 156}
-      ],
-      hover_style: [{:opacity, 0.9}],
-      events: %{click: "select:#{name}"}
-    )
+        }
+      end)
+
+    assigns =
+      Map.merge(window.assigns, %{
+        preview_label: label,
+        preview_class:
+          "flex flex-col gap-2 p-6 rounded-xl border-1 shadow-md border-[#{border_hex}] bg-[#{bg_hex}] text-[#{text_hex}]",
+        swatches: swatches,
+        info_rows: [
+          %{
+            id: "info_consistency",
+            label: "Swatches use the same spacing and surface language as the other samples"
+          },
+          %{id: "info_preview", label: "The preview uses the selected color as a panel theme"},
+          %{
+            id: "info_window",
+            label: "This example now uses Guppy.Window instead of a manual receive loop"
+          }
+        ]
+      })
+
+    ~G"""
+    <div id="style_gallery_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <div id="header_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <text id="title" class="text-3xl font-black">Style gallery</text>
+        <text id="subtitle" class="text-base text-[#94a3b8]">
+          A consistent sample shell, clickable swatches, and a preview surface driven by window assigns.
+        </text>
+      </div>
+
+      <div id="swatch_list" class="flex flex-row flex-wrap gap-2">
+        <div :for={swatch <- @swatches} id={"swatch_#{swatch.name}"} click={"select:#{swatch.name}"} class={swatch.card_class} hover_style={[opacity: 0.9]}>
+          <text id={"swatch_label_#{swatch.name}"} class="text-lg font-bold">{swatch.label}</text>
+          <text id={"swatch_hint_#{swatch.name}"} class="text-sm">{swatch.hint}</text>
+        </div>
+      </div>
+
+      <div id="preview" class={@preview_class}>
+        <text id="preview_heading" class="text-sm font-semibold">Preview</text>
+        <text id="selected_label" class="text-2xl font-black">{@preview_label}</text>
+        <text id="preview_text" class="text-base">
+          This panel inherits the selected swatch colors and rerenders immediately on click.
+        </text>
+      </div>
+
+      <div id="info_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <div :for={row <- @info_rows} id={row.id <> "_row"} class="flex flex-row items-center gap-2">
+          <div id={row.id <> "_dot"} class="w-[10px] h-[10px] rounded-full bg-[#60a5fa]"></div>
+          <text id={row.id} class="flex-1 text-base">{row.label}</text>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   defp selected_palette(name) do
@@ -160,40 +113,6 @@ defmodule Examples.StyleGalleryWindow do
       Enum.find(@swatches, fn {swatch, _, _, _, _} -> swatch == name end)
 
     {label, bg_hex, text_hex, border_hex}
-  end
-
-  defp panel(children, opts) do
-    id = Keyword.get(opts, :id)
-
-    Guppy.IR.div(
-      children,
-      id: id,
-      style: [
-        :flex,
-        :flex_col,
-        :gap_2,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#334155"},
-        {:bg_hex, "#111827"},
-        :shadow_md
-      ]
-    )
-  end
-
-  defp info_row(label, id) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.div([],
-          id: "#{id}_dot",
-          style: [{:w_px, 10}, {:h_px, 10}, :rounded_full, {:bg_hex, "#60a5fa"}]
-        ),
-        Guppy.IR.div([Guppy.IR.text(label, id: id)], style: [:flex_1, :text_base])
-      ],
-      id: "#{id}_row",
-      style: [:flex, :flex_row, :items_center, :gap_2]
-    )
   end
 end
 

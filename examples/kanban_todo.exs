@@ -1,5 +1,6 @@
 defmodule Examples.KanbanTodoWindow do
   use Guppy.Window
+  use Guppy.Component
 
   import Guppy.Window, only: [assign: 2, assign: 3, put_window_opts: 2]
 
@@ -72,46 +73,97 @@ defmodule Examples.KanbanTodoWindow do
 
   @impl Guppy.Window
   def render(window) do
-    tasks = window.assigns.tasks
+    columns =
+      Enum.map(@column_order, fn status ->
+        column_tasks = Enum.filter(window.assigns.tasks, &(&1.status == status))
+        border_hex = Map.fetch!(@column_colors, status)
 
-    Guppy.IR.div(
-      [
-        panel(
-          [
-            Guppy.IR.div([Guppy.IR.text("Kanban todo board", id: "title")],
-              style: [:text_3xl, :font_black]
-            ),
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(
-                  "Add sample tasks, drag cards across columns, and archive completed work.",
-                  id: "subtitle"
-                )
-              ],
-              style: [:text_base, {:text_color_hex, "#94a3b8"}]
-            ),
-            toolbar()
-          ],
-          id: "header_panel"
-        ),
-        Guppy.IR.div(
-          Enum.map(@column_order, &column_ir(&1, tasks)),
-          id: "board",
-          style: [:flex, :flex_row, :gap_4]
-        )
-      ],
-      id: "kanban_root",
-      style: [
-        :flex,
-        :flex_col,
-        :w_full,
-        :h_full,
-        :gap_4,
-        :p_6,
-        {:bg_hex, "#0f172a"},
-        {:text_color_hex, "#f8fafc"}
-      ]
-    )
+        %{
+          status: status,
+          title: Map.fetch!(@column_titles, status),
+          count: length(column_tasks),
+          border_hex: border_hex,
+          column_class:
+            "flex flex-col w-[320px] h-[460px] p-4 rounded-xl border-1 gap-2 shadow-md border-[#{border_hex}] bg-[#111827]",
+          count_class:
+            "p-1 rounded-full border-1 text-sm border-[#{border_hex}] bg-[#0f172a] text-[#cbd5e1]",
+          drop_zone_class:
+            "p-2 rounded-lg border-1 border-dashed text-sm border-[#{border_hex}] bg-[#0f172a] text-[#94a3b8]",
+          tasks: Enum.map(column_tasks, &task_view/1)
+        }
+      end)
+
+    assigns =
+      Map.merge(window.assigns, %{
+        toolbar_buttons: toolbar_buttons(),
+        columns: columns
+      })
+
+    ~G"""
+    <div id="kanban_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
+      <div id="header_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+        <text id="title" class="text-3xl font-black">Kanban todo board</text>
+        <text id="subtitle" class="text-base text-[#94a3b8]">
+          Add sample tasks, drag cards across columns, and archive completed work.
+        </text>
+
+        <div id="toolbar" class="flex flex-row flex-wrap gap-2 mt-2">
+          <button
+            :for={button <- @toolbar_buttons}
+            id={button.id}
+            click={button.click}
+            class={button.class}
+            hover_class={button.hover_class}
+          >
+            {button.label}
+          </button>
+        </div>
+      </div>
+
+      <div id="board" class="flex flex-row gap-4">
+        <div
+          :for={column <- @columns}
+          id={"#{column.status}_column"}
+          drop={"drop_on_#{column.status}"}
+          class={column.column_class}
+        >
+          <div id={"#{column.status}_header"} class="flex flex-row items-center justify-between mb-2">
+            <text id={"#{column.status}_title"} class="text-lg font-bold">{column.title}</text>
+            <text id={"#{column.status}_count"} class={column.count_class}>{column.count} cards</text>
+          </div>
+
+          <scroll id={"#{column.status}_scroll"} axis="y" class="flex-1 min-h-0 gap-2">
+            <div id={"#{column.status}_drop_zone"} class={column.drop_zone_class}>
+              <text id={"#{column.status}_drop_hint"}>Drop cards anywhere in this column</text>
+            </div>
+
+            <div
+              :for={task <- column.tasks}
+              id={task.card_id}
+              drag_start="drag_started"
+              drag_move="drag_moved"
+              class={task.card_class}
+              hover_class="bg-[#334155]"
+            >
+              <text id={task.title_id} class="text-base font-semibold">{task.title}</text>
+
+              <div id={task.footer_id} class="flex flex-row items-center justify-between">
+                <text id={task.status_id} class="text-xs text-[#94a3b8]">{task.status_label}</text>
+                <button
+                  id={task.archive_button_id}
+                  click={task.archive_click}
+                  class="p-2 rounded-lg border-1 border-[#991b1b] bg-[#7f1d1d] text-[#fef2f2]"
+                  hover_class="bg-[#991b1b]"
+                >
+                  Archive
+                </button>
+              </div>
+            </div>
+          </scroll>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   defp initial_window(window) do
@@ -125,173 +177,52 @@ defmodule Examples.KanbanTodoWindow do
     )
   end
 
-  defp panel(children, opts) do
-    id = Keyword.get(opts, :id)
-
-    Guppy.IR.div(
-      children,
-      id: id,
-      style: [
-        :flex,
-        :flex_col,
-        :gap_2,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#334155"},
-        {:bg_hex, "#111827"},
-        :shadow_md
-      ]
-    )
+  defp toolbar_buttons do
+    [
+      %{
+        id: "add:bug_button",
+        label: "Add bug",
+        click: "add:bug",
+        class: "p-2 rounded-lg border-1 border-[#d97706] bg-[#d97706] text-[#f8fafc] shadow-sm",
+        hover_class: "bg-[#f59e0b]"
+      },
+      %{
+        id: "add:docs_button",
+        label: "Add docs",
+        click: "add:docs",
+        class: "p-2 rounded-lg border-1 border-[#2563eb] bg-[#2563eb] text-[#f8fafc] shadow-sm",
+        hover_class: "bg-[#3b82f6]"
+      },
+      %{
+        id: "add:polish_button",
+        label: "Add polish",
+        click: "add:polish",
+        class: "p-2 rounded-lg border-1 border-[#16a34a] bg-[#16a34a] text-[#f8fafc] shadow-sm",
+        hover_class: "bg-[#22c55e]"
+      },
+      %{
+        id: "reset_board_button",
+        label: "Reset board",
+        click: "reset_board",
+        class: "p-2 rounded-lg border-1 border-[#334155] bg-[#334155] text-[#f8fafc] shadow-sm",
+        hover_class: "bg-[#475569]"
+      }
+    ]
   end
 
-  defp toolbar do
-    Guppy.IR.div(
-      [
-        action_button("Add bug", "add:bug", "#d97706", "#f59e0b"),
-        action_button("Add docs", "add:docs", "#2563eb", "#3b82f6"),
-        action_button("Add polish", "add:polish", "#16a34a", "#22c55e"),
-        action_button("Reset board", "reset_board", "#334155", "#475569")
-      ],
-      id: "toolbar",
-      style: [:flex, :flex_row, :flex_wrap, :gap_2, :mt_2]
-    )
-  end
-
-  defp column_ir(status, tasks) do
-    column_tasks = Enum.filter(tasks, &(&1.status == status))
-    border_hex = Map.fetch!(@column_colors, status)
-
-    Guppy.IR.div(
-      [
-        Guppy.IR.div(
-          [
-            Guppy.IR.div(
-              [Guppy.IR.text(Map.fetch!(@column_titles, status), id: "#{status}_title")],
-              style: [:text_lg, :font_bold]
-            ),
-            Guppy.IR.div(
-              [Guppy.IR.text("#{length(column_tasks)} cards", id: "#{status}_count")],
-              style: [
-                :p_1,
-                :rounded_full,
-                :border_1,
-                {:border_color_hex, border_hex},
-                {:bg_hex, "#0f172a"},
-                :text_sm,
-                {:text_color_hex, "#cbd5e1"}
-              ]
-            )
-          ],
-          id: "#{status}_header",
-          style: [:flex, :flex_row, :items_center, :justify_between, :mb_2]
-        ),
-        Guppy.IR.scroll(
-          [
-            Guppy.IR.div(
-              [Guppy.IR.text("Drop cards anywhere in this column", id: "#{status}_drop_hint")],
-              id: "#{status}_drop_zone",
-              style: [
-                :p_2,
-                :rounded_lg,
-                :border_1,
-                :border_dashed,
-                {:border_color_hex, border_hex},
-                {:bg_hex, "#0f172a"},
-                :text_sm,
-                {:text_color_hex, "#94a3b8"}
-              ]
-            )
-            | Enum.map(column_tasks, &task_card/1)
-          ],
-          id: "#{status}_scroll",
-          axis: :y,
-          style: [:flex_1, :min_h_0, :gap_2]
-        )
-      ],
-      id: "#{status}_column",
-      style: [
-        :flex,
-        :flex_col,
-        {:w_px, 320},
-        {:h_px, 460},
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, border_hex},
-        {:bg_hex, "#111827"},
-        :gap_2,
-        :shadow_md
-      ],
-      events: %{drop: "drop_on_#{status}"}
-    )
-  end
-
-  defp task_card(task) do
-    Guppy.IR.div(
-      [
-        Guppy.IR.div([Guppy.IR.text(task.title, id: "task_title_#{task.id}")],
-          style: [:text_base, :font_semibold]
-        ),
-        Guppy.IR.div(
-          [
-            Guppy.IR.div(
-              [
-                Guppy.IR.text(String.upcase(to_string(task.status)), id: "task_status_#{task.id}")
-              ],
-              style: [:text_xs, {:text_color_hex, "#94a3b8"}]
-            ),
-            Guppy.IR.button("Archive",
-              id: "archive:#{task.id}_button",
-              style: [
-                :p_2,
-                :rounded_lg,
-                :border_1,
-                {:border_color_hex, "#991b1b"},
-                {:bg_hex, "#7f1d1d"},
-                {:text_color_hex, "#fef2f2"}
-              ],
-              hover_style: [{:bg_hex, "#991b1b"}],
-              events: %{click: "archive:#{task.id}"}
-            )
-          ],
-          id: "task_footer_#{task.id}",
-          style: [:flex, :flex_row, :items_center, :justify_between]
-        )
-      ],
-      id: "task_card_#{task.id}",
-      style: [
-        :flex,
-        :flex_col,
-        :gap_2,
-        :p_4,
-        :rounded_xl,
-        :border_1,
-        {:border_color_hex, "#475569"},
-        {:bg_hex, "#1e293b"},
-        :cursor_pointer,
-        :shadow_sm
-      ],
-      hover_style: [{:bg_hex, "#334155"}],
-      events: %{drag_start: "drag_started", drag_move: "drag_moved"}
-    )
-  end
-
-  defp action_button(label, callback, bg_hex, hover_hex) do
-    Guppy.IR.button(label,
-      id: "#{callback}_button",
-      style: [
-        :p_2,
-        :rounded_lg,
-        :border_1,
-        {:border_color_hex, bg_hex},
-        {:bg_hex, bg_hex},
-        {:text_color_hex, "#f8fafc"},
-        :shadow_sm
-      ],
-      hover_style: [{:bg_hex, hover_hex}],
-      events: %{click: callback}
-    )
+  defp task_view(task) do
+    %{
+      card_id: "task_card_#{task.id}",
+      title_id: "task_title_#{task.id}",
+      footer_id: "task_footer_#{task.id}",
+      status_id: "task_status_#{task.id}",
+      archive_button_id: "archive:#{task.id}_button",
+      archive_click: "archive:#{task.id}",
+      title: task.title,
+      status_label: String.upcase(to_string(task.status)),
+      card_class:
+        "flex flex-col gap-2 p-4 rounded-xl border-1 border-[#475569] bg-[#1e293b] cursor-pointer shadow-sm"
+    }
   end
 
   defp handle_drop(window, source_id, status) do
