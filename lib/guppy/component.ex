@@ -11,6 +11,8 @@ defmodule Guppy.Component do
   - `<text>`
   - `<button>`
   - `<scroll>`
+  - `<image />`
+  - `<spacer />`
   - `<text_input />`
 
   It also supports first-pass function components:

@@ -41,6 +41,7 @@ defmodule Guppy.TemplateExample do
       <button id="save_button" click="save" class="p-2 rounded-lg border-1 border-blue bg-blue text-[#ffffff]">
         Save
       </button>
+      <image id="hero_image" uri="https://example.com/demo.png" object_fit="cover" grayscale="true" class="w-[240px] h-[120px] rounded-lg" />
       <scroll id="items" axis="y" class="flex-1 gap-2">
         <div :for={item <- @items} id={"item_#{item.id}"} class="rounded-md border-1 border-white p-2">
           <text>{item.label}</text>
@@ -161,6 +162,19 @@ defmodule GuppyTest do
 
     assert :ok = Guppy.IR.validate(scroll_ir)
     assert scroll_ir.axis == :both
+
+    image_ir =
+      Guppy.IR.image(
+        {:path, "/tmp/logo.png"},
+        id: "logo_image",
+        style: [{:w_px, 96}, {:h_px, 96}, :rounded_md],
+        object_fit: :cover,
+        grayscale: true
+      )
+
+    assert :ok = Guppy.IR.validate(image_ir)
+    assert image_ir.object_fit == :cover
+    assert image_ir.grayscale == true
 
     button_ir =
       Guppy.IR.button(
@@ -629,6 +643,18 @@ defmodule GuppyTest do
 
     assert {:error, {:tab_index, "first"}} =
              Guppy.IR.validate(Guppy.IR.div([], tab_index: "first"))
+
+    assert {:error, {:invalid_image_source, 123}} =
+             Guppy.IR.validate(Guppy.IR.image(123))
+
+    assert {:error, {:invalid_image_source, {:path, 123}}} =
+             Guppy.IR.validate(Guppy.IR.image({:path, 123}))
+
+    assert {:error, {:invalid_image_object_fit, :stretch}} =
+             Guppy.IR.validate(Guppy.IR.image("logo.png", object_fit: :stretch))
+
+    assert {:error, {:grayscale, "yes"}} =
+             Guppy.IR.validate(Guppy.IR.image("logo.png", grayscale: "yes"))
   end
 
   test "native ping is wired through the server" do
@@ -658,7 +684,7 @@ defmodule GuppyTest do
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
-    [title_wrapper, button, scroll, text_input, footer] = ir.children
+    [title_wrapper, button, image, scroll, text_input, footer] = ir.children
 
     assert title_wrapper.kind == :div
     assert title_wrapper.children == [%{kind: :text, content: "Template demo", id: "title"}]
@@ -669,6 +695,14 @@ defmodule GuppyTest do
     assert button.id == "save_button"
     assert button.label == "Save"
     assert button.events == %{click: "save"}
+
+    assert image.kind == :image
+    assert image.id == "hero_image"
+    assert image.source == {:uri, "https://example.com/demo.png"}
+    assert image.object_fit == :cover
+    assert image.grayscale == true
+    assert {:w_px, 240} in image.style
+    assert {:h_px, 120} in image.style
 
     assert scroll.kind == :scroll
     assert scroll.id == "items"

@@ -114,9 +114,9 @@ The goal is to keep one checklist, check items off as they land, and continue fr
 
 ## 8. Additional node kinds and higher-level primitives
 
-- [ ] image node
+- [x] image node
 - [ ] icon node
-- [ ] spacer node
+- [x] spacer node
 - [x] explicit scroll node
 - [x] button node
 - [x] text input node

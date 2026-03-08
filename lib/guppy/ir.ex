@@ -230,6 +230,23 @@ defmodule Guppy.IR do
           optional(:style) => style()
         }
 
+  @type image_source ::
+          String.t()
+          | {:uri, String.t()}
+          | {:path, String.t()}
+          | {:embedded, String.t()}
+
+  @type image_object_fit :: :fill | :contain | :cover | :scale_down | :none
+
+  @type image_node :: %{
+          required(:kind) => :image,
+          required(:source) => image_source(),
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:object_fit) => image_object_fit(),
+          optional(:grayscale) => boolean()
+        }
+
   @type button_node :: %{
           required(:kind) => :button,
           required(:label) => String.t(),
@@ -247,6 +264,12 @@ defmodule Guppy.IR do
           optional(:events) => div_events()
         }
 
+  @type spacer_node :: %{
+          required(:kind) => :spacer,
+          optional(:id) => node_id(),
+          optional(:style) => style()
+        }
+
   @type text_input_events :: %{optional(:change) => String.t()}
 
   @type text_input_node :: %{
@@ -260,7 +283,14 @@ defmodule Guppy.IR do
           optional(:events) => text_input_events()
         }
 
-  @type ir_node :: text_node() | div_node() | scroll_node() | button_node() | text_input_node()
+  @type ir_node ::
+          text_node()
+          | div_node()
+          | scroll_node()
+          | image_node()
+          | button_node()
+          | spacer_node()
+          | text_input_node()
 
   @style_flag_tokens [
     :flex,
@@ -463,6 +493,30 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
   end
 
+  @spec image(image_source(), keyword()) :: image_node()
+  def image(source, opts \\ []) when is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    object_fit = Keyword.get(opts, :object_fit)
+    grayscale = Keyword.get(opts, :grayscale)
+
+    %{kind: :image, source: source}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+    |> maybe_put(:object_fit, object_fit)
+    |> maybe_put(:grayscale, grayscale)
+  end
+
+  @spec spacer(keyword()) :: spacer_node()
+  def spacer(opts \\ []) when is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+
+    %{kind: :spacer}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+  end
+
   @spec button(String.t(), keyword()) :: button_node()
   def button(label, opts \\ []) when is_binary(label) and is_list(opts) do
     id = Keyword.get(opts, :id)
@@ -575,6 +629,23 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_node(%{kind: :image, source: source} = node) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_image_source(source),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_image_object_fit(Map.get(node, :object_fit)),
+         :ok <- validate_optional_boolean(Map.get(node, :grayscale), :grayscale) do
+      :ok
+    end
+  end
+
+  defp validate_node(%{kind: :spacer} = node) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)) do
+      :ok
+    end
+  end
+
   defp validate_node(%{kind: :button, label: label} = node) when is_binary(label) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
@@ -681,6 +752,20 @@ defmodule Guppy.IR do
   defp validate_scroll_axis(nil), do: :ok
   defp validate_scroll_axis(axis) when axis in [:x, :y, :both], do: :ok
   defp validate_scroll_axis(axis), do: {:error, {:invalid_scroll_axis, axis}}
+
+  defp validate_image_source(source) when is_binary(source), do: :ok
+
+  defp validate_image_source({kind, value})
+       when kind in [:uri, :path, :embedded] and is_binary(value), do: :ok
+
+  defp validate_image_source(source), do: {:error, {:invalid_image_source, source}}
+
+  defp validate_image_object_fit(nil), do: :ok
+
+  defp validate_image_object_fit(fit) when fit in [:fill, :contain, :cover, :scale_down, :none],
+    do: :ok
+
+  defp validate_image_object_fit(fit), do: {:error, {:invalid_image_object_fit, fit}}
 
   defp validate_style(nil), do: :ok
 

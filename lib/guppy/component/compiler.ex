@@ -143,6 +143,8 @@ defmodule Guppy.Component.Compiler do
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "text_input" -> compile_text_input(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
+        "image" -> compile_image(attrs, xmlElement(element, :content), caller)
+        "spacer" -> compile_spacer(attrs, xmlElement(element, :content), caller)
         other -> compile_component(other, attrs, xmlElement(element, :content), caller)
       end
 
@@ -214,6 +216,39 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
+  defp compile_image(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, image_allowed_attrs(), "image", caller)
+    assert_empty_element!(content, "image", caller)
+    source = build_image_source_ast(attrs, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        maybe_attr_entry(attrs, "object_fit", :object_fit, caller),
+        maybe_attr_entry(attrs, "grayscale", :boolean, caller)
+      ])
+
+    quote do
+      Guppy.IR.image(unquote(source), unquote(opts))
+    end
+  end
+
+  defp compile_spacer(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, spacer_allowed_attrs(), "spacer", caller)
+    assert_empty_element!(content, "spacer", caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style)
+      ])
+
+    quote do
+      Guppy.IR.spacer(unquote(opts))
+    end
+  end
+
   defp compile_component(tag, attrs, content, caller) do
     assert_component_attrs!(tag, attrs, caller)
     props = build_component_props_ast(attrs, content, caller)
@@ -249,6 +284,51 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.text(unquote(text), unquote(opts))
+    end
+  end
+
+  defp build_image_source_ast(attrs, caller) do
+    source_attrs = ["src", "path", "uri", "embedded"]
+
+    present_sources =
+      Enum.filter(source_attrs, fn key -> Map.has_key?(attrs, key) end)
+
+    case present_sources do
+      ["src"] ->
+        parse_attribute_value(Map.fetch!(attrs, "src"), :string_or_expr, caller)
+
+      ["path"] ->
+        value_ast = parse_attribute_value(Map.fetch!(attrs, "path"), :string_or_expr, caller)
+
+        quote do
+          {:path, unquote(value_ast)}
+        end
+
+      ["uri"] ->
+        value_ast = parse_attribute_value(Map.fetch!(attrs, "uri"), :string_or_expr, caller)
+
+        quote do
+          {:uri, unquote(value_ast)}
+        end
+
+      ["embedded"] ->
+        value_ast = parse_attribute_value(Map.fetch!(attrs, "embedded"), :string_or_expr, caller)
+
+        quote do
+          {:embedded, unquote(value_ast)}
+        end
+
+      [] ->
+        raise_compile_error!(
+          caller,
+          "missing required image source attribute: one of src, path, uri, or embedded"
+        )
+
+      _ ->
+        raise_compile_error!(
+          caller,
+          "image accepts exactly one source attribute: src, path, uri, or embedded"
+        )
     end
   end
 
@@ -578,6 +658,31 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
+  defp parse_static_value(value, :object_fit, caller) do
+    case value do
+      "fill" ->
+        :fill
+
+      "contain" ->
+        :contain
+
+      "cover" ->
+        :cover
+
+      "scale_down" ->
+        :scale_down
+
+      "none" ->
+        :none
+
+      _ ->
+        raise_compile_error!(
+          caller,
+          "expected object_fit to be fill, contain, cover, scale_down, or none"
+        )
+    end
+  end
+
   defp parse_expression!(source, nil) when is_binary(source) do
     source
     |> Code.string_to_quoted!()
@@ -770,6 +875,21 @@ defmodule Guppy.Component.Compiler do
     end)
   end
 
+  defp assert_empty_element!(content, tag, caller) do
+    if Enum.any?(content, fn
+         node when elem(node, 0) == :xmlElement ->
+           true
+
+         node when elem(node, 0) == :xmlText ->
+           node |> xmlText(:value) |> List.to_string() |> normalize_template_text() != ""
+
+         _ ->
+           false
+       end) do
+      raise_compile_error!(caller, "<#{tag}> cannot have child content")
+    end
+  end
+
   defp assert_allowed_attrs!(attrs, allowed, tag, caller) do
     case Map.keys(attrs) -- allowed do
       [] ->
@@ -800,6 +920,26 @@ defmodule Guppy.Component.Compiler do
 
   defp scroll_allowed_attrs do
     [":if", ":for", "id", "axis", "class", "style"]
+  end
+
+  defp image_allowed_attrs do
+    [
+      ":if",
+      ":for",
+      "id",
+      "src",
+      "path",
+      "uri",
+      "embedded",
+      "object_fit",
+      "grayscale",
+      "class",
+      "style"
+    ]
+  end
+
+  defp spacer_allowed_attrs do
+    [":if", ":for", "id", "class", "style"]
   end
 
   defp base_allowed_attrs do

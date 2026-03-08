@@ -177,6 +177,23 @@ pub enum ColorToken {
     Gray,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ImageSource {
+    Auto(String),
+    Uri(String),
+    Path(String),
+    Embedded(String),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ImageObjectFit {
+    Fill,
+    Contain,
+    Cover,
+    ScaleDown,
+    None,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct DivNode {
     pub id: Option<String>,
@@ -234,6 +251,17 @@ pub enum IrNode {
         style: DivStyle,
         children: Vec<IrNode>,
     },
+    Image {
+        id: Option<String>,
+        source: ImageSource,
+        style: DivStyle,
+        object_fit: ImageObjectFit,
+        grayscale: bool,
+    },
+    Spacer {
+        id: Option<String>,
+        style: DivStyle,
+    },
     Div(Box<DivNode>),
 }
 
@@ -287,6 +315,17 @@ impl IrNode {
                     children,
                 })
             }
+            "image" => Ok(Self::Image {
+                id,
+                source: get_image_source_field(map)?,
+                style: get_div_style(map)?,
+                object_fit: get_image_object_fit_field(map)?,
+                grayscale: get_boolean_field(map, "grayscale")?,
+            }),
+            "spacer" => Ok(Self::Spacer {
+                id,
+                style: get_div_style(map)?,
+            }),
             "button" => {
                 let actions = get_div_actions(map)?;
                 let label = get_string_field(map, "label")?;
@@ -412,6 +451,46 @@ fn get_scroll_axis_field(map: &HashMap<Term, Term>) -> Result<ScrollAxis, String
         Some(Term::Atom(atom)) if atom.name == "both" => Ok(ScrollAxis::Both),
         Some(other) => Err(format!("expected scroll axis atom, got {other}")),
         None => Ok(ScrollAxis::Y),
+    }
+}
+
+fn get_image_source_field(map: &HashMap<Term, Term>) -> Result<ImageSource, String> {
+    match get_field(map, "source") {
+        Some(Term::Binary(_)) | Some(Term::ByteList(_)) => {
+            term_to_string(get_field(map, "source").expect("source field present"))
+                .map(ImageSource::Auto)
+        }
+        Some(Term::Tuple(Tuple { elements })) if elements.len() == 2 => {
+            let kind = match &elements[0] {
+                Term::Atom(atom) => atom.name.as_str(),
+                other => return Err(format!("expected image source kind atom, got {other}")),
+            };
+
+            let value = term_to_string(&elements[1])?;
+
+            match kind {
+                "uri" => Ok(ImageSource::Uri(value)),
+                "path" => Ok(ImageSource::Path(value)),
+                "embedded" => Ok(ImageSource::Embedded(value)),
+                other => Err(format!("unsupported image source kind: {other}")),
+            }
+        }
+        Some(other) => Err(format!(
+            "expected image source string or tuple, got {other}"
+        )),
+        None => Err("missing required field: source".into()),
+    }
+}
+
+fn get_image_object_fit_field(map: &HashMap<Term, Term>) -> Result<ImageObjectFit, String> {
+    match get_field(map, "object_fit") {
+        Some(Term::Atom(atom)) if atom.name == "fill" => Ok(ImageObjectFit::Fill),
+        Some(Term::Atom(atom)) if atom.name == "contain" => Ok(ImageObjectFit::Contain),
+        Some(Term::Atom(atom)) if atom.name == "cover" => Ok(ImageObjectFit::Cover),
+        Some(Term::Atom(atom)) if atom.name == "scale_down" => Ok(ImageObjectFit::ScaleDown),
+        Some(Term::Atom(atom)) if atom.name == "none" => Ok(ImageObjectFit::None),
+        Some(other) => Err(format!("expected image object_fit atom, got {other}")),
+        None => Ok(ImageObjectFit::Contain),
     }
 }
 

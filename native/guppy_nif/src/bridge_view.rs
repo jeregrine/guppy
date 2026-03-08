@@ -1,8 +1,10 @@
 mod events;
 mod identity;
 mod render_div;
+mod render_image;
 mod render_pass;
 mod render_scroll;
+mod render_spacer;
 mod render_text;
 mod render_text_input;
 mod style;

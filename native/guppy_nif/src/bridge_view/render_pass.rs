@@ -1,6 +1,6 @@
 use super::{
-    BridgeRetainedState, BridgeView, events, render_div, render_scroll, render_text,
-    render_text_input,
+    BridgeRetainedState, BridgeView, events, render_div, render_image, render_scroll,
+    render_spacer, render_text, render_text_input,
 };
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
@@ -89,6 +89,22 @@ impl<'a> RenderPass<'a> {
                 window,
                 cx,
             ),
+            IrNode::Image {
+                id,
+                source,
+                style,
+                object_fit,
+                grayscale,
+            } => render_image::render(
+                self,
+                path,
+                id.as_deref(),
+                source,
+                style,
+                *object_fit,
+                *grayscale,
+            ),
+            IrNode::Spacer { id, style } => render_spacer::render(self, path, id.as_deref(), style),
             IrNode::Div(div) => {
                 render_div::render(self, path, div, parent_scroll_handle, window, cx)
             }
