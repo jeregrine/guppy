@@ -6,9 +6,6 @@ IO.inspect(Guppy.native_build_info(), label: "native_build_info")
 IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
 IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
 
-{:ok, view_id} = Guppy.open_window(self())
-IO.inspect(view_id, label: "opened_view_id")
-
 contrast_text_color = fn
   color when color in [:yellow, :white, :green] -> :black
   _color -> :white
@@ -75,7 +72,8 @@ render = fn selected ->
   )
 end
 
-:ok = Guppy.render(view_id, render.(:gray))
+{:ok, view_id} = Guppy.open_window(render.(:gray), self())
+IO.inspect(view_id, label: "opened_view_id")
 
 loop = fn loop, selected ->
   receive do

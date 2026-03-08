@@ -45,8 +45,8 @@ defmodule Guppy.Server do
     GenServer.call(server, :ping, timeout)
   end
 
-  def open_window(server \\ __MODULE__, owner \\ self(), timeout \\ 5_000) do
-    GenServer.call(server, {:open_window, owner}, timeout)
+  def open_window(server \\ __MODULE__, owner, ir, timeout \\ 5_000) do
+    GenServer.call(server, {:open_window, owner, ir}, timeout)
   end
 
   def render(server \\ __MODULE__, view_id, ir, timeout \\ 5_000) do
@@ -89,31 +89,37 @@ defmodule Guppy.Server do
     {:reply, reply, state}
   end
 
-  def handle_call({:open_window, owner}, {caller, _tag}, state) when is_pid(owner) do
+  def handle_call({:open_window, owner, ir}, {caller, _tag}, state) when is_pid(owner) do
     if owner != caller do
       {:reply, {:error, :owner_mismatch}, state}
     else
-      view_id = state.next_view_id
-
-      case state.native.request(state.native_server, {:open_window, [view_id]}) do
+      case Guppy.IR.validate(ir) do
         :ok ->
-          state =
-            state
-            |> put_view(view_id, owner)
-            |> increment_view_id()
+          view_id = state.next_view_id
 
-          {:reply, {:ok, view_id}, state}
+          case state.native.request(state.native_server, {:open_window, [view_id, ir]}) do
+            :ok ->
+              state =
+                state
+                |> put_view(view_id, owner)
+                |> increment_view_id()
 
-        {:ok, _payload} ->
-          state =
-            state
-            |> put_view(view_id, owner)
-            |> increment_view_id()
+              {:reply, {:ok, view_id}, state}
 
-          {:reply, {:ok, view_id}, state}
+            {:ok, _payload} ->
+              state =
+                state
+                |> put_view(view_id, owner)
+                |> increment_view_id()
 
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
+              {:reply, {:ok, view_id}, state}
+
+            {:error, reason} ->
+              {:reply, {:error, reason}, state}
+          end
+
+        error ->
+          {:reply, error, state}
       end
     end
   end

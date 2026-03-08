@@ -38,9 +38,9 @@ defmodule Guppy do
     Server.ping(Server, timeout)
   end
 
-  @doc "Opens a native window owned by the calling process."
-  def open_window(owner \\ self(), timeout \\ 5_000) do
-    Server.open_window(Server, owner, timeout)
+  @doc "Opens a native window owned by the calling process and renders its initial IR tree."
+  def open_window(ir, owner \\ self(), timeout \\ 5_000) do
+    Server.open_window(Server, owner, ir, timeout)
   end
 
   @doc "Renders a full IR tree into an open native window."

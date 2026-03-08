@@ -7,14 +7,8 @@ IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
 IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
 IO.inspect(Guppy.ping(), label: "ping")
 
-{:ok, view_id} = Guppy.open_window()
-IO.inspect(view_id, label: "opened_view_id")
-IO.inspect(Guppy.native_view_count(), label: "native_view_count")
-IO.puts("opened and asked GPUI to activate/focus the window")
-
-:ok =
-  Guppy.render(
-    view_id,
+{:ok, view_id} =
+  Guppy.open_window(
     Guppy.IR.div(
       [
         Guppy.IR.text("Hello from examples/hello_world.exs", id: "title"),
@@ -24,6 +18,10 @@ IO.puts("opened and asked GPUI to activate/focus the window")
       style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}, :rounded_md]
     )
   )
+
+IO.inspect(view_id, label: "opened_view_id")
+IO.inspect(Guppy.native_view_count(), label: "native_view_count")
+IO.puts("opened and asked GPUI to activate/focus the window")
 
 IO.puts("rendered IR tree")
 

@@ -1,6 +1,6 @@
 use crate::bridge_text_input;
 use crate::bridge_view::BridgeView;
-use crate::ir::{DivNode, DivStyle, IrNode};
+use crate::ir::IrNode;
 use async_task::spawn;
 use gpui::{
     App, AppContext, Application, AsyncApp, Bounds, PlatformDispatcher, WindowBounds,
@@ -30,6 +30,7 @@ static MAIN_THREAD_DISPATCHER: OnceLock<Mutex<Option<Arc<dyn PlatformDispatcher>
 pub(crate) enum MainThreadRequest {
     OpenWindow {
         view_id: u64,
+        ir: IrNode,
         reply: Sender<i32>,
     },
     SetIr {
@@ -222,43 +223,8 @@ fn try_next_request() -> Option<MainThreadRequest> {
 
 fn handle_request(request: MainThreadRequest) {
     match request {
-        MainThreadRequest::OpenWindow { view_id, reply } => {
-            let _ = reply.send(open_window(
-                view_id,
-                IrNode::Div(Box::new(DivNode {
-                    id: None,
-                    style: DivStyle::default(),
-                    hover_style: DivStyle::default(),
-                    focus_style: DivStyle::default(),
-                    in_focus_style: DivStyle::default(),
-                    active_style: DivStyle::default(),
-                    disabled_style: DivStyle::default(),
-                    disabled: false,
-                    stack_priority: None,
-                    occlude: false,
-                    focusable: false,
-                    tab_stop: None,
-                    tab_index: None,
-                    track_scroll: false,
-                    anchor_scroll: false,
-                    shortcuts: vec![],
-                    children: vec![IrNode::text(format!("Hello from Guppy view {view_id}"))],
-                    click: None,
-                    hover: None,
-                    focus: None,
-                    blur: None,
-                    key_down: None,
-                    key_up: None,
-                    context_menu: None,
-                    drag_start: None,
-                    drag_move: None,
-                    drop: None,
-                    mouse_down: None,
-                    mouse_up: None,
-                    mouse_move: None,
-                    scroll_wheel: None,
-                })),
-            ));
+        MainThreadRequest::OpenWindow { view_id, ir, reply } => {
+            let _ = reply.send(open_window(view_id, ir));
         }
         MainThreadRequest::SetIr { view_id, ir, reply } => {
             let _ = reply.send(update_ir(view_id, ir));

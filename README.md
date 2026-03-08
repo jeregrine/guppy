@@ -134,16 +134,16 @@ mix run examples/hello_world.exs
 
 This verifies the basic happy path:
 
-- open window
-- render IR
-- rerender IR
-- close window
+- open a window with initial IR
+- rerender with a replacement IR tree
+- close the window
 
 ## Public API surface worth knowing
 
 Window lifecycle:
 
-- `Guppy.open_window/0`
+- `Guppy.open_window/1`
+- `Guppy.open_window/2`
 - `Guppy.render/2`
 - `Guppy.close_window/1`
 

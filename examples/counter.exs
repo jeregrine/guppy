@@ -6,9 +6,6 @@ IO.inspect(Guppy.native_build_info(), label: "native_build_info")
 IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
 IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
 
-{:ok, view_id} = Guppy.open_window()
-IO.inspect(view_id, label: "opened_view_id")
-
 render_counter = fn count ->
   Guppy.IR.div(
     [
@@ -27,7 +24,8 @@ render_counter = fn count ->
   )
 end
 
-:ok = Guppy.render(view_id, render_counter.(0))
+{:ok, view_id} = Guppy.open_window(render_counter.(0))
+IO.inspect(view_id, label: "opened_view_id")
 
 Process.send_after(self(), :tick, 1_000)
 

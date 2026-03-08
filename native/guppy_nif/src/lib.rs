@@ -40,6 +40,7 @@ struct RuntimeState {
 enum Command {
     OpenWindow {
         view_id: u64,
+        ir: IrNode,
         reply: Sender<i32>,
     },
     SetIr {
@@ -142,8 +143,14 @@ pub extern "C" fn guppy_rust_run_main_thread_runtime(_arg: *mut c_void) -> *mut 
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_open_window(view_id: u64) -> i32 {
-    request_i32(|reply| Command::OpenWindow { view_id, reply }).unwrap_or(-1)
+pub extern "C" fn guppy_rust_open_window(
+    view_id: u64,
+    ir_ptr: *const u8,
+    ir_len: usize,
+) -> i32 {
+    request_ir(view_id, ir_ptr, ir_len, |view_id, ir, reply| {
+        Command::OpenWindow { view_id, ir, reply }
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -231,8 +238,8 @@ fn refresh_runtime_state(runtime: &mut RuntimeState) {
 fn runtime_loop(receiver: mpsc::Receiver<Command>) {
     while let Ok(command) = receiver.recv() {
         let result = match command {
-            Command::OpenWindow { view_id, reply } => main_thread_runtime::enqueue_request(
-                main_thread_runtime::MainThreadRequest::OpenWindow { view_id, reply },
+            Command::OpenWindow { view_id, ir, reply } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::OpenWindow { view_id, ir, reply },
             ),
             Command::SetIr { view_id, ir, reply } => main_thread_runtime::enqueue_request(
                 main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply },

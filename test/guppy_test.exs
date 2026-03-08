@@ -512,17 +512,15 @@ defmodule GuppyTest do
     parent = self()
 
     spawn(fn ->
-      send(parent, {:owner_mismatch, Guppy.open_window(parent)})
+      send(parent, {:owner_mismatch, Guppy.open_window(Guppy.IR.text("nope"), parent)})
     end)
 
     assert_receive {:owner_mismatch, {:error, :owner_mismatch}}
 
     case Guppy.Native.Nif.load_status() do
       :ok ->
-        {:ok, view_id} = Guppy.open_window()
+        {:ok, view_id} = Guppy.open_window(Guppy.IR.text("owned by caller"))
         on_exit(fn -> maybe_close(view_id) end)
-
-        assert :ok = Guppy.render(view_id, Guppy.IR.text("owned by caller"))
 
         spawn(fn ->
           send(parent, {:foreign_render, Guppy.render(view_id, Guppy.IR.text("nope"))})
@@ -542,7 +540,7 @@ defmodule GuppyTest do
         assert :ok = Guppy.close_window(view_id)
 
       {:error, _reason} ->
-        assert {:error, :nif_not_loaded} = Guppy.open_window()
+        assert {:error, :nif_not_loaded} = Guppy.open_window(Guppy.IR.text("hello"))
     end
   end
 
@@ -551,21 +549,19 @@ defmodule GuppyTest do
       :ok ->
         starting_count = native_view_count!()
 
-        {:ok, view_id} = Guppy.open_window()
-        on_exit(fn -> maybe_close(view_id) end)
+        {:ok, view_id} =
+          Guppy.open_window(
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Hello from IR", id: "greeting"),
+                Guppy.IR.text("Rendered as a nested tree")
+              ],
+              id: "root",
+              style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}]
+            )
+          )
 
-        assert :ok =
-                 Guppy.render(
-                   view_id,
-                   Guppy.IR.div(
-                     [
-                       Guppy.IR.text("Hello from IR", id: "greeting"),
-                       Guppy.IR.text("Rendered as a nested tree")
-                     ],
-                     id: "root",
-                     style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}]
-                   )
-                 )
+        on_exit(fn -> maybe_close(view_id) end)
 
         assert :ok =
                  Guppy.render(
@@ -1012,14 +1008,14 @@ defmodule GuppyTest do
         assert Guppy.native_view_count() == {:ok, starting_count}
 
         owner = self()
-        {:ok, owned_view_id} = Guppy.open_window(owner)
+        {:ok, owned_view_id} = Guppy.open_window(Guppy.IR.text("owned by owner"), owner)
         on_exit(fn -> maybe_close(owned_view_id) end)
 
         assert Map.get(Guppy.info().views, owned_view_id) == owner
 
         pid =
           spawn(fn ->
-            {:ok, transient_view_id} = Guppy.open_window(self())
+            {:ok, transient_view_id} = Guppy.open_window(Guppy.IR.text("transient"), self())
             send(owner, {:opened_view, transient_view_id})
             Process.sleep(:infinity)
           end)
@@ -1043,7 +1039,7 @@ defmodule GuppyTest do
         assert Guppy.native_view_count() == {:ok, starting_count}
 
       {:error, _reason} ->
-        assert {:error, :nif_not_loaded} = Guppy.open_window()
+        assert {:error, :nif_not_loaded} = Guppy.open_window(Guppy.IR.text("hello"))
     end
   end
 

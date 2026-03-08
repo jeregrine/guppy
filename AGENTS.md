@@ -73,7 +73,8 @@ Important invariants:
 Useful APIs today:
 
 - `Guppy.ping/0`
-- `Guppy.open_window/0`
+- `Guppy.open_window/1`
+- `Guppy.open_window/2`
 - `Guppy.render/2`
 - `Guppy.close_window/1`
 - `Guppy.native_view_count/0`

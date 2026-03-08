@@ -7,11 +7,9 @@ defmodule Guppy.SuperDemo do
   def run do
     {:ok, _} = Application.ensure_all_started(:guppy)
 
-    {:ok, main_view_id} = Guppy.open_window(self())
-
-    state =
+    initial_state =
       %{
-        main_view_id: main_view_id,
+        main_view_id: nil,
         aux_view_id: nil,
         child_owner_pid: nil,
         child_monitor_ref: nil,
@@ -49,6 +47,8 @@ defmodule Guppy.SuperDemo do
         statuses: capture_statuses()
       }
 
+    {:ok, main_view_id} = Guppy.open_window(render(initial_state), self())
+    state = %{initial_state | main_view_id: main_view_id}
     :ok = Guppy.render(main_view_id, render(state))
     loop(state)
   end
@@ -543,10 +543,8 @@ defmodule Guppy.SuperDemo do
   end
 
   defp open_aux_window(state, node_id) do
-    case Guppy.open_window(self()) do
+    case Guppy.open_window(aux_window_ir(), self()) do
       {:ok, aux_view_id} ->
-        :ok = Guppy.render(aux_view_id, aux_window_ir())
-
         state
         |> Map.put(:aux_view_id, aux_view_id)
         |> Map.put(:last_event, "opened auxiliary window from #{node_id}")
@@ -1234,7 +1232,10 @@ defmodule Guppy.SuperDemo do
                 Guppy.IR.text("leading-relaxed sample line one\nline two",
                   id: "leading_relaxed_text"
                 )
-              ], id: "leading_relaxed_row", style: [:leading_relaxed])
+              ],
+              id: "leading_relaxed_row",
+              style: [:leading_relaxed]
+            )
           ],
           id: "line_height_panel",
           style: [
@@ -2168,11 +2169,8 @@ defmodule Guppy.SuperDemo do
   end
 
   defp child_owner_loop(parent) do
-    {:ok, view_id} = Guppy.open_window(self())
-
-    :ok =
-      Guppy.render(
-        view_id,
+    {:ok, view_id} =
+      Guppy.open_window(
         Guppy.IR.div(
           [
             Guppy.IR.text("Child owner window", id: "child_title"),
@@ -2181,7 +2179,8 @@ defmodule Guppy.SuperDemo do
           ],
           id: "child_root",
           style: [:flex, :flex_col, :gap_2, :p_4, {:bg, :gray}, :rounded_md]
-        )
+        ),
+        self()
       )
 
     send(parent, {:child_owner_ready, self(), view_id})

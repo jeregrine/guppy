@@ -17,7 +17,9 @@ extern int guppy_rust_runtime_start(void);
 extern int guppy_rust_runtime_shutdown(void);
 extern const char *guppy_rust_runtime_status(void);
 extern void *guppy_rust_run_main_thread_runtime(void *arg);
-extern int guppy_rust_open_window(uint64_t view_id);
+extern int guppy_rust_open_window(uint64_t view_id,
+                                  const unsigned char *ir_ptr,
+                                  size_t ir_len);
 extern int guppy_rust_render_ir_window(uint64_t view_id,
                                        const unsigned char *ir_ptr,
                                        size_t ir_len);
@@ -42,6 +44,8 @@ static ERL_NIF_TERM make_atom(ErlNifEnv *env, const char *name) {
 static ERL_NIF_TERM make_error(ErlNifEnv *env, const char *reason) {
   return enif_make_tuple2(env, make_atom(env, "error"), make_atom(env, reason));
 }
+
+static int encode_term(ErlNifEnv *env, ERL_NIF_TERM term, ErlNifBinary *binary);
 
 static int get_view_id(ErlNifEnv *env, ERL_NIF_TERM term, uint64_t *view_id) {
   ErlNifUInt64 raw_view_id;
@@ -1153,13 +1157,16 @@ static ERL_NIF_TERM native_gui_status(ErlNifEnv *env, int argc,
 static ERL_NIF_TERM native_open_window(ErlNifEnv *env, int argc,
                                        const ERL_NIF_TERM argv[]) {
   uint64_t view_id;
+  ErlNifBinary ir;
   int result;
 
-  if (argc != 1 || !get_view_id(env, argv[0], &view_id)) {
+  if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
+      !encode_term(env, argv[1], &ir)) {
     return enif_make_badarg(env);
   }
 
-  result = guppy_rust_open_window(view_id);
+  result = guppy_rust_open_window(view_id, ir.data, ir.size);
+  enif_release_binary(&ir);
 
   if (result == 1) {
     return make_atom(env, "ok");
@@ -1167,6 +1174,10 @@ static ERL_NIF_TERM native_open_window(ErlNifEnv *env, int argc,
 
   if (result == 0) {
     return make_error(env, "duplicate_view_id");
+  }
+
+  if (result == -2) {
+    return enif_make_badarg(env);
   }
 
   return make_error(env, "runtime_unavailable");
@@ -1293,7 +1304,7 @@ static ErlNifFunc nif_funcs[] = {
     {"native_build_info", 0, native_build_info, 0},
     {"native_runtime_status", 0, native_runtime_status, 0},
     {"native_gui_status", 0, native_gui_status, 0},
-    {"native_open_window", 1, native_open_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"native_open_window", 2, native_open_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_set_event_target", 1, native_set_event_target, 0},
     {"native_render", 2, native_render, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_close_window", 1, native_close_window, ERL_NIF_DIRTY_JOB_IO_BOUND},

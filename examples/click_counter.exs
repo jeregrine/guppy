@@ -7,8 +7,6 @@ IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
 IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
 
 owner = self()
-{:ok, view_id} = Guppy.open_window(owner)
-IO.inspect(view_id, label: "opened_view_id")
 
 render = fn count ->
   Guppy.IR.div(
@@ -33,7 +31,8 @@ render = fn count ->
   )
 end
 
-:ok = Guppy.render(view_id, render.(0))
+{:ok, view_id} = Guppy.open_window(render.(0), owner)
+IO.inspect(view_id, label: "opened_view_id")
 
 loop = fn loop, count ->
   receive do
