@@ -1,90 +1,76 @@
 # Guppy
 
-## What is this?
+## Mission
 
-Guppy is an Elixir UI framework targeting GPUI through a NIF-backed native runtime.
+Guppy is an Elixir UI framework that renders through GPUI using a NIF-backed native runtime.
 
-Current architectural direction:
+Optimize for this architecture:
 
 - Elixir processes own UI state
-- Elixir renders to a tree/IR description
-- native side builds GPUI elements from that IR
-- GPUI handles layout, paint, focus, and windowing
+- Elixir renders UI state into an IR tree
+- native code builds GPUI elements from that IR
+- GPUI owns layout, paint, focus, scrolling, and windows
+- native events roundtrip back to the owning Elixir process
 
-Today, the tracer-shot implementation proves:
-
-- a Cargo-built NIF can load successfully
-- a small C shim plus Rust core can be linked into one native artifact
-- macOS main-thread bootstrap can happen through OTP/wx-style runtime hooks
-- Elixir can open a real GPUI window
-- Elixir can mount/update minimal IR and trigger rerender
-- owner-process cleanup closes native windows on `DOWN`
+The project is still early and unreleased. Prefer the architecture that makes the system cleaner and more correct over preserving any previous internal shape.
 
 ## Repository scope
 
 This `AGENTS.md` applies to the `./guppy` repo only.
 
-Important:
+Important repo rules:
 
-- do not preserve backwards compatibility just because an older approach exists
-- the project is not released or deployed yet, so prefer replacing broken or limiting designs outright
-- when a current representation is getting in the way, throw away the old way and implement the better one cleanly
-- optimize for solving the architectural problem, not for compatibility shims
-
-- the jj/git repo is rooted at `./guppy`
+- do **not** preserve backwards compatibility just because an older approach exists
+- if a current design is limiting, replace it cleanly
+- optimize for architectural clarity and correctness, not compatibility shims
+- the jj/git repo root is `./guppy`
 - do **not** initialize or commit from the parent directory unless explicitly asked
-- use `jj` commands from inside `./guppy`
+- use `jj` from inside `./guppy`
 
-## Project layout
+## Current intent
 
-### Files inside this repo
+What Guppy is proving right now:
 
-- `mix.exs` — Elixir app entry
-- `config/config.exs` — NIF path and native module config
-- `lib/guppy.ex` — public API
-- `lib/guppy/server.ex` — ownership, view tracking, request routing
-- `lib/guppy/native/nif.ex` — Elixir NIF wrapper and load path
-- `lib/guppy/ir.ex` — minimal Elixir IR helpers
-- `lib/mix/tasks/guppy.native.build.ex` — builds and installs the native library
-- `native/guppy_nif/c_src/guppy_nif.c` — C shim / NIF entry / main-thread bootstrap
-- `native/guppy_nif/src/lib.rs` — Rust runtime core / command routing
-- `native/guppy_nif/src/main_thread_runtime.rs` — current GPUI main-thread runtime and window bridge
-- `examples/hello_world.exs` — runnable tracer-shot example
-- `test/guppy_test.exs` — bring-up / lifecycle tests
-- `README.md` — user-facing bring-up docs
+- a Cargo-built NIF can load successfully
+- a C shim plus Rust core can ship as one native artifact
+- macOS main-thread bootstrap can work through OTP/wx-style runtime hooks
+- Elixir can open, update, and close real GPUI windows
+- Elixir can render a tree-shaped IR through a native `BridgeView`
+- stable node identity can support retained native state across rerenders
+- owner-process cleanup can close native windows on `DOWN`
 
-### Reference-only paths
+What matters more than breadth right now:
 
-These are **not** part of the `./guppy` repo's source of truth, but are useful references.
+- stable identity
+- correct retained-state pruning
+- simple full-tree replacement semantics
+- correct owner/event routing
+- clean native runtime structure
 
-- `../zed` — reference checkout of Zed
-- `../zed/crates/gpui` — GPUI source reference
-- `../guppy-plan.md` — evolving project plan
-- `~/projects/otp` — OTP/wx internals, especially NIF/main-thread patterns
+## Current architecture
 
-## Current native architecture
+High-level flow:
 
-The current implementation is intentionally NIF-first, not Port-first.
+1. Elixir code builds IR and calls the public API in `lib/guppy.ex`
+2. `Guppy.Server` owns window ownership and request routing
+3. the Elixir NIF wrapper forwards requests to native
+4. the C shim handles NIF bootstrap and macOS main-thread handoff
+5. Rust decodes ETF into native IR and queues work for the main-thread runtime
+6. `BridgeView` renders the IR into GPUI elements
+7. native events go back through the C shim into the BEAM
+8. `Guppy.Server` forwards them to the owning Elixir process
 
-Key points:
+Important invariants:
 
-- shipping target is a single native NIF artifact per target
-- C shim owns low-level NIF bootstrap concerns
-- Rust owns most runtime logic
-- on macOS, the C shim currently uses `erl_drv_steal_main_thread`, following the wx pattern
-- the native app is booted once and kept alive
-- Elixir requests go through a native queue before reaching the main-thread GPUI app
+- Elixir is the source of truth for UI state
+- native rendering is full-tree replacement from Elixir's point of view
+- retained native state must be keyed by stable identity and pruned aggressively
+- explicit node ids override generated path ids
+- ordered style-op lists must preserve order
 
-Important practical notes:
+## Current public surface
 
-- the current tracer shot uses `gpui = "0.2.2"` from crates.io
-- do **not** reintroduce `gpui_platform` unless there's a compelling reason
-- do **not** reintroduce `dispatch2`; the current implementation uses GPUI's own async/task facilities to poll the request queue on the main thread
-- the local `../zed` checkout is for reading/reference, not for the active dependency path
-
-## Current public API surface
-
-Useful functions today:
+Useful APIs today:
 
 - `Guppy.ping/0`
 - `Guppy.open_window/0`
@@ -98,45 +84,127 @@ Useful functions today:
 - `Guppy.native_gui_status/0`
 - `Guppy.IR.text/2`
 - `Guppy.IR.div/2`
+- `Guppy.IR.scroll/2`
+- `Guppy.IR.button/2`
+- `Guppy.IR.text_input/2`
 
-## Current tracer-shot limitations
+Current supported native nodes are intentionally limited:
 
-The current bridge is still intentionally narrow:
+- `:text`
+- `:div`
+- `:scroll`
+- `:button`
+- `:text_input`
 
-- native rendering now goes through a `BridgeView`
-- minimal IR validation exists on the Elixir side
-- supported native nodes are still intentionally small (`:div` + `:text`)
-- click and window-close are the only native event roundtrips today
-- style mapping exists, but only as a small explicit subset on `:div`
-- div styles are represented as an ordered style-op list, not a style map; preserve order when extending the bridge
-- explicit node ids now exist, but richer keyed/stateful behaviors are still ahead
+## Project layout
 
-So if you are extending the project, the next likely architectural moves are:
+Files you will most often need:
 
-- keep expanding style/event coverage carefully without breaking the simple IR model
-- keep the full-tree replacement invariant
-- add more events only after the identity model stays stable
+- `README.md` — user-facing status and usage
+- `mix.exs` — Elixir app entry
+- `config/config.exs` — native module configuration
+- `lib/guppy.ex` — public API
+- `lib/guppy/server.ex` — ownership, lifecycle, and native event routing
+- `lib/guppy/native/nif.ex` — Elixir NIF wrapper and load path
+- `lib/guppy/ir.ex` — Elixir IR validation/helpers
+- `lib/mix/tasks/guppy.native.build.ex` — native build/install task
+- `native/guppy_nif/c_src/guppy_nif.c` — C shim, NIF entrypoints, main-thread bootstrap
+- `native/guppy_nif/src/lib.rs` — Rust runtime core and command routing
+- `native/guppy_nif/src/main_thread_runtime.rs` — GPUI app bootstrap, request drain, window registry
+- `native/guppy_nif/src/bridge_view.rs` — root native renderer
+- `native/guppy_nif/src/bridge_view/` — render pass, identity, styles, event bridge, per-node renderers
+- `native/guppy_nif/src/bridge_text_input.rs` — retained text input implementation
+- `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
+- `examples/` — runnable demos
+- `test/guppy_test.exs` — lifecycle/integration coverage
 
-## Main-thread / macOS guidance
+Reference-only paths:
 
-This project has already proven that a real GPUI window can open from the NIF path.
+- `../zed` — Zed checkout for GPUI reference
+- `../zed/crates/gpui` — GPUI source reference
+- `../guppy-plan.md` — evolving project plan
+- `~/projects/otp` — OTP/wx internals, especially main-thread patterns
 
-When working on the native bootstrap:
+## Native implementation guidance
 
-- be very careful with main-thread ownership
-- prefer studying OTP wx before changing bootstrap behavior
-- relevant OTP files live under `~/projects/otp/lib/wx/c_src/`
-- especially study:
-  - `wxe_main.cpp`
-  - `wxe_nif.c`
+The native side is intentionally NIF-first.
 
-The current design assumption is that GUI bootstrap on macOS is a special case and may require runtime tricks similar to wx.
+Keep these decisions unless there is a strong reason to change them:
+
+- ship a single native NIF artifact per target
+- keep the C layer focused on bootstrap and BEAM interop
+- keep most runtime logic in Rust
+- on macOS, preserve the OTP/wx-style main-thread strategy unless replacing it deliberately
+- do **not** reintroduce `gpui_platform` casually
+- do **not** reintroduce `dispatch2`
+- the active GPUI dependency is `gpui = "0.2.2"` from crates.io
+- the local `../zed` checkout is for reading, not as the active dependency path
+
+When working on bootstrap or GUI lifecycle code, be extra careful about:
+
+- main-thread ownership
+- runtime startup/shutdown behavior
+- request queue draining behavior
+- window close semantics
+- owner-process cleanup
+
+For macOS bootstrap changes, study OTP wx first:
+
+- `~/projects/otp/lib/wx/c_src/wxe_main.cpp`
+- `~/projects/otp/lib/wx/c_src/wxe_nif.c`
+
+## Bridge-view guidance
+
+The bridge is no longer just a tracer-shot text bridge. Treat it as the core of the rendering architecture.
+
+Important assumptions:
+
+- `BridgeView` is the native root renderer
+- rendering is driven from native IR, not ad hoc native widget state
+- retained native state lives outside the per-render pass
+- render passes collect live retained ids and pruning happens after render
+- explicit node ids are preferred for retained or eventful elements
+- generated ids must stay stable for unchanged paths
+
+Current retained native state includes:
+
+- scroll handles
+- focus handles
+- focus subscriptions
+- text input entities
+
+When extending the bridge:
+
+- keep identity logic centralized
+- keep event emission centralized
+- keep node renderers focused and phase-structured
+- preserve ordered style-op semantics
+- add tests for identity, pruning, and other regression-prone behavior
+
+## What to prioritize next
+
+Good next steps:
+
+1. keep improving native renderer decomposition when files grow large
+2. add high-value tests around retained state and event behavior
+3. expand widget/style/event support carefully, not broadly
+4. keep tracer-shot naming and structure moving toward runtime-oriented naming
+5. preserve the simplicity of the full-tree replacement model
+
+Things to avoid unless explicitly requested:
+
+- wx API compatibility
+- Port sidecar transport
+- HEEx-first APIs
+- compatibility shims for older internal designs
+- over-generalized abstractions before the bridge proves they help
+- broad widget coverage before identity and retained behavior are solid
 
 ## Build and test workflow
 
 From inside `./guppy`:
 
-### Build/install native NIF
+Build/install native code:
 
 ```bash
 mix guppy.native.build
@@ -148,42 +216,40 @@ Release build:
 mix guppy.native.build --release
 ```
 
-### Run tests
+Run tests:
 
 ```bash
 mix test
 ```
 
-### Run the tracer-shot example
+Run the main demo:
+
+```bash
+mix run examples/super_demo.exs
+```
+
+Run the small bring-up example:
 
 ```bash
 mix run examples/hello_world.exs
 ```
 
-## Expected example behavior
-
-The example should:
-
-- load the NIF
-- open a real focused GPUI window
-- mount IR text
-- update IR text after a short delay
-- close the window after a few seconds
-
-## When changing native code
-
-If you touch any of these:
-
-- `native/guppy_nif/c_src/guppy_nif.c`
-- `native/guppy_nif/src/lib.rs`
-- `native/guppy_nif/src/main_thread_runtime.rs`
-
-then you should normally run:
+If you touch native code, usually run at least:
 
 ```bash
 mix guppy.native.build
 mix test
 ```
+
+Especially if you change:
+
+- `native/guppy_nif/c_src/guppy_nif.c`
+- `native/guppy_nif/src/lib.rs`
+- `native/guppy_nif/src/main_thread_runtime.rs`
+- `native/guppy_nif/src/bridge_view.rs`
+- anything under `native/guppy_nif/src/bridge_view/`
+- `native/guppy_nif/src/bridge_text_input.rs`
+- `native/guppy_nif/src/ir.rs`
 
 ## Commit guidance
 
@@ -197,24 +263,18 @@ jj commit -m "your message"
 jj log
 ```
 
-## Non-goals right now
+If the user asked to review before commit, stop and report back first.
 
-Avoid spending time on these unless explicitly requested:
+## Short orientation checklist
 
-- wx API compatibility
-- Port sidecar transport
-- HEEx-first APIs
-- full styling/token system before the bridge view exists
-- broad widget/event coverage before minimal IR is solid
-
-## Short version for future agents
-
-If you need to orient quickly:
+If you need to get oriented quickly:
 
 1. read `README.md`
 2. read `lib/guppy.ex`, `lib/guppy/server.ex`, and `lib/guppy/native/nif.ex`
-3. read `native/guppy_nif/c_src/guppy_nif.c`
-4. read `native/guppy_nif/src/lib.rs` and `native/guppy_nif/src/main_thread_runtime.rs`
-5. run `mix guppy.native.build`
-6. run `mix test`
-7. run `mix run examples/hello_world.exs`
+3. read `lib/guppy/ir.ex`
+4. read `native/guppy_nif/c_src/guppy_nif.c`
+5. read `native/guppy_nif/src/lib.rs` and `native/guppy_nif/src/main_thread_runtime.rs`
+6. read `native/guppy_nif/src/bridge_view.rs` and the relevant files under `native/guppy_nif/src/bridge_view/`
+7. run `mix guppy.native.build`
+8. run `mix test`
+9. run `mix run examples/super_demo.exs` if you need a full interactive smoke test

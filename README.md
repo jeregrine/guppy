@@ -1,59 +1,99 @@
 # Guppy
 
-Guppy is an Elixir UI framework targeting GPUI through a NIF-backed native runtime.
+Guppy is an Elixir UI framework that renders through GPUI using a NIF-backed native runtime.
 
-Current status: early tracer-shot bring-up, but with a real native GPUI window opening from Elixir.
+## What Guppy is trying to be
 
-## What works today
+The intended model is:
 
-Today the project can:
+- Elixir processes own UI state
+- Elixir renders that state into a simple IR tree
+- the native runtime turns that IR into GPUI elements
+- GPUI handles layout, painting, focus, scrolling, and windows
+- native events roundtrip back to the owning Elixir process
+
+This repo is still early, but it is past the toy stage: it can boot a real native GPUI app, open real windows, render IR, handle updates, and send events back into the BEAM.
+
+## Current status
+
+Today Guppy can:
 
 - load a Cargo-built NIF
-- bootstrap a native GPUI app on macOS using a wx-style main-thread handoff
-- open a real GPUI window from Elixir
-- focus/activate that window
-- mount minimal Elixir IR into the window
-- replace that IR and rerender
-- render nested `:div` / `:text` trees through a native `BridgeView`
-- roundtrip minimal click events back into the owning Elixir process
-- close native windows when the owning Elixir process dies
+- bootstrap a GPUI app on macOS via a wx-style main-thread handoff
+- open and close real native windows from Elixir
+- mount and replace a full IR tree per window
+- render native trees through `BridgeView`
+- preserve retained native state where needed across rerenders
+- send native events back to the owning Elixir process
+- close windows automatically when the owner process dies
 
-The current tracer-shot API is intentionally small:
+Supported node kinds today:
 
-- `Guppy.open_window/0`
-- `Guppy.mount/2`
-- `Guppy.update/2`
-- `Guppy.close_window/1`
-- `Guppy.IR.text/2`
-- `Guppy.IR.div/2`
-- `Guppy.IR.scroll/2`
-- `Guppy.IR.button/2`
-- `Guppy.IR.text_input/2`
+- `text`
+- `div`
+- `scroll`
+- `button`
+- `text_input`
 
-## Native build
+Supported interaction surface today includes:
 
-Build and install the native NIF into `priv/native`:
+- click
+- hover
+- focus / blur
+- key down / key up
+- shortcut-dispatched actions
+- context menu
+- drag start / drag move / drop
+- mouse down / mouse up / mouse move
+- scroll wheel
+- window closed
+- text input change
+
+This is still not a full UI framework yet. Coverage is intentionally selective, and the bridge still prefers explicit, narrow behavior over broad abstraction.
+
+## The core architectural intent
+
+A useful way to think about Guppy today:
+
+1. `Guppy.Server` owns window ownership and event routing on the Elixir side.
+2. Elixir sends full-tree replacement IR updates to native.
+3. Rust decodes ETF into native IR.
+4. `BridgeView` renders that IR into GPUI.
+5. Retained native bits like scroll handles, focus handles, and text inputs are reused across rerenders by stable node identity.
+6. Native callbacks emit messages back through the C shim into the BEAM.
+
+Important current invariant:
+
+- **rendering is full-tree replacement from Elixir's point of view**
+
+Important current non-goal:
+
+- **do not contort the code around backwards compatibility yet**
+
+## Quick start
+
+Build and install the native library:
 
 ```bash
 cd guppy
 mix guppy.native.build
 ```
 
-Release profile:
+Run tests:
 
 ```bash
 cd guppy
-mix guppy.native.build --release
+mix test
 ```
 
-## Sanity check the native bridge
+Sanity check the native runtime:
 
 ```bash
 cd guppy
 mix run -e 'IO.inspect(Guppy.Native.Nif.load_status()); IO.inspect(Guppy.native_build_info()); IO.inspect(Guppy.native_runtime_status()); IO.inspect(Guppy.native_gui_status()); IO.inspect(Guppy.ping())'
 ```
 
-Expected output after a successful build/install is roughly:
+A healthy result looks roughly like:
 
 ```elixir
 :ok
@@ -63,9 +103,9 @@ Expected output after a successful build/install is roughly:
 {:ok, :pong}
 ```
 
-## Examples
+## Recommended examples
 
-### Super demo (recommended)
+### Main demo
 
 ```bash
 cd guppy
@@ -73,24 +113,18 @@ mix guppy.native.build
 mix run examples/super_demo.exs
 ```
 
-What it does:
+This is the best current overview of the bridge. It exercises:
 
-- shows native bridge/runtime status inside the UI instead of printing it to the terminal
-- opens in a larger resizable window so the full demo fits more comfortably
-- shows a demo list on the left and the selected demo content on the right
-- uses an explicit scroll node for the detail panel so individual demos can grow without pushing the whole UI off-screen
-- includes a dedicated Scroll demo so scroll behavior is easy to verify at the default/minimum window sizes
-- exercises div clicks and text clicks in one window
-- exercises pointer, keyboard, context-menu, and drag/drop interaction callbacks
-- exercises keyboard activation of clickable divs via Tab + Enter/Space
-- exercises shortcut-dispatched action events via focused keyboard targets
-- exercises full-tree replacement updates from both clicks and timers
-- exercises minimal style tokens and palette changes
-- opens/closes an auxiliary window owned by the main process
-- spawns and kills a child-owner window to test owner `DOWN` cleanup
-- lets you manually close the main window to test `window_closed`
+- multiple node kinds
+- scroll behavior
+- focus behavior
+- click / pointer / keyboard events
+- actions and shortcuts
+- drag and drop roundtrips
+- full-tree rerendering from Elixir
+- multiple windows and owner cleanup
 
-### Hello world
+### Small bring-up example
 
 ```bash
 cd guppy
@@ -98,279 +132,153 @@ mix guppy.native.build
 mix run examples/hello_world.exs
 ```
 
-What it does:
+This verifies the basic happy path:
 
-- opens a real focused GPUI window from Elixir
-- mounts a small `div/text` IR tree
-- updates that tree after 1 second
-- closes the window after 5 seconds
+- open window
+- mount IR
+- update IR
+- close window
 
-### Timer counter
+## Public API surface worth knowing
 
-```bash
-cd guppy
-mix guppy.native.build
-mix run examples/counter.exs
-```
+Window lifecycle:
 
-What it does:
+- `Guppy.open_window/0`
+- `Guppy.mount/2`
+- `Guppy.update/2`
+- `Guppy.close_window/1`
 
-- opens a real GPUI window
-- mounts a counter view owned by Elixir state
-- sends repeated full-tree replacement updates
-- closes the window after several rerenders
+Native status / diagnostics:
 
-### Click counter
+- `Guppy.ping/0`
+- `Guppy.native_view_count/0`
+- `Guppy.native_build_info/0`
+- `Guppy.native_runtime_status/0`
+- `Guppy.native_gui_status/0`
 
-```bash
-cd guppy
-mix guppy.native.build
-mix run examples/click_counter.exs
-```
+IR helpers:
 
-What it does:
+- `Guppy.IR.text/2`
+- `Guppy.IR.div/2`
+- `Guppy.IR.scroll/2`
+- `Guppy.IR.button/2`
+- `Guppy.IR.text_input/2`
 
-- opens a real GPUI window
-- mounts a clickable IR tree
-- receives `{:guppy_event, view_id, %{type: :click, id: "increment_button", callback: "increment"}}`
-- updates the window from Elixir when clicked
-- stops cleanly when the window is manually closed
+## Identity and retained state
 
-### Text clicks
+Native retained state depends on stable node identity.
 
-```bash
-cd guppy
-mix guppy.native.build
-mix run examples/text_clicks.exs
-```
+Rules today:
 
-What it does:
+- if a node has an explicit `id`, that wins
+- otherwise Guppy generates a path-based id like `guppy-{view_id}-{path}`
 
-- opens a real GPUI window
-- mounts clickable text nodes
-- distinguishes click events by text node id
-- rerenders from Elixir based on which text was clicked
+That identity is what lets the native side safely retain and prune:
 
-### Style gallery
+- scroll handles
+- focus handles
+- focus subscriptions
+- text input entities
 
-```bash
-cd guppy
-mix guppy.native.build
-mix run examples/style_gallery.exs
-```
+If you are building dynamic UI, prefer explicit ids for nodes whose retained native behavior matters.
 
-What it does:
+## Events today
 
-- opens a real GPUI window
-- renders a few styled clickable swatches
-- updates a preview block using the current minimal style token support
-- demonstrates full-tree replacement driven by click events
+Events are delivered to the owning Elixir process as `{:guppy_event, view_id, payload}`.
 
-## Event shape today
-
-Minimal native events are delivered to the owning Elixir process as:
+Representative payloads include:
 
 ```elixir
-{:guppy_event, view_id, %{type: :click, id: node_id, callback: callback_id}}
-{:guppy_event, view_id, %{type: :hover, id: node_id, callback: callback_id, hovered: boolean}}
-{:guppy_event, view_id, %{type: :focus, id: node_id, callback: callback_id}}
-{:guppy_event, view_id, %{type: :blur, id: node_id, callback: callback_id}}
-{:guppy_event, view_id, %{type: :change, id: node_id, callback: callback_id, value: String.t()}}
-{:guppy_event, view_id, %{type: :key_down, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, is_held: boolean, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :key_up, id: node_id, callback: callback_id, key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :action, id: node_id, callback: callback_id, action: String.t(), shortcut: String.t(), key: String.t(), key_char: String.t() | nil, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :context_menu, id: node_id, callback: callback_id, x: number, y: number, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :drag_start, id: node_id, callback: callback_id, source_id: node_id}}
-{:guppy_event, view_id, %{type: :drag_move, id: node_id, callback: callback_id, source_id: node_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :drop, id: node_id, callback: callback_id, source_id: String.t()}}
-{:guppy_event, view_id, %{type: :mouse_down, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, first_mouse: boolean, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :mouse_up, id: node_id, callback: callback_id, button: button, x: number, y: number, click_count: non_neg_integer, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :mouse_move, id: node_id, callback: callback_id, pressed_button: button | nil, x: number, y: number, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :scroll_wheel, id: node_id, callback: callback_id, x: number, y: number, delta_kind: :pixels | :lines, delta_x: number, delta_y: number, modifiers: %{...}}}
-{:guppy_event, view_id, %{type: :window_closed}}
+%{type: :click, id: node_id, callback: callback_id}
+%{type: :hover, id: node_id, callback: callback_id, hovered: boolean}
+%{type: :focus, id: node_id, callback: callback_id}
+%{type: :blur, id: node_id, callback: callback_id}
+%{type: :change, id: node_id, callback: callback_id, value: String.t()}
+%{type: :action, id: node_id, callback: callback_id, action: String.t(), shortcut: String.t()}
+%{type: :window_closed}
 ```
 
-You can attach a stable node id and callback ids to a `div` like this:
+There is broader support than those examples, but the important mental model is:
 
-```elixir
-Guppy.IR.div(
-  [
-    Guppy.IR.text("Click me", id: "button_label", events: %{click: "increment"})
-  ],
-  id: "increment_button",
-  events: %{
-    click: "increment",
-    focus: "focused",
-    blur: "blurred",
-    key_down: "keyed_down",
-    key_up: "keyed_up",
-    context_menu: "contexted",
-    drag_start: "dragged_start",
-    drag_move: "dragged_move",
-    drop: "dropped",
-    mouse_down: "pointer_down",
-    mouse_up: "pointer_up",
-    mouse_move: "pointer_move",
-    scroll_wheel: "pointer_scroll"
-  },
-  actions: %{
-    "primary" => "primary_action",
-    "secondary" => "secondary_action"
-  },
-  shortcuts: [{"ctrl-j", "primary"}, {"ctrl-k", "secondary"}],
-  focusable: true,
-  tab_stop: true,
-  tab_index: 1,
-  focus_style: [{:bg, :blue}, {:border_color, :yellow}],
-  in_focus_style: [:shadow_lg],
-  active_style: [{:opacity, 0.8}],
-  disabled: false,
-  disabled_style: [{:opacity, 0.45}, {:bg, :gray}],
-  stack_priority: 10,
-  occlude: true
-)
-```
+- event payloads carry the stable node id
+- event payloads carry the callback id you declared in the IR
+- Elixir decides what to do next and sends a new full tree
 
-For common button-like UI, you can now use a button node directly:
+## Styling today
 
-```elixir
-Guppy.IR.button(
-  "Save",
-  id: "save_button",
-  style: [{:bg, :blue}],
-  actions: %{"save" => "save_action"},
-  shortcuts: [{"ctrl-s", "save"}],
-  events: %{click: "save_click"}
-)
-```
+Styling is intentionally explicit and ordered.
 
-For single-line text entry, you can now use a text input node directly:
-
-```elixir
-Guppy.IR.text_input(
-  "Jason",
-  id: "name_input",
-  placeholder: "Type a name",
-  style: [{:w_px, 240}],
-  events: %{change: "name_changed"}
-)
-```
-
-`text` nodes currently support `click` only.
-
-Identity rules today:
-
-- if an IR node has an explicit `id`, native rendering uses it as the GPUI element id
-- otherwise Guppy falls back to a generated path-based id
-
-Style tokens are represented as an ordered list, for example:
+A `div` style is an ordered list of style ops, not a map:
 
 ```elixir
 style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 ```
 
-`div` nodes can also carry ordered `hover_style`, `focus_style`, `in_focus_style`, and `active_style` lists using the same style ops.
+Later ops win over earlier ones, and order is preserved through the bridge.
 
-Clickable `div` nodes now participate in keyboard activation automatically: when focused, pressing `Enter` or `Space` emits the same `:click` callback as a mouse click. Guppy gives clickable divs a focus handle and default tab-stop participation unless you explicitly override `tab_stop: false`.
+There is also explicit support for ordered stateful style lists on `div`:
 
-`div` nodes can also declare semantic `actions` plus `shortcuts`. Shortcut handlers dispatch `:action` events from the focused element or the nearest focused ancestor that declares the matching shortcut, and propagation stops at the first match.
+- `hover_style`
+- `focus_style`
+- `in_focus_style`
+- `active_style`
+- `disabled_style`
 
-Guppy also has an explicit `scroll` node for scroll-container semantics when a plain `div` plus overflow tokens is not the right abstraction. `scroll` nodes accept `id`, `axis: :x | :y | :both` (default `:y`), `style`, and `children`, and always behave as tracked scroll containers across rerenders.
+Current style coverage is useful but still intentionally partial.
 
-Guppy also has a `button` node for common button semantics. Buttons render as interactive controls with a text label, default focus participation, keyboard activation, and basic default button styling that later style ops can override.
+## Current architecture in the repo
 
-Guppy also has a single-line `text_input` node for controlled text entry. Text inputs accept a `value`, optional `placeholder`, optional `style`, optional `disabled`, optional `tab_index`, and currently emit `change` events carrying the latest value.
+Key files:
 
-`div` nodes also support:
-- `focusable: true` to opt into GPUI focus participation
-- `tab_stop: true | false` to control whether a focused node participates in tab navigation
-- `tab_index: integer` to influence tab order
-- ordered `focus_style` for the element's focused state
-- ordered `in_focus_style` for the element while it is within a focused subtree
-- ordered `active_style` for the element's pressed/active state
-- `disabled: true | false` to suppress div interaction callbacks and focus participation
-- ordered `disabled_style` using the same style-op vocabulary as normal `style`
-- `stack_priority: non_neg_integer()` to defer painting of a div and control overlay ordering; higher priorities paint on top of lower ones
-- `occlude: true | false` to block mouse interaction from reaching elements behind this div's hitbox
-- `track_scroll: true` to preserve and reuse a GPUI `ScrollHandle` across rerenders
-- `anchor_scroll: true` to request scrolling the nearest tracked scroll container so that this div is brought into view
-- `actions: %{action_name => callback_id}` to name semantic actions on a div
-- `shortcuts: [{keystroke, action_name}, ...]` to dispatch those actions from focused keyboard input
+- `lib/guppy.ex` — public API
+- `lib/guppy/server.ex` — ownership, lifecycle, and native event routing
+- `lib/guppy/native/nif.ex` — Elixir NIF wrapper
+- `lib/guppy/ir.ex` — Elixir IR validation/helpers
+- `native/guppy_nif/c_src/guppy_nif.c` — C shim and NIF entrypoints
+- `native/guppy_nif/src/lib.rs` — Rust runtime core and command routing
+- `native/guppy_nif/src/main_thread_runtime.rs` — GPUI main-thread runtime and window management
+- `native/guppy_nif/src/bridge_view.rs` — root native IR renderer
+- `native/guppy_nif/src/bridge_view/` — render passes, events, identity, styles, per-node renderers
 
-Later tokens are applied after earlier tokens, so order is preserved across the bridge.
+The runtime is intentionally NIF-first:
 
-For overlay behavior, Guppy currently maps stacking to GPUI deferred drawing plus priority rather than CSS-style z-index.
+- single native artifact
+- small C bootstrap layer
+- Rust owns most runtime logic
+- no Port sidecar
 
-Minimal `:div` style tokens currently supported:
+## Known limits
 
-- flags: `flex`, `flex_col`, `flex_row`, `flex_wrap`, `flex_nowrap`, `flex_none`, `flex_auto`, `flex_grow`, `flex_shrink`, `flex_shrink_0`, `flex_1`, `size_full`, `w_full`, `h_full`, `w_32`, `w_64`, `w_96`, `h_32`, `min_w_32`, `min_h_0`, `min_h_full`, `max_w_64`, `max_w_96`, `max_w_full`, `max_h_32`, `max_h_96`, `max_h_full`, `gap_1`, `gap_2`, `gap_4`, `p_1`, `p_2`, `p_4`, `p_6`, `p_8`, `px_2`, `py_2`, `pt_2`, `pr_2`, `pb_2`, `pl_2`, `m_2`, `mx_2`, `my_2`, `mt_2`, `mr_2`, `mb_2`, `ml_2`, `relative`, `absolute`, `top_0`, `right_0`, `bottom_0`, `left_0`, `inset_0`, `top_1`, `right_1`, `top_2`, `right_2`, `bottom_2`, `left_2`, `text_left`, `text_center`, `text_right`, `whitespace_normal`, `whitespace_nowrap`, `truncate`, `text_ellipsis`, `line_clamp_2`, `line_clamp_3`, `text_xs`, `text_sm`, `text_base`, `text_lg`, `text_xl`, `text_2xl`, `text_3xl`, `leading_none`, `leading_tight`, `leading_snug`, `leading_normal`, `leading_relaxed`, `leading_loose`, `font_thin`, `font_extralight`, `font_light`, `font_normal`, `font_medium`, `font_semibold`, `font_bold`, `font_extrabold`, `font_black`, `italic`, `not_italic`, `underline`, `line_through`, `items_start`, `items_center`, `items_end`, `justify_start`, `justify_center`, `justify_end`, `justify_between`, `justify_around`, `cursor_pointer`, `rounded_sm`, `rounded_md`, `rounded_lg`, `rounded_xl`, `rounded_2xl`, `rounded_full`, `border_1`, `border_2`, `border_dashed`, `border_t_1`, `border_r_1`, `border_b_1`, `border_l_1`, `shadow_sm`, `shadow_md`, `shadow_lg`, `overflow_scroll`, `overflow_x_scroll`, `overflow_y_scroll`, `overflow_hidden`, `overflow_x_hidden`, `overflow_y_hidden`
-- color ops: `{:bg, color}`, `{:text_color, color}`, `{:border_color, color}`, `{:bg_hex, "#RRGGBB"}`, `{:text_color_hex, "#RRGGBB"}`, `{:border_color_hex, "#RRGGBB"}`
-- numeric value ops: `{:opacity, number}`, `{:w_px, number}`, `{:w_rem, number}`, `{:w_frac, number}`, `{:h_px, number}`, `{:h_rem, number}`, `{:h_frac, number}`, `{:scrollbar_width_px, number}`, `{:scrollbar_width_rem, number}`
-- color tokens: `:red`, `:green`, `:blue`, `:yellow`, `:black`, `:white`, `:gray`
+Guppy is still early. In particular:
 
-## Current architecture
+- node/widget coverage is still small
+- style coverage is still selective
+- retained identity is present, but richer keyed/stateful behavior is still ahead
+- the rendering model is still simple full-tree replacement
+- the bridge favors explicit hand-written mappings over general magic
 
-The current implementation is NIF-first.
+## What matters most next
 
-Packaging direction:
+The most valuable next steps are architectural, not cosmetic:
 
-- a small C shim for low-level Erlang/ERTS bootstrap
-- a Rust core linked into the same final native library
-- one native NIF artifact per target
-- no separate sidecar process
-- no separate shipped C artifact
+1. keep the identity and retained-state model solid
+2. keep the full-tree replacement model simple and correct
+3. expand node/style/event support carefully
+4. add tests around retained native behavior and event dispatch
+5. continue moving from tracer-shot naming to runtime-oriented naming and structure
 
-High-level flow:
+## Notes for contributors
 
-1. Elixir calls into the NIF wrapper
-2. the C shim owns NIF bootstrap and macOS main-thread handoff
-3. mount/update terms are copied into owned ETF binaries before the NIF returns
-4. Rust owns most of the native runtime logic and decodes ETF into native IR
-5. native click handlers send messages back into the BEAM through the C shim
-6. `Guppy.Server` routes native events back to the owning Elixir process
-7. Elixir sends full-tree replacement updates back to native
-8. GPUI renders and rerenders from Elixir-driven state
-
-## Reference repositories
-
-The active dependency is currently `gpui = "0.2.2"` from crates.io.
-
-Useful references while developing:
-
-- `../zed` — reference checkout of Zed
-- `../zed/crates/gpui` — GPUI source reference
-- `../guppy-plan.md` — project plan
-- `~/projects/otp` — OTP/wx internals, especially:
-  - `lib/wx/c_src/wxe_main.cpp`
-  - `lib/wx/c_src/wxe_nif.c`
-
-## Known limitations
-
-The tracer shot is real, but still intentionally narrow:
-
-- native rendering only supports a minimal IR shape today
-- supported nodes are currently `:div`, `:text`, `:scroll`, `:button`, and `:text_input`
-- event and style coverage is still intentionally partial even though the bridge now supports a broader interaction surface
-- style mapping exists, but only for a small explicit subset on `:div`
-- explicit node ids are supported, but there is not yet broader keyed/stateful UI behavior built on top of them
-- `update_window_text/2` is now just a convenience wrapper over `update(view_id, Guppy.IR.text(text))`
-
-## Development workflow
-
-Common commands:
+If you touch native code under `native/guppy_nif/`, usually run:
 
 ```bash
-cd guppy
 mix guppy.native.build
 mix test
-mix run examples/hello_world.exs
-mix run examples/counter.exs
-mix run examples/super_demo.exs
-mix run examples/hello_world.exs
-mix run examples/counter.exs
-mix run examples/click_counter.exs
-mix run examples/text_clicks.exs
-mix run examples/style_gallery.exs
 ```
 
-If you change native code under `native/guppy_nif/`, rebuild before testing.
+For macOS bootstrap work, study OTP wx first:
+
+- `~/projects/otp/lib/wx/c_src/wxe_main.cpp`
+- `~/projects/otp/lib/wx/c_src/wxe_nif.c`
+
+The active GPUI dependency is currently `gpui = "0.2.2"` from crates.io.
