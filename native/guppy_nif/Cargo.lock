@@ -2323,6 +2323,7 @@ checksum = "12101ecc8225ea6d675bc70263074eab6169079621c2186fe0c66590b2df9681"
 name = "guppy_nif"
 version = "0.1.0"
 dependencies = [
+ "async-task",
  "cc",
  "eetf",
  "gpui",

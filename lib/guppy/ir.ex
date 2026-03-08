@@ -512,14 +512,21 @@ defmodule Guppy.IR do
   end
 
   @spec validate(ir_node()) :: :ok | {:error, term()}
-  def validate(%{kind: :text, content: content} = node) when is_binary(content) do
+  def validate(ir) do
+    with :ok <- validate_node(ir),
+         :ok <- validate_unique_ids(ir) do
+      :ok
+    end
+  end
+
+  defp validate_node(%{kind: :text, content: content} = node) when is_binary(content) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_events(Map.get(node, :events), [:click]) do
       :ok
     end
   end
 
-  def validate(%{kind: :div, children: children} = node) when is_list(children) do
+  defp validate_node(%{kind: :div, children: children} = node) when is_list(children) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
@@ -559,7 +566,7 @@ defmodule Guppy.IR do
     end
   end
 
-  def validate(%{kind: :scroll, children: children} = node) when is_list(children) do
+  defp validate_node(%{kind: :scroll, children: children} = node) when is_list(children) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_scroll_axis(Map.get(node, :axis)),
          :ok <- validate_style(Map.get(node, :style)),
@@ -568,7 +575,7 @@ defmodule Guppy.IR do
     end
   end
 
-  def validate(%{kind: :button, label: label} = node) when is_binary(label) do
+  defp validate_node(%{kind: :button, label: label} = node) when is_binary(label) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
@@ -597,7 +604,7 @@ defmodule Guppy.IR do
     end
   end
 
-  def validate(%{kind: :text_input, value: value} = node) when is_binary(value) do
+  defp validate_node(%{kind: :text_input, value: value} = node) when is_binary(value) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_optional_string(Map.get(node, :placeholder), :placeholder),
          :ok <- validate_style(Map.get(node, :style)),
@@ -608,16 +615,45 @@ defmodule Guppy.IR do
     end
   end
 
-  def validate(other), do: {:error, {:invalid_ir, other}}
+  defp validate_node(other), do: {:error, {:invalid_ir, other}}
 
   defp validate_children(children) do
     Enum.reduce_while(children, :ok, fn child, :ok ->
-      case validate(child) do
+      case validate_node(child) do
         :ok -> {:cont, :ok}
         error -> {:halt, error}
       end
     end)
   end
+
+  defp validate_unique_ids(ir) do
+    case collect_ids(ir, MapSet.new()) do
+      {:ok, _ids} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp collect_ids(%{id: id} = node, ids) when is_binary(id) do
+    if MapSet.member?(ids, id) do
+      {:error, {:duplicate_id, id}}
+    else
+      collect_child_ids(node, MapSet.put(ids, id))
+    end
+  end
+
+  defp collect_ids(node, ids), do: collect_child_ids(node, ids)
+
+  defp collect_child_ids(%{kind: kind, children: children}, ids)
+       when kind in [:div, :scroll] and is_list(children) do
+    Enum.reduce_while(children, {:ok, ids}, fn child, {:ok, acc_ids} ->
+      case collect_ids(child, acc_ids) do
+        {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp collect_child_ids(_node, ids), do: {:ok, ids}
 
   defp validate_id(nil), do: :ok
   defp validate_id(id) when is_binary(id), do: :ok

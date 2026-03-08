@@ -53,16 +53,16 @@ fn erlang_include_dir() -> PathBuf {
             "io:format(\"~s\", [filename:join(code:root_dir(), \"usr/include\")]), halt().",
         ])
         .output()
-        .expect("failed to execute `erl` while locating erl_nif.h; set ERL_EI_INCLUDE_DIR to override");
+        .expect(
+            "failed to execute `erl` while locating erl_nif.h; set ERL_EI_INCLUDE_DIR to override",
+        );
 
     if !output.status.success() {
-        panic!(
-            "`erl` failed while locating erl_nif.h; set ERL_EI_INCLUDE_DIR to override"
-        );
+        panic!("`erl` failed while locating erl_nif.h; set ERL_EI_INCLUDE_DIR to override");
     }
 
-    let include_dir = String::from_utf8(output.stdout)
-        .expect("`erl` returned non-utf8 output for include path");
+    let include_dir =
+        String::from_utf8(output.stdout).expect("`erl` returned non-utf8 output for include path");
 
     PathBuf::from(include_dir)
 }

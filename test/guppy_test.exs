@@ -399,6 +399,16 @@ defmodule GuppyTest do
 
     assert {:error, {:invalid_id, 123}} = Guppy.IR.validate(Guppy.IR.text("hello", id: 123))
 
+    assert {:error, {:duplicate_id, "dup"}} =
+             Guppy.IR.validate(
+               Guppy.IR.div([
+                 Guppy.IR.text("first", id: "dup"),
+                 Guppy.IR.scroll([
+                   Guppy.IR.div([], id: "dup")
+                 ])
+               ])
+             )
+
     assert {:error, {:invalid_style_op, :bogus}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [:bogus]))
 
@@ -495,6 +505,39 @@ defmodule GuppyTest do
 
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} = Guppy.ping()
+    end
+  end
+
+  test "view ownership is enforced by the server" do
+    parent = self()
+
+    spawn(fn ->
+      send(parent, {:owner_mismatch, Guppy.open_window(parent)})
+    end)
+
+    assert_receive {:owner_mismatch, {:error, :owner_mismatch}}
+
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        {:ok, view_id} = Guppy.open_window()
+        on_exit(fn -> maybe_close(view_id) end)
+
+        assert :ok = Guppy.mount(view_id, Guppy.IR.text("owned by caller"))
+
+        spawn(fn ->
+          send(parent, {:foreign_mount, Guppy.mount(view_id, Guppy.IR.text("nope"))})
+          send(parent, {:foreign_update, Guppy.update(view_id, Guppy.IR.text("still nope"))})
+          send(parent, {:foreign_close, Guppy.close_window(view_id)})
+        end)
+
+        assert_receive {:foreign_mount, {:error, :not_view_owner}}
+        assert_receive {:foreign_update, {:error, :not_view_owner}}
+        assert_receive {:foreign_close, {:error, :not_view_owner}}
+
+        assert :ok = Guppy.close_window(view_id)
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.open_window()
     end
   end
 

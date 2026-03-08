@@ -1097,6 +1097,7 @@ static int maybe_start_hello_window(void) {
   guppy_gui_started = guppy_gui_status == 1;
   return guppy_gui_started;
 #else
+  guppy_gui_started = 1;
   return 1;
 #endif
 }
@@ -1328,12 +1329,12 @@ static ErlNifFunc nif_funcs[] = {
     {"native_build_info", 0, native_build_info, 0},
     {"native_runtime_status", 0, native_runtime_status, 0},
     {"native_gui_status", 0, native_gui_status, 0},
-    {"native_open_window", 1, native_open_window, 0},
+    {"native_open_window", 1, native_open_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_set_event_target", 1, native_set_event_target, 0},
-    {"native_mount", 2, native_mount, 0},
-    {"native_update", 2, native_update, 0},
-    {"native_close_window", 1, native_close_window, 0},
-    {"native_view_count", 0, native_view_count, 0},
+    {"native_mount", 2, native_mount, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"native_update", 2, native_update, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"native_close_window", 1, native_close_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"native_view_count", 0, native_view_count, ERL_NIF_DIRTY_JOB_IO_BOUND},
 };
 
 ERL_NIF_INIT(Elixir.Guppy.Native.Nif, nif_funcs, load, reload, upgrade, unload)

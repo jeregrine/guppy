@@ -1,12 +1,16 @@
 use crate::bridge_text_input;
 use crate::bridge_view::BridgeView;
-use crate::ir::{DivStyle, IrNode};
-use gpui::{App, AppContext, Application, AsyncApp, Bounds, WindowBounds, WindowOptions, px, size};
+use crate::ir::{DivNode, DivStyle, IrNode};
+use async_task::spawn;
+use gpui::{
+    App, AppContext, Application, AsyncApp, Bounds, PlatformDispatcher, WindowBounds,
+    WindowOptions, px, size,
+};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
+use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
 
 unsafe extern "C" {
     fn guppy_c_gui_started(status: i32);
@@ -20,9 +24,14 @@ thread_local! {
 
 static REQUEST_TX: OnceLock<Sender<MainThreadRequest>> = OnceLock::new();
 static REQUEST_RX: OnceLock<Mutex<Receiver<MainThreadRequest>>> = OnceLock::new();
+static MAIN_THREAD_DISPATCHER: OnceLock<Mutex<Option<Arc<dyn PlatformDispatcher>>>> =
+    OnceLock::new();
 
 pub(crate) enum MainThreadRequest {
-    OpenWindow { view_id: u64, reply: Sender<i32> },
+    OpenWindow {
+        view_id: u64,
+        reply: Sender<i32>,
+    },
     MountIr {
         view_id: u64,
         ir: IrNode,
@@ -33,8 +42,13 @@ pub(crate) enum MainThreadRequest {
         ir: IrNode,
         reply: Sender<i32>,
     },
-    CloseWindow { view_id: u64, reply: Sender<i32> },
-    ViewCount { reply: Sender<u64> },
+    CloseWindow {
+        view_id: u64,
+        reply: Sender<i32>,
+    },
+    ViewCount {
+        reply: Sender<u64>,
+    },
 }
 
 pub fn run_app(open_boot_window: bool) {
@@ -46,7 +60,7 @@ pub fn run_app(open_boot_window: bool) {
         });
 
         bridge_text_input::bind_keys(cx);
-        start_request_poller(cx);
+        register_main_thread_dispatcher(cx);
 
         unsafe { guppy_c_gui_started(1) };
 
@@ -58,7 +72,8 @@ pub fn run_app(open_boot_window: bool) {
 
 pub(crate) fn enqueue_request(request: MainThreadRequest) -> Result<(), ()> {
     let sender = REQUEST_TX.get().ok_or(())?;
-    sender.send(request).map_err(|_| ())
+    sender.send(request).map_err(|_| ())?;
+    schedule_request_drain()
 }
 
 pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
@@ -85,7 +100,6 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
                     ir,
                     scroll_handles: Default::default(),
                     focus_handles: Default::default(),
-                    focus_registered: Default::default(),
                     focus_subscriptions: Default::default(),
                     text_inputs: Default::default(),
                 })
@@ -101,6 +115,10 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
                 let _ = handle.update(&mut app, |_, window, cx| {
                     window.activate_window();
                     window.on_window_should_close(cx, move |_window, _cx| {
+                        WINDOWS.with(|windows| {
+                            windows.borrow_mut().remove(&view_id);
+                        });
+
                         unsafe {
                             let _ = guppy_c_send_window_closed_event(view_id);
                         }
@@ -177,32 +195,45 @@ fn init_request_queue() {
         let _ = REQUEST_TX.set(tx);
         let _ = REQUEST_RX.set(Mutex::new(rx));
     }
+
+    let _ = MAIN_THREAD_DISPATCHER.set(Mutex::new(None));
 }
 
-fn start_request_poller(cx: &mut App) {
-    cx.spawn(async move |cx| loop {
-        drain_requests();
-        cx.background_executor().timer(Duration::from_millis(16)).await;
-    })
-    .detach();
+fn register_main_thread_dispatcher(cx: &mut App) {
+    let dispatcher = cx.foreground_executor().dispatcher.clone();
+    let slot = MAIN_THREAD_DISPATCHER
+        .get()
+        .expect("main-thread dispatcher slot not initialized");
+    let mut slot = slot.lock().expect("dispatcher lock poisoned");
+    *slot = Some(dispatcher);
+}
+
+fn schedule_request_drain() -> Result<(), ()> {
+    let dispatcher = {
+        let slot = MAIN_THREAD_DISPATCHER.get().ok_or(())?;
+        let slot = slot.lock().map_err(|_| ())?;
+        slot.clone().ok_or(())?
+    };
+
+    let (runnable, task) = spawn(async move { drain_requests() }, move |runnable| {
+        dispatcher.dispatch_on_main_thread(runnable);
+    });
+
+    runnable.schedule();
+    task.detach();
+    Ok(())
 }
 
 fn drain_requests() {
-    let Some(receiver) = REQUEST_RX.get() else {
-        return;
-    };
-
-    loop {
-        let next = {
-            let guard = receiver.lock().expect("request queue lock poisoned");
-            guard.try_recv()
-        };
-
-        match next {
-            Ok(request) => handle_request(request),
-            Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
-        }
+    while let Some(request) = try_next_request() {
+        handle_request(request);
     }
+}
+
+fn try_next_request() -> Option<MainThreadRequest> {
+    let receiver = REQUEST_RX.get()?;
+    let guard = receiver.lock().expect("request queue lock poisoned");
+    guard.try_recv().ok()
 }
 
 fn handle_request(request: MainThreadRequest) {
@@ -210,7 +241,7 @@ fn handle_request(request: MainThreadRequest) {
         MainThreadRequest::OpenWindow { view_id, reply } => {
             let _ = reply.send(open_window(
                 view_id,
-                IrNode::Div {
+                IrNode::Div(Box::new(DivNode {
                     id: None,
                     style: DivStyle::default(),
                     hover_style: DivStyle::default(),
@@ -242,7 +273,7 @@ fn handle_request(request: MainThreadRequest) {
                     mouse_up: None,
                     mouse_move: None,
                     scroll_wheel: None,
-                },
+                })),
             ));
         }
         MainThreadRequest::MountIr { view_id, ir, reply } => {

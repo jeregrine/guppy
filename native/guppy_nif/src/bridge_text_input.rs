@@ -1,9 +1,9 @@
 use gpui::{
     App, Bounds, Context, CursorStyle, Element, ElementId, ElementInputHandler, Entity,
-    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, IntoElement,
-    KeyBinding, LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
-    Pixels, Point, Render, SharedString, Style, TextRun, UTF16Selection, UnderlineStyle, Window,
-    actions, div, fill, hsla, point, prelude::*, px, relative, rgb, rgba,
+    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, IntoElement, KeyBinding, LayoutId,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render,
+    SharedString, Style, TextRun, UTF16Selection, UnderlineStyle, Window, actions, div, fill, hsla,
+    point, prelude::*, px, relative, rgb, rgba,
 };
 use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
@@ -57,6 +57,16 @@ pub fn bind_keys(cx: &mut App) {
     ]);
 }
 
+pub struct BridgeTextInputOptions {
+    pub view_id: u64,
+    pub node_id: String,
+    pub value: String,
+    pub placeholder: String,
+    pub change: Option<String>,
+    pub disabled: bool,
+    pub tab_index: Option<isize>,
+}
+
 pub struct BridgeTextInput {
     pub view_id: u64,
     pub node_id: String,
@@ -77,14 +87,18 @@ pub struct BridgeTextInput {
 impl BridgeTextInput {
     pub fn new(
         cx: &mut Context<crate::bridge_view::BridgeView>,
-        view_id: u64,
-        node_id: String,
-        value: String,
-        placeholder: String,
-        change: Option<String>,
-        disabled: bool,
-        tab_index: Option<isize>,
+        options: BridgeTextInputOptions,
     ) -> Entity<Self> {
+        let BridgeTextInputOptions {
+            view_id,
+            node_id,
+            value,
+            placeholder,
+            change,
+            disabled,
+            tab_index,
+        } = options;
+
         cx.new(|cx| Self {
             view_id,
             node_id,
@@ -234,7 +248,12 @@ impl BridgeTextInput {
         self.replace_text_in_range(None, "", window, cx)
     }
 
-    fn on_mouse_down(&mut self, event: &MouseDownEvent, _window: &mut Window, cx: &mut Context<Self>) {
+    fn on_mouse_down(
+        &mut self,
+        event: &MouseDownEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if self.disabled {
             return;
         }
@@ -262,7 +281,12 @@ impl BridgeTextInput {
         }
     }
 
-    fn show_character_palette(&mut self, _: &ShowCharacterPalette, window: &mut Window, _: &mut Context<Self>) {
+    fn show_character_palette(
+        &mut self,
+        _: &ShowCharacterPalette,
+        window: &mut Window,
+        _: &mut Context<Self>,
+    ) {
         if self.disabled {
             return;
         }
@@ -323,7 +347,8 @@ impl BridgeTextInput {
             return 0;
         }
 
-        let (Some(bounds), Some(line)) = (self.last_bounds.as_ref(), self.last_layout.as_ref()) else {
+        let (Some(bounds), Some(line)) = (self.last_bounds.as_ref(), self.last_layout.as_ref())
+        else {
             return 0;
         };
         if position.y < bounds.top() {
@@ -427,8 +452,14 @@ impl EntityInputHandler for BridgeTextInput {
         })
     }
 
-    fn marked_text_range(&self, _window: &mut Window, _cx: &mut Context<Self>) -> Option<Range<usize>> {
-        self.marked_range.as_ref().map(|range| self.range_to_utf16(range))
+    fn marked_text_range(
+        &self,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<Range<usize>> {
+        self.marked_range
+            .as_ref()
+            .map(|range| self.range_to_utf16(range))
     }
 
     fn unmark_text(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {
@@ -488,7 +519,7 @@ impl EntityInputHandler for BridgeTextInput {
         self.selected_range = new_selected_range_utf16
             .as_ref()
             .map(|range_utf16| self.range_from_utf16(range_utf16))
-            .map(|new_range| new_range.start + range.start..new_range.end + range.end)
+            .map(|new_range| new_range.start + range.start..new_range.end + range.start)
             .unwrap_or_else(|| range.start + new_text.len()..range.start + new_text.len());
 
         self.send_change_event();
@@ -505,8 +536,14 @@ impl EntityInputHandler for BridgeTextInput {
         let last_layout = self.last_layout.as_ref()?;
         let range = self.range_from_utf16(&range_utf16);
         Some(Bounds::from_corners(
-            point(bounds.left() + last_layout.x_for_index(range.start), bounds.top()),
-            point(bounds.left() + last_layout.x_for_index(range.end), bounds.bottom()),
+            point(
+                bounds.left() + last_layout.x_for_index(range.start),
+                bounds.top(),
+            ),
+            point(
+                bounds.left() + last_layout.x_for_index(range.end),
+                bounds.bottom(),
+            ),
         ))
     }
 
@@ -518,7 +555,7 @@ impl EntityInputHandler for BridgeTextInput {
     ) -> Option<usize> {
         let line_point = self.last_bounds?.localize(&point)?;
         let last_layout = self.last_layout.as_ref()?;
-        let utf8_index = last_layout.index_for_x(point.x - line_point.x)?;
+        let utf8_index = last_layout.index_for_x(line_point.x)?;
         Some(self.offset_to_utf16(utf8_index))
     }
 }
@@ -643,8 +680,14 @@ impl Element for TextElement {
             (
                 Some(fill(
                     Bounds::from_corners(
-                        point(bounds.left() + line.x_for_index(selected_range.start), bounds.top()),
-                        point(bounds.left() + line.x_for_index(selected_range.end), bounds.bottom()),
+                        point(
+                            bounds.left() + line.x_for_index(selected_range.start),
+                            bounds.top(),
+                        ),
+                        point(
+                            bounds.left() + line.x_for_index(selected_range.end),
+                            bounds.bottom(),
+                        ),
                     ),
                     rgba(0x3311ff30),
                 )),
@@ -671,13 +714,18 @@ impl Element for TextElement {
         let focus_handle = self.input.read(cx).focus_handle.clone();
         let disabled = self.input.read(cx).disabled;
         if !disabled {
-            window.handle_input(&focus_handle, ElementInputHandler::new(bounds, self.input.clone()), cx);
+            window.handle_input(
+                &focus_handle,
+                ElementInputHandler::new(bounds, self.input.clone()),
+                cx,
+            );
         }
         if let Some(selection) = prepaint.selection.take() {
             window.paint_quad(selection)
         }
         let line = prepaint.line.take().unwrap();
-        line.paint(bounds.origin, window.line_height(), window, cx).unwrap();
+        line.paint(bounds.origin, window.line_height(), window, cx)
+            .unwrap();
 
         if focus_handle.is_focused(window)
             && let Some(cursor) = prepaint.cursor.take()
@@ -695,16 +743,32 @@ impl Element for TextElement {
 
 impl Render for BridgeTextInput {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let background = if self.disabled { rgb(0x2f2f2f) } else { rgb(0xffffff) };
-        let text_color = if self.disabled { rgb(0x9f9f9f) } else { rgb(0x111111) };
-        let border_color = if self.disabled { rgb(0x666666) } else { rgb(0xd0d0d0) };
+        let background = if self.disabled {
+            rgb(0x2f2f2f)
+        } else {
+            rgb(0xffffff)
+        };
+        let text_color = if self.disabled {
+            rgb(0x9f9f9f)
+        } else {
+            rgb(0x111111)
+        };
+        let border_color = if self.disabled {
+            rgb(0x666666)
+        } else {
+            rgb(0xd0d0d0)
+        };
         let handle = self.focus_handle.clone();
 
         div()
             .w_full()
             .key_context("BridgeTextInput")
             .track_focus(&handle)
-            .cursor(if self.disabled { CursorStyle::Arrow } else { CursorStyle::IBeam })
+            .cursor(if self.disabled {
+                CursorStyle::Arrow
+            } else {
+                CursorStyle::IBeam
+            })
             .on_action(cx.listener(Self::backspace))
             .on_action(cx.listener(Self::delete))
             .on_action(cx.listener(Self::left))

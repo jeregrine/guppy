@@ -178,6 +178,41 @@ pub enum ColorToken {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct DivNode {
+    pub id: Option<String>,
+    pub style: DivStyle,
+    pub hover_style: DivStyle,
+    pub focus_style: DivStyle,
+    pub in_focus_style: DivStyle,
+    pub active_style: DivStyle,
+    pub disabled_style: DivStyle,
+    pub disabled: bool,
+    pub stack_priority: Option<usize>,
+    pub occlude: bool,
+    pub focusable: bool,
+    pub tab_stop: Option<bool>,
+    pub tab_index: Option<isize>,
+    pub track_scroll: bool,
+    pub anchor_scroll: bool,
+    pub shortcuts: Vec<ShortcutBinding>,
+    pub children: Vec<IrNode>,
+    pub click: Option<String>,
+    pub hover: Option<String>,
+    pub focus: Option<String>,
+    pub blur: Option<String>,
+    pub key_down: Option<String>,
+    pub key_up: Option<String>,
+    pub context_menu: Option<String>,
+    pub drag_start: Option<String>,
+    pub drag_move: Option<String>,
+    pub drop: Option<String>,
+    pub mouse_down: Option<String>,
+    pub mouse_up: Option<String>,
+    pub mouse_move: Option<String>,
+    pub scroll_wheel: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum IrNode {
     Text {
         id: Option<String>,
@@ -199,39 +234,7 @@ pub enum IrNode {
         style: DivStyle,
         children: Vec<IrNode>,
     },
-    Div {
-        id: Option<String>,
-        style: DivStyle,
-        hover_style: DivStyle,
-        focus_style: DivStyle,
-        in_focus_style: DivStyle,
-        active_style: DivStyle,
-        disabled_style: DivStyle,
-        disabled: bool,
-        stack_priority: Option<usize>,
-        occlude: bool,
-        focusable: bool,
-        tab_stop: Option<bool>,
-        tab_index: Option<isize>,
-        track_scroll: bool,
-        anchor_scroll: bool,
-        shortcuts: Vec<ShortcutBinding>,
-        children: Vec<IrNode>,
-        click: Option<String>,
-        hover: Option<String>,
-        focus: Option<String>,
-        blur: Option<String>,
-        key_down: Option<String>,
-        key_up: Option<String>,
-        context_menu: Option<String>,
-        drag_start: Option<String>,
-        drag_move: Option<String>,
-        drop: Option<String>,
-        mouse_down: Option<String>,
-        mouse_up: Option<String>,
-        mouse_move: Option<String>,
-        scroll_wheel: Option<String>,
-    },
+    Div(Box<DivNode>),
 }
 
 impl IrNode {
@@ -289,12 +292,17 @@ impl IrNode {
                 let label = get_string_field(map, "label")?;
                 let style = prepend_style(default_button_style(), get_div_style(map)?);
                 let hover_style = get_div_hover_style(map)?;
-                let focus_style = prepend_style(default_button_focus_style(), get_div_focus_style(map)?);
+                let focus_style =
+                    prepend_style(default_button_focus_style(), get_div_focus_style(map)?);
                 let in_focus_style = get_div_in_focus_style(map)?;
-                let active_style = prepend_style(default_button_active_style(), get_div_active_style(map)?);
-                let disabled_style = prepend_style(default_button_disabled_style(), get_div_disabled_style(map)?);
+                let active_style =
+                    prepend_style(default_button_active_style(), get_div_active_style(map)?);
+                let disabled_style = prepend_style(
+                    default_button_disabled_style(),
+                    get_div_disabled_style(map)?,
+                );
 
-                Ok(Self::Div {
+                Ok(Self::Div(Box::new(DivNode {
                     id,
                     style,
                     hover_style,
@@ -326,7 +334,7 @@ impl IrNode {
                     mouse_up: get_mouse_up_event(map)?,
                     mouse_move: get_mouse_move_event(map)?,
                     scroll_wheel: None,
-                })
+                })))
             }
             "div" => {
                 let children = match get_field(map, "children") {
@@ -339,7 +347,7 @@ impl IrNode {
 
                 let actions = get_div_actions(map)?;
 
-                Ok(Self::Div {
+                Ok(Self::Div(Box::new(DivNode {
                     id,
                     style: get_div_style(map)?,
                     hover_style: get_div_hover_style(map)?,
@@ -371,7 +379,7 @@ impl IrNode {
                     mouse_up: get_mouse_up_event(map)?,
                     mouse_move: get_mouse_move_event(map)?,
                     scroll_wheel: get_scroll_wheel_event(map)?,
-                })
+                })))
             }
             other => Err(format!("unsupported ir kind: {other}")),
         }
@@ -440,7 +448,9 @@ fn get_optional_boolean_field(
     match get_field(map, key) {
         Some(Term::Atom(atom)) if atom.name == "true" => Ok(Some(true)),
         Some(Term::Atom(atom)) if atom.name == "false" => Ok(Some(false)),
-        Some(other) => Err(format!("expected optional boolean field {key}, got {other}")),
+        Some(other) => Err(format!(
+            "expected optional boolean field {key}, got {other}"
+        )),
         None => Ok(None),
     }
 }
@@ -456,15 +466,14 @@ fn get_optional_integer_field(
             .parse::<isize>()
             .map(Some)
             .map_err(|error| format!("invalid integer field {key}: {error}")),
-        Some(other) => Err(format!("expected optional integer field {key}, got {other}")),
+        Some(other) => Err(format!(
+            "expected optional integer field {key}, got {other}"
+        )),
         None => Ok(None),
     }
 }
 
-fn get_optional_usize_field(
-    map: &HashMap<Term, Term>,
-    key: &str,
-) -> Result<Option<usize>, String> {
+fn get_optional_usize_field(map: &HashMap<Term, Term>, key: &str) -> Result<Option<usize>, String> {
     match get_field(map, key) {
         Some(Term::FixInteger(value)) => usize::try_from(value.value)
             .map(Some)
@@ -562,7 +571,10 @@ fn get_div_shortcuts(
     };
 
     let shortcuts = get_list(shortcuts_term)?;
-    shortcuts.iter().map(|shortcut| parse_shortcut_binding(shortcut, actions)).collect()
+    shortcuts
+        .iter()
+        .map(|shortcut| parse_shortcut_binding(shortcut, actions))
+        .collect()
 }
 
 fn parse_shortcut_binding(
@@ -574,7 +586,9 @@ fn parse_shortcut_binding(
     };
 
     if elements.len() != 2 {
-        return Err(format!("expected shortcut tuple with 2 elements, got {term}"));
+        return Err(format!(
+            "expected shortcut tuple with 2 elements, got {term}"
+        ));
     }
 
     let shortcut = term_to_string(&elements[0])?;

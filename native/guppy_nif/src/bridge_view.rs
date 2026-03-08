@@ -1,9 +1,9 @@
-use crate::bridge_text_input::BridgeTextInput;
+use crate::bridge_text_input::{BridgeTextInput, BridgeTextInputOptions};
 use crate::ir::{ColorToken, DivStyle, IrNode, ScrollAxis, ShortcutBinding, StyleOp};
 use gpui::{
-    AnyElement, Context, Empty, Entity, FocusHandle, FontWeight, InteractiveElement, InteractiveText,
-    KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
-    ScrollAnchor, ScrollDelta, ScrollHandle, ScrollWheelEvent, SharedString,
+    AnyElement, Context, Empty, Entity, FocusHandle, FontWeight, InteractiveElement,
+    InteractiveText, KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent,
+    MouseUpEvent, ScrollAnchor, ScrollDelta, ScrollHandle, ScrollWheelEvent, SharedString,
     StatefulInteractiveElement, StyleRefinement, Styled, StyledText, Subscription, Window,
     deferred, div, prelude::*, px, relative, rems, rgb,
 };
@@ -230,7 +230,6 @@ pub struct BridgeView {
     pub ir: IrNode,
     pub scroll_handles: HashMap<String, ScrollHandle>,
     pub focus_handles: HashMap<String, FocusHandle>,
-    pub focus_registered: HashSet<String>,
     pub focus_subscriptions: Vec<Subscription>,
     pub text_inputs: HashMap<String, Entity<BridgeTextInput>>,
 }
@@ -240,307 +239,54 @@ struct BridgeDragState {
     source_id: String,
 }
 
-impl Render for BridgeView {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        div()
-            .size_full()
-            .p_6()
-            .bg(rgb(0x202020))
-            .text_color(rgb(0xffffff))
-            .child(render_ir(
-                self.view_id,
-                "root",
-                &self.ir,
-                &mut self.scroll_handles,
-                &mut self.focus_handles,
-                &mut self.focus_registered,
-                &mut self.focus_subscriptions,
-                &mut self.text_inputs,
-                None,
-                window,
-                cx,
-            ))
-    }
+#[derive(Default)]
+struct LiveNodes {
+    scroll_handles: HashSet<String>,
+    focus_handles: HashSet<String>,
+    text_inputs: HashSet<String>,
 }
 
-fn render_ir(
+struct BridgeRenderer<'a> {
     view_id: u64,
-    path: &str,
-    ir: &IrNode,
-    scroll_handles: &mut HashMap<String, ScrollHandle>,
-    focus_handles: &mut HashMap<String, FocusHandle>,
-    focus_registered: &mut HashSet<String>,
-    focus_subscriptions: &mut Vec<Subscription>,
-    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
-    parent_scroll_handle: Option<ScrollHandle>,
-    window: &mut Window,
-    cx: &mut Context<BridgeView>,
-) -> AnyElement {
-    match ir {
-        IrNode::Text { id, content, click } => {
-            render_text(view_id, path, id.as_deref(), content, click.as_deref())
-        }
-        IrNode::TextInput {
-            id,
-            value,
-            placeholder,
-            style,
-            disabled,
-            tab_index,
-            change,
-        } => render_text_input(
-            view_id,
-            path,
-            id.as_deref(),
-            value,
-            placeholder,
-            style,
-            *disabled,
-            *tab_index,
-            change.as_deref(),
-            text_inputs,
-            cx,
-        ),
-        IrNode::Scroll {
-            id,
-            axis,
-            style,
-            children,
-        } => render_scroll(
-            view_id,
-            path,
-            id.as_deref(),
-            *axis,
-            style,
-            children,
-            scroll_handles,
-            focus_handles,
-            focus_registered,
-            focus_subscriptions,
-            text_inputs,
-            parent_scroll_handle,
-            window,
-            cx,
-        ),
-        IrNode::Div {
-            id,
-            style,
-            hover_style,
-            focus_style,
-            in_focus_style,
-            active_style,
-            disabled_style,
-            disabled,
-            stack_priority,
-            occlude,
-            focusable,
-            tab_stop,
-            tab_index,
-            track_scroll,
-            anchor_scroll,
-            shortcuts,
-            children,
-            click,
-            hover,
-            focus,
-            blur,
-            key_down,
-            key_up,
-            context_menu,
-            drag_start,
-            drag_move,
-            drop,
-            mouse_down,
-            mouse_up,
-            mouse_move,
-            scroll_wheel,
-        } => render_div(
-            view_id,
-            path,
-            id.as_deref(),
-            style,
-            hover_style,
-            focus_style,
-            in_focus_style,
-            active_style,
-            disabled_style,
-            *disabled,
-            *stack_priority,
-            *occlude,
-            *focusable,
-            *tab_stop,
-            *tab_index,
-            *track_scroll,
-            *anchor_scroll,
-            shortcuts,
-            children,
-            click.as_deref(),
-            hover.as_deref(),
-            focus.as_deref(),
-            blur.as_deref(),
-            key_down.as_deref(),
-            key_up.as_deref(),
-            context_menu.as_deref(),
-            drag_start.as_deref(),
-            drag_move.as_deref(),
-            drop.as_deref(),
-            mouse_down.as_deref(),
-            mouse_up.as_deref(),
-            mouse_move.as_deref(),
-            scroll_wheel.as_deref(),
-            scroll_handles,
-            focus_handles,
-            focus_registered,
-            focus_subscriptions,
-            text_inputs,
-            parent_scroll_handle,
-            window,
-            cx,
-        ),
-    }
+    scroll_handles: &'a mut HashMap<String, ScrollHandle>,
+    focus_handles: &'a mut HashMap<String, FocusHandle>,
+    focus_subscriptions: &'a mut Vec<Subscription>,
+    text_inputs: &'a mut HashMap<String, Entity<BridgeTextInput>>,
+    live: LiveNodes,
+    focus_callbacks_registered: HashSet<String>,
 }
 
-fn render_text(
-    view_id: u64,
-    path: &str,
-    id: Option<&str>,
-    content: &str,
-    click: Option<&str>,
-) -> AnyElement {
-    let node_id = node_id(view_id, path, id);
-    let interactive_text = InteractiveText::new(
-        SharedString::from(node_id.clone()),
-        StyledText::new(content.to_owned()),
-    );
-
-    match click {
-        Some(callback_id) if !content.is_empty() => {
-            let callback_id = callback_id.to_owned();
-            let click_node_id = node_id.clone();
-
-            interactive_text
-                .on_click(vec![0..content.len()], move |_, _, _| unsafe {
-                    let _ = guppy_c_send_click_event(
-                        view_id,
-                        click_node_id.as_ptr(),
-                        click_node_id.len(),
-                        callback_id.as_ptr(),
-                        callback_id.len(),
-                    );
-                })
-                .into_any_element()
-        }
-        _ => interactive_text.into_any_element(),
-    }
+struct TextNodeRef<'a> {
+    id: Option<&'a str>,
+    content: &'a str,
+    click: Option<&'a str>,
 }
 
-fn render_text_input(
-    view_id: u64,
-    path: &str,
-    id: Option<&str>,
-    value: &str,
-    placeholder: &str,
-    style: &DivStyle,
+struct TextInputNodeRef<'a> {
+    id: Option<&'a str>,
+    value: &'a str,
+    placeholder: &'a str,
+    style: &'a DivStyle,
     disabled: bool,
     tab_index: Option<isize>,
-    change: Option<&str>,
-    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
-    cx: &mut Context<BridgeView>,
-) -> AnyElement {
-    let node_id = node_id(view_id, path, id);
-
-    let entity = text_inputs
-        .entry(node_id.clone())
-        .or_insert_with(|| {
-            BridgeTextInput::new(
-                cx,
-                view_id,
-                node_id.clone(),
-                value.to_owned(),
-                placeholder.to_owned(),
-                change.map(str::to_owned),
-                disabled,
-                tab_index,
-            )
-        })
-        .clone();
-
-    entity.update(cx, |input, _cx| {
-        input.sync_from_ir(value, placeholder, change, disabled, tab_index);
-    });
-
-    apply_div_style(div().id(SharedString::from(node_id)).child(entity), style).into_any_element()
+    change: Option<&'a str>,
 }
 
-fn render_scroll(
-    view_id: u64,
-    path: &str,
-    id: Option<&str>,
+struct ScrollNodeRef<'a> {
+    id: Option<&'a str>,
     axis: ScrollAxis,
-    style: &DivStyle,
-    children: &[IrNode],
-    scroll_handles: &mut HashMap<String, ScrollHandle>,
-    focus_handles: &mut HashMap<String, FocusHandle>,
-    focus_registered: &mut HashSet<String>,
-    focus_subscriptions: &mut Vec<Subscription>,
-    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
-    parent_scroll_handle: Option<ScrollHandle>,
-    window: &mut Window,
-    cx: &mut Context<BridgeView>,
-) -> AnyElement {
-    let node_id = node_id(view_id, path, id);
-    let scroll_handle = scroll_handles
-        .entry(node_id.clone())
-        .or_insert_with(ScrollHandle::new)
-        .clone();
-
-    let child_elements = children
-        .iter()
-        .enumerate()
-        .map(|(index, child)| {
-            render_ir(
-                view_id,
-                &format!("{path}.{index}"),
-                child,
-                scroll_handles,
-                focus_handles,
-                focus_registered,
-                focus_subscriptions,
-                text_inputs,
-                Some(scroll_handle.clone()).or(parent_scroll_handle.clone()),
-                window,
-                cx,
-            )
-        })
-        .collect::<Vec<_>>();
-
-    let element = apply_div_style(
-        div()
-            .id(SharedString::from(node_id))
-            .children(child_elements)
-            .track_scroll(&scroll_handle),
-        style,
-    );
-
-    let element = match axis {
-        ScrollAxis::X => element.overflow_x_scroll(),
-        ScrollAxis::Y => element.overflow_y_scroll(),
-        ScrollAxis::Both => element.overflow_scroll(),
-    };
-
-    element.into_any_element()
+    style: &'a DivStyle,
+    children: &'a [IrNode],
 }
 
-fn render_div(
-    view_id: u64,
-    path: &str,
-    id: Option<&str>,
-    style: &DivStyle,
-    hover_style: &DivStyle,
-    focus_style: &DivStyle,
-    in_focus_style: &DivStyle,
-    active_style: &DivStyle,
-    disabled_style: &DivStyle,
+struct DivNodeRef<'a> {
+    id: Option<&'a str>,
+    style: &'a DivStyle,
+    hover_style: &'a DivStyle,
+    focus_style: &'a DivStyle,
+    in_focus_style: &'a DivStyle,
+    active_style: &'a DivStyle,
+    disabled_style: &'a DivStyle,
     disabled: bool,
     stack_priority: Option<usize>,
     occlude: bool,
@@ -549,573 +295,946 @@ fn render_div(
     tab_index: Option<isize>,
     track_scroll: bool,
     anchor_scroll: bool,
-    shortcuts: &[ShortcutBinding],
-    children: &[IrNode],
-    click: Option<&str>,
-    hover: Option<&str>,
-    focus: Option<&str>,
-    blur: Option<&str>,
-    key_down: Option<&str>,
-    key_up: Option<&str>,
-    context_menu: Option<&str>,
-    drag_start: Option<&str>,
-    drag_move: Option<&str>,
-    drop: Option<&str>,
-    mouse_down: Option<&str>,
-    mouse_up: Option<&str>,
-    mouse_move: Option<&str>,
-    scroll_wheel: Option<&str>,
-    scroll_handles: &mut HashMap<String, ScrollHandle>,
-    focus_handles: &mut HashMap<String, FocusHandle>,
-    focus_registered: &mut HashSet<String>,
-    focus_subscriptions: &mut Vec<Subscription>,
-    text_inputs: &mut HashMap<String, Entity<BridgeTextInput>>,
-    parent_scroll_handle: Option<ScrollHandle>,
-    window: &mut Window,
-    cx: &mut Context<BridgeView>,
- ) -> AnyElement {
-    let node_id = node_id(view_id, path, id);
-    let click = if disabled { None } else { click };
-    let hover = if disabled { None } else { hover };
-    let focus = if disabled { None } else { focus };
-    let blur = if disabled { None } else { blur };
-    let key_down = if disabled { None } else { key_down };
-    let key_up = if disabled { None } else { key_up };
-    let context_menu = if disabled { None } else { context_menu };
-    let drag_start = if disabled { None } else { drag_start };
-    let drag_move = if disabled { None } else { drag_move };
-    let drop = if disabled { None } else { drop };
-    let mouse_down = if disabled { None } else { mouse_down };
-    let mouse_up = if disabled { None } else { mouse_up };
-    let mouse_move = if disabled { None } else { mouse_move };
-    let scroll_wheel = if disabled { None } else { scroll_wheel };
-    let shortcuts = if disabled { Vec::new() } else { shortcuts.to_vec() };
-    let focusable = focusable && !disabled;
-    let tab_stop = if disabled { None } else { tab_stop };
-    let tab_index = if disabled { None } else { tab_index };
-    let keyboard_actionable = click.is_some() || !shortcuts.is_empty();
-    let tab_stop = if keyboard_actionable {
-        Some(tab_stop.unwrap_or(true))
-    } else {
-        tab_stop
-    };
+    shortcuts: &'a [ShortcutBinding],
+    children: &'a [IrNode],
+    click: Option<&'a str>,
+    hover: Option<&'a str>,
+    focus: Option<&'a str>,
+    blur: Option<&'a str>,
+    key_down: Option<&'a str>,
+    key_up: Option<&'a str>,
+    context_menu: Option<&'a str>,
+    drag_start: Option<&'a str>,
+    drag_move: Option<&'a str>,
+    drop: Option<&'a str>,
+    mouse_down: Option<&'a str>,
+    mouse_up: Option<&'a str>,
+    mouse_move: Option<&'a str>,
+    scroll_wheel: Option<&'a str>,
+}
 
-    let tracked_scroll_handle = if track_scroll {
-        Some(
-            scroll_handles
-                .entry(node_id.clone())
-                .or_insert_with(ScrollHandle::new)
-                .clone(),
+impl Render for BridgeView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.focus_subscriptions.clear();
+
+        let view_id = self.view_id;
+
+        let root = {
+            let mut renderer = BridgeRenderer::new(
+                view_id,
+                &mut self.scroll_handles,
+                &mut self.focus_handles,
+                &mut self.focus_subscriptions,
+                &mut self.text_inputs,
+            );
+
+            let root = renderer.render_node("root", &self.ir, None, window, cx);
+            let live = std::mem::take(&mut renderer.live);
+            self.prune_state(live);
+            root
+        };
+
+        div()
+            .size_full()
+            .p_6()
+            .bg(rgb(0x202020))
+            .text_color(rgb(0xffffff))
+            .child(root)
+    }
+}
+
+impl BridgeView {
+    fn prune_state(&mut self, live: LiveNodes) {
+        self.scroll_handles
+            .retain(|node_id, _| live.scroll_handles.contains(node_id));
+        self.focus_handles
+            .retain(|node_id, _| live.focus_handles.contains(node_id));
+        self.text_inputs
+            .retain(|node_id, _| live.text_inputs.contains(node_id));
+    }
+}
+
+impl<'a> BridgeRenderer<'a> {
+    fn new(
+        view_id: u64,
+        scroll_handles: &'a mut HashMap<String, ScrollHandle>,
+        focus_handles: &'a mut HashMap<String, FocusHandle>,
+        focus_subscriptions: &'a mut Vec<Subscription>,
+        text_inputs: &'a mut HashMap<String, Entity<BridgeTextInput>>,
+    ) -> Self {
+        Self {
+            view_id,
+            scroll_handles,
+            focus_handles,
+            focus_subscriptions,
+            text_inputs,
+            live: LiveNodes::default(),
+            focus_callbacks_registered: HashSet::new(),
+        }
+    }
+
+    fn render_node(
+        &mut self,
+        path: &str,
+        ir: &IrNode,
+        parent_scroll_handle: Option<ScrollHandle>,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        match ir {
+            IrNode::Text { id, content, click } => self.render_text(
+                path,
+                TextNodeRef {
+                    id: id.as_deref(),
+                    content,
+                    click: click.as_deref(),
+                },
+            ),
+            IrNode::TextInput {
+                id,
+                value,
+                placeholder,
+                style,
+                disabled,
+                tab_index,
+                change,
+            } => self.render_text_input(
+                path,
+                TextInputNodeRef {
+                    id: id.as_deref(),
+                    value,
+                    placeholder,
+                    style,
+                    disabled: *disabled,
+                    tab_index: *tab_index,
+                    change: change.as_deref(),
+                },
+                cx,
+            ),
+            IrNode::Scroll {
+                id,
+                axis,
+                style,
+                children,
+            } => self.render_scroll(
+                path,
+                ScrollNodeRef {
+                    id: id.as_deref(),
+                    axis: *axis,
+                    style,
+                    children,
+                },
+                window,
+                cx,
+            ),
+            IrNode::Div(div) => self.render_div(
+                path,
+                DivNodeRef {
+                    id: div.id.as_deref(),
+                    style: &div.style,
+                    hover_style: &div.hover_style,
+                    focus_style: &div.focus_style,
+                    in_focus_style: &div.in_focus_style,
+                    active_style: &div.active_style,
+                    disabled_style: &div.disabled_style,
+                    disabled: div.disabled,
+                    stack_priority: div.stack_priority,
+                    occlude: div.occlude,
+                    focusable: div.focusable,
+                    tab_stop: div.tab_stop,
+                    tab_index: div.tab_index,
+                    track_scroll: div.track_scroll,
+                    anchor_scroll: div.anchor_scroll,
+                    shortcuts: &div.shortcuts,
+                    children: &div.children,
+                    click: div.click.as_deref(),
+                    hover: div.hover.as_deref(),
+                    focus: div.focus.as_deref(),
+                    blur: div.blur.as_deref(),
+                    key_down: div.key_down.as_deref(),
+                    key_up: div.key_up.as_deref(),
+                    context_menu: div.context_menu.as_deref(),
+                    drag_start: div.drag_start.as_deref(),
+                    drag_move: div.drag_move.as_deref(),
+                    drop: div.drop.as_deref(),
+                    mouse_down: div.mouse_down.as_deref(),
+                    mouse_up: div.mouse_up.as_deref(),
+                    mouse_move: div.mouse_move.as_deref(),
+                    scroll_wheel: div.scroll_wheel.as_deref(),
+                },
+                parent_scroll_handle,
+                window,
+                cx,
+            ),
+        }
+    }
+
+    fn render_text(&mut self, path: &str, node: TextNodeRef<'_>) -> AnyElement {
+        let view_id = self.view_id;
+        let node_id = node_id(view_id, path, node.id);
+        let interactive_text = InteractiveText::new(
+            SharedString::from(node_id.clone()),
+            StyledText::new(node.content.to_owned()),
+        );
+
+        match node.click {
+            Some(callback_id) if !node.content.is_empty() => {
+                let callback_id = callback_id.to_owned();
+                let click_node_id = node_id.clone();
+                let clickable_ranges = std::iter::once(0..node.content.len()).collect::<Vec<_>>();
+
+                interactive_text
+                    .on_click(clickable_ranges, move |_, _, _| unsafe {
+                        let _ = guppy_c_send_click_event(
+                            view_id,
+                            click_node_id.as_ptr(),
+                            click_node_id.len(),
+                            callback_id.as_ptr(),
+                            callback_id.len(),
+                        );
+                    })
+                    .into_any_element()
+            }
+            _ => interactive_text.into_any_element(),
+        }
+    }
+
+    fn render_text_input(
+        &mut self,
+        path: &str,
+        node: TextInputNodeRef<'_>,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        let view_id = self.view_id;
+        let node_id = node_id(view_id, path, node.id);
+        self.live.text_inputs.insert(node_id.clone());
+
+        let entity = self
+            .text_inputs
+            .entry(node_id.clone())
+            .or_insert_with(|| {
+                BridgeTextInput::new(
+                    cx,
+                    BridgeTextInputOptions {
+                        view_id,
+                        node_id: node_id.clone(),
+                        value: node.value.to_owned(),
+                        placeholder: node.placeholder.to_owned(),
+                        change: node.change.map(str::to_owned),
+                        disabled: node.disabled,
+                        tab_index: node.tab_index,
+                    },
+                )
+            })
+            .clone();
+
+        entity.update(cx, |input, _cx| {
+            input.sync_from_ir(
+                node.value,
+                node.placeholder,
+                node.change,
+                node.disabled,
+                node.tab_index,
+            );
+        });
+
+        apply_div_style(
+            div().id(SharedString::from(node_id)).child(entity),
+            node.style,
         )
-    } else {
-        None
-    };
+        .into_any_element()
+    }
 
-    let needs_focus_handle =
-        keyboard_actionable
+    fn render_scroll(
+        &mut self,
+        path: &str,
+        node: ScrollNodeRef<'_>,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        let view_id = self.view_id;
+        let node_id = node_id(view_id, path, node.id);
+        self.live.scroll_handles.insert(node_id.clone());
+
+        let scroll_handle = self
+            .scroll_handles
+            .entry(node_id.clone())
+            .or_default()
+            .clone();
+
+        let child_elements =
+            self.render_children(path, node.children, Some(scroll_handle.clone()), window, cx);
+
+        let element = apply_div_style(
+            div()
+                .id(SharedString::from(node_id))
+                .children(child_elements)
+                .track_scroll(&scroll_handle),
+            node.style,
+        );
+
+        let element = match node.axis {
+            ScrollAxis::X => element.overflow_x_scroll(),
+            ScrollAxis::Y => element.overflow_y_scroll(),
+            ScrollAxis::Both => element.overflow_scroll(),
+        };
+
+        element.into_any_element()
+    }
+
+    fn render_div(
+        &mut self,
+        path: &str,
+        node: DivNodeRef<'_>,
+        parent_scroll_handle: Option<ScrollHandle>,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        let view_id = self.view_id;
+        let node_id = node_id(view_id, path, node.id);
+        let click = if node.disabled { None } else { node.click };
+        let hover = if node.disabled { None } else { node.hover };
+        let focus = if node.disabled { None } else { node.focus };
+        let blur = if node.disabled { None } else { node.blur };
+        let key_down = if node.disabled { None } else { node.key_down };
+        let key_up = if node.disabled { None } else { node.key_up };
+        let context_menu = if node.disabled {
+            None
+        } else {
+            node.context_menu
+        };
+        let drag_start = if node.disabled { None } else { node.drag_start };
+        let drag_move = if node.disabled { None } else { node.drag_move };
+        let drop = if node.disabled { None } else { node.drop };
+        let mouse_down = if node.disabled { None } else { node.mouse_down };
+        let mouse_up = if node.disabled { None } else { node.mouse_up };
+        let mouse_move = if node.disabled { None } else { node.mouse_move };
+        let scroll_wheel = if node.disabled {
+            None
+        } else {
+            node.scroll_wheel
+        };
+        let shortcuts = if node.disabled {
+            Vec::new()
+        } else {
+            node.shortcuts.to_vec()
+        };
+        let focusable = node.focusable && !node.disabled;
+        let tab_stop = if node.disabled { None } else { node.tab_stop };
+        let tab_index = if node.disabled { None } else { node.tab_index };
+        let keyboard_actionable = click.is_some() || !shortcuts.is_empty();
+        let tab_stop = if keyboard_actionable {
+            Some(tab_stop.unwrap_or(true))
+        } else {
+            tab_stop
+        };
+
+        let tracked_scroll_handle = if node.track_scroll {
+            self.live.scroll_handles.insert(node_id.clone());
+            Some(
+                self.scroll_handles
+                    .entry(node_id.clone())
+                    .or_default()
+                    .clone(),
+            )
+        } else {
+            None
+        };
+
+        let needs_focus_handle = keyboard_actionable
             || focusable
             || tab_stop.is_some()
             || tab_index.is_some()
-            || !focus_style.is_empty()
-            || !in_focus_style.is_empty()
+            || !node.focus_style.is_empty()
+            || !node.in_focus_style.is_empty()
             || focus.is_some()
             || blur.is_some()
             || key_down.is_some()
             || key_up.is_some();
 
-    let focus_handle = if needs_focus_handle {
-        Some(ensure_focus_handle(node_id.as_str(), focus_handles, cx, tab_stop, tab_index))
-    } else {
-        None
-    };
+        let focus_handle = if needs_focus_handle {
+            Some(self.ensure_focus_handle(node_id.as_str(), cx, tab_stop, tab_index))
+        } else {
+            None
+        };
 
-    if let Some(handle) = focus_handle.as_ref() {
-        register_focus_callbacks(
-            view_id,
-            node_id.as_str(),
-            handle,
-            focus,
-            blur,
-            focus_registered,
-            focus_subscriptions,
-            window,
-            cx,
+        if let Some(handle) = focus_handle.as_ref() {
+            self.register_focus_callbacks(node_id.as_str(), handle, focus, blur, window, cx);
+        }
+
+        let child_scroll_handle = tracked_scroll_handle
+            .clone()
+            .or(parent_scroll_handle.clone());
+        let child_elements =
+            self.render_children(path, node.children, child_scroll_handle, window, cx);
+
+        let styled_div = apply_div_style(
+            div()
+                .id(SharedString::from(node_id.clone()))
+                .children(child_elements),
+            node.style,
         );
-    }
 
-    let child_scroll_handle = tracked_scroll_handle.clone().or(parent_scroll_handle.clone());
+        let styled_div = if node.occlude {
+            styled_div.occlude()
+        } else {
+            styled_div
+        };
 
-    let child_elements = children
-        .iter()
-        .enumerate()
-        .map(|(index, child)| {
-            render_ir(
-                view_id,
-                &format!("{path}.{index}"),
-                child,
-                scroll_handles,
-                focus_handles,
-                focus_registered,
-                focus_subscriptions,
-                text_inputs,
-                child_scroll_handle.clone(),
-                window,
-                cx,
-            )
-        })
-        .collect::<Vec<_>>();
-
-    let styled_div = apply_div_style(
-        div()
-            .id(SharedString::from(node_id.clone()))
-            .children(child_elements),
-        style,
-    );
-
-    let styled_div = if occlude { styled_div.occlude() } else { styled_div };
-
-    let styled_div = match tracked_scroll_handle.as_ref() {
-        Some(handle) => styled_div.track_scroll(handle),
-        None => styled_div,
-    };
-
-    let styled_div = if anchor_scroll {
-        match parent_scroll_handle.as_ref() {
-            Some(handle) => styled_div.anchor_scroll(Some(ScrollAnchor::for_handle(handle.clone()))),
+        let styled_div = match tracked_scroll_handle.as_ref() {
+            Some(handle) => styled_div.track_scroll(handle),
             None => styled_div,
-        }
-    } else {
-        styled_div
-    };
+        };
 
-    let styled_div = match focus_handle.as_ref() {
-        Some(handle) => {
-            let styled_div = styled_div.track_focus(handle);
-
-            if keyboard_actionable || focusable {
-                styled_div.focusable()
-            } else {
-                styled_div
+        let styled_div = if node.anchor_scroll {
+            match parent_scroll_handle.as_ref() {
+                Some(handle) => {
+                    styled_div.anchor_scroll(Some(ScrollAnchor::for_handle(handle.clone())))
+                }
+                None => styled_div,
             }
-        }
-        None => styled_div,
-    };
+        } else {
+            styled_div
+        };
 
-    let styled_div = if disabled || focus_style.is_empty() {
-        styled_div
-    } else {
-        let focus_ops = focus_style.clone();
-        styled_div.focus(move |style| apply_refinement_style(style, &focus_ops))
-    };
+        let styled_div = match focus_handle.as_ref() {
+            Some(handle) => {
+                let styled_div = styled_div.track_focus(handle);
+                if keyboard_actionable || focusable {
+                    styled_div.focusable()
+                } else {
+                    styled_div
+                }
+            }
+            None => styled_div,
+        };
 
-    let styled_div = if disabled || in_focus_style.is_empty() {
-        styled_div
-    } else {
-        let in_focus_ops = in_focus_style.clone();
-        styled_div.in_focus(move |style| apply_refinement_style(style, &in_focus_ops))
-    };
+        let styled_div = if node.disabled || node.focus_style.is_empty() {
+            styled_div
+        } else {
+            let focus_ops = node.focus_style.clone();
+            styled_div.focus(move |style| apply_refinement_style(style, &focus_ops))
+        };
 
-    let styled_div = if disabled || hover_style.is_empty() {
-        styled_div
-    } else {
-        let hover_ops = hover_style.clone();
-        styled_div.hover(move |style| apply_refinement_style(style, &hover_ops))
-    };
+        let styled_div = if node.disabled || node.in_focus_style.is_empty() {
+            styled_div
+        } else {
+            let in_focus_ops = node.in_focus_style.clone();
+            styled_div.in_focus(move |style| apply_refinement_style(style, &in_focus_ops))
+        };
 
-    let styled_div = if disabled || active_style.is_empty() {
-        styled_div
-    } else {
-        let active_ops = active_style.clone();
-        styled_div.active(move |style| apply_refinement_style(style, &active_ops))
-    };
+        let styled_div = if node.disabled || node.hover_style.is_empty() {
+            styled_div
+        } else {
+            let hover_ops = node.hover_style.clone();
+            styled_div.hover(move |style| apply_refinement_style(style, &hover_ops))
+        };
 
-    let styled_div = match hover {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let hover_node_id = node_id.clone();
+        let styled_div = if node.disabled || node.active_style.is_empty() {
+            styled_div
+        } else {
+            let active_ops = node.active_style.clone();
+            styled_div.active(move |style| apply_refinement_style(style, &active_ops))
+        };
 
-            styled_div.on_hover(move |hovered, _, _| unsafe {
-                let _ = guppy_c_send_hover_event(
-                    view_id,
-                    hover_node_id.as_ptr(),
-                    hover_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    if *hovered { 1 } else { 0 },
-                );
-            })
-        }
-        None => styled_div,
-    };
+        let styled_div = match hover {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let hover_node_id = node_id.clone();
 
-    let styled_div = match focus_handle.as_ref() {
-        Some(handle) => {
-            let handle = handle.clone();
-            styled_div.on_any_mouse_down(move |_, window, _| {
-                handle.focus(window);
-            })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = if key_down.is_some() || !shortcuts.is_empty() {
-        let key_down_callback_id = key_down.map(str::to_owned);
-        let key_down_node_id = node_id.clone();
-        let shortcut_bindings = shortcuts.to_vec();
-
-        styled_div.on_key_down(move |event: &KeyDownEvent, _, cx| {
-            let key = event.keystroke.key.as_bytes();
-            let (key_char_ptr, key_char_len, has_key_char) = key_char_parts(event.keystroke.key_char.as_ref());
-            let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
-
-            if let Some(callback_id) = key_down_callback_id.as_ref() {
-                unsafe {
-                    let _ = guppy_c_send_key_down_event(
+                styled_div.on_hover(move |hovered, _, _| unsafe {
+                    let _ = guppy_c_send_hover_event(
                         view_id,
-                        key_down_node_id.as_ptr(),
-                        key_down_node_id.len(),
+                        hover_node_id.as_ptr(),
+                        hover_node_id.len(),
                         callback_id.as_ptr(),
                         callback_id.len(),
-                        key.as_ptr(),
-                        key.len(),
-                        key_char_ptr,
-                        key_char_len,
-                        has_key_char,
-                        if event.is_held { 1 } else { 0 },
-                        control,
-                        alt,
-                        shift,
-                        platform,
-                        function,
+                        if *hovered { 1 } else { 0 },
                     );
-                }
+                })
             }
+            None => styled_div,
+        };
 
-            if let Some(shortcut) = matching_shortcut(event, &shortcut_bindings) {
-                unsafe {
-                    let _ = guppy_c_send_action_event(
-                        view_id,
-                        key_down_node_id.as_ptr(),
-                        key_down_node_id.len(),
-                        shortcut.callback.as_ptr(),
-                        shortcut.callback.len(),
-                        shortcut.action.as_ptr(),
-                        shortcut.action.len(),
-                        shortcut.shortcut.as_ptr(),
-                        shortcut.shortcut.len(),
-                        key.as_ptr(),
-                        key.len(),
-                        key_char_ptr,
-                        key_char_len,
-                        has_key_char,
-                        control,
-                        alt,
-                        shift,
-                        platform,
-                        function,
-                    );
-                }
-
-                cx.stop_propagation();
+        let styled_div = match focus_handle.as_ref() {
+            Some(handle) => {
+                let handle = handle.clone();
+                styled_div.on_any_mouse_down(move |_, window, _| {
+                    handle.focus(window);
+                })
             }
-        })
-    } else {
-        styled_div
-    };
+            None => styled_div,
+        };
 
-    let styled_div = match key_up {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let key_up_node_id = node_id.clone();
+        let styled_div = if key_down.is_some() || !shortcuts.is_empty() {
+            let key_down_callback_id = key_down.map(str::to_owned);
+            let key_down_node_id = node_id.clone();
+            let shortcut_bindings = shortcuts.clone();
 
-            styled_div.on_key_up(move |event: &KeyUpEvent, _, _| unsafe {
+            styled_div.on_key_down(move |event: &KeyDownEvent, _, cx| {
                 let key = event.keystroke.key.as_bytes();
-                let (key_char_ptr, key_char_len, has_key_char) = match event.keystroke.key_char.as_ref() {
-                    Some(key_char) => (key_char.as_ptr(), key_char.len(), 1),
-                    None => (std::ptr::null(), 0, 0),
-                };
-                let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
-                let _ = guppy_c_send_key_up_event(
-                    view_id,
-                    key_up_node_id.as_ptr(),
-                    key_up_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    key.as_ptr(),
-                    key.len(),
-                    key_char_ptr,
-                    key_char_len,
-                    has_key_char,
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                );
-            })
-        }
-        None => styled_div,
-    };
+                let (key_char_ptr, key_char_len, has_key_char) =
+                    key_char_parts(event.keystroke.key_char.as_ref());
+                let (control, alt, shift, platform, function) =
+                    modifier_flags(&event.keystroke.modifiers);
 
-    let styled_div = match context_menu {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let context_menu_node_id = node_id.clone();
-
-            styled_div.on_mouse_down(MouseButton::Right, move |event: &MouseDownEvent, _, _| unsafe {
-                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-                let _ = guppy_c_send_context_menu_event(
-                    view_id,
-                    context_menu_node_id.as_ptr(),
-                    context_menu_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    pixel_to_f64(event.position.x),
-                    pixel_to_f64(event.position.y),
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                );
-            })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = match drop {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let drop_node_id = node_id.clone();
-
-            styled_div.on_drop::<BridgeDragState>(move |drag, _, _| unsafe {
-                let _ = guppy_c_send_drop_event(
-                    view_id,
-                    drop_node_id.as_ptr(),
-                    drop_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    drag.source_id.as_ptr(),
-                    drag.source_id.len(),
-                );
-            })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = match drag_move {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let drag_move_node_id = node_id.clone();
-
-            styled_div.on_drag_move::<BridgeDragState>(move |event, _, cx| unsafe {
-                let drag = event.drag(cx);
-                let (control, alt, shift, platform, function) = modifier_flags(&event.event.modifiers);
-                let _ = guppy_c_send_drag_move_event(
-                    view_id,
-                    drag_move_node_id.as_ptr(),
-                    drag_move_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    drag.source_id.as_ptr(),
-                    drag.source_id.len(),
-                    optional_mouse_button_code(event.event.pressed_button),
-                    pixel_to_f64(event.event.position.x),
-                    pixel_to_f64(event.event.position.y),
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                );
-            })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = match drag_start {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let drag_start_node_id = node_id.clone();
-            let drag_source_id = node_id.clone();
-
-            styled_div.on_drag(
-                BridgeDragState {
-                    source_id: drag_source_id,
-                },
-                move |drag, _, _, cx| {
+                if let Some(callback_id) = key_down_callback_id.as_ref() {
                     unsafe {
-                        let _ = guppy_c_send_drag_start_event(
+                        let _ = guppy_c_send_key_down_event(
                             view_id,
-                            drag_start_node_id.as_ptr(),
-                            drag_start_node_id.len(),
+                            key_down_node_id.as_ptr(),
+                            key_down_node_id.len(),
                             callback_id.as_ptr(),
                             callback_id.len(),
-                            drag.source_id.as_ptr(),
-                            drag.source_id.len(),
+                            key.as_ptr(),
+                            key.len(),
+                            key_char_ptr,
+                            key_char_len,
+                            has_key_char,
+                            if event.is_held { 1 } else { 0 },
+                            control,
+                            alt,
+                            shift,
+                            platform,
+                            function,
+                        );
+                    }
+                }
+
+                if let Some(shortcut) = matching_shortcut(event, &shortcut_bindings) {
+                    unsafe {
+                        let _ = guppy_c_send_action_event(
+                            view_id,
+                            key_down_node_id.as_ptr(),
+                            key_down_node_id.len(),
+                            shortcut.callback.as_ptr(),
+                            shortcut.callback.len(),
+                            shortcut.action.as_ptr(),
+                            shortcut.action.len(),
+                            shortcut.shortcut.as_ptr(),
+                            shortcut.shortcut.len(),
+                            key.as_ptr(),
+                            key.len(),
+                            key_char_ptr,
+                            key_char_len,
+                            has_key_char,
+                            control,
+                            alt,
+                            shift,
+                            platform,
+                            function,
                         );
                     }
 
-                    cx.new(|_| Empty)
-                },
-            )
-        }
-        None if drag_move.is_some() => {
-            let drag_source_id = node_id.clone();
-
-            styled_div.on_drag(
-                BridgeDragState {
-                    source_id: drag_source_id,
-                },
-                move |_, _, _, cx| cx.new(|_| Empty),
-            )
-        }
-        None => styled_div,
-    };
-
-    let styled_div = match mouse_down {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let mouse_down_node_id = node_id.clone();
-
-            styled_div.on_any_mouse_down(move |event: &MouseDownEvent, _, _| unsafe {
-                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-                let _ = guppy_c_send_mouse_down_event(
-                    view_id,
-                    mouse_down_node_id.as_ptr(),
-                    mouse_down_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    mouse_button_code(event.button),
-                    pixel_to_f64(event.position.x),
-                    pixel_to_f64(event.position.y),
-                    event.click_count as u64,
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                    if event.first_mouse { 1 } else { 0 },
-                );
+                    cx.stop_propagation();
+                }
             })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = match mouse_up {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let mouse_up_node_id = node_id.clone();
-
-            styled_div.capture_any_mouse_up(move |event: &MouseUpEvent, _, _| unsafe {
-                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-                let _ = guppy_c_send_mouse_up_event(
-                    view_id,
-                    mouse_up_node_id.as_ptr(),
-                    mouse_up_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    mouse_button_code(event.button),
-                    pixel_to_f64(event.position.x),
-                    pixel_to_f64(event.position.y),
-                    event.click_count as u64,
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                );
-            })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = match mouse_move {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let mouse_move_node_id = node_id.clone();
-
-            styled_div.on_mouse_move(move |event: &MouseMoveEvent, _, _| unsafe {
-                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-                let _ = guppy_c_send_mouse_move_event(
-                    view_id,
-                    mouse_move_node_id.as_ptr(),
-                    mouse_move_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    optional_mouse_button_code(event.pressed_button),
-                    pixel_to_f64(event.position.x),
-                    pixel_to_f64(event.position.y),
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                );
-            })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = match scroll_wheel {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let scroll_node_id = node_id.clone();
-
-            styled_div.on_scroll_wheel(move |event: &ScrollWheelEvent, _, _| unsafe {
-                let (delta_kind_code, delta_x, delta_y) = scroll_delta_parts(event.delta);
-                let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-                let _ = guppy_c_send_scroll_wheel_event(
-                    view_id,
-                    scroll_node_id.as_ptr(),
-                    scroll_node_id.len(),
-                    callback_id.as_ptr(),
-                    callback_id.len(),
-                    pixel_to_f64(event.position.x),
-                    pixel_to_f64(event.position.y),
-                    delta_kind_code,
-                    delta_x,
-                    delta_y,
-                    control,
-                    alt,
-                    shift,
-                    platform,
-                    function,
-                );
-            })
-        }
-        None => styled_div,
-    };
-
-    let styled_div = if disabled && !disabled_style.is_empty() {
-        apply_div_style(styled_div, disabled_style)
-    } else {
-        styled_div
-    };
-
-    let element = match click {
-        Some(callback_id) => {
-            let callback_id = callback_id.to_owned();
-            let click_node_id = node_id.clone();
-
+        } else {
             styled_div
-                .on_click(move |_, _, _| unsafe {
-                    let _ = guppy_c_send_click_event(
+        };
+
+        let styled_div = match key_up {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let key_up_node_id = node_id.clone();
+
+                styled_div.on_key_up(move |event: &KeyUpEvent, _, _| unsafe {
+                    let key = event.keystroke.key.as_bytes();
+                    let (key_char_ptr, key_char_len, has_key_char) =
+                        key_char_parts(event.keystroke.key_char.as_ref());
+                    let (control, alt, shift, platform, function) =
+                        modifier_flags(&event.keystroke.modifiers);
+                    let _ = guppy_c_send_key_up_event(
                         view_id,
-                        click_node_id.as_ptr(),
-                        click_node_id.len(),
+                        key_up_node_id.as_ptr(),
+                        key_up_node_id.len(),
                         callback_id.as_ptr(),
                         callback_id.len(),
+                        key.as_ptr(),
+                        key.len(),
+                        key_char_ptr,
+                        key_char_len,
+                        has_key_char,
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
                     );
                 })
-                .into_any_element()
-        }
-        None => styled_div.into_any_element(),
-    };
+            }
+            None => styled_div,
+        };
 
-    match stack_priority {
-        Some(priority) => deferred(element).with_priority(priority).into_any_element(),
-        None => element,
+        let styled_div = match context_menu {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let context_menu_node_id = node_id.clone();
+
+                styled_div.on_mouse_down(
+                    MouseButton::Right,
+                    move |event: &MouseDownEvent, _, _| unsafe {
+                        let (control, alt, shift, platform, function) =
+                            modifier_flags(&event.modifiers);
+                        let _ = guppy_c_send_context_menu_event(
+                            view_id,
+                            context_menu_node_id.as_ptr(),
+                            context_menu_node_id.len(),
+                            callback_id.as_ptr(),
+                            callback_id.len(),
+                            pixel_to_f64(event.position.x),
+                            pixel_to_f64(event.position.y),
+                            control,
+                            alt,
+                            shift,
+                            platform,
+                            function,
+                        );
+                    },
+                )
+            }
+            None => styled_div,
+        };
+
+        let styled_div = match drop {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let drop_node_id = node_id.clone();
+
+                styled_div.on_drop::<BridgeDragState>(move |drag, _, _| unsafe {
+                    let _ = guppy_c_send_drop_event(
+                        view_id,
+                        drop_node_id.as_ptr(),
+                        drop_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                        drag.source_id.as_ptr(),
+                        drag.source_id.len(),
+                    );
+                })
+            }
+            None => styled_div,
+        };
+
+        let styled_div = match drag_move {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let drag_move_node_id = node_id.clone();
+
+                styled_div.on_drag_move::<BridgeDragState>(move |event, _, cx| unsafe {
+                    let drag = event.drag(cx);
+                    let (control, alt, shift, platform, function) =
+                        modifier_flags(&event.event.modifiers);
+                    let _ = guppy_c_send_drag_move_event(
+                        view_id,
+                        drag_move_node_id.as_ptr(),
+                        drag_move_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                        drag.source_id.as_ptr(),
+                        drag.source_id.len(),
+                        optional_mouse_button_code(event.event.pressed_button),
+                        pixel_to_f64(event.event.position.x),
+                        pixel_to_f64(event.event.position.y),
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
+                    );
+                })
+            }
+            None => styled_div,
+        };
+
+        let styled_div = match drag_start {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let drag_start_node_id = node_id.clone();
+                let drag_source_id = node_id.clone();
+
+                styled_div.on_drag(
+                    BridgeDragState {
+                        source_id: drag_source_id,
+                    },
+                    move |drag, _, _, cx| {
+                        unsafe {
+                            let _ = guppy_c_send_drag_start_event(
+                                view_id,
+                                drag_start_node_id.as_ptr(),
+                                drag_start_node_id.len(),
+                                callback_id.as_ptr(),
+                                callback_id.len(),
+                                drag.source_id.as_ptr(),
+                                drag.source_id.len(),
+                            );
+                        }
+
+                        cx.new(|_| Empty)
+                    },
+                )
+            }
+            None if drag_move.is_some() => {
+                let drag_source_id = node_id.clone();
+
+                styled_div.on_drag(
+                    BridgeDragState {
+                        source_id: drag_source_id,
+                    },
+                    move |_, _, _, cx| cx.new(|_| Empty),
+                )
+            }
+            None => styled_div,
+        };
+
+        let styled_div = match mouse_down {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let mouse_down_node_id = node_id.clone();
+
+                styled_div.on_any_mouse_down(move |event: &MouseDownEvent, _, _| unsafe {
+                    let (control, alt, shift, platform, function) =
+                        modifier_flags(&event.modifiers);
+                    let _ = guppy_c_send_mouse_down_event(
+                        view_id,
+                        mouse_down_node_id.as_ptr(),
+                        mouse_down_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                        mouse_button_code(event.button),
+                        pixel_to_f64(event.position.x),
+                        pixel_to_f64(event.position.y),
+                        event.click_count as u64,
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
+                        if event.first_mouse { 1 } else { 0 },
+                    );
+                })
+            }
+            None => styled_div,
+        };
+
+        let styled_div = match mouse_up {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let mouse_up_node_id = node_id.clone();
+
+                styled_div.capture_any_mouse_up(move |event: &MouseUpEvent, _, _| unsafe {
+                    let (control, alt, shift, platform, function) =
+                        modifier_flags(&event.modifiers);
+                    let _ = guppy_c_send_mouse_up_event(
+                        view_id,
+                        mouse_up_node_id.as_ptr(),
+                        mouse_up_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                        mouse_button_code(event.button),
+                        pixel_to_f64(event.position.x),
+                        pixel_to_f64(event.position.y),
+                        event.click_count as u64,
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
+                    );
+                })
+            }
+            None => styled_div,
+        };
+
+        let styled_div = match mouse_move {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let mouse_move_node_id = node_id.clone();
+
+                styled_div.on_mouse_move(move |event: &MouseMoveEvent, _, _| unsafe {
+                    let (control, alt, shift, platform, function) =
+                        modifier_flags(&event.modifiers);
+                    let _ = guppy_c_send_mouse_move_event(
+                        view_id,
+                        mouse_move_node_id.as_ptr(),
+                        mouse_move_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                        optional_mouse_button_code(event.pressed_button),
+                        pixel_to_f64(event.position.x),
+                        pixel_to_f64(event.position.y),
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
+                    );
+                })
+            }
+            None => styled_div,
+        };
+
+        let styled_div = match scroll_wheel {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let scroll_node_id = node_id.clone();
+
+                styled_div.on_scroll_wheel(move |event: &ScrollWheelEvent, _, _| unsafe {
+                    let (delta_kind_code, delta_x, delta_y) = scroll_delta_parts(event.delta);
+                    let (control, alt, shift, platform, function) =
+                        modifier_flags(&event.modifiers);
+                    let _ = guppy_c_send_scroll_wheel_event(
+                        view_id,
+                        scroll_node_id.as_ptr(),
+                        scroll_node_id.len(),
+                        callback_id.as_ptr(),
+                        callback_id.len(),
+                        pixel_to_f64(event.position.x),
+                        pixel_to_f64(event.position.y),
+                        delta_kind_code,
+                        delta_x,
+                        delta_y,
+                        control,
+                        alt,
+                        shift,
+                        platform,
+                        function,
+                    );
+                })
+            }
+            None => styled_div,
+        };
+
+        let styled_div = if node.disabled && !node.disabled_style.is_empty() {
+            apply_div_style(styled_div, node.disabled_style)
+        } else {
+            styled_div
+        };
+
+        let element = match click {
+            Some(callback_id) => {
+                let callback_id = callback_id.to_owned();
+                let click_node_id = node_id.clone();
+
+                styled_div
+                    .on_click(move |_, _, _| unsafe {
+                        let _ = guppy_c_send_click_event(
+                            view_id,
+                            click_node_id.as_ptr(),
+                            click_node_id.len(),
+                            callback_id.as_ptr(),
+                            callback_id.len(),
+                        );
+                    })
+                    .into_any_element()
+            }
+            None => styled_div.into_any_element(),
+        };
+
+        match node.stack_priority {
+            Some(priority) => deferred(element).with_priority(priority).into_any_element(),
+            None => element,
+        }
+    }
+
+    fn render_children(
+        &mut self,
+        path: &str,
+        children: &[IrNode],
+        parent_scroll_handle: Option<ScrollHandle>,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> Vec<AnyElement> {
+        children
+            .iter()
+            .enumerate()
+            .map(|(index, child)| {
+                self.render_node(
+                    &format!("{path}.{index}"),
+                    child,
+                    parent_scroll_handle.clone(),
+                    window,
+                    cx,
+                )
+            })
+            .collect()
+    }
+
+    fn ensure_focus_handle(
+        &mut self,
+        node_id: &str,
+        cx: &mut Context<BridgeView>,
+        tab_stop: Option<bool>,
+        tab_index: Option<isize>,
+    ) -> FocusHandle {
+        self.live.focus_handles.insert(node_id.to_owned());
+
+        let handle = self
+            .focus_handles
+            .entry(node_id.to_owned())
+            .or_insert_with(|| cx.focus_handle())
+            .clone();
+
+        let handle = match tab_stop {
+            Some(tab_stop) => handle.tab_stop(tab_stop),
+            None => handle,
+        };
+
+        match tab_index {
+            Some(tab_index) => handle.tab_index(tab_index),
+            None => handle,
+        }
+    }
+
+    fn register_focus_callbacks(
+        &mut self,
+        node_id: &str,
+        focus_handle: &FocusHandle,
+        focus: Option<&str>,
+        blur: Option<&str>,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) {
+        let view_id = self.view_id;
+        let Some(_) = focus.or(blur) else {
+            return;
+        };
+
+        if self.focus_callbacks_registered.contains(node_id) {
+            return;
+        }
+
+        if let Some(callback_id) = focus {
+            let focus_node_id = node_id.to_owned();
+            let callback_id = callback_id.to_owned();
+            let subscription = cx.on_focus(focus_handle, window, move |_, _, _| unsafe {
+                let _ = guppy_c_send_focus_event(
+                    view_id,
+                    focus_node_id.as_ptr(),
+                    focus_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                );
+            });
+            self.focus_subscriptions.push(subscription);
+        }
+
+        if let Some(callback_id) = blur {
+            let blur_node_id = node_id.to_owned();
+            let callback_id = callback_id.to_owned();
+            let subscription = cx.on_blur(focus_handle, window, move |_, _, _| unsafe {
+                let _ = guppy_c_send_blur_event(
+                    view_id,
+                    blur_node_id.as_ptr(),
+                    blur_node_id.len(),
+                    callback_id.as_ptr(),
+                    callback_id.len(),
+                );
+            });
+            self.focus_subscriptions.push(subscription);
+        }
+
+        self.focus_callbacks_registered.insert(node_id.to_owned());
     }
 }
 
@@ -1422,81 +1541,6 @@ fn apply_refinement_style(mut style: StyleRefinement, ops: &DivStyle) -> StyleRe
     }
 
     style
-}
-
-fn ensure_focus_handle(
-    node_id: &str,
-    focus_handles: &mut HashMap<String, FocusHandle>,
-    cx: &mut Context<BridgeView>,
-    tab_stop: Option<bool>,
-    tab_index: Option<isize>,
-) -> FocusHandle {
-    let handle = focus_handles
-        .entry(node_id.to_owned())
-        .or_insert_with(|| cx.focus_handle())
-        .clone();
-
-    let handle = match tab_stop {
-        Some(tab_stop) => handle.tab_stop(tab_stop),
-        None => handle,
-    };
-
-    match tab_index {
-        Some(tab_index) => handle.tab_index(tab_index),
-        None => handle,
-    }
-}
-
-fn register_focus_callbacks(
-    view_id: u64,
-    node_id: &str,
-    focus_handle: &FocusHandle,
-    focus: Option<&str>,
-    blur: Option<&str>,
-    focus_registered: &mut HashSet<String>,
-    focus_subscriptions: &mut Vec<Subscription>,
-    window: &mut Window,
-    cx: &mut Context<BridgeView>,
-) {
-    let Some(_) = focus.or(blur) else {
-        return;
-    };
-
-    if focus_registered.contains(node_id) {
-        return;
-    }
-
-    if let Some(callback_id) = focus {
-        let focus_node_id = node_id.to_owned();
-        let callback_id = callback_id.to_owned();
-        let subscription = cx.on_focus(focus_handle, window, move |_, _, _| unsafe {
-            let _ = guppy_c_send_focus_event(
-                view_id,
-                focus_node_id.as_ptr(),
-                focus_node_id.len(),
-                callback_id.as_ptr(),
-                callback_id.len(),
-            );
-        });
-        focus_subscriptions.push(subscription);
-    }
-
-    if let Some(callback_id) = blur {
-        let blur_node_id = node_id.to_owned();
-        let callback_id = callback_id.to_owned();
-        let subscription = cx.on_blur(focus_handle, window, move |_, _, _| unsafe {
-            let _ = guppy_c_send_blur_event(
-                view_id,
-                blur_node_id.as_ptr(),
-                blur_node_id.len(),
-                callback_id.as_ptr(),
-                callback_id.len(),
-            );
-        });
-        focus_subscriptions.push(subscription);
-    }
-
-    focus_registered.insert(node_id.to_owned());
 }
 
 fn modifier_flags(modifiers: &gpui::Modifiers) -> (i32, i32, i32, i32, i32) {

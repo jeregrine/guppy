@@ -93,33 +93,37 @@ defmodule Guppy.Server do
     {:reply, reply, state}
   end
 
-  def handle_call({:open_window, owner}, _from, state) when is_pid(owner) do
-    view_id = state.next_view_id
+  def handle_call({:open_window, owner}, {caller, _tag}, state) when is_pid(owner) do
+    if owner != caller do
+      {:reply, {:error, :owner_mismatch}, state}
+    else
+      view_id = state.next_view_id
 
-    case state.native.request(state.native_server, {:open_window, [view_id]}) do
-      :ok ->
-        state =
-          state
-          |> put_view(view_id, owner)
-          |> increment_view_id()
+      case state.native.request(state.native_server, {:open_window, [view_id]}) do
+        :ok ->
+          state =
+            state
+            |> put_view(view_id, owner)
+            |> increment_view_id()
 
-        {:reply, {:ok, view_id}, state}
+          {:reply, {:ok, view_id}, state}
 
-      {:ok, _payload} ->
-        state =
-          state
-          |> put_view(view_id, owner)
-          |> increment_view_id()
+        {:ok, _payload} ->
+          state =
+            state
+            |> put_view(view_id, owner)
+            |> increment_view_id()
 
-        {:reply, {:ok, view_id}, state}
+          {:reply, {:ok, view_id}, state}
 
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
+      end
     end
   end
 
-  def handle_call({:mount, view_id, ir}, _from, state) do
-    case validate_view_ir(state, view_id, ir) do
+  def handle_call({:mount, view_id, ir}, {caller, _tag}, state) do
+    case validate_owned_view_ir(state, caller, view_id, ir) do
       :ok ->
         reply = state.native.request(state.native_server, {:mount, [view_id, ir]})
         {:reply, normalize_native_reply(reply), state}
@@ -129,8 +133,8 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:update, view_id, ir}, _from, state) do
-    case validate_view_ir(state, view_id, ir) do
+  def handle_call({:update, view_id, ir}, {caller, _tag}, state) do
+    case validate_owned_view_ir(state, caller, view_id, ir) do
       :ok ->
         reply = state.native.request(state.native_server, {:update, [view_id, ir]})
         {:reply, normalize_native_reply(reply), state}
@@ -140,17 +144,17 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:close_window, view_id}, _from, state) do
-    case Map.has_key?(state.views, view_id) do
-      true ->
+  def handle_call({:close_window, view_id}, {caller, _tag}, state) do
+    case validate_owned_view(state, caller, view_id) do
+      :ok ->
         case state.native.request(state.native_server, {:close_window, [view_id]}) do
           :ok -> {:reply, :ok, delete_view(state, view_id)}
           {:ok, _payload} -> {:reply, :ok, delete_view(state, view_id)}
           {:error, reason} -> {:reply, {:error, reason}, state}
         end
 
-      false ->
-        {:reply, {:error, :unknown_view_id}, state}
+      error ->
+        {:reply, error, state}
     end
   end
 
@@ -212,10 +216,17 @@ defmodule Guppy.Server do
     end
   end
 
-  defp validate_view_ir(state, view_id, ir) do
-    cond do
-      not Map.has_key?(state.views, view_id) -> {:error, :unknown_view_id}
-      true -> Guppy.IR.validate(ir)
+  defp validate_owned_view_ir(state, caller, view_id, ir) do
+    with :ok <- validate_owned_view(state, caller, view_id) do
+      Guppy.IR.validate(ir)
+    end
+  end
+
+  defp validate_owned_view(state, caller, view_id) do
+    case Map.fetch(state.views, view_id) do
+      :error -> {:error, :unknown_view_id}
+      {:ok, ^caller} -> :ok
+      {:ok, _owner} -> {:error, :not_view_owner}
     end
   end
 

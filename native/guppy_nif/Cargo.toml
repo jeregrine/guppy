@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 path = "src/lib.rs"
 
 [dependencies]
+async-task = "4.7.1"
 eetf = "0.11.0"
 gpui = "0.2.2"
 unicode-segmentation = "1.12.0"
