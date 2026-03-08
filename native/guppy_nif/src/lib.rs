@@ -7,8 +7,10 @@ mod bridge_text_input;
 mod bridge_view;
 mod ir;
 mod main_thread_runtime;
+mod window_options;
 
 use crate::ir::IrNode;
+use crate::window_options::WindowOptionsConfig;
 use std::ffi::{c_char, c_void};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Sender};
@@ -41,6 +43,7 @@ enum Command {
     OpenWindow {
         view_id: u64,
         ir: IrNode,
+        options: WindowOptionsConfig,
         reply: Sender<i32>,
     },
     SetIr {
@@ -143,13 +146,32 @@ pub extern "C" fn guppy_rust_run_main_thread_runtime(_arg: *mut c_void) -> *mut 
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_open_window(
+/// # Safety
+///
+/// `ir_ptr`/`ir_len` and `opts_ptr`/`opts_len` must describe valid byte slices
+/// for the duration of this call.
+pub unsafe extern "C" fn guppy_rust_open_window(
     view_id: u64,
     ir_ptr: *const u8,
     ir_len: usize,
+    opts_ptr: *const u8,
+    opts_len: usize,
 ) -> i32 {
+    let Some(opts_bytes) = (unsafe { slice_from_raw_parts(opts_ptr, opts_len) }) else {
+        return -1;
+    };
+
+    let Ok(options) = WindowOptionsConfig::decode_etf(opts_bytes) else {
+        return -2;
+    };
+
     request_ir(view_id, ir_ptr, ir_len, |view_id, ir, reply| {
-        Command::OpenWindow { view_id, ir, reply }
+        Command::OpenWindow {
+            view_id,
+            ir,
+            options,
+            reply,
+        }
     })
 }
 
@@ -238,8 +260,18 @@ fn refresh_runtime_state(runtime: &mut RuntimeState) {
 fn runtime_loop(receiver: mpsc::Receiver<Command>) {
     while let Ok(command) = receiver.recv() {
         let result = match command {
-            Command::OpenWindow { view_id, ir, reply } => main_thread_runtime::enqueue_request(
-                main_thread_runtime::MainThreadRequest::OpenWindow { view_id, ir, reply },
+            Command::OpenWindow {
+                view_id,
+                ir,
+                options,
+                reply,
+            } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::OpenWindow {
+                    view_id,
+                    ir,
+                    options,
+                    reply,
+                },
             ),
             Command::SetIr { view_id, ir, reply } => main_thread_runtime::enqueue_request(
                 main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply },

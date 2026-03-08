@@ -68,8 +68,9 @@ defmodule Guppy.Window do
     case module.mount(arg, window) do
       {:ok, window} ->
         ir = module.render(window)
+        window_options = Map.get(window.private, :window_options, [])
 
-        case Guppy.open_window(ir, self()) do
+        case Guppy.open_window(ir, self(), window_options) do
           {:ok, view_id} ->
             {:ok, %State{module: module, window: %{window | view_id: view_id}}}
 
@@ -134,6 +135,16 @@ defmodule Guppy.Window do
 
   def put_private(%__MODULE__{} = window, key, value) when is_atom(key) do
     %{window | private: Map.put(window.private, key, value)}
+  end
+
+  def put_window_opts(%__MODULE__{} = window, opts) when is_list(opts) or is_map(opts) do
+    current = Map.get(window.private, :window_options, [])
+
+    merged_opts =
+      current
+      |> Keyword.merge(Keyword.new(opts))
+
+    put_private(window, :window_options, merged_opts)
   end
 
   defp apply_callback(state, {:noreply, window}, window_closed?) do

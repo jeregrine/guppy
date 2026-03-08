@@ -1,11 +1,11 @@
 defmodule Examples.KanbanTodoWindow do
   use Guppy.Window
 
-  import Guppy.Window, only: [assign: 2, assign: 3]
+  import Guppy.Window, only: [assign: 2, assign: 3, put_window_opts: 2]
 
   @column_order [:todo, :doing, :done]
   @column_titles %{todo: "Todo", doing: "Doing", done: "Done"}
-  @column_colors %{todo: :gray, doing: :blue, done: :green}
+  @column_colors %{todo: "#64748b", doing: "#3b82f6", done: "#22c55e"}
   @seed_titles %{
     bug: "Fix drag/drop highlight bug",
     docs: "Write bridge-view architecture notes",
@@ -14,7 +14,14 @@ defmodule Examples.KanbanTodoWindow do
 
   @impl Guppy.Window
   def mount(:ok, window) do
-    {:ok, initial_window(window)}
+    {:ok,
+     window
+     |> put_window_opts(
+       window_bounds: [width: 1260, height: 820],
+       window_min_size: [width: 1100, height: 760],
+       titlebar: [title: "Guppy kanban todo"]
+     )
+     |> initial_window()}
   end
 
   @impl Guppy.Window
@@ -38,7 +45,6 @@ defmodule Examples.KanbanTodoWindow do
     handle_drop(window, source_id, :done)
   end
 
-  @impl Guppy.Window
   def handle_event("reset_board", _event_data, window) do
     IO.puts("reset board")
     {:noreply, initial_window(window)}
@@ -70,12 +76,24 @@ defmodule Examples.KanbanTodoWindow do
 
     Guppy.IR.div(
       [
-        Guppy.IR.text("Kanban todo board", id: "title"),
-        Guppy.IR.text(
-          "Add sample tasks, drag cards across columns, or archive them.",
-          id: "subtitle"
+        panel(
+          [
+            Guppy.IR.div([Guppy.IR.text("Kanban todo board", id: "title")],
+              style: [:text_3xl, :font_black]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text(
+                  "Add sample tasks, drag cards across columns, and archive completed work.",
+                  id: "subtitle"
+                )
+              ],
+              style: [:text_base, {:text_color_hex, "#94a3b8"}]
+            ),
+            toolbar()
+          ],
+          id: "header_panel"
         ),
-        toolbar(),
         Guppy.IR.div(
           Enum.map(@column_order, &column_ir(&1, tasks)),
           id: "board",
@@ -83,7 +101,16 @@ defmodule Examples.KanbanTodoWindow do
         )
       ],
       id: "kanban_root",
-      style: [:flex, :flex_col, :gap_4, :p_4, {:bg_hex, "#16181d"}, {:text_color_hex, "#f5f5f5"}]
+      style: [
+        :flex,
+        :flex_col,
+        :w_full,
+        :h_full,
+        :gap_4,
+        :p_6,
+        {:bg_hex, "#0f172a"},
+        {:text_color_hex, "#f8fafc"}
+      ]
     )
   end
 
@@ -98,36 +125,83 @@ defmodule Examples.KanbanTodoWindow do
     )
   end
 
+  defp panel(children, opts) do
+    id = Keyword.get(opts, :id)
+
+    Guppy.IR.div(
+      children,
+      id: id,
+      style: [
+        :flex,
+        :flex_col,
+        :gap_2,
+        :p_4,
+        :rounded_xl,
+        :border_1,
+        {:border_color_hex, "#334155"},
+        {:bg_hex, "#111827"},
+        :shadow_md
+      ]
+    )
+  end
+
   defp toolbar do
     Guppy.IR.div(
       [
-        action_button("Add bug", "add:bug", :yellow),
-        action_button("Add docs", "add:docs", :blue),
-        action_button("Add polish", "add:polish", :green),
-        action_button("Reset board", "reset_board", :gray)
+        action_button("Add bug", "add:bug", "#d97706", "#f59e0b"),
+        action_button("Add docs", "add:docs", "#2563eb", "#3b82f6"),
+        action_button("Add polish", "add:polish", "#16a34a", "#22c55e"),
+        action_button("Reset board", "reset_board", "#334155", "#475569")
       ],
       id: "toolbar",
-      style: [:flex, :flex_row, :gap_2]
+      style: [:flex, :flex_row, :flex_wrap, :gap_2, :mt_2]
     )
   end
 
   defp column_ir(status, tasks) do
     column_tasks = Enum.filter(tasks, &(&1.status == status))
-    color = Map.fetch!(@column_colors, status)
+    border_hex = Map.fetch!(@column_colors, status)
 
     Guppy.IR.div(
       [
         Guppy.IR.div(
           [
-            Guppy.IR.text(Map.fetch!(@column_titles, status), id: "#{status}_title"),
-            Guppy.IR.text("#{length(column_tasks)} cards", id: "#{status}_count")
+            Guppy.IR.div(
+              [Guppy.IR.text(Map.fetch!(@column_titles, status), id: "#{status}_title")],
+              style: [:text_lg, :font_bold]
+            ),
+            Guppy.IR.div(
+              [Guppy.IR.text("#{length(column_tasks)} cards", id: "#{status}_count")],
+              style: [
+                :p_1,
+                :rounded_full,
+                :border_1,
+                {:border_color_hex, border_hex},
+                {:bg_hex, "#0f172a"},
+                :text_sm,
+                {:text_color_hex, "#cbd5e1"}
+              ]
+            )
           ],
           id: "#{status}_header",
-          style: [:flex, :flex_col, :gap_1, :mb_2]
+          style: [:flex, :flex_row, :items_center, :justify_between, :mb_2]
         ),
         Guppy.IR.scroll(
           [
-            Guppy.IR.div([], id: "#{status}_drop_zone", style: [{:h_px, 8}])
+            Guppy.IR.div(
+              [Guppy.IR.text("Drop cards anywhere in this column", id: "#{status}_drop_hint")],
+              id: "#{status}_drop_zone",
+              style: [
+                :p_2,
+                :rounded_lg,
+                :border_1,
+                :border_dashed,
+                {:border_color_hex, border_hex},
+                {:bg_hex, "#0f172a"},
+                :text_sm,
+                {:text_color_hex, "#94a3b8"}
+              ]
+            )
             | Enum.map(column_tasks, &task_card/1)
           ],
           id: "#{status}_scroll",
@@ -140,13 +214,14 @@ defmodule Examples.KanbanTodoWindow do
         :flex,
         :flex_col,
         {:w_px, 320},
-        {:h_px, 420},
-        :p_2,
-        :rounded_md,
+        {:h_px, 460},
+        :p_4,
+        :rounded_xl,
         :border_1,
-        {:border_color, color},
-        {:bg_hex, "#22252b"},
-        :gap_2
+        {:border_color_hex, border_hex},
+        {:bg_hex, "#111827"},
+        :gap_2,
+        :shadow_md
       ],
       events: %{drop: "drop_on_#{status}"}
     )
@@ -155,11 +230,33 @@ defmodule Examples.KanbanTodoWindow do
   defp task_card(task) do
     Guppy.IR.div(
       [
-        Guppy.IR.text(task.title, id: "task_title_#{task.id}"),
-        Guppy.IR.button("Archive",
-          id: "archive:#{task.id}_button",
-          style: [{:bg, :red}],
-          events: %{click: "archive:#{task.id}"}
+        Guppy.IR.div([Guppy.IR.text(task.title, id: "task_title_#{task.id}")],
+          style: [:text_base, :font_semibold]
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text(String.upcase(to_string(task.status)), id: "task_status_#{task.id}")
+              ],
+              style: [:text_xs, {:text_color_hex, "#94a3b8"}]
+            ),
+            Guppy.IR.button("Archive",
+              id: "archive:#{task.id}_button",
+              style: [
+                :p_2,
+                :rounded_lg,
+                :border_1,
+                {:border_color_hex, "#991b1b"},
+                {:bg_hex, "#7f1d1d"},
+                {:text_color_hex, "#fef2f2"}
+              ],
+              hover_style: [{:bg_hex, "#991b1b"}],
+              events: %{click: "archive:#{task.id}"}
+            )
+          ],
+          id: "task_footer_#{task.id}",
+          style: [:flex, :flex_row, :items_center, :justify_between]
         )
       ],
       id: "task_card_#{task.id}",
@@ -167,22 +264,32 @@ defmodule Examples.KanbanTodoWindow do
         :flex,
         :flex_col,
         :gap_2,
-        :p_2,
-        :rounded_md,
+        :p_4,
+        :rounded_xl,
         :border_1,
-        {:border_color, :white},
-        {:bg_hex, "#2c3038"},
-        :cursor_pointer
+        {:border_color_hex, "#475569"},
+        {:bg_hex, "#1e293b"},
+        :cursor_pointer,
+        :shadow_sm
       ],
-      hover_style: [{:bg_hex, "#363b45"}],
+      hover_style: [{:bg_hex, "#334155"}],
       events: %{drag_start: "drag_started", drag_move: "drag_moved"}
     )
   end
 
-  defp action_button(label, callback, color) do
+  defp action_button(label, callback, bg_hex, hover_hex) do
     Guppy.IR.button(label,
       id: "#{callback}_button",
-      style: [{:bg, color}],
+      style: [
+        :p_2,
+        :rounded_lg,
+        :border_1,
+        {:border_color_hex, bg_hex},
+        {:bg_hex, bg_hex},
+        {:text_color_hex, "#f8fafc"},
+        :shadow_sm
+      ],
+      hover_style: [{:bg_hex, hover_hex}],
       events: %{click: callback}
     )
   end

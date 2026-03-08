@@ -19,7 +19,9 @@ extern const char *guppy_rust_runtime_status(void);
 extern void *guppy_rust_run_main_thread_runtime(void *arg);
 extern int guppy_rust_open_window(uint64_t view_id,
                                   const unsigned char *ir_ptr,
-                                  size_t ir_len);
+                                  size_t ir_len,
+                                  const unsigned char *opts_ptr,
+                                  size_t opts_len);
 extern int guppy_rust_render_ir_window(uint64_t view_id,
                                        const unsigned char *ir_ptr,
                                        size_t ir_len);
@@ -1158,15 +1160,17 @@ static ERL_NIF_TERM native_open_window(ErlNifEnv *env, int argc,
                                        const ERL_NIF_TERM argv[]) {
   uint64_t view_id;
   ErlNifBinary ir;
+  ErlNifBinary opts;
   int result;
 
-  if (argc != 2 || !get_view_id(env, argv[0], &view_id) ||
-      !encode_term(env, argv[1], &ir)) {
+  if (argc != 3 || !get_view_id(env, argv[0], &view_id) ||
+      !encode_term(env, argv[1], &ir) || !encode_term(env, argv[2], &opts)) {
     return enif_make_badarg(env);
   }
 
-  result = guppy_rust_open_window(view_id, ir.data, ir.size);
+  result = guppy_rust_open_window(view_id, ir.data, ir.size, opts.data, opts.size);
   enif_release_binary(&ir);
+  enif_release_binary(&opts);
 
   if (result == 1) {
     return make_atom(env, "ok");
@@ -1304,7 +1308,7 @@ static ErlNifFunc nif_funcs[] = {
     {"native_build_info", 0, native_build_info, 0},
     {"native_runtime_status", 0, native_runtime_status, 0},
     {"native_gui_status", 0, native_gui_status, 0},
-    {"native_open_window", 2, native_open_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"native_open_window", 3, native_open_window, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_set_event_target", 1, native_set_event_target, 0},
     {"native_render", 2, native_render, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"native_close_window", 1, native_close_window, ERL_NIF_DIRTY_JOB_IO_BOUND},

@@ -1,12 +1,19 @@
 defmodule Examples.TimerCounterWindow do
   use Guppy.Window
 
-  import Guppy.Window, only: [assign: 3, update: 3]
+  import Guppy.Window, only: [assign: 3, update: 3, put_window_opts: 2]
 
   @impl Guppy.Window
   def mount(initial_count, window) do
     Process.send_after(self(), :tick, 1_000)
-    {:ok, assign(window, :count, initial_count)}
+
+    {:ok,
+     window
+     |> put_window_opts(
+       window_bounds: [width: 760, height: 560],
+       titlebar: [title: "Guppy timer counter"]
+     )
+     |> assign(:count, initial_count)}
   end
 
   @impl Guppy.Window
@@ -15,18 +22,73 @@ defmodule Examples.TimerCounterWindow do
 
     Guppy.IR.div(
       [
-        Guppy.IR.text("Counter example", id: "title"),
-        Guppy.IR.text("count = #{count}", id: "count_label"),
+        panel(
+          [
+            Guppy.IR.div([Guppy.IR.text("Timer counter", id: "title")],
+              style: [:text_3xl, :font_black]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text(
+                  "This window rerenders from Elixir state once per second and stops after five updates.",
+                  id: "subtitle"
+                )
+              ],
+              style: [:text_base, {:text_color_hex, "#94a3b8"}]
+            )
+          ],
+          id: "header_panel"
+        ),
         Guppy.IR.div(
           [
-            Guppy.IR.text("This window is rerendered from Elixir state."),
-            Guppy.IR.text("Each tick sends a full replacement IR tree.")
+            Guppy.IR.div(
+              [Guppy.IR.text("Current count", id: "count_heading")],
+              style: [:text_sm, :font_semibold, {:text_color_hex, "#bfdbfe"}]
+            ),
+            Guppy.IR.div(
+              [Guppy.IR.text(Integer.to_string(count), id: "count_label")],
+              style: [:text_3xl, :font_black]
+            ),
+            Guppy.IR.div(
+              [Guppy.IR.text(progress_text(count), id: "progress_text")],
+              style: [:text_base, {:text_color_hex, "#dbeafe"}]
+            )
           ],
-          style: [:p_2, {:bg, :gray}, :rounded_md]
+          id: "count_panel",
+          style: [
+            :flex,
+            :flex_col,
+            :items_center,
+            :gap_2,
+            :p_6,
+            :rounded_xl,
+            :border_1,
+            {:border_color_hex, "#2563eb"},
+            {:bg_hex, "#172554"},
+            :shadow_md,
+            :text_center
+          ]
+        ),
+        panel(
+          [
+            info_row("State lives in the window process", "info_state"),
+            info_row("Each tick updates assigns and triggers a fresh render", "info_tick"),
+            info_row("The example exits once the count reaches five", "info_stop")
+          ],
+          id: "info_panel"
         )
       ],
       id: "counter_root",
-      style: [:flex, :flex_col, :gap_2, :p_4]
+      style: [
+        :flex,
+        :flex_col,
+        :w_full,
+        :h_full,
+        :gap_4,
+        :p_6,
+        {:bg_hex, "#0f172a"},
+        {:text_color_hex, "#f8fafc"}
+      ]
     )
   end
 
@@ -42,6 +104,43 @@ defmodule Examples.TimerCounterWindow do
   def handle_info(:tick, window) do
     IO.puts("stopping window process after 5 updates")
     {:stop, :normal, window}
+  end
+
+  defp progress_text(count) when count < 5, do: "Waiting for the next timer tick..."
+  defp progress_text(_count), do: "Done. The process will shut down now."
+
+  defp panel(children, opts) do
+    id = Keyword.get(opts, :id)
+
+    Guppy.IR.div(
+      children,
+      id: id,
+      style: [
+        :flex,
+        :flex_col,
+        :gap_2,
+        :p_4,
+        :rounded_xl,
+        :border_1,
+        {:border_color_hex, "#334155"},
+        {:bg_hex, "#111827"},
+        :shadow_md
+      ]
+    )
+  end
+
+  defp info_row(label, id) do
+    Guppy.IR.div(
+      [
+        Guppy.IR.div([],
+          id: "#{id}_dot",
+          style: [{:w_px, 10}, {:h_px, 10}, :rounded_full, {:bg_hex, "#60a5fa"}]
+        ),
+        Guppy.IR.div([Guppy.IR.text(label, id: id)], style: [:flex_1, :text_base])
+      ],
+      id: "#{id}_row",
+      style: [:flex, :flex_row, :items_center, :gap_2]
+    )
   end
 end
 

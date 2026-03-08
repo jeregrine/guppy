@@ -104,9 +104,9 @@ defmodule Guppy.Native.Nif do
     {:reply, with_loaded(state, fn -> {:ok, native_ping()} end), state}
   end
 
-  def handle_call({:request, {:open_window, [view_id, ir]}}, _from, state) do
-    {:reply, with_loaded(state, fn -> normalize_status(native_open_window(view_id, ir)) end),
-     state}
+  def handle_call({:request, {:open_window, [view_id, ir, opts]}}, _from, state) do
+    {:reply,
+     with_loaded(state, fn -> normalize_status(native_open_window(view_id, ir, opts)) end), state}
   end
 
   def handle_call({:request, {:set_event_target, [pid]}}, _from, state) when is_pid(pid) do
@@ -150,7 +150,7 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
-  def native_open_window(_view_id, _ir) do
+  def native_open_window(_view_id, _ir, _opts) do
     {:error, :nif_not_loaded}
   end
 

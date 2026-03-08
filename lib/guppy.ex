@@ -39,8 +39,22 @@ defmodule Guppy do
   end
 
   @doc "Opens a native window owned by the calling process and renders its initial IR tree."
-  def open_window(ir, owner \\ self(), timeout \\ 5_000) do
-    Server.open_window(Server, owner, ir, timeout)
+  def open_window(ir), do: Server.open_window(Server, self(), ir, [], 5_000)
+
+  def open_window(ir, owner) when is_pid(owner),
+    do: Server.open_window(Server, owner, ir, [], 5_000)
+
+  def open_window(ir, owner, opts) when is_pid(owner) and is_list(opts) do
+    Server.open_window(Server, owner, ir, opts, 5_000)
+  end
+
+  def open_window(ir, owner, timeout) when is_pid(owner) and is_integer(timeout) do
+    Server.open_window(Server, owner, ir, [], timeout)
+  end
+
+  def open_window(ir, owner, opts, timeout)
+      when is_pid(owner) and is_list(opts) and is_integer(timeout) do
+    Server.open_window(Server, owner, ir, opts, timeout)
   end
 
   @doc "Renders a full IR tree into an open native window."

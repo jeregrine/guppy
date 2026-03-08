@@ -1,11 +1,9 @@
 use crate::bridge_text_input;
 use crate::bridge_view::BridgeView;
 use crate::ir::IrNode;
+use crate::window_options::WindowOptionsConfig;
 use async_task::spawn;
-use gpui::{
-    App, AppContext, Application, AsyncApp, Bounds, PlatformDispatcher, WindowBounds,
-    WindowOptions, px, size,
-};
+use gpui::{App, AppContext, Application, AsyncApp, PlatformDispatcher};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -31,6 +29,7 @@ pub(crate) enum MainThreadRequest {
     OpenWindow {
         view_id: u64,
         ir: IrNode,
+        options: WindowOptionsConfig,
         reply: Sender<i32>,
     },
     SetIr {
@@ -68,7 +67,7 @@ pub(crate) fn enqueue_request(request: MainThreadRequest) -> Result<(), ()> {
     schedule_request_drain()
 }
 
-pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
+pub fn open_window(view_id: u64, ir: IrNode, options: WindowOptionsConfig) -> i32 {
     APP.with(|app| {
         let app = app.borrow().as_ref().cloned();
 
@@ -76,33 +75,32 @@ pub fn open_window(view_id: u64, ir: IrNode) -> i32 {
             return -1;
         };
 
-        let result = app.open_window(
-            WindowOptions {
-                window_bounds: Some(WindowBounds::Windowed(Bounds::from_corners(
-                    gpui::point(px(80.0), px(80.0)),
-                    gpui::point(px(1280.0), px(920.0)),
-                ))),
-                is_resizable: true,
-                window_min_size: Some(size(px(960.0), px(720.0))),
-                ..Default::default()
-            },
-            move |_, cx| {
-                cx.new(|_| BridgeView {
-                    view_id,
-                    ir,
-                    retained: Default::default(),
-                })
-            },
-        );
+        let should_focus = options.focus.unwrap_or(true);
+        let Ok(gpui_options) = app.update(|cx| options.to_gpui(cx)) else {
+            return -1;
+        };
+
+        let result = app.open_window(gpui_options, move |_, cx| {
+            cx.new(|_| BridgeView {
+                view_id,
+                ir,
+                retained: Default::default(),
+            })
+        });
 
         match result {
             Ok(handle) => {
-                let _ = app.update(|cx| {
-                    cx.activate(true);
-                });
+                if should_focus {
+                    let _ = app.update(|cx| {
+                        cx.activate(true);
+                    });
+                }
 
                 let _ = handle.update(&mut app, |_, window, cx| {
-                    window.activate_window();
+                    if should_focus {
+                        window.activate_window();
+                    }
+
                     window.on_window_should_close(cx, move |_window, _cx| {
                         WINDOWS.with(|windows| {
                             windows.borrow_mut().remove(&view_id);
@@ -223,8 +221,13 @@ fn try_next_request() -> Option<MainThreadRequest> {
 
 fn handle_request(request: MainThreadRequest) {
     match request {
-        MainThreadRequest::OpenWindow { view_id, ir, reply } => {
-            let _ = reply.send(open_window(view_id, ir));
+        MainThreadRequest::OpenWindow {
+            view_id,
+            ir,
+            options,
+            reply,
+        } => {
+            let _ = reply.send(open_window(view_id, ir, options));
         }
         MainThreadRequest::SetIr { view_id, ir, reply } => {
             let _ = reply.send(update_ir(view_id, ir));

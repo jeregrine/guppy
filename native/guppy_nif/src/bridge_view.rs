@@ -10,7 +10,7 @@ mod style;
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
 use gpui::{
-    Context, Entity, FocusHandle, Render, ScrollHandle, Subscription, Window, div, prelude::*, rgb,
+    Context, Entity, FocusHandle, Render, ScrollHandle, Subscription, Window, div, prelude::*,
 };
 use std::collections::HashMap;
 
@@ -40,12 +40,7 @@ impl Render for BridgeView {
             root
         };
 
-        div()
-            .size_full()
-            .p_6()
-            .bg(rgb(0x202020))
-            .text_color(rgb(0xffffff))
-            .child(root)
+        div().size_full().child(root)
     }
 }
 
