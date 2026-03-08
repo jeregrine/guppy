@@ -27,6 +27,7 @@ The current tracer-shot API is intentionally small:
 - `Guppy.IR.text/2`
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
+- `Guppy.IR.button/2`
 
 ## Native build
 
@@ -228,6 +229,19 @@ Guppy.IR.div(
 )
 ```
 
+For common button-like UI, you can now use a button node directly:
+
+```elixir
+Guppy.IR.button(
+  "Save",
+  id: "save_button",
+  style: [{:bg, :blue}],
+  actions: %{"save" => "save_action"},
+  shortcuts: [{"ctrl-s", "save"}],
+  events: %{click: "save_click"}
+)
+```
+
 `text` nodes currently support `click` only.
 
 Identity rules today:
@@ -248,6 +262,8 @@ Clickable `div` nodes now participate in keyboard activation automatically: when
 `div` nodes can also declare semantic `actions` plus `shortcuts`. Shortcut handlers dispatch `:action` events from the focused element or the nearest focused ancestor that declares the matching shortcut, and propagation stops at the first match.
 
 Guppy also has an explicit `scroll` node for scroll-container semantics when a plain `div` plus overflow tokens is not the right abstraction. `scroll` nodes accept `id`, `axis: :x | :y | :both` (default `:y`), `style`, and `children`, and always behave as tracked scroll containers across rerenders.
+
+Guppy also has a `button` node for common button semantics. Buttons render as interactive controls with a text label, default focus participation, keyboard activation, and basic default button styling that later style ops can override.
 
 `div` nodes also support:
 - `focusable: true` to opt into GPUI focus participation
@@ -317,7 +333,7 @@ Useful references while developing:
 The tracer shot is real, but still intentionally narrow:
 
 - native rendering only supports a minimal IR shape today
-- supported nodes are currently `:div`, `:text`, and `:scroll`
+- supported nodes are currently `:div`, `:text`, `:scroll`, and `:button`
 - event and style coverage is still intentionally partial even though the bridge now supports a broader interaction surface
 - style mapping exists, but only for a small explicit subset on `:div`
 - explicit node ids are supported, but there is not yet broader keyed/stateful UI behavior built on top of them

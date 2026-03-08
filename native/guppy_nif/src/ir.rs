@@ -266,6 +266,50 @@ impl IrNode {
                     children,
                 })
             }
+            "button" => {
+                let actions = get_div_actions(map)?;
+                let label = get_string_field(map, "label")?;
+                let style = prepend_style(default_button_style(), get_div_style(map)?);
+                let hover_style = get_div_hover_style(map)?;
+                let focus_style = prepend_style(default_button_focus_style(), get_div_focus_style(map)?);
+                let in_focus_style = get_div_in_focus_style(map)?;
+                let active_style = prepend_style(default_button_active_style(), get_div_active_style(map)?);
+                let disabled_style = prepend_style(default_button_disabled_style(), get_div_disabled_style(map)?);
+
+                Ok(Self::Div {
+                    id,
+                    style,
+                    hover_style,
+                    focus_style,
+                    in_focus_style,
+                    active_style,
+                    disabled_style,
+                    disabled: get_boolean_field(map, "disabled")?,
+                    stack_priority: None,
+                    occlude: false,
+                    focusable: true,
+                    tab_stop: Some(true),
+                    tab_index: get_optional_integer_field(map, "tab_index")?,
+                    track_scroll: false,
+                    anchor_scroll: false,
+                    shortcuts: get_div_shortcuts(map, &actions)?,
+                    children: vec![Self::text(label)],
+                    click: get_click_event(map)?,
+                    hover: get_hover_event(map)?,
+                    focus: get_focus_event(map)?,
+                    blur: get_blur_event(map)?,
+                    key_down: get_key_down_event(map)?,
+                    key_up: get_key_up_event(map)?,
+                    context_menu: get_context_menu_event(map)?,
+                    drag_start: None,
+                    drag_move: None,
+                    drop: None,
+                    mouse_down: get_mouse_down_event(map)?,
+                    mouse_up: get_mouse_up_event(map)?,
+                    mouse_move: get_mouse_move_event(map)?,
+                    scroll_wheel: None,
+                })
+            }
             "div" => {
                 let children = match get_field(map, "children") {
                     Some(term) => get_list(term)?
@@ -415,6 +459,39 @@ fn get_optional_usize_field(
         Some(other) => Err(format!("expected optional usize field {key}, got {other}")),
         None => Ok(None),
     }
+}
+
+fn default_button_style() -> DivStyle {
+    vec![
+        StyleOp::Flex,
+        StyleOp::JustifyCenter,
+        StyleOp::ItemsCenter,
+        StyleOp::TextCenter,
+        StyleOp::P2,
+        StyleOp::RoundedMd,
+        StyleOp::Border1,
+        StyleOp::BorderColor(ColorToken::White),
+        StyleOp::Bg(ColorToken::Gray),
+        StyleOp::TextColor(ColorToken::White),
+        StyleOp::CursorPointer,
+    ]
+}
+
+fn default_button_focus_style() -> DivStyle {
+    vec![StyleOp::BorderColor(ColorToken::Yellow)]
+}
+
+fn default_button_active_style() -> DivStyle {
+    vec![StyleOp::Opacity(0.85)]
+}
+
+fn default_button_disabled_style() -> DivStyle {
+    vec![StyleOp::Opacity(0.45)]
+}
+
+fn prepend_style(mut defaults: DivStyle, mut style: DivStyle) -> DivStyle {
+    defaults.append(&mut style);
+    defaults
 }
 
 fn get_div_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {

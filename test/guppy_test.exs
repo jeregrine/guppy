@@ -27,6 +27,36 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(scroll_ir)
     assert scroll_ir.axis == :both
 
+    button_ir =
+      Guppy.IR.button(
+        "Save changes",
+        id: "save_button",
+        style: [{:bg, :blue}, {:text_color, :white}],
+        focus_style: [{:border_color, :yellow}],
+        active_style: [{:opacity, 0.7}],
+        disabled_style: [{:opacity, 0.3}],
+        disabled: false,
+        tab_index: 2,
+        actions: %{"save" => "save_action"},
+        shortcuts: [{"ctrl-s", "save"}],
+        events: %{
+          click: "save_click",
+          focus: "save_focus",
+          blur: "save_blur",
+          key_down: "save_key_down",
+          key_up: "save_key_up",
+          context_menu: "save_context",
+          mouse_down: "save_mouse_down",
+          mouse_up: "save_mouse_up",
+          mouse_move: "save_mouse_move"
+        }
+      )
+
+    assert :ok = Guppy.IR.validate(button_ir)
+    assert button_ir.tab_index == 2
+    assert button_ir.actions == %{"save" => "save_action"}
+    assert button_ir.shortcuts == [{"ctrl-s", "save"}]
+
     styled_ir =
       Guppy.IR.div(
         [Guppy.IR.text("hello")],
@@ -378,6 +408,12 @@ defmodule GuppyTest do
     assert {:error, {:invalid_scroll_axis, :diagonal}} =
              Guppy.IR.validate(Guppy.IR.scroll([], axis: :diagonal))
 
+    assert {:error, {:invalid_ir, %{kind: :button, label: 123}}} =
+             Guppy.IR.validate(%{kind: :button, label: 123})
+
+    assert {:error, {:invalid_event, :drag_start, "nope"}} =
+             Guppy.IR.validate(Guppy.IR.button("Save", events: %{drag_start: "nope"}))
+
     assert {:error, {:invalid_actions, [:nope]}} =
              Guppy.IR.validate(Guppy.IR.div([], actions: [:nope]))
 
@@ -465,6 +501,17 @@ defmodule GuppyTest do
                      ],
                      id: "scroll_root",
                      style: [{:h_px, 180}, :p_2, :rounded_md, :border_1, {:border_color, :white}]
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.update(
+                   view_id,
+                   Guppy.IR.button(
+                     "Save via button node",
+                     id: "save_button",
+                     style: [{:bg, :blue}],
+                     events: %{click: "save"}
                    )
                  )
 

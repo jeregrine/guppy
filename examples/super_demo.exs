@@ -1411,10 +1411,10 @@ defmodule Guppy.SuperDemo do
     label = demo_label(demo_id)
     bg = if selected?, do: :blue, else: :gray
 
-    Guppy.IR.div(
-      [Guppy.IR.text(label, id: "nav_#{demo_id}_label")],
+    Guppy.IR.button(
+      label,
       id: "nav_#{demo_id}",
-      style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, bg}, {:text_color, :white}, :cursor_pointer],
+      style: [{:bg, bg}, {:text_color, :white}],
       focus_style: [{:border_color, :yellow}],
       active_style: [{:opacity, 0.82}],
       events: %{click: "select_demo:#{demo_id}"}
@@ -1442,17 +1442,13 @@ defmodule Guppy.SuperDemo do
   end
 
   defp action_button(label, id, callback, color) do
-    Guppy.IR.div(
-      [Guppy.IR.text(label, id: "#{id}_label")],
+    Guppy.IR.button(
+      label,
       id: id,
       style: [
-        :p_2,
-        :rounded_md,
-        :border_1,
         {:border_color, contrast_border_color(color)},
         {:bg, color},
-        {:text_color, contrast_text_color(color)},
-        :cursor_pointer
+        {:text_color, contrast_text_color(color)}
       ],
       focus_style: [{:border_color, :yellow}],
       active_style: [{:opacity, 0.8}],
@@ -1461,15 +1457,12 @@ defmodule Guppy.SuperDemo do
   end
 
   defp disabled_action_button(label, id) do
-    Guppy.IR.div(
-      [Guppy.IR.text(label, id: "#{id}_label")],
+    Guppy.IR.button(
+      label,
       id: id,
       disabled: true,
       disabled_style: [{:opacity, 0.45}, {:bg, :gray}, {:border_color, :white}],
       style: [
-        :p_2,
-        :rounded_md,
-        :border_1,
         {:border_color, :yellow},
         {:bg, :yellow},
         {:text_color, :black}
