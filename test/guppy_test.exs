@@ -1,8 +1,6 @@
 defmodule Guppy.TestCounterWindow do
   use Guppy.Window
 
-  import Guppy.Window, only: [assign: 3, update: 3]
-
   @impl Guppy.Window
   def mount(initial_count, window) do
     {:ok, assign(window, :count, initial_count)}

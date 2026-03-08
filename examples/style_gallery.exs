@@ -1,8 +1,5 @@
 defmodule Examples.StyleGalleryWindow do
   use Guppy.Window
-  use Guppy.Component
-
-  import Guppy.Window, only: [assign: 3, put_window_opts: 2]
 
   @swatches [
     {:slate, "Slate", "#475569", "#f8fafc", "#64748b"},

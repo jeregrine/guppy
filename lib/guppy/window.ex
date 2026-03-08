@@ -46,6 +46,8 @@ defmodule Guppy.Window do
 
   defmacro __using__(_opts) do
     quote do
+      use Guppy.Component
+
       @behaviour Guppy.Window
 
       def start_link(arg, opts \\ []) do

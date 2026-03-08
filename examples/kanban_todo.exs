@@ -1,8 +1,5 @@
 defmodule Examples.KanbanTodoWindow do
   use Guppy.Window
-  use Guppy.Component
-
-  import Guppy.Window, only: [assign: 2, assign: 3, put_window_opts: 2]
 
   @column_order [:backlog, :planned, :in_progress, :review, :blocked, :done]
 

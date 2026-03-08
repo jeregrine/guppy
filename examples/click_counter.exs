@@ -1,8 +1,5 @@
 defmodule Examples.ClickCounterWindow do
   use Guppy.Window
-  use Guppy.Component
-
-  import Guppy.Window, only: [assign: 3, update: 3, put_window_opts: 2]
 
   @impl Guppy.Window
   def mount(initial_count, window) do

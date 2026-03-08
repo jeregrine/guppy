@@ -2,8 +2,8 @@ defmodule Guppy.Component do
   @moduledoc """
   Compile-time Guppy template support.
 
-  `use Guppy.Component` imports the `~G` sigil, which compiles a restricted,
-  HEEx-style template syntax directly to Guppy IR.
+  `use Guppy.Component` imports the `~G` sigil and common window assign helpers,
+  compiling a restricted HEEx-style template syntax directly to Guppy IR.
 
   The current template vocabulary intentionally matches Guppy's real IR surface:
 
@@ -19,7 +19,15 @@ defmodule Guppy.Component do
 
   defmacro __using__(_opts) do
     quote do
-      import Guppy.Component, only: [sigil_G: 2]
+      import Guppy.Component,
+        only: [
+          sigil_G: 2,
+          assign: 2,
+          assign: 3,
+          update: 3,
+          put_private: 3,
+          put_window_opts: 2
+        ]
     end
   end
 
@@ -30,6 +38,12 @@ defmodule Guppy.Component do
   def fetch_assign!(assigns, key) when is_map(assigns) and is_atom(key) do
     Map.fetch!(assigns, key)
   end
+
+  def assign(window, key, value), do: Guppy.Window.assign(window, key, value)
+  def assign(window, attrs), do: Guppy.Window.assign(window, attrs)
+  def update(window, key, fun), do: Guppy.Window.update(window, key, fun)
+  def put_private(window, key, value), do: Guppy.Window.put_private(window, key, value)
+  def put_window_opts(window, opts), do: Guppy.Window.put_window_opts(window, opts)
 
   def maybe_entry(_key, nil), do: nil
   def maybe_entry(key, value), do: {key, value}
