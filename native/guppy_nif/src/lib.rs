@@ -5,8 +5,8 @@
 
 mod bridge_text_input;
 mod bridge_view;
-mod hello_window;
 mod ir;
+mod main_thread_runtime;
 
 use crate::ir::IrNode;
 use std::ffi::{c_char, c_void};
@@ -141,9 +141,9 @@ pub extern "C" fn guppy_rust_runtime_status() -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn guppy_rust_run_hello_window_main_thread(arg: *mut c_void) -> *mut c_void {
-    let open_boot_window = !arg.is_null();
-    hello_window::run_app(open_boot_window);
+pub extern "C" fn guppy_rust_run_main_thread_runtime(arg: *mut c_void) -> *mut c_void {
+    let open_bootstrap_window = !arg.is_null();
+    main_thread_runtime::run_app(open_bootstrap_window);
     std::ptr::null_mut()
 }
 
@@ -248,35 +248,21 @@ fn refresh_runtime_state(runtime: &mut RuntimeState) {
 fn runtime_loop(receiver: mpsc::Receiver<Command>) {
     while let Ok(command) = receiver.recv() {
         let result = match command {
-            Command::OpenWindow { view_id, reply } => {
-                hello_window::enqueue_request(hello_window::MainThreadRequest::OpenWindow {
-                    view_id,
-                    reply,
-                })
-            }
-            Command::MountIr { view_id, ir, reply } => {
-                hello_window::enqueue_request(hello_window::MainThreadRequest::MountIr {
-                    view_id,
-                    ir,
-                    reply,
-                })
-            }
-            Command::UpdateIr { view_id, ir, reply } => {
-                hello_window::enqueue_request(hello_window::MainThreadRequest::UpdateIr {
-                    view_id,
-                    ir,
-                    reply,
-                })
-            }
-            Command::CloseWindow { view_id, reply } => {
-                hello_window::enqueue_request(hello_window::MainThreadRequest::CloseWindow {
-                    view_id,
-                    reply,
-                })
-            }
-            Command::ViewCount { reply } => {
-                hello_window::enqueue_request(hello_window::MainThreadRequest::ViewCount { reply })
-            }
+            Command::OpenWindow { view_id, reply } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::OpenWindow { view_id, reply },
+            ),
+            Command::MountIr { view_id, ir, reply } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::MountIr { view_id, ir, reply },
+            ),
+            Command::UpdateIr { view_id, ir, reply } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::UpdateIr { view_id, ir, reply },
+            ),
+            Command::CloseWindow { view_id, reply } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::CloseWindow { view_id, reply },
+            ),
+            Command::ViewCount { reply } => main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::ViewCount { reply },
+            ),
             Command::Shutdown => break,
         };
 

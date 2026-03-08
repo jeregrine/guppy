@@ -48,7 +48,7 @@ Important:
 - `lib/mix/tasks/guppy.native.build.ex` — builds and installs the native library
 - `native/guppy_nif/c_src/guppy_nif.c` — C shim / NIF entry / main-thread bootstrap
 - `native/guppy_nif/src/lib.rs` — Rust runtime core / command routing
-- `native/guppy_nif/src/hello_window.rs` — current tracer-shot GPUI window bridge
+- `native/guppy_nif/src/main_thread_runtime.rs` — current GPUI main-thread runtime and window bridge
 - `examples/hello_world.exs` — runnable tracer-shot example
 - `test/guppy_test.exs` — bring-up / lifecycle tests
 - `README.md` — user-facing bring-up docs
@@ -176,7 +176,7 @@ If you touch any of these:
 
 - `native/guppy_nif/c_src/guppy_nif.c`
 - `native/guppy_nif/src/lib.rs`
-- `native/guppy_nif/src/hello_window.rs`
+- `native/guppy_nif/src/main_thread_runtime.rs`
 
 then you should normally run:
 
@@ -214,7 +214,7 @@ If you need to orient quickly:
 1. read `README.md`
 2. read `lib/guppy.ex`, `lib/guppy/server.ex`, and `lib/guppy/native/nif.ex`
 3. read `native/guppy_nif/c_src/guppy_nif.c`
-4. read `native/guppy_nif/src/lib.rs` and `native/guppy_nif/src/hello_window.rs`
+4. read `native/guppy_nif/src/lib.rs` and `native/guppy_nif/src/main_thread_runtime.rs`
 5. run `mix guppy.native.build`
 6. run `mix test`
 7. run `mix run examples/hello_world.exs`

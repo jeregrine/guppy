@@ -16,7 +16,7 @@ extern const char *guppy_rust_build_info(void);
 extern int guppy_rust_runtime_start(void);
 extern int guppy_rust_runtime_shutdown(void);
 extern const char *guppy_rust_runtime_status(void);
-extern void *guppy_rust_run_hello_window_main_thread(void *arg);
+extern void *guppy_rust_run_main_thread_runtime(void *arg);
 extern int guppy_rust_open_window(uint64_t view_id);
 extern int guppy_rust_mount_ir_window(uint64_t view_id, const unsigned char *ir_ptr,
                                       size_t ir_len);
@@ -1062,15 +1062,15 @@ int guppy_c_send_window_closed_event(uint64_t view_id) {
   return sent;
 }
 
-static int should_boot_hello_window(void) {
-  const char *value = getenv("GUPPY_BOOT_HELLO_WINDOW");
+static int should_bootstrap_runtime_window(void) {
+  const char *value = getenv("GUPPY_BOOTSTRAP_RUNTIME_WINDOW");
   return value != NULL && strcmp(value, "1") == 0;
 }
 
-static int maybe_start_hello_window(void) {
+static int maybe_start_main_thread_runtime(void) {
 #ifdef __APPLE__
   int result;
-  void *arg = should_boot_hello_window() ? (void *)1 : NULL;
+  void *arg = should_bootstrap_runtime_window() ? (void *)1 : NULL;
 
   if (guppy_gui_started) {
     return 1;
@@ -1081,7 +1081,7 @@ static int maybe_start_hello_window(void) {
   guppy_gui_status = 0;
 
   result = erl_drv_steal_main_thread((char *)"guppy_gpui", &guppy_gui_thread,
-                                     guppy_rust_run_hello_window_main_thread,
+                                     guppy_rust_run_main_thread_runtime,
                                      arg, NULL);
 
   if (result != 0) {
@@ -1102,7 +1102,7 @@ static int maybe_start_hello_window(void) {
 #endif
 }
 
-static void maybe_stop_hello_window(void) {
+static void maybe_stop_main_thread_runtime(void) {
 #ifdef __APPLE__
   if (guppy_gui_started) {
     erl_drv_stolen_main_thread_join(guppy_gui_thread, NULL);
@@ -1303,7 +1303,7 @@ static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
     return 1;
   }
 
-  if (!maybe_start_hello_window()) {
+  if (!maybe_start_main_thread_runtime()) {
     return 1;
   }
 
@@ -1321,7 +1321,7 @@ static int upgrade(ErlNifEnv *env, void **priv_data, void **old_priv_data,
 
 static void unload(ErlNifEnv *env, void *priv_data) {
   guppy_rust_runtime_shutdown();
-  maybe_stop_hello_window();
+  maybe_stop_main_thread_runtime();
 }
 
 static ErlNifFunc nif_funcs[] = {

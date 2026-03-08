@@ -51,7 +51,7 @@ pub(crate) enum MainThreadRequest {
     },
 }
 
-pub fn run_app(open_boot_window: bool) {
+pub fn run_app(open_bootstrap_window: bool) {
     init_request_queue();
 
     Application::new().run(move |cx: &mut App| {
@@ -64,7 +64,7 @@ pub fn run_app(open_boot_window: bool) {
 
         unsafe { guppy_c_gui_started(1) };
 
-        if open_boot_window {
+        if open_bootstrap_window {
             let _ = open_window(0, IrNode::text("Hello from Guppy NIF + GPUI"));
         }
     });
