@@ -3,7 +3,7 @@ use crate::bridge_view::BridgeView;
 use crate::ir::{DivStyle, IrNode, ScrollAxis};
 use gpui::{
     AnyElement, Context, InteractiveElement, IntoElement, ParentElement,
-    StatefulInteractiveElement, Window, div,
+    StatefulInteractiveElement, Styled, Window, div,
 };
 
 pub(crate) struct ScrollSpec<'a> {
@@ -38,11 +38,32 @@ pub(crate) fn render(
         spec.style,
     );
 
-    let element = match spec.axis {
+    let mut element = match spec.axis {
         ScrollAxis::X => element.overflow_x_scroll(),
         ScrollAxis::Y => element.overflow_y_scroll(),
         ScrollAxis::Both => element.overflow_scroll(),
     };
 
+    if should_restrict_scroll_to_axis(spec.axis) {
+        element.style().restrict_scroll_to_axis = Some(true);
+    }
+
     element.into_any_element()
+}
+
+fn should_restrict_scroll_to_axis(axis: ScrollAxis) -> bool {
+    matches!(axis, ScrollAxis::X | ScrollAxis::Y)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_restrict_scroll_to_axis;
+    use crate::ir::ScrollAxis;
+
+    #[test]
+    fn axis_specific_scroll_nodes_restrict_wheel_translation() {
+        assert!(should_restrict_scroll_to_axis(ScrollAxis::X));
+        assert!(should_restrict_scroll_to_axis(ScrollAxis::Y));
+        assert!(!should_restrict_scroll_to_axis(ScrollAxis::Both));
+    }
 }

@@ -84,70 +84,88 @@ defmodule Examples.KanbanTodoWindow do
     counts = count_by_status(tasks)
     columns = Enum.map(@column_order, &column_view(&1, tasks, counts))
 
-    board_width_px = length(columns) * 272 + max(length(columns) - 1, 0) * 8 + 8
+    board_width_px = length(columns) * 264 + max(length(columns) - 1, 0) * 8 + 8
+    open_count = length(tasks) - Map.get(counts, :done, 0)
+    blocked_count = Map.get(counts, :blocked, 0)
+    done_count = Map.get(counts, :done, 0)
 
     assigns =
       Map.merge(window.assigns, %{
         add_disabled: blank?(window.assigns.draft_title),
-        done_count: Map.get(counts, :done, 0),
+        done_count: done_count,
         board_columns_class:
           "flex flex-row flex-nowrap gap-2 h-full pr-2 w-[#{board_width_px}px]",
+        header_metrics: [
+          %{id: "open_scope", label: "Open", value: open_count, class: metric_class(:open)},
+          %{
+            id: "blocked_scope",
+            label: "Blocked",
+            value: blocked_count,
+            class: metric_class(:blocked)
+          },
+          %{id: "done_scope", label: "Done", value: done_count, class: metric_class(:done)}
+        ],
         columns: columns
       })
 
     ~G"""
-    <div id="kanban_root" class="flex flex-col w-full h-full gap-4 p-4 bg-[#09111f] text-[#f8fafc]">
-      <div id="board_header" class="flex flex-row items-center justify-between gap-4 p-4 rounded-xl border-1 border-[#1e293b] bg-[#0f172a] shadow-md">
-        <div id="board_header_copy" class="flex flex-col gap-1 flex-1">
-          <text id="eyebrow" class="text-sm font-semibold text-[#93c5fd]">PRODUCT DELIVERY</text>
-          <text id="title" class="text-2xl font-black">Launch readiness board</text>
-          <text id="subtitle" class="text-sm text-[#94a3b8] leading-snug">
-            Release work, blockers, and finish-line polish in one production-style surface.
-          </text>
+    <div id="kanban_root" class="flex flex-col w-full h-full gap-2 p-2 bg-[#09111f] text-[#f8fafc]">
+      <div id="top_shell" class="flex flex-col gap-2 p-2 rounded-xl border-1 border-[#1e293b] bg-[#0f172a] shadow-md">
+        <div id="board_header" class="flex flex-row items-center justify-between gap-2">
+          <div id="board_header_copy" class="flex flex-col gap-1 flex-1">
+            <text id="eyebrow" class="text-xs font-semibold text-[#93c5fd]">PRODUCT DELIVERY</text>
+            <text id="title" class="text-xl font-black">Launch readiness board</text>
+            <text id="subtitle" class="text-xs text-[#94a3b8] leading-snug">
+              Release work, blockers, and final polish in one dense production-style surface.
+            </text>
+          </div>
+
+          <div id="header_metrics" class="flex flex-row items-center gap-2">
+            <div :for={metric <- @header_metrics} id={metric.id} class={metric.class}>
+              <text id={metric.id <> "_label"} class="text-xs text-[#94a3b8]">{metric.label}</text>
+              <text id={metric.id <> "_value"} class="text-sm font-bold">{metric.value}</text>
+            </div>
+          </div>
         </div>
 
-        <div id="board_header_badge" class="px-2 py-2 rounded-full border-1 border-[#334155] bg-[#111827] text-[#cbd5e1]">
-          <text id="board_header_badge_text" class="text-xs font-semibold">Shipping view</text>
+        <div id="toolbar" class="flex flex-row items-center gap-2">
+          <text_input
+            id="draft_title"
+            value={@draft_title}
+            placeholder="Add a bug, feature, or release task"
+            change="draft_changed"
+            class="flex-1 p-2 rounded-lg border-1 border-[#334155] bg-[#0b1220] text-[#f8fafc]"
+          />
+
+          <button
+            id="add_task_button"
+            click="add_task"
+            disabled={@add_disabled}
+            class="p-2 rounded-lg border-1 border-[#2563eb] bg-[#2563eb] text-[#eff6ff] shadow-sm"
+            hover_class="bg-[#3b82f6]"
+            disabled_class="border-[#1e293b] bg-[#0b1220] text-[#475569]"
+          >
+            Add card
+          </button>
+
+          <button
+            id="archive_done_button"
+            click="archive_done"
+            disabled={@done_count == 0}
+            class="p-2 rounded-lg border-1 border-[#334155] bg-[#111827] text-[#e2e8f0]"
+            hover_class="bg-[#1e293b]"
+            disabled_class="border-[#1e293b] bg-[#0b1220] text-[#475569]"
+          >
+            Archive completed
+          </button>
+
+          <div id="toolbar_notice" class={notice_class(@notice_tone)}>
+            <text id="toolbar_notice_text" class="text-xs font-medium">{@notice}</text>
+          </div>
         </div>
       </div>
 
-      <div id="toolbar" class="flex flex-row items-center gap-2 p-2 rounded-xl border-1 border-[#1e293b] bg-[#0f172a] shadow-sm">
-        <text_input
-          id="draft_title"
-          value={@draft_title}
-          placeholder="Add a bug, feature, or release task"
-          change="draft_changed"
-          class="flex-1 p-2 rounded-lg border-1 border-[#334155] bg-[#0b1220] text-[#f8fafc]"
-        />
-
-        <button
-          id="add_task_button"
-          click="add_task"
-          disabled={@add_disabled}
-          class="p-2 rounded-lg border-1 border-[#2563eb] bg-[#2563eb] text-[#eff6ff] shadow-sm"
-          hover_class="bg-[#3b82f6]"
-          disabled_class="border-[#1e293b] bg-[#0b1220] text-[#475569]"
-        >
-          Add card
-        </button>
-
-        <button
-          id="archive_done_button"
-          click="archive_done"
-          disabled={@done_count == 0}
-          class="p-2 rounded-lg border-1 border-[#334155] bg-[#111827] text-[#e2e8f0]"
-          hover_class="bg-[#1e293b]"
-          disabled_class="border-[#1e293b] bg-[#0b1220] text-[#475569]"
-        >
-          Archive completed
-        </button>
-
-        <div id="toolbar_notice" class={notice_class(@notice_tone)}>
-          <text id="toolbar_notice_text" class="text-xs font-medium">{@notice}</text>
-        </div>
-      </div>
-
-      <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-xl border-1 border-[#1e293b] bg-[#0f172a] shadow-md p-2">
+      <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-xl border-1 border-[#1e293b] bg-[#0d1526] shadow-md p-2">
         <scroll id="board_scroll" axis="x" class="flex-1 min-h-0 scrollbar-w-[10px]">
           <div id="board_columns" class={@board_columns_class}>
             <div
@@ -156,8 +174,11 @@ defmodule Examples.KanbanTodoWindow do
               drop={column.drop_event}
               class={column.class}
             >
-              <div id={column.header_id} class="flex flex-row items-center justify-between gap-2">
-                <text id={column.title_id} class="text-sm font-bold">{column.title}</text>
+              <div id={column.header_id} class="flex flex-row items-center justify-between gap-2 p-1">
+                <div id={column.title_id <> "_wrap"} class="flex flex-row items-center gap-2 flex-1">
+                  <div id={column.accent_id} class={column.accent_class}></div>
+                  <text id={column.title_id} class="text-sm font-bold">{column.title}</text>
+                </div>
 
                 <div id={column.count_badge_id} class={column.count_badge_class}>
                   <text id={column.count_id} class="text-xs font-semibold">{column.count}</text>
@@ -188,7 +209,7 @@ defmodule Examples.KanbanTodoWindow do
                       <text id={task.updated_id} class="text-xs text-[#64748b]">{task.updated_at}</text>
                     </div>
 
-                    <div id={task.body_id} class="flex flex-col gap-2">
+                    <div id={task.body_id} class="flex flex-col gap-1">
                       <text id={task.title_id} class="text-sm font-semibold leading-snug">{task.title}</text>
                       <text id={task.summary_id} class="text-xs text-[#94a3b8] leading-snug line-clamp-2 whitespace-normal">
                         {task.summary}
@@ -427,6 +448,7 @@ defmodule Examples.KanbanTodoWindow do
       drop_event: "drop_on_#{status}",
       header_id: "#{status}_header",
       title_id: "#{status}_title",
+      accent_id: "#{status}_accent",
       count_id: "#{status}_count",
       count_badge_id: "#{status}_count_badge",
       scroll_id: "#{status}_scroll",
@@ -435,7 +457,8 @@ defmodule Examples.KanbanTodoWindow do
       empty_text_id: "#{status}_empty_text",
       empty?: column_tasks == [],
       class:
-        "flex flex-col flex-none w-[272px] h-full gap-2 p-2 rounded-xl border-1 bg-[#0b1220] border-[#{meta.accent}] shadow-sm",
+        "flex flex-col flex-none w-[264px] h-full gap-2 p-2 rounded-xl border-1 bg-[#0b1220] border-[#{meta.accent}] shadow-sm",
+      accent_class: "w-[8px] h-[8px] rounded-full bg-[#{meta.accent}]",
       count_badge_class:
         "px-2 py-2 rounded-full border-1 bg-[#111827] border-[#{meta.accent}] text-[#e2e8f0]",
       empty_class:
@@ -564,6 +587,15 @@ defmodule Examples.KanbanTodoWindow do
 
   defp notice_class(:success),
     do: "p-2 rounded-lg border-1 border-[#166534] bg-[#14532d] text-[#dcfce7]"
+
+  defp metric_class(:open),
+    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#2563eb] bg-[#111827] min-w-32"
+
+  defp metric_class(:blocked),
+    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#991b1b] bg-[#111827] min-w-32"
+
+  defp metric_class(:done),
+    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#166534] bg-[#111827] min-w-32"
 
   defp task_sort_key(task), do: {priority_rank(task.priority), task.id}
 
