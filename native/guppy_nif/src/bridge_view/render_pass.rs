@@ -1,6 +1,6 @@
 use super::{
-    BridgeRetainedState, BridgeView, events, render_checkbox, render_div, render_image,
-    render_scroll, render_spacer, render_text, render_text_input,
+    BridgeRetainedState, BridgeView, events, render_checkbox, render_div, render_icon,
+    render_image, render_scroll, render_spacer, render_text, render_text_input,
 };
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
@@ -104,6 +104,9 @@ impl<'a> RenderPass<'a> {
                 *object_fit,
                 *grayscale,
             ),
+            IrNode::Icon { id, source, style } => {
+                render_icon::render(self, path, id.as_deref(), source, style)
+            }
             IrNode::Checkbox(node) => render_checkbox::render(self, path, node, window, cx),
             IrNode::Spacer { id, style } => render_spacer::render(self, path, id.as_deref(), style),
             IrNode::Div(div) => {

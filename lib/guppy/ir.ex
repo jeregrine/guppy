@@ -247,6 +247,13 @@ defmodule Guppy.IR do
           optional(:grayscale) => boolean()
         }
 
+  @type icon_node :: %{
+          required(:kind) => :icon,
+          required(:source) => image_source(),
+          optional(:id) => node_id(),
+          optional(:style) => style()
+        }
+
   @type button_node :: %{
           required(:kind) => :button,
           required(:label) => String.t(),
@@ -310,6 +317,7 @@ defmodule Guppy.IR do
           | div_node()
           | scroll_node()
           | image_node()
+          | icon_node()
           | button_node()
           | checkbox_node()
           | spacer_node()
@@ -540,6 +548,16 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
   end
 
+  @spec icon(image_source(), keyword()) :: icon_node()
+  def icon(source, opts \\ []) when is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+
+    %{kind: :icon, source: source}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+  end
+
   @spec checkbox(String.t(), boolean(), keyword()) :: checkbox_node()
   def checkbox(label, checked, opts \\ [])
       when is_binary(label) and is_boolean(checked) and is_list(opts) do
@@ -685,6 +703,14 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_image_object_fit(Map.get(node, :object_fit)),
          :ok <- validate_optional_boolean(Map.get(node, :grayscale), :grayscale) do
+      :ok
+    end
+  end
+
+  defp validate_node(%{kind: :icon, source: source} = node) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_image_source(source),
+         :ok <- validate_style(Map.get(node, :style)) do
       :ok
     end
   end

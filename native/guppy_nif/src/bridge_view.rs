@@ -2,6 +2,7 @@ mod events;
 mod identity;
 mod render_checkbox;
 mod render_div;
+mod render_icon;
 mod render_image;
 mod render_pass;
 mod render_scroll;

@@ -44,6 +44,7 @@ defmodule Guppy.TemplateExample do
       <checkbox id="tos_checkbox" checked="true" change="toggle_tos" class="gap-2 items-center">
         Accept terms
       </checkbox>
+      <icon id="release_icon" embedded="icons/release.svg" class="w-[24px] h-[24px]" />
       <image id="hero_image" uri="https://example.com/demo.png" object_fit="cover" grayscale="true" class="w-[240px] h-[120px] rounded-lg" />
       <scroll id="items" axis="y" class="flex-1 gap-2">
         <div :for={item <- @items} id={"item_#{item.id}"} class="rounded-md border-1 border-white p-2">
@@ -199,6 +200,15 @@ defmodule GuppyTest do
     assert checkbox_ir.checked == true
     assert checkbox_ir.tab_index == 5
     assert checkbox_ir.events == %{change: "toggle_ship", focus: "focus_ship", blur: "blur_ship"}
+
+    icon_ir =
+      Guppy.IR.icon({:path, "/tmp/release.svg"},
+        id: "release_icon",
+        style: [{:w_px, 18}, {:h_px, 18}]
+      )
+
+    assert :ok = Guppy.IR.validate(icon_ir)
+    assert icon_ir.source == {:path, "/tmp/release.svg"}
 
     button_ir =
       Guppy.IR.button(
@@ -680,6 +690,9 @@ defmodule GuppyTest do
     assert {:error, {:grayscale, "yes"}} =
              Guppy.IR.validate(Guppy.IR.image("logo.png", grayscale: "yes"))
 
+    assert {:error, {:invalid_image_source, {:uri, 123}}} =
+             Guppy.IR.validate(Guppy.IR.icon({:uri, 123}))
+
     assert {:error, {:disabled, "yes"}} =
              Guppy.IR.validate(Guppy.IR.checkbox("Ship", true, disabled: "yes"))
 
@@ -717,7 +730,7 @@ defmodule GuppyTest do
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
-    [title_wrapper, button, checkbox, image, scroll, text_input, footer] = ir.children
+    [title_wrapper, button, checkbox, icon, image, scroll, text_input, footer] = ir.children
 
     assert title_wrapper.kind == :div
     assert title_wrapper.children == [%{kind: :text, content: "Template demo", id: "title"}]
@@ -734,6 +747,12 @@ defmodule GuppyTest do
     assert checkbox.label == "Accept terms"
     assert checkbox.checked == true
     assert checkbox.events == %{change: "toggle_tos"}
+
+    assert icon.kind == :icon
+    assert icon.id == "release_icon"
+    assert icon.source == {:embedded, "icons/release.svg"}
+    assert {:w_px, 24} in icon.style
+    assert {:h_px, 24} in icon.style
 
     assert image.kind == :image
     assert image.id == "hero_image"

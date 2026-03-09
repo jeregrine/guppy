@@ -13,6 +13,7 @@ defmodule Guppy.Component do
   - `<checkbox />`
   - `<scroll>`
   - `<image />`
+  - `<icon />`
   - `<spacer />`
   - `<text_input />`
 

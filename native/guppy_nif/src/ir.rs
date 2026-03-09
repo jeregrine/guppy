@@ -385,6 +385,11 @@ pub enum IrNode {
         object_fit: ImageObjectFit,
         grayscale: bool,
     },
+    Icon {
+        id: Option<String>,
+        source: ImageSource,
+        style: DivStyle,
+    },
     Checkbox(Box<CheckboxNode>),
     Spacer {
         id: Option<String>,
@@ -449,6 +454,11 @@ impl IrNode {
                 style: get_div_style(map)?,
                 object_fit: get_image_object_fit_field(map)?,
                 grayscale: get_boolean_field(map, "grayscale")?,
+            }),
+            "icon" => Ok(Self::Icon {
+                id,
+                source: get_image_source_field(map)?,
+                style: get_div_style(map)?,
             }),
             "checkbox" => Ok(Self::Checkbox(Box::new(CheckboxNode {
                 id,

@@ -146,6 +146,7 @@ defmodule Guppy.Component.Compiler do
         "text_input" -> compile_text_input(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
         "image" -> compile_image(attrs, xmlElement(element, :content), caller)
+        "icon" -> compile_icon(attrs, xmlElement(element, :content), caller)
         "spacer" -> compile_spacer(attrs, xmlElement(element, :content), caller)
         other -> compile_component(other, attrs, xmlElement(element, :content), caller)
       end
@@ -257,6 +258,22 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.image(unquote(source), unquote(opts))
+    end
+  end
+
+  defp compile_icon(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, icon_allowed_attrs(), "icon", caller)
+    assert_empty_element!(content, "icon", caller)
+    source = build_image_source_ast(attrs, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style)
+      ])
+
+    quote do
+      Guppy.IR.icon(unquote(source), unquote(opts))
     end
   end
 
@@ -988,6 +1005,10 @@ defmodule Guppy.Component.Compiler do
       "class",
       "style"
     ]
+  end
+
+  defp icon_allowed_attrs do
+    [":if", ":for", "id", "src", "path", "uri", "embedded", "class", "style"]
   end
 
   defp checkbox_allowed_attrs do
