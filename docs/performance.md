@@ -37,7 +37,9 @@ Selected results from `mix run bench/guppy_bench.exs`:
 | `Guppy.render/2` native request latency | 49.32 ms | 51.21 ms |
 | Kanban initial render tree build | 149.42 μs | 231.22 μs |
 | Kanban scroll interaction tree build | 150.01 μs | 228.91 μs |
-| High-frequency scroll payload encode | 0.49 μs | 0.54 μs |
+| High-frequency mouse move payload encode | 0.46 μs | 0.50 μs |
+| High-frequency drag move payload encode | 0.46 μs | 0.50 μs |
+| High-frequency scroll wheel payload encode | 0.46 μs | 0.50 μs |
 
 ## Release native snapshot
 
@@ -58,6 +60,7 @@ After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.ex
 - `Guppy.IR.validated!/1` can wrap static or trusted trees after one validation pass so repeated `open_window`/`render` calls skip Elixir-side validation while still unwrapping before native decode.
 - `Guppy.Window` routed event-to-rerender coverage uses native-shaped server delivery; actual GPUI-generated event delivery still needs end-to-end coverage.
 - The repeated routed-event snapshot is measurement-only; current release results do not justify default `Guppy.Window` batching/debounce without stronger evidence of user-visible pressure.
+- Current high-frequency payload encode measurements for mouse move, drag move, and scroll wheel are sub-microsecond and do not justify adding default event coalescing without native delivery evidence.
 - Use release native builds for interactive/manual performance checks:
 
 ```sh

@@ -78,7 +78,7 @@ Current known benchmark coverage:
 - native-side performance counters for Rust boundary IR/options encode-decode timing
 - event-to-rerender proxy latency
 - `Guppy.Window` routed event-to-rerender latency and repeated routed-event pressure through native-shaped server event delivery; current release measurements do not justify default rerender batching/debounce
-- high-frequency event payload pressure: mouse move, drag move, scroll wheel
+- high-frequency event payload pressure: mouse move, drag move, scroll wheel; current payload encode measurements do not justify default coalescing
 - kanban scenario: initial render, add card, move card, edit card, scroll interaction
 - debug and release native benchmark snapshots documented in `docs/performance.md`
 - prevalidated IR wrapper for trusted/static trees to skip repeated Elixir validation
@@ -86,10 +86,6 @@ Current known benchmark coverage:
 Remaining performance work:
 
 1. Add a GPUI-generated end-to-end event-to-rerender benchmark using actual native event delivery.
-2. Coalesce high-frequency native events where measurement shows pressure:
-   - mouse move
-   - drag move
-   - scroll wheel
 
 ## Phase 2: GPUI compliance hardening
 
