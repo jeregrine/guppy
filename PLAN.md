@@ -144,6 +144,8 @@ mix run bench/guppy_bench.exs
 mix run bench/guppy_bench.exs --native # includes hidden-window native render latency when available
 ```
 
+Current baseline notes: `docs/performance.md`.
+
 Required benchmark areas:
 
 - `~G` template render cost for 10/100/1_000 nodes
