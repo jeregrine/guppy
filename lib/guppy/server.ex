@@ -189,6 +189,20 @@ defmodule Guppy.Server do
     end
   end
 
+  def handle_info({:guppy_native_event, view_id, :window_close_requested, _payload}, state)
+      when is_integer(view_id) do
+    case Map.fetch(state.views, view_id) do
+      {:ok, owner} ->
+        send(owner, {:guppy_event, view_id, %{type: :window_close_requested}})
+        emit_event_route_telemetry(view_id, :window_close_requested, :ok)
+        {:noreply, state}
+
+      :error ->
+        emit_event_route_telemetry(view_id, :window_close_requested, :unknown_view_id)
+        {:noreply, state}
+    end
+  end
+
   def handle_info({:guppy_native_event, view_id, :window_closed, _payload}, state)
       when is_integer(view_id) do
     case Map.fetch(state.views, view_id) do

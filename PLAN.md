@@ -194,11 +194,10 @@ Deferred primitive areas:
 
 ### Started in runtime hardening: native request containment and lifecycle telemetry
 
-Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage. Known and unknown native close events are covered by event-route telemetry tests. Server-mediated native requests now contain native wrapper crashes/exits and report `{:error, :runtime_unavailable}` instead of crashing `Guppy.Server`.
+Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage. Known and unknown native close events are covered by event-route telemetry tests. Native window close attempts now emit `window_close_requested` before `window_closed`, so owners can observe close intent before server cleanup. Server-mediated native requests now contain native wrapper crashes/exits and report `{:error, :runtime_unavailable}` instead of crashing `Guppy.Server`.
 
 Remaining runtime scope:
 
-- close-request lifecycle hardening beyond current `window_closed` routing
 - native runtime restart/reinitialization strategy after hard failures
 - keyed subtree diffing only if benchmarks demand it
 - cross-platform strategy beyond macOS

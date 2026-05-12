@@ -949,6 +949,11 @@ defmodule GuppyTest do
       assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
                       %{view_id: -1, type: :click, status: :unknown_view_id}}
 
+      send(Guppy.server(), {:guppy_native_event, -1, :window_close_requested, :undefined})
+
+      assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
+                      %{view_id: -1, type: :window_close_requested, status: :unknown_view_id}}
+
       send(Guppy.server(), {:guppy_native_event, -1, :window_closed, :undefined})
 
       assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
@@ -1785,6 +1790,15 @@ defmodule GuppyTest do
         close_route_handler_id = {__MODULE__, self(), :known_window_closed_route}
         :ok = attach_forwarding_telemetry(close_route_handler_id, [:guppy, :event, :route])
         on_exit(fn -> :telemetry.detach(close_route_handler_id) end)
+
+        send(Guppy.server(), {:guppy_native_event, view_id, :window_close_requested, :undefined})
+
+        assert_receive {:guppy_event, ^view_id, %{type: :window_close_requested}}
+
+        assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
+                        %{view_id: ^view_id, type: :window_close_requested, status: :ok}}
+
+        assert Map.has_key?(Guppy.info().views, view_id)
 
         send(Guppy.server(), {:guppy_native_event, view_id, :window_closed, :undefined})
 

@@ -33,7 +33,7 @@ Statuses:
 | `examples/list_example.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | variable-height `list`/`ListState` behavior and custom scrollbar parity | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/mouse_pressure.rs` | mouse event callbacks | partial | pressure payload is not exposed; basic mouse down/up/move payloads are routed | server routing tests cover pointer events; pressure explicitly deferred |
 | `examples/move_entity_between_windows.rs` | none | out of scope | direct GPUI entity migration conflicts with Elixir-owned IR/window ownership model | explicitly out of scope for current architecture |
-| `examples/on_window_close_quit.rs` | `Guppy.close_window/2` | partial | close-request event lifecycle parity | tests cover close API, not native close-request event |
+| `examples/on_window_close_quit.rs` | `Guppy.close_window/2`; native `window_close_requested` and `window_closed` events | partial | close-request cannot be vetoed synchronously by Elixir yet | server route tests cover close-request and closed lifecycle events |
 | `examples/opacity.rs` | style token `{:opacity, value}` | partial | exact visual parity not smoke-tested | IR/style validation |
 | `examples/ownership_post.rs` | `Guppy.Server` owner tracking | partial | direct GPUI entity ownership scenario not ported | server tests |
 | `examples/painting.rs` | none | unsupported | custom painting/canvas deferred; would require a new retained drawing primitive | explicitly deferred in PLAN; no implementation |

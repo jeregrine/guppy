@@ -80,6 +80,7 @@ rustler::atoms! {
     source_id,
     unknown_view_id,
     value,
+    window_close_requested,
     window_closed,
     x,
     y,
@@ -370,6 +371,12 @@ pub(crate) fn notify_gui_started(status: i32) {
     let mut gui_status = GUI_STATUS.lock().expect("gui status lock poisoned");
     *gui_status = status;
     GUI_STATUS_COND.notify_all();
+}
+
+pub(crate) fn send_window_close_requested_event(view_id: u64) -> i32 {
+    send_event(view_id, window_close_requested(), |env| {
+        rustler::types::atom::undefined().encode(env)
+    })
 }
 
 pub(crate) fn send_window_closed_event(view_id: u64) -> i32 {

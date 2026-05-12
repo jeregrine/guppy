@@ -99,6 +99,8 @@ pub fn open_window(view_id: u64, ir: IrNode, options: WindowOptionsConfig) -> i3
                     }
 
                     window.on_window_should_close(cx, move |_window, _cx| {
+                        let _ = crate::send_window_close_requested_event(view_id);
+
                         WINDOWS.with(|windows| {
                             windows.borrow_mut().remove(&view_id);
                         });
