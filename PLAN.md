@@ -42,9 +42,9 @@ mix run examples/hello_world.exs
 
 For performance-sensitive changes, run benchmarks or probes from `docs/performance.md` before optimizing.
 
-## Active phase: primitive expansion
+## Completed primitive expansion baseline
 
-The next useful work is adding missing high-value primitives that are already visible in the GPUI compliance matrix. Do not add widgets casually: each primitive must be implemented end-to-end and backed by tests, docs, examples, and matrix updates.
+High-value primitives visible in the GPUI compliance matrix now have a useful baseline. Do not add more widgets casually: each future primitive must be explicitly prioritized, implemented end-to-end, and backed by tests, docs, examples, and matrix updates.
 
 ### Primitive definition of done
 
@@ -210,7 +210,7 @@ Current runtime decisions:
 - keyed subtree diffing remains deferred until benchmarks show full-tree replacement is the bottleneck
 - cross-platform behavior beyond macOS remains a distribution/support strategy item, not a blocker for the current local source build
 
-## Ongoing maintenance while expanding primitives
+## Ongoing maintenance
 
 Keep these current as part of feature work:
 
@@ -221,21 +221,23 @@ Keep these current as part of feature work:
 
 Performance guidance remains: do not add default scroll debounce, high-frequency event coalescing, or `Guppy.Window` rerender batching without measurements proving the need.
 
-## Active next phase: distribution hardening
+## Completed distribution hardening baseline
 
-Distribution hardening is the next major phase.
+Distribution hardening has a baseline plan and source-build gate. Precompiled artifacts are intentionally deferred until publishing is actually being prepared.
 
-Started scope:
+Delivered scope:
 
 - source-build targets and current macOS-first assumptions are documented in `docs/distribution.md`
 - precompiled artifact gates and the initial target matrix are documented in `docs/distribution.md`
+- release-process expectations for native artifacts are documented in `docs/distribution.md`
 - `.github/workflows/check.yml` validates the macOS source-build fallback by running `mix guppy.native.build` and `scripts/check`
+- local source builds remain the supported fallback path
 
-Remaining scope:
+Deferred until publish/release work:
 
-- add `rustler_precompiled` only after source builds remain green and artifact naming/loading is clear
-- add precompiled artifact build/load validation for every advertised target
-- preserve local source builds as the fallback path
+- adding `rustler_precompiled`
+- precompiled artifact build/load validation for every advertised target
+- claiming any target as precompiled-supported
 
 ## Non-goals for now
 

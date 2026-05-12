@@ -318,12 +318,12 @@ Especially if you change:
 
 ## What to prioritize next
 
-Follow `PLAN.md`. The active phase is distribution hardening; primitive expansion and runtime hardening have useful baselines, and remaining large widgets should stay deferred unless explicitly reprioritized.
+Follow `PLAN.md`. Primitive expansion, runtime hardening, compliance tracking, and distribution planning now have useful baselines. Prefer bug fixes, evidence-backed hardening, or explicitly requested features over speculative new surface area.
 
 Current priority order:
 
-1. plan `rustler_precompiled` artifact naming/loading while preserving local source builds
-2. add precompiled artifact build/load validation for supported targets before publishing
+1. keep `scripts/check` and the macOS source-build CI path green
+2. add `rustler_precompiled` only when publishing/precompiled artifacts are explicitly prioritized
 3. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
 4. full editor/rich-text parity only if explicitly scoped
 
