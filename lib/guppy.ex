@@ -86,4 +86,9 @@ defmodule Guppy do
   def native_gui_status do
     Guppy.Native.Nif.gui_status()
   end
+
+  @doc "Returns native-side performance counters when the NIF is loaded."
+  def native_performance_counters do
+    Guppy.Native.Nif.performance_counters()
+  end
 end

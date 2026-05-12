@@ -8,9 +8,10 @@ use crate::ir::IrNode;
 use crate::window_options::WindowOptionsConfig;
 use rustler::{Atom, Encoder, Env, Error, LocalPid, NifResult, OwnedEnv, Term};
 use std::ffi::{CString, c_char, c_void};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Condvar, Mutex};
+use std::time::{Duration, Instant};
 
 #[cfg(target_os = "macos")]
 type ErlNifTid = *mut c_void;
@@ -89,6 +90,16 @@ static GUI_STARTED: AtomicBool = AtomicBool::new(false);
 static GUI_STATUS: Mutex<i32> = Mutex::new(0);
 static GUI_STATUS_COND: Condvar = Condvar::new();
 static EVENT_TARGET: Mutex<Option<LocalPid>> = Mutex::new(None);
+static OPEN_IR_TO_BINARY_COUNT: AtomicU64 = AtomicU64::new(0);
+static OPEN_IR_TO_BINARY_NANOS: AtomicU64 = AtomicU64::new(0);
+static OPEN_IR_DECODE_COUNT: AtomicU64 = AtomicU64::new(0);
+static OPEN_IR_DECODE_NANOS: AtomicU64 = AtomicU64::new(0);
+static OPEN_OPTIONS_DECODE_COUNT: AtomicU64 = AtomicU64::new(0);
+static OPEN_OPTIONS_DECODE_NANOS: AtomicU64 = AtomicU64::new(0);
+static RENDER_IR_TO_BINARY_COUNT: AtomicU64 = AtomicU64::new(0);
+static RENDER_IR_TO_BINARY_NANOS: AtomicU64 = AtomicU64::new(0);
+static RENDER_IR_DECODE_COUNT: AtomicU64 = AtomicU64::new(0);
+static RENDER_IR_DECODE_NANOS: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(target_os = "macos")]
 static GUI_THREAD: Mutex<Option<usize>> = Mutex::new(None);
@@ -127,6 +138,40 @@ fn native_gui_status() -> &'static str {
     }
 }
 
+#[rustler::nif]
+fn native_performance_counters<'a>(env: Env<'a>) -> Term<'a> {
+    let pairs = vec![
+        counter_pair(env, "open_ir_to_binary_count", &OPEN_IR_TO_BINARY_COUNT),
+        counter_pair(
+            env,
+            "open_ir_to_binary_native_time_ns",
+            &OPEN_IR_TO_BINARY_NANOS,
+        ),
+        counter_pair(env, "open_ir_decode_count", &OPEN_IR_DECODE_COUNT),
+        counter_pair(env, "open_ir_decode_native_time_ns", &OPEN_IR_DECODE_NANOS),
+        counter_pair(env, "open_options_decode_count", &OPEN_OPTIONS_DECODE_COUNT),
+        counter_pair(
+            env,
+            "open_options_decode_native_time_ns",
+            &OPEN_OPTIONS_DECODE_NANOS,
+        ),
+        counter_pair(env, "render_ir_to_binary_count", &RENDER_IR_TO_BINARY_COUNT),
+        counter_pair(
+            env,
+            "render_ir_to_binary_native_time_ns",
+            &RENDER_IR_TO_BINARY_NANOS,
+        ),
+        counter_pair(env, "render_ir_decode_count", &RENDER_IR_DECODE_COUNT),
+        counter_pair(
+            env,
+            "render_ir_decode_native_time_ns",
+            &RENDER_IR_DECODE_NANOS,
+        ),
+    ];
+
+    map_from_pairs(env, pairs)
+}
+
 #[rustler::nif(schedule = "DirtyIo")]
 fn native_open_window<'a>(
     env: Env<'a>,
@@ -134,12 +179,32 @@ fn native_open_window<'a>(
     ir: Term<'a>,
     opts: Term<'a>,
 ) -> NifResult<Term<'a>> {
+    let to_binary_started_at = Instant::now();
     let ir_binary = ir.to_binary();
+    record_counter(
+        &OPEN_IR_TO_BINARY_COUNT,
+        &OPEN_IR_TO_BINARY_NANOS,
+        to_binary_started_at.elapsed(),
+    );
+
     let opts_binary = opts.to_binary();
 
+    let options_decode_started_at = Instant::now();
     let options =
         WindowOptionsConfig::decode_etf(opts_binary.as_slice()).map_err(|_| Error::BadArg)?;
+    record_counter(
+        &OPEN_OPTIONS_DECODE_COUNT,
+        &OPEN_OPTIONS_DECODE_NANOS,
+        options_decode_started_at.elapsed(),
+    );
+
+    let ir_decode_started_at = Instant::now();
     let ir = IrNode::decode_etf(ir_binary.as_slice()).map_err(|_| Error::BadArg)?;
+    record_counter(
+        &OPEN_IR_DECODE_COUNT,
+        &OPEN_IR_DECODE_NANOS,
+        ir_decode_started_at.elapsed(),
+    );
 
     let result = request_i32(|reply| main_thread_runtime::MainThreadRequest::OpenWindow {
         view_id,
@@ -161,8 +226,21 @@ fn native_set_event_target(pid: LocalPid) -> Atom {
 
 #[rustler::nif(schedule = "DirtyIo")]
 fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>) -> NifResult<Term<'a>> {
+    let to_binary_started_at = Instant::now();
     let ir_binary = ir.to_binary();
+    record_counter(
+        &RENDER_IR_TO_BINARY_COUNT,
+        &RENDER_IR_TO_BINARY_NANOS,
+        to_binary_started_at.elapsed(),
+    );
+
+    let ir_decode_started_at = Instant::now();
     let ir = IrNode::decode_etf(ir_binary.as_slice()).map_err(|_| Error::BadArg)?;
+    record_counter(
+        &RENDER_IR_DECODE_COUNT,
+        &RENDER_IR_DECODE_NANOS,
+        ir_decode_started_at.elapsed(),
+    );
 
     let result =
         request_i32(|reply| main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply })
@@ -355,6 +433,19 @@ fn mouse_button_atom(code: i32) -> Atom {
 fn map_from_pairs<'a>(env: Env<'a>, pairs: Vec<(Term<'a>, Term<'a>)>) -> Term<'a> {
     let (keys, values): (Vec<_>, Vec<_>) = pairs.into_iter().unzip();
     Term::map_from_term_arrays(env, &keys, &values).expect("event payload map construction failed")
+}
+
+fn counter_pair<'a>(env: Env<'a>, key: &'static str, counter: &AtomicU64) -> (Term<'a>, Term<'a>) {
+    (key.encode(env), counter.load(Ordering::Relaxed).encode(env))
+}
+
+fn record_counter(count: &AtomicU64, nanos: &AtomicU64, duration: Duration) {
+    count.fetch_add(1, Ordering::Relaxed);
+    nanos.fetch_add(duration_to_u64_nanos(duration), Ordering::Relaxed);
+}
+
+fn duration_to_u64_nanos(duration: Duration) -> u64 {
+    duration.as_nanos().min(u128::from(u64::MAX)) as u64
 }
 
 fn send_id_callback_event(view_id: u64, event: Atom, node_id: &str, callback_id: &str) -> i32 {

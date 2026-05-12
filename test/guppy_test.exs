@@ -756,6 +756,34 @@ defmodule GuppyTest do
     end
   end
 
+  test "native performance counters expose Rust boundary timing" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        assert {:ok, before_counters} = Guppy.native_performance_counters()
+        assert is_map(before_counters)
+        assert is_integer(before_counters["render_ir_decode_count"])
+        assert is_integer(before_counters["render_ir_decode_native_time_ns"])
+        assert is_integer(before_counters["open_ir_decode_count"])
+        assert is_integer(before_counters["open_ir_decode_native_time_ns"])
+
+        ir = Guppy.IR.text("counter probe", id: "counter_probe")
+        {:ok, view_id} = Guppy.open_window(ir, self(), show: false)
+        on_exit(fn -> maybe_close(view_id) end)
+        assert :ok = Guppy.render(view_id, ir)
+
+        assert {:ok, after_counters} = Guppy.native_performance_counters()
+
+        assert after_counters["open_ir_decode_count"] >=
+                 before_counters["open_ir_decode_count"] + 1
+
+        assert after_counters["render_ir_decode_count"] >=
+                 before_counters["render_ir_decode_count"] + 1
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.native_performance_counters()
+    end
+  end
+
   test "native event routing emits telemetry" do
     handler_id = {__MODULE__, self(), :event_route_telemetry}
 

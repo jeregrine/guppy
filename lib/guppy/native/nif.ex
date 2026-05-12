@@ -81,6 +81,10 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_performance_counters do
+    {:error, :nif_not_loaded}
+  end
+
   def native_open_window(_view_id, _ir, _opts) do
     {:error, :nif_not_loaded}
   end
@@ -118,6 +122,13 @@ defmodule Guppy.Native.Nif do
   def gui_status do
     case load_status() do
       :ok -> {:ok, native_gui_status() |> native_string_to_string()}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  def performance_counters do
+    case load_status() do
+      :ok -> {:ok, native_performance_counters()}
       {:error, reason} -> {:error, reason}
     end
   end

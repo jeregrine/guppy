@@ -43,6 +43,7 @@ Selected results from `mix run bench/guppy_bench.exs`:
 
 - This is a baseline, not a promise of stable performance yet.
 - Runtime telemetry is available at `[:guppy, :native, :nif]` for direct Rustler NIF call latency, `[:guppy, :native, :request]` for server-mediated native request latency, `[:guppy, :event, :route]` for native event routing, and `[:guppy, :window, :rerender]` for `Guppy.Window` rerender latency.
+- `Guppy.native_performance_counters/0` exposes native-side counters for Rust boundary IR/options encode-decode timing.
 - `Guppy.Window` routed event-to-rerender coverage uses native-shaped server delivery; actual GPUI-generated event delivery still needs end-to-end coverage.
 - The repeated routed-event snapshot is measurement-only; no default batching/debounce has been added without stronger evidence of user-visible pressure.
 - Use release native builds for interactive/manual performance checks:
