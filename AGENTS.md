@@ -67,7 +67,7 @@ Important current invariants:
 - main-thread request drain scheduling is coalesced with an atomic scheduled flag
 - ETF IR field lookup keys are cached in Rust
 - native style lists use `Arc<[StyleOp]>`
-- pooled `ErlNifEnv` for event emission was tried and backed out because it regressed scrolling; event emission uses normal per-event env allocation again
+- native event emission is implemented in Rust through Rustler `OwnedEnv`/`LocalPid` support
 
 ### Performance guidance
 
@@ -218,7 +218,9 @@ Reference-only paths:
 
 - `../zed` — Zed checkout for GPUI reference
 - `../zed/crates/gpui` — GPUI source reference
-- `../guppy-plan.md` — evolving project plan
+- `PLAN.md` — active forward-looking project plan
+- `docs/performance.md` — benchmark commands and baseline notes
+- `docs/gpui-compliance.md` — GPUI compatibility matrix
 - `~/projects/otp` — OTP/wx internals
 
 ## Build and test workflow
@@ -243,6 +245,12 @@ Run tests:
 mix test
 ```
 
+Run the full local check suite:
+
+```bash
+scripts/check
+```
+
 Run the main examples:
 
 ```bash
@@ -265,6 +273,15 @@ mix guppy.native.build --release
 mix run examples/kanban_todo.exs
 ```
 
+For performance-sensitive changes, run:
+
+```bash
+mix run bench/guppy_bench.exs
+mix run bench/guppy_bench.exs --native
+```
+
+On macOS, `mix guppy.native.build` codesigns the copied NIF artifact in `priv/native/` to avoid stale ad-hoc signature kills after rebuilds.
+
 Especially if you change:
 
 - `native/guppy_nif/src/lib.rs`
@@ -276,9 +293,16 @@ Especially if you change:
 
 ## What to prioritize next
 
-Prefer real structural work over design-system abstraction.
+Prefer real structural hardening over design-system abstraction or new widgets.
 
-Good next targets:
+Follow `PLAN.md`. Current priority order:
+
+1. performance hardening with Benchee/native measurements
+2. GPUI compliance hardening and matrix-backed example ports
+3. supported primitive expansion only after the above has evidence
+4. runtime hardening and distribution work
+
+When primitive expansion resumes, likely targets are:
 
 1. `textarea/editor`
 2. radio/select primitives
