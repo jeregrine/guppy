@@ -169,20 +169,26 @@ defmodule Guppy.Bench do
   end
 
   defp native_render_latency do
-    ir = kanban_tree(columns: 4, cards: 40)
-
-    case Guppy.open_window(ir, self(), show: false) do
-      {:ok, view_id} ->
-        Benchee.run(
-          %{"Guppy.render/2 native request latency" => fn -> :ok = Guppy.render(view_id, ir) end},
-          benchee_opts()
-        )
-
-        :ok = Guppy.close_window(view_id)
-
-      {:error, reason} ->
-        IO.puts("skip native render/request latency; open_window failed: #{inspect(reason)}")
-    end
+    Benchee.run(
+      %{
+        "Guppy.render/2 native request latency" =>
+          {fn {view_id, ir} ->
+             :ok = Guppy.render(view_id, ir)
+           end,
+           before_scenario: fn _input ->
+             ir = kanban_tree(columns: 4, cards: 40)
+             {:ok, view_id} = Guppy.open_window(ir, self(), show: false)
+             {view_id, ir}
+           end,
+           after_scenario: fn {view_id, _ir} ->
+             :ok = Guppy.close_window(view_id)
+           end}
+      },
+      benchee_opts()
+    )
+  rescue
+    error ->
+      IO.puts("skip native render/request latency; benchmark setup failed: #{Exception.message(error)}")
   end
 end
 
