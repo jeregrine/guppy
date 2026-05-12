@@ -74,7 +74,10 @@ pub(crate) fn render(
 #[cfg(test)]
 mod tests {
     use super::{TextInputSpec, upsert_text_input_entity};
-    use crate::{bridge_view::BridgeView, ir::IrNode};
+    use crate::{
+        bridge_view::BridgeView,
+        ir::{DivStyle, IrNode},
+    };
 
     #[gpui::test]
     fn upsert_text_input_reuses_existing_entity_and_syncs_state(cx: &mut gpui::TestAppContext) {
@@ -86,7 +89,7 @@ mod tests {
 
         view.update_in(cx, |view, _window, view_cx| {
             let mut pass = super::RenderPass::new(view.view_id, &mut view.retained);
-            let style = Vec::new();
+            let style: DivStyle = Vec::new().into();
 
             let first = upsert_text_input_entity(
                 &mut pass,
