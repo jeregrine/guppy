@@ -322,6 +322,25 @@ pub struct CheckboxNode {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct RadioNode {
+    pub id: Option<String>,
+    pub label: String,
+    pub value: String,
+    pub checked: bool,
+    pub style: DivStyle,
+    pub hover_style: DivStyle,
+    pub focus_style: DivStyle,
+    pub in_focus_style: DivStyle,
+    pub active_style: DivStyle,
+    pub disabled_style: DivStyle,
+    pub disabled: bool,
+    pub tab_index: Option<isize>,
+    pub change: Option<String>,
+    pub focus: Option<String>,
+    pub blur: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct DivNode {
     pub id: Option<String>,
     pub style: DivStyle,
@@ -400,6 +419,7 @@ pub enum IrNode {
         style: DivStyle,
     },
     Checkbox(Box<CheckboxNode>),
+    Radio(Box<RadioNode>),
     Spacer {
         id: Option<String>,
         style: DivStyle,
@@ -481,6 +501,23 @@ impl IrNode {
             "checkbox" => Ok(Self::Checkbox(Box::new(CheckboxNode {
                 id,
                 label: get_string_field(map, "label")?,
+                checked: get_required_boolean_field(map, "checked")?,
+                style: get_div_style(map)?,
+                hover_style: get_div_hover_style(map)?,
+                focus_style: get_div_focus_style(map)?,
+                in_focus_style: get_div_in_focus_style(map)?,
+                active_style: get_div_active_style(map)?,
+                disabled_style: get_div_disabled_style(map)?,
+                disabled: get_boolean_field(map, "disabled")?,
+                tab_index: get_optional_integer_field(map, "tab_index")?,
+                change: get_change_event(map)?,
+                focus: get_focus_event(map)?,
+                blur: get_blur_event(map)?,
+            }))),
+            "radio" => Ok(Self::Radio(Box::new(RadioNode {
+                id,
+                label: get_string_field(map, "label")?,
+                value: get_string_field(map, "value")?,
                 checked: get_required_boolean_field(map, "checked")?,
                 style: get_div_style(map)?,
                 hover_style: get_div_hover_style(map)?,

@@ -11,6 +11,7 @@ defmodule Guppy.Component do
   - `<text>`
   - `<button>`
   - `<checkbox />`
+  - `<radio />`
   - `<scroll>`
   - `<image />`
   - `<icon />`

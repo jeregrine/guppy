@@ -23,6 +23,8 @@ defmodule Guppy.SuperDemo do
         text_input_changes: 0,
         textarea_value: "Line one\nLine two",
         textarea_changes: 0,
+        selected_priority: "medium",
+        radio_changes: 0,
         mouse_downs: 0,
         mouse_ups: 0,
         mouse_moves: 0,
@@ -224,6 +226,13 @@ defmodule Guppy.SuperDemo do
 
   defp handle_change(state, view_id, %{id: node_id, callback: callback_id, value: value}) do
     cond do
+      view_id == state.main_view_id and node_id in ["priority_low", "priority_medium", "priority_high"] ->
+        state
+        |> Map.put(:selected_priority, value)
+        |> Map.update!(:radio_changes, &(&1 + 1))
+        |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+        |> rerender!()
+
       view_id == state.main_view_id and node_id == "demo_textarea" ->
         state
         |> Map.put(:textarea_value, value)
@@ -825,6 +834,17 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.text("textarea_value = #{inspect(state.textarea_value)}"),
         Guppy.IR.text("textarea_changes = #{state.textarea_changes}"),
+        Guppy.IR.div(
+          [
+            radio_option("Low", "low", state.selected_priority),
+            radio_option("Medium", "medium", state.selected_priority),
+            radio_option("High", "high", state.selected_priority)
+          ],
+          id: "priority_radio_group",
+          style: [:flex, :flex_row, :gap_4]
+        ),
+        Guppy.IR.text("selected_priority = #{state.selected_priority}"),
+        Guppy.IR.text("radio_changes = #{state.radio_changes}"),
         Guppy.IR.div(
           [
             Guppy.IR.text("Pointer pad", id: "pointer_pad_title"),
@@ -2112,6 +2132,18 @@ defmodule Guppy.SuperDemo do
       style:
         [:p_2, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:text_color, :white}] ++
           style
+    )
+  end
+
+  defp radio_option(label, value, selected_value) do
+    Guppy.IR.radio(
+      label,
+      value,
+      value == selected_value,
+      id: "priority_#{value}",
+      style: [:gap_2, :p_2, :rounded_md, :border_1, {:border_color, :white}],
+      active_style: [{:opacity, 0.8}],
+      events: %{change: "priority_changed"}
     )
   end
 

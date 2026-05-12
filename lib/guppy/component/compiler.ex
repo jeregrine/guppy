@@ -55,6 +55,7 @@ defmodule Guppy.Component.Compiler do
   ]
   @text_events ["click"]
   @checkbox_events ["change", "focus", "blur"]
+  @radio_events ["change", "focus", "blur"]
   @text_input_events ["change"]
   @input_attrs ["id", "value", "placeholder", "class", "style", "disabled", "tab_index"]
 
@@ -144,6 +145,7 @@ defmodule Guppy.Component.Compiler do
         "scroll" -> compile_scroll(attrs, xmlElement(element, :content), caller)
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
+        "radio" -> compile_radio(attrs, xmlElement(element, :content), caller)
         "text_input" -> compile_text_input(attrs, caller)
         "textarea" -> compile_textarea(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
@@ -216,25 +218,39 @@ defmodule Guppy.Component.Compiler do
   defp compile_checkbox(attrs, content, caller) do
     assert_allowed_attrs!(attrs, checkbox_allowed_attrs(), "checkbox", caller)
     checked = fetch_required_attr!(attrs, "checked", :boolean, caller)
-    label = build_checkbox_label_ast(attrs, content, caller)
-
-    opts =
-      keyword_ast([
-        maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
-        style_entry(attrs, "hover_class", "hover_style", :hover_style),
-        style_entry(attrs, "focus_class", "focus_style", :focus_style),
-        style_entry(attrs, "in_focus_class", "in_focus_style", :in_focus_style),
-        style_entry(attrs, "active_class", "active_style", :active_style),
-        style_entry(attrs, "disabled_class", "disabled_style", :disabled_style),
-        maybe_attr_entry(attrs, "disabled", :boolean, caller),
-        maybe_attr_entry(attrs, "tab_index", :integer, caller),
-        events_entry(attrs, @checkbox_events, caller)
-      ])
+    label = build_choice_label_ast("checkbox", attrs, content, caller)
+    opts = build_choice_opts(attrs, @checkbox_events, caller)
 
     quote do
       Guppy.IR.checkbox(unquote(label), unquote(checked), unquote(opts))
     end
+  end
+
+  defp compile_radio(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, radio_allowed_attrs(), "radio", caller)
+    checked = fetch_required_attr!(attrs, "checked", :boolean, caller)
+    value = fetch_required_attr!(attrs, "value", :string_or_expr, caller)
+    label = build_choice_label_ast("radio", attrs, content, caller)
+    opts = build_choice_opts(attrs, @radio_events, caller)
+
+    quote do
+      Guppy.IR.radio(unquote(label), unquote(value), unquote(checked), unquote(opts))
+    end
+  end
+
+  defp build_choice_opts(attrs, events, caller) do
+    keyword_ast([
+      maybe_attr_entry(attrs, "id", :string, caller),
+      style_entry(attrs, "class", "style", :style),
+      style_entry(attrs, "hover_class", "hover_style", :hover_style),
+      style_entry(attrs, "focus_class", "focus_style", :focus_style),
+      style_entry(attrs, "in_focus_class", "in_focus_style", :in_focus_style),
+      style_entry(attrs, "active_class", "active_style", :active_style),
+      style_entry(attrs, "disabled_class", "disabled_style", :disabled_style),
+      maybe_attr_entry(attrs, "disabled", :boolean, caller),
+      maybe_attr_entry(attrs, "tab_index", :integer, caller),
+      events_entry(attrs, events, caller)
+    ])
   end
 
   defp compile_text(attrs, content, caller) do
@@ -385,7 +401,7 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
-  defp build_checkbox_label_ast(attrs, content, caller) do
+  defp build_choice_label_ast(tag, attrs, content, caller) do
     has_label_attr? = Map.has_key?(attrs, "label")
     has_content? = has_non_empty_content?(content)
 
@@ -393,7 +409,7 @@ defmodule Guppy.Component.Compiler do
       has_label_attr? and has_content? ->
         raise_compile_error!(
           caller,
-          "checkbox accepts either a label attribute or child text, not both"
+          "#{tag} accepts either a label attribute or child text, not both"
         )
 
       has_label_attr? ->
@@ -403,7 +419,7 @@ defmodule Guppy.Component.Compiler do
         build_string_content_ast(content, caller)
 
       true ->
-        raise_compile_error!(caller, "checkbox requires a label attribute or child text")
+        raise_compile_error!(caller, "#{tag} requires a label attribute or child text")
     end
   end
 
@@ -1023,6 +1039,11 @@ defmodule Guppy.Component.Compiler do
   defp checkbox_allowed_attrs do
     [":if", ":for", "id", "label", "checked", "disabled", "tab_index"] ++
       Enum.map(@style_attr_pairs, &elem(&1, 0)) ++ @checkbox_events
+  end
+
+  defp radio_allowed_attrs do
+    [":if", ":for", "id", "label", "value", "checked", "disabled", "tab_index"] ++
+      Enum.map(@style_attr_pairs, &elem(&1, 0)) ++ @radio_events
   end
 
   defp spacer_allowed_attrs do

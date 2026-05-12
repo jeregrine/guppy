@@ -44,6 +44,9 @@ defmodule Guppy.TemplateExample do
       <checkbox id="tos_checkbox" checked="true" change="toggle_tos" class="gap-2 items-center">
         Accept terms
       </checkbox>
+      <radio id="priority_high" value="high" checked={@priority == "high"} change="priority_changed" class="gap-2 items-center">
+        High priority
+      </radio>
       <icon id="release_icon" embedded="icons/release.svg" class="w-[24px] h-[24px]" />
       <image id="hero_image" uri="https://example.com/demo.png" object_fit="cover" grayscale="true" class="w-[240px] h-[120px] rounded-lg" />
       <scroll id="items" axis="y" class="flex-1 gap-2">
@@ -201,6 +204,31 @@ defmodule GuppyTest do
     assert checkbox_ir.checked == true
     assert checkbox_ir.tab_index == 5
     assert checkbox_ir.events == %{change: "toggle_ship", focus: "focus_ship", blur: "blur_ship"}
+
+    radio_ir =
+      Guppy.IR.radio(
+        "High priority",
+        "high",
+        true,
+        id: "priority_high",
+        style: [:gap_2],
+        disabled: false,
+        tab_index: 2,
+        events: %{change: "priority_changed", focus: "focus_priority", blur: "blur_priority"}
+      )
+
+    assert :ok = Guppy.IR.validate(radio_ir)
+    assert radio_ir.kind == :radio
+    assert radio_ir.label == "High priority"
+    assert radio_ir.value == "high"
+    assert radio_ir.checked == true
+    assert radio_ir.tab_index == 2
+
+    assert radio_ir.events == %{
+             change: "priority_changed",
+             focus: "focus_priority",
+             blur: "blur_priority"
+           }
 
     icon_ir =
       Guppy.IR.icon({:path, "/tmp/release.svg"},
@@ -637,6 +665,9 @@ defmodule GuppyTest do
     assert {:error, {:invalid_ir, %{kind: :button, label: 123}}} =
              Guppy.IR.validate(%{kind: :button, label: 123})
 
+    assert {:error, {:invalid_ir, %{kind: :radio, label: "High", value: 123, checked: true}}} =
+             Guppy.IR.validate(%{kind: :radio, label: "High", value: 123, checked: true})
+
     assert {:error, {:invalid_ir, %{kind: :text_input, value: 123}}} =
              Guppy.IR.validate(%{kind: :text_input, value: 123})
 
@@ -645,6 +676,9 @@ defmodule GuppyTest do
 
     assert {:error, {:invalid_event, :drag_start, "nope"}} =
              Guppy.IR.validate(Guppy.IR.button("Save", events: %{drag_start: "nope"}))
+
+    assert {:error, {:invalid_event, :click, "nope"}} =
+             Guppy.IR.validate(Guppy.IR.radio("High", "high", false, events: %{click: "nope"}))
 
     assert {:error, {:invalid_event, :click, "nope"}} =
              Guppy.IR.validate(Guppy.IR.text_input("Jason", events: %{click: "nope"}))
@@ -853,6 +887,7 @@ defmodule GuppyTest do
         items: [%{id: 1, label: "One"}, %{id: 2, label: "Two"}],
         value: "Jason",
         notes: "Line one\nLine two",
+        priority: "high",
         show_footer: true
       })
 
@@ -862,7 +897,7 @@ defmodule GuppyTest do
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
-    [title_wrapper, button, checkbox, icon, image, scroll, text_input, textarea, footer] =
+    [title_wrapper, button, checkbox, radio, icon, image, scroll, text_input, textarea, footer] =
       ir.children
 
     assert title_wrapper.kind == :div
@@ -880,6 +915,13 @@ defmodule GuppyTest do
     assert checkbox.label == "Accept terms"
     assert checkbox.checked == true
     assert checkbox.events == %{change: "toggle_tos"}
+
+    assert radio.kind == :radio
+    assert radio.id == "priority_high"
+    assert radio.label == "High priority"
+    assert radio.value == "high"
+    assert radio.checked == true
+    assert radio.events == %{change: "priority_changed"}
 
     assert icon.kind == :icon
     assert icon.id == "release_icon"
@@ -1149,6 +1191,18 @@ defmodule GuppyTest do
                      ],
                      id: "scroll_root",
                      style: [{:h_px, 180}, :p_2, :rounded_md, :border_1, {:border_color, :white}]
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
+                   Guppy.IR.radio(
+                     "High priority",
+                     "high",
+                     true,
+                     id: "native_priority_high",
+                     events: %{change: "priority_changed"}
                    )
                  )
 

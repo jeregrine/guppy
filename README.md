@@ -33,6 +33,7 @@ Guppy currently supports these native node kinds:
 - `scroll`
 - `button`
 - `checkbox`
+- `radio`
 - `text_input`
 - `textarea`
 - `image`
@@ -51,6 +52,7 @@ Current native event coverage includes:
 - mouse down / mouse up / mouse move
 - scroll wheel
 - checkbox change
+- radio change
 - text input / textarea change
 - window closed
 
@@ -200,6 +202,7 @@ IR helpers:
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
+- `Guppy.IR.radio/4`
 - `Guppy.IR.text_input/2`
 - `Guppy.IR.textarea/2`
 - `Guppy.IR.image/2`
@@ -274,6 +277,7 @@ Built-in template tags currently include:
 - `<text>`
 - `<button>`
 - `<checkbox>`
+- `<radio>`
 - `<scroll>`
 - `<image />`
 - `<icon />`
@@ -425,7 +429,7 @@ Key files:
 Still missing or intentionally narrow:
 
 - full editor/rich-text parity
-- radio/select primitives
+- select primitive
 - list/uniform-list primitive
 - tooltip/popover primitives
 - richer text runs/highlights

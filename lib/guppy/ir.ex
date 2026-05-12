@@ -304,6 +304,23 @@ defmodule Guppy.IR do
           optional(:events) => checkbox_events()
         }
 
+  @type radio_node :: %{
+          required(:kind) => :radio,
+          required(:label) => String.t(),
+          required(:value) => String.t(),
+          required(:checked) => boolean(),
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:hover_style) => style(),
+          optional(:focus_style) => style(),
+          optional(:in_focus_style) => style(),
+          optional(:active_style) => style(),
+          optional(:disabled_style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => checkbox_events()
+        }
+
   @type spacer_node :: %{
           required(:kind) => :spacer,
           optional(:id) => node_id(),
@@ -342,6 +359,7 @@ defmodule Guppy.IR do
           | icon_node()
           | button_node()
           | checkbox_node()
+          | radio_node()
           | spacer_node()
           | text_input_node()
           | textarea_node()
@@ -584,7 +602,18 @@ defmodule Guppy.IR do
   @spec checkbox(String.t(), boolean(), keyword()) :: checkbox_node()
   def checkbox(label, checked, opts \\ [])
       when is_binary(label) and is_boolean(checked) and is_list(opts) do
+    choice_node(:checkbox, label, checked, opts)
+  end
+
+  @spec radio(String.t(), String.t(), boolean(), keyword()) :: radio_node()
+  def radio(label, value, checked, opts \\ [])
+      when is_binary(label) and is_binary(value) and is_boolean(checked) and is_list(opts) do
+    choice_node(:radio, label, checked, Keyword.put(opts, :value, value))
+  end
+
+  defp choice_node(kind, label, checked, opts) do
     id = Keyword.get(opts, :id)
+    value = Keyword.get(opts, :value)
     style = Keyword.get(opts, :style)
     events = Keyword.get(opts, :events)
     hover_style = Keyword.get(opts, :hover_style)
@@ -595,7 +624,8 @@ defmodule Guppy.IR do
     disabled = Keyword.get(opts, :disabled)
     tab_index = Keyword.get(opts, :tab_index)
 
-    %{kind: :checkbox, label: label, checked: checked}
+    %{kind: kind, label: label, checked: checked}
+    |> maybe_put(:value, value)
     |> maybe_put(:id, id)
     |> maybe_put(:style, style)
     |> maybe_put(:hover_style, hover_style)
@@ -778,18 +808,12 @@ defmodule Guppy.IR do
 
   defp validate_node(%{kind: :checkbox, label: label, checked: checked} = node)
        when is_binary(label) and is_boolean(checked) do
-    with :ok <- validate_id(Map.get(node, :id)),
-         :ok <- validate_style(Map.get(node, :style)),
-         :ok <- validate_style(Map.get(node, :hover_style)),
-         :ok <- validate_style(Map.get(node, :focus_style)),
-         :ok <- validate_style(Map.get(node, :in_focus_style)),
-         :ok <- validate_style(Map.get(node, :active_style)),
-         :ok <- validate_style(Map.get(node, :disabled_style)),
-         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
-         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
-         :ok <- validate_events(Map.get(node, :events), [:change, :focus, :blur]) do
-      :ok
-    end
+    validate_choice_node(node)
+  end
+
+  defp validate_node(%{kind: :radio, label: label, value: value, checked: checked} = node)
+       when is_binary(label) and is_binary(value) and is_boolean(checked) do
+    validate_choice_node(node)
   end
 
   defp validate_node(%{kind: :button, label: label} = node) when is_binary(label) do
@@ -834,6 +858,21 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(other), do: {:error, {:invalid_ir, other}}
+
+  defp validate_choice_node(node) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :hover_style)),
+         :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :in_focus_style)),
+         :ok <- validate_style(Map.get(node, :active_style)),
+         :ok <- validate_style(Map.get(node, :disabled_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
+         :ok <- validate_events(Map.get(node, :events), [:change, :focus, :blur]) do
+      :ok
+    end
+  end
 
   defp validate_children(children) do
     Enum.reduce_while(children, :ok, fn child, :ok ->

@@ -83,14 +83,33 @@ Still out of scope:
 - collaborative/editor entity semantics
 - full Zed editor parity
 
-### Priority 1: radio/select primitives
+### Completed in primitive expansion: radio
 
-Goal: cover common form controls with predictable Elixir-owned state.
+Guppy now has a minimal radio option primitive for Elixir-owned form state.
+
+Delivered scope:
+
+- `Guppy.IR.radio/4`
+- `radio` template tag
+- label, value, checked, disabled, style, tab index, and change/focus/blur events
+- keyboard activation through Enter/Space
+- example coverage in `examples/super_demo.exs`
+- `README.md` supported-surface update
+- `docs/gpui-compliance.md` matrix update for form-control gaps
+
+Still out of scope:
+
+- a retained native radio-group owner; Elixir remains the group state owner
+- select/dropdown controls
+
+### Priority 1: select primitive
+
+Goal: cover common select/dropdown form control scenarios with predictable Elixir-owned state.
 
 Initial scope:
 
-- radio group / radio option or equivalent minimal IR shape
-- select/dropdown if GPUI support is practical; otherwise document missing popover dependency
+- determine whether GPUI 0.2.2 supports a clean select/dropdown primitive
+- if not, document the popover/anchored-overlay dependency and defer native select
 - change events with stable value payloads
 - keyboard/focus behavior as far as GPUI 0.2.2 supports cleanly
 - form-focused example coverage
