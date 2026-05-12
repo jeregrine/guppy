@@ -32,6 +32,17 @@ Important assumptions:
 - the shipped native artifact shape should remain one NIF per target
 - local source builds must continue to work even after precompiled artifacts are added
 
+## CI status
+
+`.github/workflows/check.yml` runs the current macOS source-build gate:
+
+1. install Erlang/Elixir and Rust
+2. fetch Mix dependencies
+3. build the native NIF with `mix guppy.native.build`
+4. run `scripts/check`
+
+This validates the fallback source-build path before any precompiled artifact support is introduced.
+
 ## Precompiled artifact plan
 
 Do not add `rustler_precompiled` until the source-build path and runtime behavior stay stable.

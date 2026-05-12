@@ -229,11 +229,12 @@ Started scope:
 
 - source-build targets and current macOS-first assumptions are documented in `docs/distribution.md`
 - precompiled artifact gates and the initial target matrix are documented in `docs/distribution.md`
+- `.github/workflows/check.yml` validates the macOS source-build fallback by running `mix guppy.native.build` and `scripts/check`
 
 Remaining scope:
 
 - add `rustler_precompiled` only after source builds remain green and artifact naming/loading is clear
-- CI artifact validation for supported targets
+- add precompiled artifact build/load validation for every advertised target
 - release-process documentation for native artifact production
 - preserve local source builds as the fallback path
 

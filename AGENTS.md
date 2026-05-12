@@ -323,7 +323,7 @@ Follow `PLAN.md`. The active phase is distribution hardening; primitive expansio
 Current priority order:
 
 1. plan `rustler_precompiled` artifact naming/loading while preserving local source builds
-2. add CI artifact validation for supported targets before publishing
+2. add precompiled artifact build/load validation for supported targets before publishing
 3. document the native artifact release process
 4. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
 5. full editor/rich-text parity only if explicitly scoped
