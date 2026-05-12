@@ -102,19 +102,20 @@ Still out of scope:
 - a retained native radio-group owner; Elixir remains the group state owner
 - select/dropdown controls
 
-### Priority 1: select primitive
+### Deferred in primitive expansion: select/dropdown
 
-Goal: cover common select/dropdown form control scenarios with predictable Elixir-owned state.
+GPUI 0.2.2 does not expose a simple select/dropdown primitive in the examples or public element surface comparable to text input or checkbox. A native-quality select needs anchored overlay/popover behavior first; implementing a fake always-expanded select would add API surface without matching the intended interaction model.
 
-Initial scope:
+Deferred scope:
 
-- determine whether GPUI 0.2.2 supports a clean select/dropdown primitive
-- if not, document the popover/anchored-overlay dependency and defer native select
-- change events with stable value payloads
-- keyboard/focus behavior as far as GPUI 0.2.2 supports cleanly
-- form-focused example coverage
+- select/dropdown primitive
+- option list overlay positioning
+- outside-click close lifecycle
+- keyboard navigation within the opened option list
 
-### Priority 2: list / uniform-list primitive
+Revisit after tooltip/popover/anchored-overlay support exists.
+
+### Priority 1: list / uniform-list primitive
 
 Goal: support larger repeated UI without forcing every example through giant full trees forever.
 
@@ -127,7 +128,7 @@ Initial scope:
 - benchmark before/after for large lists
 - compliance matrix updates for `examples/list_example.rs`, `examples/uniform_list.rs`, and data-table/tree gaps
 
-### Priority 3: tooltip/popover primitives
+### Priority 2: tooltip/popover primitives
 
 Goal: unlock anchored overlay scenarios after core form/list work.
 
