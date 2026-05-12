@@ -235,7 +235,6 @@ Remaining scope:
 
 - add `rustler_precompiled` only after source builds remain green and artifact naming/loading is clear
 - add precompiled artifact build/load validation for every advertised target
-- release-process documentation for native artifact production
 - preserve local source builds as the fallback path
 
 ## Non-goals for now

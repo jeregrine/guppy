@@ -43,6 +43,24 @@ Important assumptions:
 
 This validates the fallback source-build path before any precompiled artifact support is introduced.
 
+## Release process draft
+
+Until precompiled artifacts exist, a release is source-only:
+
+1. Run `scripts/check`.
+2. Run `mix guppy.native.build --release` on macOS and smoke at least `examples/hello_world.exs`.
+3. Confirm `docs/gpui-compliance.md` still records the current `../zed/crates/gpui` reference.
+4. Update version/changelog metadata when publishing begins.
+5. Do not attach native artifacts unless they were built by CI and load-tested.
+
+Future native artifact release flow:
+
+1. CI builds one NIF artifact per supported target.
+2. CI load-tests each artifact in a clean package install.
+3. macOS artifacts are signed or ad-hoc signed as required by the target packaging model.
+4. Release notes list every target triple and whether source-build fallback remains available.
+5. Failed or untested targets are omitted rather than published optimistically.
+
 ## Precompiled artifact plan
 
 Do not add `rustler_precompiled` until the source-build path and runtime behavior stay stable.

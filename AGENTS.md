@@ -324,9 +324,8 @@ Current priority order:
 
 1. plan `rustler_precompiled` artifact naming/loading while preserving local source builds
 2. add precompiled artifact build/load validation for supported targets before publishing
-3. document the native artifact release process
-4. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
-5. full editor/rich-text parity only if explicitly scoped
+3. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
+4. full editor/rich-text parity only if explicitly scoped
 
 Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
 
