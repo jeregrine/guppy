@@ -219,46 +219,66 @@ defmodule Guppy.Bench do
       %{
         "Guppy.Window routed event-to-rerender latency" =>
           {fn {view_id, _pid, handler_id} ->
-             send(Guppy.server(), {
-               :guppy_native_event,
-               view_id,
-               :click,
-               %{id: "bench_counter_button", callback: "increment"}
-             })
-
-             receive do
-               {:bench_rerender, ^view_id, :ok} -> :ok
-             after
-               1_000 -> raise "timed out waiting for window rerender telemetry"
-             end
-
+             send_counter_click(view_id)
+             wait_for_rerenders(view_id, 1)
              handler_id
            end,
-           before_scenario: fn _input ->
-             {:ok, pid} = Guppy.Bench.CounterWindow.start_link(nil)
-             view_id = Guppy.Window.view_id(pid)
-             handler_id = {__MODULE__, self(), :window_rerender, make_ref()}
-
-             :ok =
-               :telemetry.attach(
-                 handler_id,
-                 [:guppy, :window, :rerender],
-                 &Guppy.Bench.Telemetry.forward_window_rerender/4,
-                 self()
-               )
-
-             {view_id, pid, handler_id}
+           before_scenario: &start_counter_window_scenario/1,
+           after_scenario: &stop_counter_window_scenario/1},
+        "Guppy.Window repeated routed event pressure (10 events)" =>
+          {fn {view_id, _pid, handler_id} ->
+             for _index <- 1..10, do: send_counter_click(view_id)
+             wait_for_rerenders(view_id, 10)
+             handler_id
            end,
-           after_scenario: fn {_view_id, pid, handler_id} ->
-             :telemetry.detach(handler_id)
-             if Process.alive?(pid), do: GenServer.stop(pid, :normal)
-           end}
+           before_scenario: &start_counter_window_scenario/1,
+           after_scenario: &stop_counter_window_scenario/1}
       },
       benchee_opts()
     )
   rescue
     error ->
       IO.puts("skip native event-to-rerender latency; benchmark setup failed: #{Exception.message(error)}")
+  end
+
+  defp start_counter_window_scenario(_input) do
+    {:ok, pid} = Guppy.Bench.CounterWindow.start_link(nil)
+    view_id = Guppy.Window.view_id(pid)
+    handler_id = {__MODULE__, self(), :window_rerender, make_ref()}
+
+    :ok =
+      :telemetry.attach(
+        handler_id,
+        [:guppy, :window, :rerender],
+        &Guppy.Bench.Telemetry.forward_window_rerender/4,
+        self()
+      )
+
+    {view_id, pid, handler_id}
+  end
+
+  defp stop_counter_window_scenario({_view_id, pid, handler_id}) do
+    :telemetry.detach(handler_id)
+    if Process.alive?(pid), do: GenServer.stop(pid, :normal)
+  end
+
+  defp send_counter_click(view_id) do
+    send(Guppy.server(), {
+      :guppy_native_event,
+      view_id,
+      :click,
+      %{id: "bench_counter_button", callback: "increment"}
+    })
+  end
+
+  defp wait_for_rerenders(_view_id, 0), do: :ok
+
+  defp wait_for_rerenders(view_id, remaining) do
+    receive do
+      {:bench_rerender, ^view_id, :ok} -> wait_for_rerenders(view_id, remaining - 1)
+    after
+      1_000 -> raise "timed out waiting for window rerender telemetry"
+    end
   end
 
   defp native_render_latency do

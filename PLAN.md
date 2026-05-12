@@ -76,7 +76,7 @@ Current known benchmark coverage:
 - `Guppy.render/2` hidden-window native request latency
 - runtime telemetry for direct NIF call latency, native request latency, native event routing, and `Guppy.Window` rerender latency
 - event-to-rerender proxy latency
-- `Guppy.Window` routed event-to-rerender latency through native-shaped server event delivery
+- `Guppy.Window` routed event-to-rerender latency and repeated routed-event pressure through native-shaped server event delivery
 - high-frequency event payload pressure: mouse move, drag move, scroll wheel
 - kanban scenario: initial render, add card, move card, edit card, scroll interaction
 
