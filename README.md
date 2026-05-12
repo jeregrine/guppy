@@ -55,6 +55,16 @@ Current native event coverage includes:
 
 That is still intentionally selective. Guppy is not pretending to be a complete widget toolkit yet.
 
+Guppy is **not** all of GPUI from Elixir. It is an Elixir-owned state/render loop targeting a documented GPUI subset. The tracked compatibility matrix lives in [`docs/gpui-compliance.md`](docs/gpui-compliance.md), and new primitives should only be considered supported when they have:
+
+- Elixir IR validation
+- Rust decode support
+- native render implementation
+- event behavior if interactive
+- retained-state behavior if applicable
+- unit or integration tests
+- example or compliance-port coverage
+
 ## Quick start
 
 Build and install the native library:
