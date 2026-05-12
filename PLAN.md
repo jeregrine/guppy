@@ -1,186 +1,101 @@
 # Guppy Hardening Plan
 
-This is the active plan. Older scratch plans were removed because they described completed or superseded architecture work.
+This is the active forward-looking plan. Completed baseline, Rustler migration, benchmark setup, GPUI matrix, and README surface-contract work have been removed from the required-work list.
 
-## Standard
+## Current standard
 
-Guppy should be treated as a serious Elixir/GPUI bridge, not a demo. The bar is:
+Guppy should be treated as a serious Elixir/GPUI bridge, not a demo. Keep the bar at:
 
-- TDD-driven development from here forward
+- TDD-driven development
 - small commits with clear descriptions of what was done and why
-- one clear NIF boundary
-- no bespoke C shim unless proven impossible
+- one clear Rustler NIF boundary
+- no bespoke C shim
 - native tests green
 - measurable performance
 - explicit GPUI compatibility tracking
 - examples that double as regression coverage
 
-## Current blunt assessment
+## Current state
 
-Guppy has a promising architecture:
+Guppy now has:
 
-- Elixir owns UI state
-- render output is a tree IR
-- GPUI renders native windows
-- native events route back to BEAM owners
-- retained native state exists for focus, scroll, and text input
+- Elixir-owned UI state
+- tree IR render output
+- Rustler-owned NIF exports and BEAM interop
+- no `native/guppy_nif/c_src/` implementation
+- GPUI native rendering through Rust
+- native events routed back through Rustler to BEAM owners
+- retained native state for focus, scroll, and text input
+- a local full-suite check command: `scripts/check`
+- Benchee benchmarks: `bench/guppy_bench.exs`
+- performance notes: `docs/performance.md`
+- GPUI compatibility matrix: `docs/gpui-compliance.md`
+- supported-surface contract in `README.md`
 
-But it is not hardened yet:
+## Required checks
 
-- the native Rust test suite currently fails to compile
-- there is no benchmark suite
-- there is no GPUI compliance matrix
-- the C NIF layer is too large and owns too much application logic
-- high-frequency events are not coalesced
-- GPUI example/test parity is unknown
-
-## Decision: move to Rustler without a C shim
-
-The Rustler migration should not be a cautious side spike. It should be the next architectural cleanup.
-
-### Target
-
-Remove `native/guppy_nif/c_src/guppy_nif.c` entirely.
-
-Rustler should own:
-
-- `ERL_NIF_INIT`
-- NIF exports
-- dirty scheduler flags
-- argument decoding
-- return encoding
-- event payload encoding
-- panic containment
-- load/unload lifecycle hooks
-- BEAM process references/resources where appropriate
-
-Rust should still own:
-
-- GPUI application/runtime state
-- macOS main-thread startup
-- request queueing to the GPUI main thread
-- window registry
-- BridgeView rendering
-- retained GPUI state
-
-### Main-thread requirement
-
-The current C shim calls OTP's main-thread stealing APIs on macOS. The Rustler rewrite should call those APIs directly from Rust using `extern "C"` declarations if still required:
-
-- `erl_drv_steal_main_thread`
-- `erl_drv_stolen_main_thread_join`
-
-If Rust can link and call those symbols directly, there is no justification for keeping a shim. If it cannot, document the exact linker/symbol issue before reintroducing any native shim.
-
-### Desired boundary
-
-```text
-Elixir
-  -> Rustler NIF module
-    -> Rust GPUI runtime API
-      -> GPUI main-thread request loop
-```
-
-There should be no C event-construction layer and no C request-decoding layer.
-
-## Phase 0: restore baseline quality
-
-Before large changes:
-
-- work test-first: write or expose the failing check before implementation
-- fix native test compile failure in `render_text_input.rs`
-- make these commands green:
-
-```sh
-mix test
-cd native/guppy_nif && cargo test
-cd native/guppy_nif && cargo clippy --all-targets -- -D warnings
-mix format --check-formatted
-cd native/guppy_nif && cargo fmt --check
-```
-
-Add a single local check command or script that runs the full suite.
-
-Current local check command:
+Before and after meaningful changes, keep this green:
 
 ```sh
 scripts/check
 ```
 
-## Phase 1: Rustler rewrite
+That covers:
 
-1. Add `:rustler` to Mix deps.
-2. Add `rustler` crate dependency to `native/guppy_nif/Cargo.toml`.
-3. Replace C NIF exports with Rustler functions:
-   - `native_ping/0`
-   - `native_build_info/0`
-   - `native_runtime_status/0`
-   - `native_gui_status/0`
-   - `native_open_window/3`
-   - `native_set_event_target/1`
-   - `native_render/2`
-   - `native_close_window/1`
-   - `native_view_count/0`
-4. Use Rustler dirty scheduling for calls that block on the GPUI main-thread request queue.
-5. Move event sending into Rust using Rustler `OwnedEnv`/PID support.
-6. Delete `c_src/` and the C build path from `build.rs`.
-7. Keep the Elixir public API stable while replacing internals.
+```sh
+mix test
+mix format --check-formatted
+cd native/guppy_nif && cargo test
+cd native/guppy_nif && cargo clippy --all-targets -- -D warnings
+cd native/guppy_nif && cargo fmt --check
+```
 
-Exit criteria:
+For native/runtime changes, also run:
 
-- no C source remains in the NIF implementation
-- all current examples still open and render
-- event routing still works
-- native tests/clippy are green
+```sh
+mix guppy.native.build
+mix run examples/hello_world.exs
+```
 
-## Phase 2: performance discipline
-
-Add benchmarks before adding more widgets.
-
-Current benchmark command:
+For performance-sensitive changes, run:
 
 ```sh
 mix run bench/guppy_bench.exs
-mix run bench/guppy_bench.exs --native # includes hidden-window native render latency when available
+mix run bench/guppy_bench.exs --native
 ```
 
-Current baseline notes: `docs/performance.md`.
+## Phase 1: performance hardening
 
-Required benchmark areas:
+Benchmarks exist. Use them before optimizing.
+
+Current known benchmark coverage:
 
 - `~G` template render cost for 10/100/1_000 nodes
 - IR validation cost
-- NIF encode/decode cost
-- `Guppy.render/2` request latency p50/p95/p99
-- event-to-rerender latency
-- high-frequency event pressure: mouse move, drag move, scroll wheel
-- kanban scenario: initial render, add card, move card, edit card, scroll
+- ETF encode/decode proxy cost
+- `Guppy.render/2` hidden-window native request latency
+- event-to-rerender proxy latency
+- high-frequency event payload pressure: mouse move, drag move, scroll wheel
+- kanban scenario: initial render, add card, move card, edit card
 
-Required changes after measurement:
+Remaining performance work:
 
-- coalesce high-frequency native events
-- batch/debounce `Guppy.Window` rerenders where appropriate
-- avoid repeated validation for static or trusted subtrees
-- add telemetry/logging hooks for render and native request latency
+1. Add better native encode/decode timing around the actual Rustler NIF boundary, not only ETF proxy timing.
+2. Add a more realistic end-to-end event-to-rerender benchmark using native event delivery.
+3. Add kanban scroll interaction coverage to the benchmark suite.
+4. Coalesce high-frequency native events where measurement shows pressure:
+   - mouse move
+   - drag move
+   - scroll wheel
+5. Batch or debounce `Guppy.Window` rerenders where measurement shows repeated render pressure.
+6. Avoid repeated validation for static or trusted subtrees where benchmarks justify it.
+7. Add telemetry/logging hooks for render latency and native request latency.
 
-## Phase 3: GPUI compliance matrix
+## Phase 2: GPUI compliance hardening
 
-Create a tracked matrix for upstream GPUI examples and high-level test cases.
+The matrix exists at `docs/gpui-compliance.md`. Keep it current against `../zed/crates/gpui` before claiming compatibility improvements.
 
-Current matrix: `docs/gpui-compliance.md`.
-
-Use the latest cloned Zed/GPUI repository as the source of truth, and periodically refresh the matrix against upstream changes so Guppy does not accidentally target stale examples or tests.
-
-For each GPUI example/test:
-
-- source path and upstream commit/reference
-- Guppy port path
-- status: supported / partial / unsupported / intentionally out of scope
-- missing primitives
-- automated smoke coverage if possible
-- manual verification notes if not automatable yet
-
-Initial examples to port first:
+Initial examples to harden first:
 
 - `hello_world`
 - `scrollable`
@@ -189,6 +104,15 @@ Initial examples to port first:
 - `tab_stop`
 - `image` / `svg`
 - `window_positioning`
+
+For each port or compatibility improvement, track:
+
+- source path and upstream commit/reference
+- Guppy port path
+- status: supported / partial / unsupported / intentionally out of scope
+- missing primitives
+- automated smoke coverage if possible
+- manual verification notes if not automatable yet
 
 Known likely gaps:
 
@@ -201,15 +125,9 @@ Known likely gaps:
 - advanced text layout and rich text runs
 - grid/data-table parity
 
-## Phase 4: supported surface contract
+## Phase 3: supported primitive expansion
 
-Update README to be precise:
-
-- Guppy is not yet all of GPUI from Elixir.
-- Guppy is an Elixir-owned state/render loop targeting a documented GPUI subset.
-- The supported subset must be listed and tested.
-
-Every new primitive needs:
+Do not add more widgets casually. Every new primitive needs:
 
 - Elixir IR validation
 - Rust decode
@@ -218,21 +136,27 @@ Every new primitive needs:
 - retained-state behavior if applicable
 - unit/integration tests
 - example or compliance-port coverage
+- matrix update in `docs/gpui-compliance.md`
 
-## Phase 5: hardening after Rustler/perf/compliance
+Priority order:
 
-Only after the above:
+1. textarea/editor
+2. radio/select primitives
+3. list / uniform-list primitive
+4. tooltip/popover primitives
 
-- add missing primitives in priority order
+## Phase 4: runtime hardening
+
+After performance/compliance work has sharper evidence:
+
 - consider keyed subtree diffing if benchmarks demand it
 - strengthen supervision/restart behavior for native runtime failures
+- improve native event lifecycle coverage, especially close-request and owner cleanup cases
 - expand cross-platform strategy beyond macOS
 
-## Phase 6: distribution and precompiled artifacts
+## Phase 5: distribution and precompiled artifacts
 
-After the Rustler rewrite, tests, benchmarks, and compliance matrix are in place, add `rustler_precompiled` for user-friendly installation.
-
-This is intentionally last because precompiled artifact distribution should package a stable native boundary, not hide churn.
+Add `rustler_precompiled` only after the Rustler boundary and native behavior are stable enough to package.
 
 Exit criteria:
 
@@ -243,8 +167,8 @@ Exit criteria:
 
 ## Non-goals for now
 
-- adding more widgets before the Rustler rewrite
-- preserving the existing C shim
-- claiming full GPUI compatibility without a matrix
+- adding more widgets before performance/compliance hardening
+- reintroducing a C shim
+- claiming full GPUI compatibility without matrix evidence
 - optimizing based on anecdotes instead of benchmarks
 - adding `rustler_precompiled` before the native boundary is stable
