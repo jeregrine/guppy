@@ -5,9 +5,10 @@ Benchmarks use [`Benchee`](https://hex.pm/packages/benchee):
 ```sh
 mix run bench/guppy_bench.exs
 mix run bench/guppy_bench.exs --native
+mix run bench/native_event_probe.exs --events=20
 ```
 
-`--native` additionally opens a hidden GPUI window and measures `Guppy.render/2` request latency when the local platform can run the native runtime.
+`--native` additionally opens a hidden GPUI window and measures `Guppy.render/2` request latency when the local platform can run the native runtime. `bench/native_event_probe.exs` opens a visible probe window for manual GPUI-generated click-to-rerender measurement.
 
 ## 2026-05-12 local snapshot
 
@@ -58,7 +59,7 @@ After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.ex
 - Runtime telemetry is available at `[:guppy, :native, :nif]` for direct Rustler NIF call latency, `[:guppy, :native, :request]` for server-mediated native request latency, `[:guppy, :event, :route]` for native event routing, and `[:guppy, :window, :rerender]` for `Guppy.Window` rerender latency.
 - `Guppy.native_performance_counters/0` exposes native-side counters for Rust boundary IR/options encode-decode timing and native event send timing/failures.
 - `Guppy.IR.validated!/1` can wrap static or trusted trees after one validation pass so repeated `open_window`/`render` calls skip Elixir-side validation while still unwrapping before native decode.
-- `Guppy.Window` routed event-to-rerender coverage uses native-shaped server delivery; actual GPUI-generated event delivery still needs end-to-end coverage.
+- `bench/native_event_probe.exs` provides a manual GPUI-generated event probe. It measures route-to-rerender latency after actual native click delivery; it does not include OS input latency before GPUI emits the event.
 - The repeated routed-event snapshot is measurement-only; current release results do not justify default `Guppy.Window` batching/debounce without stronger evidence of user-visible pressure.
 - Current high-frequency payload encode measurements for mouse move, drag move, and scroll wheel are sub-microsecond and do not justify adding default event coalescing without native delivery evidence.
 - Use release native builds for interactive/manual performance checks:
