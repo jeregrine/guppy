@@ -100,6 +100,9 @@ static RENDER_IR_TO_BINARY_COUNT: AtomicU64 = AtomicU64::new(0);
 static RENDER_IR_TO_BINARY_NANOS: AtomicU64 = AtomicU64::new(0);
 static RENDER_IR_DECODE_COUNT: AtomicU64 = AtomicU64::new(0);
 static RENDER_IR_DECODE_NANOS: AtomicU64 = AtomicU64::new(0);
+static NATIVE_EVENT_SEND_COUNT: AtomicU64 = AtomicU64::new(0);
+static NATIVE_EVENT_SEND_NANOS: AtomicU64 = AtomicU64::new(0);
+static NATIVE_EVENT_SEND_FAILURE_COUNT: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(target_os = "macos")]
 static GUI_THREAD: Mutex<Option<usize>> = Mutex::new(None);
@@ -166,6 +169,17 @@ fn native_performance_counters<'a>(env: Env<'a>) -> Term<'a> {
             env,
             "render_ir_decode_native_time_ns",
             &RENDER_IR_DECODE_NANOS,
+        ),
+        counter_pair(env, "native_event_send_count", &NATIVE_EVENT_SEND_COUNT),
+        counter_pair(
+            env,
+            "native_event_send_native_time_ns",
+            &NATIVE_EVENT_SEND_NANOS,
+        ),
+        counter_pair(
+            env,
+            "native_event_send_failure_count",
+            &NATIVE_EVENT_SEND_FAILURE_COUNT,
         ),
     ];
 
@@ -365,12 +379,14 @@ pub(crate) fn send_window_closed_event(view_id: u64) -> i32 {
 }
 
 fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -> Term<'a>) -> i32 {
+    let started_at = Instant::now();
     let target = {
         let target = EVENT_TARGET.lock().expect("event target lock poisoned");
         *target
     };
 
     let Some(target) = target else {
+        record_event_send(started_at, false);
         return 0;
     };
 
@@ -378,8 +394,14 @@ fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -
     match msg_env.send_and_clear(&target, |env| {
         (guppy_native_event(), view_id, event, payload(env)).encode(env)
     }) {
-        Ok(()) => 1,
-        Err(_) => 0,
+        Ok(()) => {
+            record_event_send(started_at, true);
+            1
+        }
+        Err(_) => {
+            record_event_send(started_at, false);
+            0
+        }
     }
 }
 
@@ -442,6 +464,18 @@ fn counter_pair<'a>(env: Env<'a>, key: &'static str, counter: &AtomicU64) -> (Te
 fn record_counter(count: &AtomicU64, nanos: &AtomicU64, duration: Duration) {
     count.fetch_add(1, Ordering::Relaxed);
     nanos.fetch_add(duration_to_u64_nanos(duration), Ordering::Relaxed);
+}
+
+fn record_event_send(started_at: Instant, sent: bool) {
+    record_counter(
+        &NATIVE_EVENT_SEND_COUNT,
+        &NATIVE_EVENT_SEND_NANOS,
+        started_at.elapsed(),
+    );
+
+    if !sent {
+        NATIVE_EVENT_SEND_FAILURE_COUNT.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 fn duration_to_u64_nanos(duration: Duration) -> u64 {

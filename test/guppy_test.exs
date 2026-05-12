@@ -780,6 +780,9 @@ defmodule GuppyTest do
         assert is_integer(before_counters["render_ir_decode_native_time_ns"])
         assert is_integer(before_counters["open_ir_decode_count"])
         assert is_integer(before_counters["open_ir_decode_native_time_ns"])
+        assert is_integer(before_counters["native_event_send_count"])
+        assert is_integer(before_counters["native_event_send_native_time_ns"])
+        assert is_integer(before_counters["native_event_send_failure_count"])
 
         ir = Guppy.IR.text("counter probe", id: "counter_probe")
         {:ok, view_id} = Guppy.open_window(ir, self(), show: false)
