@@ -57,7 +57,7 @@ After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.ex
 - `Guppy.native_performance_counters/0` exposes native-side counters for Rust boundary IR/options encode-decode timing.
 - `Guppy.IR.validated!/1` can wrap static or trusted trees after one validation pass so repeated `open_window`/`render` calls skip Elixir-side validation while still unwrapping before native decode.
 - `Guppy.Window` routed event-to-rerender coverage uses native-shaped server delivery; actual GPUI-generated event delivery still needs end-to-end coverage.
-- The repeated routed-event snapshot is measurement-only; no default batching/debounce has been added without stronger evidence of user-visible pressure.
+- The repeated routed-event snapshot is measurement-only; current release results do not justify default `Guppy.Window` batching/debounce without stronger evidence of user-visible pressure.
 - Use release native builds for interactive/manual performance checks:
 
 ```sh

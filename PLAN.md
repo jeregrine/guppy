@@ -77,7 +77,7 @@ Current known benchmark coverage:
 - runtime telemetry for direct NIF call latency, native request latency, native event routing, and `Guppy.Window` rerender latency
 - native-side performance counters for Rust boundary IR/options encode-decode timing
 - event-to-rerender proxy latency
-- `Guppy.Window` routed event-to-rerender latency and repeated routed-event pressure through native-shaped server event delivery
+- `Guppy.Window` routed event-to-rerender latency and repeated routed-event pressure through native-shaped server event delivery; current release measurements do not justify default rerender batching/debounce
 - high-frequency event payload pressure: mouse move, drag move, scroll wheel
 - kanban scenario: initial render, add card, move card, edit card, scroll interaction
 - debug and release native benchmark snapshots documented in `docs/performance.md`
@@ -90,7 +90,6 @@ Remaining performance work:
    - mouse move
    - drag move
    - scroll wheel
-3. Batch or debounce `Guppy.Window` rerenders where measurement shows repeated render pressure.
 
 ## Phase 2: GPUI compliance hardening
 
