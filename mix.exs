@@ -20,7 +20,8 @@ defmodule Guppy.MixProject do
 
   defp deps do
     [
-      {:benchee, "~> 1.3", only: :dev, runtime: false}
+      {:benchee, "~> 1.3", only: :dev, runtime: false},
+      {:rustler, "~> 0.37.3"}
     ]
   end
 end

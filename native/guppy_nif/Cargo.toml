@@ -13,6 +13,7 @@ path = "src/lib.rs"
 async-task = "4.7.1"
 eetf = "0.11.0"
 gpui = { version = "0.2.2", features = ["test-support"] }
+rustler = "0.37.4"
 unicode-segmentation = "1.12.0"
 
 [build-dependencies]
