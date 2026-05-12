@@ -177,15 +177,31 @@ Still out of scope:
 - retained/native overlay owner state; Elixir owns open/closed state
 - full select/dropdown built on top of popover
 
-### Priority 1: remaining compliance hardening
+### Completed in primitive expansion: compliance sweep
 
-Goal: reduce or explicitly defer the remaining partial/unsupported matrix rows before moving to runtime/distribution work.
+The compliance matrix now has rows for every GPUI example/test source at `../zed/crates/gpui` reference `78c889c21d`, and the remaining unsupported/partial rows are either backed by focused smoke coverage, explicitly deferred, or marked out of scope for the current Elixir-owned IR architecture.
 
-Initial scope:
+Deferred primitive areas:
 
-- add focused smoke tests where existing primitives already cover a row
-- explicitly mark rows out of scope where they are platform APIs or GPUI internals
-- leave high-effort primitives such as animation, grid, canvas, menus, and rich text as future work unless specifically prioritized
+- animation lifecycle primitives
+- gradient style primitives
+- grid layout primitives
+- custom painting/canvas and pattern painting
+- menu APIs
+- richer text/rich editor parity
+- full data-table/tree virtualization parity
+- full select/dropdown parity on top of richer popover behavior
+
+### Started in runtime hardening: owner cleanup telemetry
+
+Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage.
+
+Remaining runtime scope:
+
+- close-request lifecycle hardening beyond current `window_closed` routing
+- stronger native runtime failure/restart behavior
+- keyed subtree diffing only if benchmarks demand it
+- cross-platform strategy beyond macOS
 
 ## Ongoing maintenance while expanding primitives
 
@@ -200,13 +216,11 @@ Performance guidance remains: do not add default scroll debounce, high-frequency
 
 ## Later work
 
-Runtime and distribution hardening come after the primitive surface is more useful:
+Distribution hardening comes after runtime lifecycle behavior is stable:
 
-- close-request and owner-cleanup lifecycle hardening
-- stronger native runtime failure/restart behavior
-- keyed subtree diffing only if benchmarks demand it
-- cross-platform strategy beyond macOS
 - `rustler_precompiled` packaging once native behavior is stable enough
+- CI artifact validation for supported targets
+- release-process documentation for native artifact production
 
 ## Non-goals for now
 

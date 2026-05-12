@@ -325,7 +325,7 @@ defmodule Guppy.Server do
     case Map.fetch(state.owners, owner) do
       {:ok, %{views: views}} ->
         Enum.reduce(views, state, fn view_id, acc_state ->
-          _ = acc_state.native.request(acc_state.native_server, {:close_window, [view_id]})
+          _ = native_request(acc_state, :close_window, {:close_window, [view_id]})
           %{acc_state | views: Map.delete(acc_state.views, view_id)}
         end)
 

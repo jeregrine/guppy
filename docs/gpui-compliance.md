@@ -21,26 +21,26 @@ Statuses:
 | `examples/window_positioning.rs` | window options validation in `Guppy.Server` tests; hidden native window smoke | partial | complete multi-display/window positioning behavior not covered in CI | automated option validation; hidden-window native smoke with bounds/min-size/kind/decorations/background |
 | `examples/active_state_bug.rs` | style states on button/checkbox/div | partial | exact active state regression not ported | IR validation only |
 | `examples/anchor.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | explicit anchor choice/positioning controls not exposed yet | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
-| `examples/animation.rs` | none | unsupported | animation primitives | none |
+| `examples/animation.rs` | none | unsupported | animation primitives deferred; requires timing/lifecycle design outside current Elixir-owned static IR | explicitly deferred in PLAN; no implementation |
 | `examples/data_table.rs` | `uniform_list` text-row primitive covers only simple repeated rows | partial | grid/data-table layout, columns, cells, and virtualization semantics beyond simple rows | IR/template/native smoke for `uniform_list`; no data-table port |
 | `examples/focus_visible.rs` | focus/blur callbacks | partial | focus-visible styling semantics | IR validation only |
 | `examples/gif_viewer.rs` | image node | partial | animated GIF controls/loading states | manual only |
-| `examples/gradient.rs` | none | unsupported | gradient style primitives | none |
-| `examples/grid_layout.rs` | none | unsupported | grid layout primitives | none |
+| `examples/gradient.rs` | none | unsupported | gradient style primitives deferred until style surface expansion | explicitly deferred in PLAN; no implementation |
+| `examples/grid_layout.rs` | none | unsupported | grid layout primitives deferred; flex/div remains current layout surface | explicitly deferred in PLAN; no implementation |
 | `examples/image_gallery.rs` | image node examples | partial | gallery layout primitives and loading states | manual only |
 | `examples/image_loading.rs` | image node | partial | async loading/error state parity | manual only |
 | `examples/layer_shell.rs` | none | out of scope | platform shell/layer APIs | none |
 | `examples/list_example.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | variable-height `list`/`ListState` behavior and custom scrollbar parity | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
-| `examples/mouse_pressure.rs` | mouse event callbacks | partial | pressure payload and native event parity | none |
-| `examples/move_entity_between_windows.rs` | none | unsupported | multi-window entity migration semantics | none |
+| `examples/mouse_pressure.rs` | mouse event callbacks | partial | pressure payload is not exposed; basic mouse down/up/move payloads are routed | server routing tests cover pointer events; pressure explicitly deferred |
+| `examples/move_entity_between_windows.rs` | none | out of scope | direct GPUI entity migration conflicts with Elixir-owned IR/window ownership model | explicitly out of scope for current architecture |
 | `examples/on_window_close_quit.rs` | `Guppy.close_window/2` | partial | close-request event lifecycle parity | tests cover close API, not native close-request event |
 | `examples/opacity.rs` | style token `{:opacity, value}` | partial | exact visual parity not smoke-tested | IR/style validation |
 | `examples/ownership_post.rs` | `Guppy.Server` owner tracking | partial | direct GPUI entity ownership scenario not ported | server tests |
-| `examples/painting.rs` | none | unsupported | custom painting/canvas | none |
+| `examples/painting.rs` | none | unsupported | custom painting/canvas deferred; would require a new retained drawing primitive | explicitly deferred in PLAN; no implementation |
 | `examples/paths_bench.rs` | none | out of scope | GPUI internal path benchmark | none |
-| `examples/pattern.rs` | none | unsupported | pattern painting | none |
+| `examples/pattern.rs` | none | unsupported | pattern painting deferred with custom painting/canvas work | explicitly deferred in PLAN; no implementation |
 | `examples/popover.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | nested popover parity and advanced deferred-layer controls | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
-| `examples/set_menus.rs` | none | unsupported | menu APIs | none |
+| `examples/set_menus.rs` | none | unsupported | menu APIs deferred to runtime/window API hardening, not core IR primitives | explicitly deferred in PLAN; no implementation |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |
 | `examples/text.rs` | `text` node; practical multiline input via `textarea` | partial | rich text runs/layout controls and full editor parity incomplete | IR/template tests; textarea example/manual smoke |

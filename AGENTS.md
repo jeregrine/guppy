@@ -317,15 +317,15 @@ Especially if you change:
 
 ## What to prioritize next
 
-Follow `PLAN.md`. The active phase is primitive expansion: add missing high-value primitives end-to-end, with IR validation, template support, native decode/rendering, retained state when needed, tests, examples, README updates, and GPUI matrix updates.
+Follow `PLAN.md`. The active phase is runtime hardening; primitive expansion has a useful baseline and remaining large widgets should stay deferred unless explicitly reprioritized.
 
 Current priority order:
 
-1. harden remaining partial compliance rows with focused smoke tests or explicit deferrals
-2. more generic list/uniform-list rendering if the text-row primitive proves too narrow
-3. runtime and distribution hardening after the primitive surface is more useful
+1. runtime lifecycle hardening, especially close-request and owner cleanup
+2. stronger native runtime failure/restart behavior
+3. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
 4. full editor/rich-text parity only if explicitly scoped
-5. runtime and distribution hardening after the primitive surface is more useful
+5. distribution/precompiled artifact work after runtime behavior is stable
 
 Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
 

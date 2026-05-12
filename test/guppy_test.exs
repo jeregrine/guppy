@@ -1765,6 +1765,10 @@ defmodule GuppyTest do
 
         assert Map.get(Guppy.info().views, owned_view_id) == owner
 
+        cleanup_handler_id = {__MODULE__, self(), :owner_cleanup_native_request}
+        :ok = attach_forwarding_telemetry(cleanup_handler_id, [:guppy, :native, :request])
+        on_exit(fn -> :telemetry.detach(cleanup_handler_id) end)
+
         pid =
           spawn(fn ->
             {:ok, transient_view_id} = Guppy.open_window(Guppy.IR.text("transient"), self())
@@ -1785,6 +1789,10 @@ defmodule GuppyTest do
         Process.exit(pid, :kill)
         wait_until(fn -> not Map.has_key?(Guppy.info().views, transient_view_id) end)
 
+        assert_receive {:telemetry_event, [:guppy, :native, :request], %{duration: duration},
+                        %{command: :close_window, status: :ok}}
+
+        assert is_integer(duration)
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
 
         :ok = Guppy.close_window(owned_view_id)
