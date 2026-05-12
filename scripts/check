@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+cd "$repo_root"
+mix test
+mix format --check-formatted
+
+cd "$repo_root/native/guppy_nif"
+cargo test
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
