@@ -31,6 +31,10 @@ defmodule Guppy.TestCounterWindow do
   end
 end
 
+defmodule Guppy.CrashingNative do
+  def request(_server, _request), do: exit(:native_down)
+end
+
 defmodule Guppy.TemplateExample do
   use Guppy.Component
 
@@ -830,6 +834,30 @@ defmodule GuppyTest do
 
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} = Guppy.ping()
+    end
+  end
+
+  test "native request crashes are contained and reported" do
+    server = :"guppy_crashing_native_#{System.unique_integer([:positive])}"
+    handler_id = {__MODULE__, self(), :crashing_native_request_telemetry}
+
+    :ok = attach_forwarding_telemetry(handler_id, [:guppy, :native, :request])
+
+    try do
+      start_supervised!(
+        {Guppy.Server,
+         name: server, native: Guppy.CrashingNative, native_server: Guppy.CrashingNative}
+      )
+
+      assert {:error, :runtime_unavailable} = Guppy.Server.ping(server)
+      assert Process.alive?(Process.whereis(server))
+
+      assert_receive {:telemetry_event, [:guppy, :native, :request], %{duration: duration},
+                      %{command: :ping, status: {:error, :runtime_unavailable}}}
+
+      assert is_integer(duration)
+    after
+      :telemetry.detach(handler_id)
     end
   end
 

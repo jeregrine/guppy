@@ -238,7 +238,16 @@ defmodule Guppy.Server do
 
   defp native_request(state, command, request) do
     start_time = System.monotonic_time()
-    reply = state.native.request(state.native_server, request)
+
+    reply =
+      try do
+        state.native.request(state.native_server, request)
+      rescue
+        _error -> {:error, :runtime_unavailable}
+      catch
+        _kind, _reason -> {:error, :runtime_unavailable}
+      end
+
     duration = System.monotonic_time() - start_time
 
     :telemetry.execute(

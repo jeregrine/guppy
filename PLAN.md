@@ -192,14 +192,14 @@ Deferred primitive areas:
 - full data-table/tree virtualization parity
 - full select/dropdown parity on top of richer popover behavior
 
-### Started in runtime hardening: owner cleanup and close-event telemetry
+### Started in runtime hardening: native request containment and lifecycle telemetry
 
-Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage. Unknown native close events are also covered by event-route telemetry tests.
+Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage. Unknown native close events are also covered by event-route telemetry tests. Server-mediated native requests now contain native wrapper crashes/exits and report `{:error, :runtime_unavailable}` instead of crashing `Guppy.Server`.
 
 Remaining runtime scope:
 
 - close-request lifecycle hardening beyond current `window_closed` routing
-- stronger native runtime failure/restart behavior
+- native runtime restart/reinitialization strategy after hard failures
 - keyed subtree diffing only if benchmarks demand it
 - cross-platform strategy beyond macOS
 
