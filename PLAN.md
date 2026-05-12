@@ -81,6 +81,7 @@ Current known benchmark coverage:
 - high-frequency event payload pressure: mouse move, drag move, scroll wheel
 - kanban scenario: initial render, add card, move card, edit card, scroll interaction
 - debug and release native benchmark snapshots documented in `docs/performance.md`
+- prevalidated IR wrapper for trusted/static trees to skip repeated Elixir validation
 
 Remaining performance work:
 
@@ -90,7 +91,6 @@ Remaining performance work:
    - drag move
    - scroll wheel
 3. Batch or debounce `Guppy.Window` rerenders where measurement shows repeated render pressure.
-4. Avoid repeated validation for static or trusted subtrees where benchmarks justify it.
 
 ## Phase 2: GPUI compliance hardening
 

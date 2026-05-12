@@ -98,6 +98,7 @@ defmodule Guppy.Server do
       with :ok <- Guppy.IR.validate(ir),
            {:ok, opts} <- validate_window_options(opts) do
         view_id = state.next_view_id
+        ir = Guppy.IR.unwrap(ir)
 
         case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}) do
           :ok ->
@@ -129,7 +130,7 @@ defmodule Guppy.Server do
   def handle_call({:render, view_id, ir}, {caller, _tag}, state) do
     case validate_owned_view_ir(state, caller, view_id, ir) do
       :ok ->
-        reply = native_request(state, :render, {:render, [view_id, ir]})
+        reply = native_request(state, :render, {:render, [view_id, Guppy.IR.unwrap(ir)]})
         {:reply, normalize_native_reply(reply), state}
 
       error ->

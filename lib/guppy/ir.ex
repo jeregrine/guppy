@@ -1,3 +1,14 @@
+defmodule Guppy.IR.Validated do
+  @moduledoc """
+  Wrapper for an IR tree that has already passed Elixir-side validation.
+  """
+
+  @type t :: %__MODULE__{ir: term()}
+
+  @enforce_keys [:ir]
+  defstruct [:ir]
+end
+
 defmodule Guppy.IR do
   @moduledoc """
   Minimal IR helpers for the Phase 1 tracer shot.
@@ -633,7 +644,29 @@ defmodule Guppy.IR do
     |> maybe_put(:events, events)
   end
 
-  @spec validate(ir_node()) :: :ok | {:error, term()}
+  @spec validated(ir_node()) :: {:ok, Guppy.IR.Validated.t()} | {:error, term()}
+  def validated(%Guppy.IR.Validated{} = validated), do: {:ok, validated}
+
+  def validated(ir) do
+    with :ok <- validate(ir) do
+      {:ok, %Guppy.IR.Validated{ir: ir}}
+    end
+  end
+
+  @spec validated!(ir_node()) :: Guppy.IR.Validated.t()
+  def validated!(ir) do
+    case validated(ir) do
+      {:ok, validated} -> validated
+      {:error, reason} -> raise ArgumentError, "invalid IR: #{inspect(reason)}"
+    end
+  end
+
+  def unwrap(%Guppy.IR.Validated{ir: ir}), do: ir
+  def unwrap(ir), do: ir
+
+  @spec validate(ir_node() | Guppy.IR.Validated.t()) :: :ok | {:error, term()}
+  def validate(%Guppy.IR.Validated{}), do: :ok
+
   def validate(ir) do
     with :ok <- validate_node(ir),
          :ok <- validate_unique_ids(ir) do

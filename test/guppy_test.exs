@@ -703,6 +703,21 @@ defmodule GuppyTest do
              Guppy.IR.validate(Guppy.IR.checkbox("Ship", true, events: %{click: "toggle"}))
   end
 
+  test "validated IR wrappers validate once and unwrap for rendering" do
+    ir = Guppy.IR.div([Guppy.IR.text("trusted", id: "trusted_text")], id: "trusted_root")
+
+    assert {:ok, validated} = Guppy.IR.validated(ir)
+    assert :ok = Guppy.IR.validate(validated)
+    assert Guppy.IR.unwrap(validated) == ir
+    assert Guppy.IR.validated!(ir) == validated
+
+    assert {:error, {:invalid_id, 123}} = Guppy.IR.validated(Guppy.IR.text("bad", id: 123))
+
+    assert_raise ArgumentError, fn ->
+      Guppy.IR.validated!(Guppy.IR.text("bad", id: 123))
+    end
+  end
+
   test "native ping is wired through the server" do
     case Guppy.Native.Nif.load_status() do
       :ok ->
