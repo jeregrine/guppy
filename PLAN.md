@@ -1,36 +1,19 @@
-# Guppy Hardening Plan
+# Guppy Forward Plan
 
-This is the active forward-looking plan. Completed baseline, Rustler migration, benchmark setup, GPUI matrix, and README surface-contract work have been removed from the required-work list.
+This is the active forward-looking plan. Completed baseline architecture, Rustler migration, benchmark/performance hardening, GPUI compliance matrix setup, initial GPUI example hardening, and README surface-contract work are historical context only and are no longer planned work.
 
 ## Current standard
 
 Guppy should be treated as a serious Elixir/GPUI bridge, not a demo. Keep the bar at:
 
 - TDD-driven development
-- small commits with clear descriptions of what was done and why
+- small, reviewable changes
 - one clear Rustler NIF boundary
 - no bespoke C shim
 - native tests green
-- measurable performance
+- measurable performance decisions
 - explicit GPUI compatibility tracking
 - examples that double as regression coverage
-
-## Current state
-
-Guppy now has:
-
-- Elixir-owned UI state
-- tree IR render output
-- Rustler-owned NIF exports and BEAM interop
-- no `native/guppy_nif/c_src/` implementation
-- GPUI native rendering through Rust
-- native events routed back through Rustler to BEAM owners
-- retained native state for focus, scroll, and text input
-- a local full-suite check command: `scripts/check`
-- Benchee benchmarks: `bench/guppy_bench.exs`
-- performance notes: `docs/performance.md`
-- GPUI compatibility matrix: `docs/gpui-compliance.md`
-- supported-surface contract in `README.md`
 
 ## Required checks
 
@@ -57,116 +40,110 @@ mix guppy.native.build
 mix run examples/hello_world.exs
 ```
 
-For performance-sensitive changes, run:
+For performance-sensitive changes, run benchmarks or probes from `docs/performance.md` before optimizing.
 
-```sh
-mix run bench/guppy_bench.exs
-mix run bench/guppy_bench.exs --native
-```
+## Active phase: primitive expansion
 
-## Phase 1: performance hardening
+The next useful work is adding missing high-value primitives that are already visible in the GPUI compliance matrix. Do not add widgets casually: each primitive must be implemented end-to-end and backed by tests, docs, examples, and matrix updates.
 
-Benchmarks exist. Use them before optimizing.
+### Primitive definition of done
 
-Current known benchmark coverage:
+Every new primitive needs:
 
-- `~G` template render cost for 10/100/1_000 nodes
-- IR validation cost
-- ETF encode/decode proxy cost
-- `Guppy.render/2` hidden-window native request latency
-- runtime telemetry for direct NIF call latency, native request latency, native event routing, and `Guppy.Window` rerender latency
-- native-side performance counters for Rust boundary IR/options encode-decode timing and native event sends
-- event-to-rerender proxy latency
-- `Guppy.Window` routed event-to-rerender latency and repeated routed-event pressure through native-shaped server event delivery; current release measurements do not justify default rerender batching/debounce
-- automated GPUI simulated click regression coverage for the native event bridge
-- manual GPUI-generated native click-to-rerender probe in `bench/native_event_probe.exs`
-- high-frequency event payload pressure: mouse move, drag move, scroll wheel; current payload encode measurements do not justify default coalescing
-- kanban scenario: initial render, add card, move card, edit card, scroll interaction
-- debug and release native benchmark snapshots documented in `docs/performance.md`
-- prevalidated IR wrapper for trusted/static trees to skip repeated Elixir validation
-
-Remaining performance work:
-
-- None required before Phase 2. Actual GPUI event timing is covered by the manual `bench/native_event_probe.exs` probe; the automated GPUI test platform now covers simulated click delivery into the native event bridge, but not BEAM/NIF end-to-end timing.
-
-## Phase 2: GPUI compliance hardening
-
-The matrix exists at `docs/gpui-compliance.md`. Keep it current against `../zed/crates/gpui` before claiming compatibility improvements.
-
-Initial examples to harden first:
-
-- `hello_world`
-- `scrollable`
-- `input`
-- `drag_drop`
-- `tab_stop`
-- `image` / `svg`
-- `window_positioning`
-
-For each port or compatibility improvement, track:
-
-- source path and upstream commit/reference
-- Guppy port path
-- status: supported / partial / unsupported / intentionally out of scope
-- missing primitives
-- automated smoke coverage if possible
-- manual verification notes if not automatable yet
-
-Known likely gaps:
-
-- uniform list / virtualized list
-- popover / anchored overlays
-- editor / textarea
-- custom painting / canvas
-- animation
-- menus
-- advanced text layout and rich text runs
-- grid/data-table parity
-
-## Phase 3: supported primitive expansion
-
-Do not add more widgets casually. Every new primitive needs:
-
-- Elixir IR validation
-- Rust decode
-- render implementation
-- event behavior if interactive
-- retained-state behavior if applicable
-- unit/integration tests
+- Elixir IR helper and validation in `lib/guppy/ir.ex`
+- template/compiler support in `Guppy.Component` / `~G` when author-facing
+- Rust ETF decode in `native/guppy_nif/src/ir.rs`
+- native render implementation under `native/guppy_nif/src/bridge_view/`
+- native event behavior if interactive
+- retained-state behavior if stateful
+- ExUnit coverage for IR/template/server behavior
+- Rust coverage for decode/render/event behavior
 - example or compliance-port coverage
-- matrix update in `docs/gpui-compliance.md`
+- `README.md` supported-surface update
+- `docs/gpui-compliance.md` matrix update
 
-Priority order:
+### Priority 1: textarea/editor
 
-1. textarea/editor
-2. radio/select primitives
-3. list / uniform-list primitive
-4. tooltip/popover primitives
+Goal: provide a practical multiline text input primitive without pretending to expose full Zed editor parity.
 
-## Phase 4: runtime hardening
+Initial scope:
 
-After performance/compliance work has sharper evidence:
+- `Guppy.IR.textarea/2` or clearly named equivalent
+- `textarea` template tag
+- value, placeholder, disabled, style, tab index
+- change/focus/blur events if supported by the retained native implementation
+- retained native state keyed by stable node identity
+- example coverage in `examples/super_demo.exs` or a focused example
+- matrix update for `examples/input.rs`, `examples/text.rs`, and editor/textarea-related gaps
 
-- consider keyed subtree diffing if benchmarks demand it
-- strengthen supervision/restart behavior for native runtime failures
-- improve native event lifecycle coverage, especially close-request and owner cleanup cases
-- expand cross-platform strategy beyond macOS
+Out of initial scope unless evidence makes it cheap:
 
-## Phase 5: distribution and precompiled artifacts
+- rich text runs
+- syntax highlighting
+- collaborative/editor entity semantics
+- full Zed editor parity
 
-Add `rustler_precompiled` only after the Rustler boundary and native behavior are stable enough to package.
+### Priority 2: radio/select primitives
 
-Exit criteria:
+Goal: cover common form controls with predictable Elixir-owned state.
 
-- local source builds still work
-- precompiled loading works on supported targets
-- release process documents how native artifacts are produced
-- CI builds and validates artifacts before publishing
+Initial scope:
+
+- radio group / radio option or equivalent minimal IR shape
+- select/dropdown if GPUI support is practical; otherwise document missing popover dependency
+- change events with stable value payloads
+- keyboard/focus behavior as far as GPUI 0.2.2 supports cleanly
+- form-focused example coverage
+
+### Priority 3: list / uniform-list primitive
+
+Goal: support larger repeated UI without forcing every example through giant full trees forever.
+
+Initial scope:
+
+- determine whether to wrap GPUI uniform list or provide a Guppy-specific retained list primitive
+- stable item identity
+- scroll retention
+- item event routing back to the owning Elixir process
+- benchmark before/after for large lists
+- compliance matrix updates for `examples/list_example.rs`, `examples/uniform_list.rs`, and data-table/tree gaps
+
+### Priority 4: tooltip/popover primitives
+
+Goal: unlock anchored overlay scenarios after core form/list work.
+
+Initial scope:
+
+- tooltip primitive if lightweight
+- popover/anchored overlay primitive only if GPUI 0.2.2 APIs support it cleanly
+- focus/close lifecycle behavior
+- examples and matrix updates for `examples/popover.rs` and `examples/anchor.rs`
+
+## Ongoing maintenance while expanding primitives
+
+Keep these current as part of feature work:
+
+- `docs/gpui-compliance.md`: source reference, status, gaps, and verification notes
+- `README.md`: supported public API and node surface
+- `examples/super_demo.exs`: broad manual smoke coverage
+- `docs/performance.md`: only when new measurements affect decisions
+
+Performance guidance remains: do not add default scroll debounce, high-frequency event coalescing, or `Guppy.Window` rerender batching without measurements proving the need.
+
+## Later work
+
+Runtime and distribution hardening come after the primitive surface is more useful:
+
+- close-request and owner-cleanup lifecycle hardening
+- stronger native runtime failure/restart behavior
+- keyed subtree diffing only if benchmarks demand it
+- cross-platform strategy beyond macOS
+- `rustler_precompiled` packaging once native behavior is stable enough
 
 ## Non-goals for now
 
-- adding more widgets before performance/compliance hardening
 - reintroducing a C shim
 - claiming full GPUI compatibility without matrix evidence
 - optimizing based on anecdotes instead of benchmarks
-- adding `rustler_precompiled` before the native boundary is stable
+- semantic theme tokens in core IR
+- packaging/precompiled artifacts before primitive behavior settles

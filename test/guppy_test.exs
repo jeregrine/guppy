@@ -1020,6 +1020,35 @@ defmodule GuppyTest do
              Guppy.Server.validate_window_options_for_test(kind: :dialog)
   end
 
+  test "hidden window positioning options reach the native window path" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        starting_count = native_view_count!()
+
+        {:ok, view_id} =
+          Guppy.open_window(
+            Guppy.IR.text("positioning smoke"),
+            self(),
+            show: false,
+            focus: false,
+            window_bounds: [x: 24, y: 32, width: 320, height: 240],
+            window_min_size: [width: 160, height: 120],
+            kind: :floating,
+            window_decorations: :client,
+            window_background: :transparent
+          )
+
+        on_exit(fn -> maybe_close(view_id) end)
+        assert Guppy.native_view_count() == {:ok, starting_count + 1}
+        assert :ok = Guppy.close_window(view_id)
+        assert Guppy.native_view_count() == {:ok, starting_count}
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} =
+                 Guppy.open_window(Guppy.IR.text("positioning smoke"), self(), show: false)
+    end
+  end
+
   test "view ownership is enforced by the server" do
     parent = self()
 

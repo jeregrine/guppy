@@ -65,7 +65,7 @@ impl BridgeView {
 #[cfg(test)]
 mod tests {
     use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
-    use crate::ir::{DivNode, IrNode, StyleOp};
+    use crate::ir::{DivNode, IrNode, ScrollAxis, StyleOp};
     use gpui::{Modifiers, Render, ScrollHandle, point, px};
 
     #[test]
@@ -112,6 +112,31 @@ mod tests {
     }
 
     #[gpui::test]
+    fn render_retains_scroll_and_focus_state_for_compliance_smoke(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 10,
+            ir: IrNode::Scroll {
+                id: Some("compliance_scroll".into()),
+                axis: ScrollAxis::Y,
+                style: Vec::new().into(),
+                children: vec![tab_stop_div()],
+            },
+            retained: BridgeRetainedState::default(),
+        });
+
+        view.update_in(cx, |view, window, view_cx| {
+            let _ = view.render(window, view_cx);
+
+            assert!(
+                view.retained
+                    .scroll_handles
+                    .contains_key("compliance_scroll")
+            );
+            assert!(view.retained.focus_handles.contains_key("tab_target"));
+        });
+    }
+
+    #[gpui::test]
     fn render_prunes_dead_text_input_entities(cx: &mut gpui::TestAppContext) {
         let (view, cx) = cx.add_window_view(|_, _| BridgeView {
             view_id: 9,
@@ -135,6 +160,42 @@ mod tests {
             let _ = view.render(window, view_cx);
             assert!(view.retained.text_inputs.is_empty());
         });
+    }
+
+    fn tab_stop_div() -> IrNode {
+        IrNode::Div(Box::new(DivNode {
+            id: Some("tab_target".into()),
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            hover_style: Vec::new().into(),
+            focus_style: Vec::new().into(),
+            in_focus_style: Vec::new().into(),
+            active_style: Vec::new().into(),
+            disabled_style: Vec::new().into(),
+            disabled: false,
+            stack_priority: None,
+            occlude: false,
+            focusable: true,
+            tab_stop: Some(true),
+            tab_index: Some(1),
+            track_scroll: false,
+            anchor_scroll: false,
+            shortcuts: Vec::new(),
+            children: vec![IrNode::text("tab target")],
+            click: None,
+            hover: None,
+            focus: None,
+            blur: None,
+            key_down: None,
+            key_up: None,
+            context_menu: None,
+            drag_start: None,
+            drag_move: None,
+            drop: None,
+            mouse_down: None,
+            mouse_up: None,
+            mouse_move: None,
+            scroll_wheel: None,
+        }))
     }
 
     fn clickable_div() -> IrNode {

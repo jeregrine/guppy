@@ -48,6 +48,7 @@ Important current invariants:
 - retained native state must be keyed by stable identity and pruned aggressively
 - explicit node ids win over generated path ids
 - style-op lists are ordered and order must be preserved
+- prevalidated IR wrappers may skip Elixir-side validation, but must unwrap before native decode
 
 ## Important current implementation details
 
@@ -58,6 +59,8 @@ Important current invariants:
 - `Guppy.Native.Nif` is now a direct Elixir wrapper module around the NIF functions
 - `Guppy.Window` is the preferred assign-based per-window process abstraction
 - `Guppy.Component` / `~G` is the preferred template authoring path
+- `Guppy.IR.validated/1` and `Guppy.IR.validated!/1` wrap trusted/static IR after one validation pass; server APIs unwrap before native dispatch
+- runtime telemetry events exist for native NIF calls (`[:guppy, :native, :nif]`), server-mediated native requests (`[:guppy, :native, :request]`), native event routing (`[:guppy, :event, :route]`), and `Guppy.Window` rerenders (`[:guppy, :window, :rerender]`)
 
 ### Native side
 
@@ -68,6 +71,8 @@ Important current invariants:
 - ETF IR field lookup keys are cached in Rust
 - native style lists use `Arc<[StyleOp]>`
 - native event emission is implemented in Rust through Rustler `OwnedEnv`/`LocalPid` support
+- native performance counters track Rust boundary IR/options encode-decode timing and native event send timing/failures
+- native tests include GPUI simulated-click coverage for event bridge delivery
 
 ### Performance guidance
 
@@ -79,7 +84,7 @@ mix guppy.native.build --release
 
 Debug native builds can feel much worse than release builds.
 
-Do **not** add default scroll debounce as a blind fix. First prove that native-to-Elixir event traffic is actually the cause.
+Do **not** add default scroll debounce, high-frequency event coalescing, or `Guppy.Window` rerender batching as a blind fix. Existing measurements did not justify defaults; first prove native-to-Elixir event traffic or repeated rerenders are actually the cause using benchmarks, `Guppy.native_performance_counters/0`, or the telemetry events above.
 
 ## Current public API surface
 
@@ -96,10 +101,14 @@ Useful top-level API:
 - `Guppy.native_build_info/0`
 - `Guppy.native_runtime_status/0`
 - `Guppy.native_gui_status/0`
+- `Guppy.native_performance_counters/0`
 - `use Guppy.Window`
 
 Useful IR helpers today:
 
+- `Guppy.IR.validated/1`
+- `Guppy.IR.validated!/1`
+- `Guppy.IR.unwrap/1`
 - `Guppy.IR.text/2`
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
@@ -219,8 +228,9 @@ Reference-only paths:
 - `../zed` — Zed checkout for GPUI reference
 - `../zed/crates/gpui` — GPUI source reference
 - `PLAN.md` — active forward-looking project plan
-- `docs/performance.md` — benchmark commands and baseline notes
+- `docs/performance.md` — benchmark commands, telemetry/counter notes, and baseline results
 - `docs/gpui-compliance.md` — GPUI compatibility matrix
+- `bench/native_event_probe.exs` — manual GPUI-generated event timing probe
 - `~/projects/otp` — OTP/wx internals
 
 ## Build and test workflow
@@ -280,6 +290,12 @@ mix run bench/guppy_bench.exs
 mix run bench/guppy_bench.exs --native
 ```
 
+For manual GPUI-generated event timing, run:
+
+```bash
+mix run bench/native_event_probe.exs --events=20
+```
+
 On macOS, `mix guppy.native.build` codesigns the copied NIF artifact in `priv/native/` to avoid stale ad-hoc signature kills after rebuilds.
 
 Especially if you change:
@@ -293,22 +309,19 @@ Especially if you change:
 
 ## What to prioritize next
 
-Prefer real structural hardening over design-system abstraction or new widgets.
+Follow `PLAN.md`. The active phase is primitive expansion: add missing high-value primitives end-to-end, with IR validation, template support, native decode/rendering, retained state when needed, tests, examples, README updates, and GPUI matrix updates.
 
-Follow `PLAN.md`. Current priority order:
+Current priority order:
 
-1. performance hardening with Benchee/native measurements
-2. GPUI compliance hardening and matrix-backed example ports
-3. supported primitive expansion only after the above has evidence
-4. runtime hardening and distribution work
+1. `textarea/editor` as a practical multiline input, not full Zed editor parity
+2. radio/select primitives for common form controls
+3. list / uniform-list primitive for larger repeated UI and scroll retention
+4. tooltip/popover primitives after form/list work
+5. runtime and distribution hardening after the primitive surface is more useful
 
-When primitive expansion resumes, likely targets are:
+Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
 
-1. `textarea/editor`
-2. radio/select primitives
-3. list / uniform-list primitive
-4. tooltip/popover primitives
-5. more retained-state and event regression tests
+Continue keeping `docs/gpui-compliance.md`, `README.md`, and examples current as compatibility work continues.
 
 Do **not** push semantic theme-token ideas into core IR unless the user explicitly changes direction. Keep higher-level theming in Elixir.
 

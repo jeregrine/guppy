@@ -49,3 +49,58 @@ fn to_gpui_object_fit(object_fit: ImageObjectFit) -> ObjectFit {
         ImageObjectFit::None => ObjectFit::None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{image_source, to_gpui_object_fit};
+    use crate::ir::{ImageObjectFit, ImageSource};
+    use gpui::{ObjectFit, Resource};
+
+    #[test]
+    fn maps_image_sources_to_gpui_resources() {
+        match image_source(&ImageSource::Uri("https://example.com/logo.svg".into())) {
+            gpui::ImageSource::Resource(Resource::Uri(uri)) => {
+                assert_eq!(uri.to_string(), "https://example.com/logo.svg")
+            }
+            _ => panic!("expected uri resource"),
+        }
+
+        match image_source(&ImageSource::Path("/tmp/logo.png".into())) {
+            gpui::ImageSource::Resource(Resource::Path(path)) => {
+                assert_eq!(path.to_string_lossy(), "/tmp/logo.png")
+            }
+            _ => panic!("expected path resource"),
+        }
+
+        match image_source(&ImageSource::Embedded("icons/release.svg".into())) {
+            gpui::ImageSource::Resource(Resource::Embedded(path)) => {
+                assert_eq!(path.as_ref(), "icons/release.svg")
+            }
+            _ => panic!("expected embedded resource"),
+        }
+    }
+
+    #[test]
+    fn maps_image_object_fit_to_gpui_object_fit() {
+        assert!(matches!(
+            to_gpui_object_fit(ImageObjectFit::Fill),
+            ObjectFit::Fill
+        ));
+        assert!(matches!(
+            to_gpui_object_fit(ImageObjectFit::Contain),
+            ObjectFit::Contain
+        ));
+        assert!(matches!(
+            to_gpui_object_fit(ImageObjectFit::Cover),
+            ObjectFit::Cover
+        ));
+        assert!(matches!(
+            to_gpui_object_fit(ImageObjectFit::ScaleDown),
+            ObjectFit::ScaleDown
+        ));
+        assert!(matches!(
+            to_gpui_object_fit(ImageObjectFit::None),
+            ObjectFit::None
+        ));
+    }
+}

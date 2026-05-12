@@ -12,13 +12,13 @@ Statuses:
 | GPUI source | Guppy port/coverage | Status | Missing primitives / gaps | Verification |
 | --- | --- | --- | --- | --- |
 | `examples/hello_world.rs` | `examples/hello_world.exs`, `test/guppy_test.exs` template checks | supported | none known for static text/window open | automated IR/template tests; manual example smoke |
-| `examples/scrollable.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; native scroll tests | partial | GPUI parity for every scroll option not mapped; high-frequency scroll coalescing pending | Rust scroll-axis unit test; manual kanban smoke |
+| `examples/scrollable.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; native scroll tests | partial | GPUI parity for every scroll option not mapped; no default high-frequency coalescing planned from current measurements | Rust scroll-axis unit test; GPUI render smoke retains explicit scroll handles; manual kanban smoke |
 | `examples/input.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; text input retained-state tests | partial | textarea/editor, rich input behavior, full focus semantics | Rust text-input retained-state unit test; manual example smoke |
-| `examples/drag_drop.rs` | `examples/kanban_todo.exs` drag callbacks | partial | native drag payload parity, drop target model, event coalescing | manual kanban smoke; no automated native event smoke yet |
-| `examples/tab_stop.rs` | text input/button/checkbox `tab_index` and `tab_stop` IR fields | partial | full GPUI tab stop traversal parity not covered | IR validation only; needs native smoke |
-| `examples/image/image.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs`, `test/guppy_test.exs` image template checks | partial | complete image loading states and asset pipeline parity | automated IR/template tests; manual gallery smoke |
-| `examples/svg/svg.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs` via `icon`/embedded image sources | partial | full SVG rendering controls and sizing parity | automated IR/template checks for icon/image; manual smoke |
-| `examples/window_positioning.rs` | window options validation in `Guppy.Server` tests | partial | complete multi-display/window positioning behavior not smoke-tested | automated option validation; needs native smoke |
+| `examples/drag_drop.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs` drag/drop callbacks | partial | native drag payload parity and drop target model are narrower than GPUI; no default event coalescing planned from current measurements | Elixir server routing tests cover drag_start/drag_move/drop payloads; manual kanban smoke |
+| `examples/tab_stop.rs` | text input/button/checkbox/div `tab_index` and `tab_stop` IR fields | partial | full GPUI tab traversal ordering parity not covered | IR validation; GPUI render smoke retains focus handle for tab-stop div |
+| `examples/image/image.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs`, `test/guppy_test.exs` image template checks | partial | complete async image loading states and asset pipeline parity | automated IR/template tests; Rust image source/object-fit mapping tests; manual gallery smoke |
+| `examples/svg/svg.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs` via `icon`/embedded image sources | partial | full SVG rendering controls and sizing parity | automated IR/template checks for icon/image; Rust embedded image-source mapping test; manual smoke |
+| `examples/window_positioning.rs` | window options validation in `Guppy.Server` tests; hidden native window smoke | partial | complete multi-display/window positioning behavior not covered in CI | automated option validation; hidden-window native smoke with bounds/min-size/kind/decorations/background |
 | `examples/active_state_bug.rs` | style states on button/checkbox/div | partial | exact active state regression not ported | IR validation only |
 | `examples/anchor.rs` | none | unsupported | anchor/anchored overlay primitives | none |
 | `examples/animation.rs` | none | unsupported | animation primitives | none |
@@ -55,12 +55,12 @@ Statuses:
 ## First ports to harden
 
 1. `hello_world`: keep as the basic smoke target.
-2. `scrollable`: add automated native smoke around scroll state retention.
-3. `input`: expand text-input behavior and focus/change event coverage.
-4. `drag_drop`: automate event payload and rerender regression coverage.
-5. `tab_stop`: add focus traversal smoke coverage.
-6. `image` / `svg`: add asset-loading success/failure smoke coverage.
-7. `window_positioning`: add hidden-window native option smoke where CI can run GPUI.
+2. `scrollable`: automated native smoke covers explicit scroll handle retention; broader GPUI scroll-option parity remains tracked as partial.
+3. `input`: retained text-input behavior and server-routed change/focus coverage are automated; textarea/editor remains a missing primitive.
+4. `drag_drop`: server-routed drag/drop payload regression coverage is automated; native GPUI drag simulation remains manual.
+5. `tab_stop`: native render smoke covers tab-stop focus-handle retention; full traversal ordering remains partial.
+6. `image` / `svg`: source/object-fit mapping and template coverage are automated; async loading success/failure remains manual/partial.
+7. `window_positioning`: hidden-window native option smoke covers the supported option path; multi-display behavior remains manual/partial.
 
 ## Refresh process
 
