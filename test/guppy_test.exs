@@ -1782,9 +1782,17 @@ defmodule GuppyTest do
         assert :ok = Guppy.render(view_id, Guppy.IR.text("Hello again from Elixir"))
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
 
+        close_route_handler_id = {__MODULE__, self(), :known_window_closed_route}
+        :ok = attach_forwarding_telemetry(close_route_handler_id, [:guppy, :event, :route])
+        on_exit(fn -> :telemetry.detach(close_route_handler_id) end)
+
         send(Guppy.server(), {:guppy_native_event, view_id, :window_closed, :undefined})
 
         assert_receive {:guppy_event, ^view_id, %{type: :window_closed}}
+
+        assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
+                        %{view_id: ^view_id, type: :window_closed, status: :ok}}
+
         refute Map.has_key?(Guppy.info().views, view_id)
 
         assert :ok =
