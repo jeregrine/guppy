@@ -101,6 +101,12 @@ cd native/guppy_nif && cargo fmt --check
 
 Add a single local check command or script that runs the full suite.
 
+Current local check command:
+
+```sh
+scripts/check
+```
+
 ## Phase 1: Rustler rewrite
 
 1. Add `:rustler` to Mix deps.
@@ -130,6 +136,13 @@ Exit criteria:
 ## Phase 2: performance discipline
 
 Add benchmarks before adding more widgets.
+
+Current benchmark command:
+
+```sh
+mix run bench/guppy_bench.exs
+mix run bench/guppy_bench.exs --native # includes hidden-window native render latency when available
+```
 
 Required benchmark areas:
 
