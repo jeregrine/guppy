@@ -80,6 +80,7 @@ Current known benchmark coverage:
 - `Guppy.Window` routed event-to-rerender latency and repeated routed-event pressure through native-shaped server event delivery
 - high-frequency event payload pressure: mouse move, drag move, scroll wheel
 - kanban scenario: initial render, add card, move card, edit card, scroll interaction
+- debug and release native benchmark snapshots documented in `docs/performance.md`
 
 Remaining performance work:
 

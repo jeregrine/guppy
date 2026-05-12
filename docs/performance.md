@@ -39,6 +39,16 @@ Selected results from `mix run bench/guppy_bench.exs`:
 | Kanban scroll interaction tree build | 150.01 μs | 228.91 μs |
 | High-frequency scroll payload encode | 0.49 μs | 0.54 μs |
 
+## Release native snapshot
+
+After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.exs --native` results:
+
+| Scenario | Average | 99th percentile |
+| --- | ---: | ---: |
+| `Guppy.Window` routed event-to-rerender latency | 0.150 ms | 4.32 ms |
+| `Guppy.Window` repeated routed event pressure (10 events) | 12.19 ms | 88.19 ms |
+| `Guppy.render/2` native request latency | 6.36 ms | 14.20 ms |
+
 ## Notes
 
 - This is a baseline, not a promise of stable performance yet.
