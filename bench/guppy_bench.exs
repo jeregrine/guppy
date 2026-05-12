@@ -20,120 +20,81 @@ defmodule Guppy.Bench do
 
     IO.puts("# Guppy benchmark snapshot")
     IO.puts("# elixir=#{System.version()} otp=#{System.otp_release()} native=#{include_native?}")
-    IO.puts("# times are microseconds per operation unless noted")
     IO.puts("")
 
-    [10, 100, 1_000]
-    |> Enum.each(fn count ->
-      items = Enum.to_list(1..count)
-      ir = tree(count)
-
-      bench("~G template render #{count} nodes", fn ->
-        Guppy.Bench.Template.render(%{items: items})
-      end)
-
-      bench("IR validation #{count} nodes", fn ->
-        :ok = Guppy.IR.validate(ir)
-      end)
-
-      bench("ETF encode/decode proxy #{count} nodes", fn ->
-        ir |> :erlang.term_to_binary() |> :erlang.binary_to_term()
-      end)
-    end)
-
-    kanban = kanban_tree(columns: 4, cards: 40)
-
-    bench("kanban initial render tree build", fn ->
-      kanban_tree(columns: 4, cards: 40)
-    end)
-
-    bench("kanban add card tree build", fn ->
-      add_kanban_card(kanban)
-    end)
-
-    bench("kanban move card tree build", fn ->
-      move_kanban_card(kanban)
-    end)
-
-    bench("kanban edit card tree build", fn ->
-      edit_kanban_card(kanban)
-    end)
-
-    bench("high-frequency event pressure: mouse_move payload", fn ->
-      event_payload(:mouse_move)
-    end)
-
-    bench("high-frequency event pressure: drag_move payload", fn ->
-      event_payload(:drag_move)
-    end)
-
-    bench("high-frequency event pressure: scroll_wheel payload", fn ->
-      event_payload(:scroll_wheel)
-    end)
+    Benchee.run(static_scenarios(), benchee_opts())
 
     if include_native? do
-      native_render_latency(kanban)
+      native_render_latency()
     else
       IO.puts("skip native render/request latency; rerun with --native to open a hidden GPUI window")
     end
   end
 
-  defp bench(name, fun) do
-    {sample_count, inner_count, samples} = sample(fun)
-    sorted = Enum.sort(samples)
+  defp static_scenarios do
+    node_scenarios =
+      [10, 100, 1_000]
+      |> Enum.flat_map(fn count ->
+        items = Enum.to_list(1..count)
+        ir = tree(count)
 
-    IO.puts(
-      Enum.join(
         [
-          name,
-          "samples=#{sample_count}",
-          "inner=#{inner_count}",
-          "p50=#{format_micros(percentile(sorted, 50))}",
-          "p95=#{format_micros(percentile(sorted, 95))}",
-          "p99=#{format_micros(percentile(sorted, 99))}"
-        ],
-        "\t"
-      )
-    )
+          {"~G template render #{count} nodes", fn ->
+             Guppy.Bench.Template.render(%{items: items})
+           end},
+          {"IR validation #{count} nodes", fn ->
+             :ok = Guppy.IR.validate(ir)
+           end},
+          {"ETF encode/decode proxy #{count} nodes", fn ->
+             ir |> :erlang.term_to_binary() |> :erlang.binary_to_term()
+           end}
+        ]
+      end)
+
+    kanban = kanban_tree(columns: 4, cards: 40)
+
+    kanban_scenarios = [
+      {"kanban initial render tree build", fn ->
+         kanban_tree(columns: 4, cards: 40)
+       end},
+      {"kanban add card tree build", fn ->
+         add_kanban_card(kanban)
+       end},
+      {"kanban move card tree build", fn ->
+         move_kanban_card(kanban)
+       end},
+      {"kanban edit card tree build", fn ->
+         edit_kanban_card(kanban)
+       end},
+      {"event-to-rerender proxy latency", fn ->
+         :change
+         |> event_payload()
+         |> apply_event_to_kanban(kanban)
+       end},
+      {"high-frequency event pressure: mouse_move payload encode", fn ->
+         :mouse_move |> event_payload() |> :erlang.term_to_binary()
+       end},
+      {"high-frequency event pressure: drag_move payload encode", fn ->
+         :drag_move |> event_payload() |> :erlang.term_to_binary()
+       end},
+      {"high-frequency event pressure: scroll_wheel payload encode", fn ->
+         :scroll_wheel |> event_payload() |> :erlang.term_to_binary()
+       end}
+    ]
+
+    Map.new(node_scenarios ++ kanban_scenarios)
   end
 
-  defp sample(fun) do
-    sample_count = 200
-    inner_count = inner_count(fun)
-
-    samples =
-      for _ <- 1..sample_count do
-        start = System.monotonic_time(:nanosecond)
-
-        for _ <- 1..inner_count do
-          fun.()
-        end
-
-        stop = System.monotonic_time(:nanosecond)
-        (stop - start) / inner_count / 1_000
-      end
-
-    {sample_count, inner_count, samples}
+  defp benchee_opts do
+    [
+      time: 1,
+      warmup: 0.2,
+      memory_time: 0,
+      reduction_time: 0,
+      percentiles: [50, 95, 99],
+      print: [fast_warning: false]
+    ]
   end
-
-  defp inner_count(fun) do
-    start = System.monotonic_time(:nanosecond)
-
-    for _ <- 1..10 do
-      fun.()
-    end
-
-    elapsed = System.monotonic_time(:nanosecond) - start
-    per_op = max(elapsed / 10, 1)
-    max(1, min(1_000, round(5_000_000 / per_op)))
-  end
-
-  defp percentile(sorted, pct) do
-    index = max(0, ceil(length(sorted) * pct / 100) - 1)
-    Enum.at(sorted, index)
-  end
-
-  defp format_micros(value), do: :erlang.float_to_binary(value, decimals: 2)
 
   defp tree(count) do
     children =
@@ -188,8 +149,14 @@ defmodule Guppy.Bench do
   end
 
   defp edit_kanban_card(kanban) do
-    put_in(kanban, [:children, Access.at(0), :children, Access.at(0), :children, Access.at(0), :content], "Edited card")
+    put_in(
+      kanban,
+      [:children, Access.at(0), :children, Access.at(0), :children, Access.at(0), :content],
+      "Edited card"
+    )
   end
+
+  defp apply_event_to_kanban(_event, kanban), do: edit_kanban_card(kanban)
 
   defp event_payload(kind) do
     %{
@@ -201,12 +168,15 @@ defmodule Guppy.Bench do
     }
   end
 
-  defp native_render_latency(ir) do
+  defp native_render_latency do
+    ir = kanban_tree(columns: 4, cards: 40)
+
     case Guppy.open_window(ir, self(), show: false) do
       {:ok, view_id} ->
-        bench("Guppy.render/2 native request latency", fn ->
-          :ok = Guppy.render(view_id, ir)
-        end)
+        Benchee.run(
+          %{"Guppy.render/2 native request latency" => fn -> :ok = Guppy.render(view_id, ir) end},
+          benchee_opts()
+        )
 
         :ok = Guppy.close_window(view_id)
 

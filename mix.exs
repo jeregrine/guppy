@@ -19,6 +19,8 @@ defmodule Guppy.MixProject do
   end
 
   defp deps do
-    []
+    [
+      {:benchee, "~> 1.3", only: :dev, runtime: false}
+    ]
   end
 end
