@@ -29,8 +29,10 @@ struct IrFieldKeys {
     actions: Term,
     shortcuts: Term,
     label: Term,
+    open: Term,
     events: Term,
     click: Term,
+    close: Term,
     hover: Term,
     focus: Term,
     blur: Term,
@@ -53,6 +55,7 @@ struct IrFieldKeys {
     anchor_scroll: Term,
     tooltip: Term,
     source: Term,
+    popover_style: Term,
     object_fit: Term,
     grayscale: Term,
     checked: Term,
@@ -81,8 +84,10 @@ impl IrFieldKeys {
             actions: atom_term("actions"),
             shortcuts: atom_term("shortcuts"),
             label: atom_term("label"),
+            open: atom_term("open"),
             events: atom_term("events"),
             click: atom_term("click"),
+            close: atom_term("close"),
             hover: atom_term("hover"),
             focus: atom_term("focus"),
             blur: atom_term("blur"),
@@ -105,6 +110,7 @@ impl IrFieldKeys {
             anchor_scroll: atom_term("anchor_scroll"),
             tooltip: atom_term("tooltip"),
             source: atom_term("source"),
+            popover_style: atom_term("popover_style"),
             object_fit: atom_term("object_fit"),
             grayscale: atom_term("grayscale"),
             checked: atom_term("checked"),
@@ -440,6 +446,17 @@ pub enum IrNode {
         item_style: DivStyle,
         click: Option<String>,
     },
+    Popover {
+        id: Option<String>,
+        label: String,
+        open: bool,
+        style: DivStyle,
+        popover_style: DivStyle,
+        disabled: bool,
+        click: Option<String>,
+        close: Option<String>,
+        children: Vec<IrNode>,
+    },
     Spacer {
         id: Option<String>,
         style: DivStyle,
@@ -513,6 +530,27 @@ impl IrNode {
                 item_style: get_style_list_field(map, "item_style")?,
                 click: get_click_event(map)?,
             }),
+            "popover" => {
+                let children = match get_field(map, "children") {
+                    Some(term) => get_list(term)?
+                        .iter()
+                        .map(Self::from_term)
+                        .collect::<Result<Vec<_>, _>>()?,
+                    None => Vec::new(),
+                };
+
+                Ok(Self::Popover {
+                    id,
+                    label: get_string_field(map, "label")?,
+                    open: get_required_boolean_field(map, "open")?,
+                    style: get_div_style(map)?,
+                    popover_style: get_style_list_field(map, "popover_style")?,
+                    disabled: get_boolean_field(map, "disabled")?,
+                    click: get_click_event(map)?,
+                    close: get_close_event(map)?,
+                    children,
+                })
+            }
             "image" => Ok(Self::Image {
                 id,
                 source: get_image_source_field(map)?,
@@ -698,8 +736,10 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "actions" => &keys.actions,
         "shortcuts" => &keys.shortcuts,
         "label" => &keys.label,
+        "open" => &keys.open,
         "events" => &keys.events,
         "click" => &keys.click,
+        "close" => &keys.close,
         "hover" => &keys.hover,
         "focus" => &keys.focus,
         "blur" => &keys.blur,
@@ -722,6 +762,7 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "anchor_scroll" => &keys.anchor_scroll,
         "tooltip" => &keys.tooltip,
         "source" => &keys.source,
+        "popover_style" => &keys.popover_style,
         "object_fit" => &keys.object_fit,
         "grayscale" => &keys.grayscale,
         "checked" => &keys.checked,
@@ -1226,6 +1267,10 @@ fn parse_color_token(token: &str) -> Result<ColorToken, String> {
 
 fn get_click_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
     get_optional_event(map, "click")
+}
+
+fn get_close_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {
+    get_optional_event(map, "close")
 }
 
 fn get_hover_event(map: &HashMap<Term, Term>) -> Result<Option<String>, String> {

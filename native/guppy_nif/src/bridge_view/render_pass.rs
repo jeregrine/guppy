@@ -1,7 +1,7 @@
 use super::{
     BridgeRetainedState, BridgeView, events, render_checkbox, render_div, render_icon,
-    render_image, render_radio, render_scroll, render_spacer, render_text, render_text_input,
-    render_uniform_list,
+    render_image, render_popover, render_radio, render_scroll, render_spacer, render_text,
+    render_text_input, render_uniform_list,
 };
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
@@ -109,6 +109,33 @@ impl<'a> RenderPass<'a> {
                     id: id.as_deref(),
                     axis: *axis,
                     style,
+                    children,
+                },
+                window,
+                cx,
+            ),
+            IrNode::Popover {
+                id,
+                label,
+                open,
+                style,
+                popover_style,
+                disabled,
+                click,
+                close,
+                children,
+            } => render_popover::render(
+                self,
+                render_popover::PopoverSpec {
+                    path,
+                    id: id.as_deref(),
+                    label,
+                    open: *open,
+                    style,
+                    popover_style,
+                    disabled: *disabled,
+                    click: click.as_deref(),
+                    close: close.as_deref(),
                     children,
                 },
                 window,

@@ -333,6 +333,20 @@ defmodule Guppy.IR do
           optional(:events) => text_events()
         }
 
+  @type popover_events :: %{optional(:click) => String.t(), optional(:close) => String.t()}
+
+  @type popover_node :: %{
+          required(:kind) => :popover,
+          required(:label) => String.t(),
+          required(:open) => boolean(),
+          required(:children) => [ir_node()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:popover_style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:events) => popover_events()
+        }
+
   @type spacer_node :: %{
           required(:kind) => :spacer,
           optional(:id) => node_id(),
@@ -373,6 +387,7 @@ defmodule Guppy.IR do
           | checkbox_node()
           | radio_node()
           | uniform_list_node()
+          | popover_node()
           | spacer_node()
           | text_input_node()
           | textarea_node()
@@ -578,6 +593,23 @@ defmodule Guppy.IR do
     |> maybe_put(:id, id)
     |> maybe_put(:axis, axis)
     |> maybe_put(:style, style)
+  end
+
+  @spec popover(String.t(), boolean(), [ir_node()], keyword()) :: popover_node()
+  def popover(label, open, children, opts \\ [])
+      when is_binary(label) and is_boolean(open) and is_list(children) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    popover_style = Keyword.get(opts, :popover_style)
+    disabled = Keyword.get(opts, :disabled)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :popover, label: label, open: open, children: children}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+    |> maybe_put(:popover_style, popover_style)
+    |> maybe_put(:disabled, disabled)
+    |> maybe_put(:events, events)
   end
 
   @spec uniform_list([uniform_list_item()], keyword()) :: uniform_list_node()
@@ -811,6 +843,18 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_node(%{kind: :popover, label: label, open: open, children: children} = node)
+       when is_binary(label) and is_boolean(open) and is_list(children) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :popover_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_events(Map.get(node, :events), [:click, :close]),
+         :ok <- validate_children(children) do
+      :ok
+    end
+  end
+
   defp validate_node(%{kind: :uniform_list, items: items} = node) when is_list(items) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
@@ -951,7 +995,7 @@ defmodule Guppy.IR do
   defp collect_ids(node, ids), do: collect_child_ids(node, ids)
 
   defp collect_child_ids(%{kind: kind, children: children}, ids)
-       when kind in [:div, :scroll] and is_list(children) do
+       when kind in [:div, :scroll, :popover] and is_list(children) do
     Enum.reduce_while(children, {:ok, ids}, fn child, {:ok, acc_ids} ->
       case collect_ids(child, acc_ids) do
         {:ok, next_ids} -> {:cont, {:ok, next_ids}}

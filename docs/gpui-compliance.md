@@ -20,7 +20,7 @@ Statuses:
 | `examples/svg/svg.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs` via `icon`/embedded image sources | partial | full SVG rendering controls and sizing parity | automated IR/template checks for icon/image; Rust embedded image-source mapping test; manual smoke |
 | `examples/window_positioning.rs` | window options validation in `Guppy.Server` tests; hidden native window smoke | partial | complete multi-display/window positioning behavior not covered in CI | automated option validation; hidden-window native smoke with bounds/min-size/kind/decorations/background |
 | `examples/active_state_bug.rs` | style states on button/checkbox/div | partial | exact active state regression not ported | IR validation only |
-| `examples/anchor.rs` | div `tooltip` covers only simple hover text | partial | anchor/anchored overlay primitives and explicit popover positioning | tooltip IR/template/native smoke; no anchored popover port |
+| `examples/anchor.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | explicit anchor choice/positioning controls not exposed yet | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/animation.rs` | none | unsupported | animation primitives | none |
 | `examples/data_table.rs` | `uniform_list` text-row primitive covers only simple repeated rows | partial | grid/data-table layout, columns, cells, and virtualization semantics beyond simple rows | IR/template/native smoke for `uniform_list`; no data-table port |
 | `examples/focus_visible.rs` | focus/blur callbacks | partial | focus-visible styling semantics | IR validation only |
@@ -39,7 +39,7 @@ Statuses:
 | `examples/painting.rs` | none | unsupported | custom painting/canvas | none |
 | `examples/paths_bench.rs` | none | out of scope | GPUI internal path benchmark | none |
 | `examples/pattern.rs` | none | unsupported | pattern painting | none |
-| `examples/popover.rs` | div `tooltip` covers only simple hover text | partial | popover/anchored overlay primitive, outside-click close lifecycle, nested deferred layers | tooltip IR/template/native smoke; no popover port |
+| `examples/popover.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | nested popover parity and advanced deferred-layer controls | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/set_menus.rs` | none | unsupported | menu APIs | none |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |

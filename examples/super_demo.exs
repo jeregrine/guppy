@@ -25,6 +25,7 @@ defmodule Guppy.SuperDemo do
         textarea_changes: 0,
         selected_priority: "medium",
         radio_changes: 0,
+        popover_open: false,
         mouse_downs: 0,
         mouse_ups: 0,
         mouse_moves: 0,
@@ -379,6 +380,18 @@ defmodule Guppy.SuperDemo do
       "uniform_item_clicked" ->
         state
         |> Map.put(:last_event, "uniform list click via #{node_id}")
+        |> rerender!()
+
+      "open_popover" ->
+        state
+        |> Map.put(:popover_open, true)
+        |> Map.put(:last_event, "opened popover via #{node_id}")
+        |> rerender!()
+
+      "close_popover" ->
+        state
+        |> Map.put(:popover_open, false)
+        |> Map.put(:last_event, "closed popover via #{node_id}")
         |> rerender!()
 
       "underlay_click" ->
@@ -810,6 +823,18 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("Clicks, pointer events, and rerenders"),
         Guppy.IR.text(
           "Use Tab to focus clickable cards and buttons, then press Enter or Space to activate them."
+        ),
+        Guppy.IR.popover(
+          "Open popover",
+          state.popover_open,
+          [
+            Guppy.IR.text("Popover content is rendered in a GPUI deferred anchored layer."),
+            Guppy.IR.text("Click outside the popover to emit the close callback.")
+          ],
+          id: "demo_popover",
+          style: [:p_2, :rounded_md, :border_1, {:border_color, :blue}],
+          popover_style: [:p_4, :gap_2],
+          events: %{click: "open_popover", close: "close_popover"}
         ),
         Guppy.IR.div(
           [Guppy.IR.text("Hover this row to exercise the native tooltip path.")],

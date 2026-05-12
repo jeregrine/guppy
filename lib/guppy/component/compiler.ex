@@ -145,6 +145,7 @@ defmodule Guppy.Component.Compiler do
         "div" -> compile_div(attrs, xmlElement(element, :content), caller)
         "scroll" -> compile_scroll(attrs, xmlElement(element, :content), caller)
         "uniform_list" -> compile_uniform_list(attrs, xmlElement(element, :content), caller)
+        "popover" -> compile_popover(attrs, xmlElement(element, :content), caller)
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
         "radio" -> compile_radio(attrs, xmlElement(element, :content), caller)
@@ -195,6 +196,26 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.uniform_list(unquote(items), unquote(opts))
+    end
+  end
+
+  defp compile_popover(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, popover_allowed_attrs(), "popover", caller)
+    label = fetch_required_attr!(attrs, "label", :string_or_expr, caller)
+    open = fetch_required_attr!(attrs, "open", :boolean, caller)
+    children = build_children_ast(content, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "popover_class", "popover_style", :popover_style),
+        maybe_attr_entry(attrs, "disabled", :boolean, caller),
+        events_entry(attrs, ["click", "close"], caller)
+      ])
+
+    quote do
+      Guppy.IR.popover(unquote(label), unquote(open), unquote(children), unquote(opts))
     end
   end
 
@@ -1038,6 +1059,23 @@ defmodule Guppy.Component.Compiler do
 
   defp uniform_list_allowed_attrs do
     [":if", ":for", "id", "items", "class", "style", "item_class", "item_style"] ++ @text_events
+  end
+
+  defp popover_allowed_attrs do
+    [
+      ":if",
+      ":for",
+      "id",
+      "label",
+      "open",
+      "class",
+      "style",
+      "popover_class",
+      "popover_style",
+      "disabled",
+      "click",
+      "close"
+    ]
   end
 
   defp image_allowed_attrs do

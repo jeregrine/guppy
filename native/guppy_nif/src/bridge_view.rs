@@ -5,6 +5,7 @@ mod render_div;
 mod render_icon;
 mod render_image;
 mod render_pass;
+mod render_popover;
 mod render_radio;
 mod render_scroll;
 mod render_spacer;

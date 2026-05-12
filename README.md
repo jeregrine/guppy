@@ -32,6 +32,7 @@ Guppy currently supports these native node kinds:
 - `div`
 - `scroll`
 - `uniform_list`
+- `popover`
 - `button`
 - `checkbox`
 - `radio`
@@ -56,6 +57,7 @@ Current native event coverage includes:
 - checkbox change
 - radio change
 - uniform list item click
+- popover trigger/close click callbacks
 - text input / textarea change
 - window closed
 
@@ -204,6 +206,7 @@ IR helpers:
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
+- `Guppy.IR.popover/4`
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
 - `Guppy.IR.radio/4`
@@ -284,6 +287,7 @@ Built-in template tags currently include:
 - `<radio>`
 - `<scroll>`
 - `<uniform_list />`
+- `<popover>`
 - `<image />`
 - `<icon />`
 - `<spacer />`
@@ -436,7 +440,7 @@ Still missing or intentionally narrow:
 - full editor/rich-text parity
 - select primitive
 - fully generic list item renderers
-- popover / anchored overlay primitives
+- full popover parity (nested/deferred layer edge cases)
 - richer text runs/highlights
 - letter spacing
 

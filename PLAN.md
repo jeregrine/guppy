@@ -157,15 +157,35 @@ Still out of scope:
 - hoverable tooltip content
 - anchored popovers / overlay close lifecycle
 
-### Priority 1: popover primitives
+### Completed in primitive expansion: popover
 
-Goal: unlock anchored overlay scenarios and eventual native select/dropdown support.
+Guppy now has a minimal Elixir-owned popover primitive backed by GPUI deferred anchored layers.
+
+Delivered scope:
+
+- `Guppy.IR.popover/4`
+- `popover` template tag
+- trigger label, open flag, children, trigger click callback, and outside-click close callback
+- GPUI `deferred(anchored(...))` native render path
+- example coverage in `examples/super_demo.exs`
+- `README.md` supported-surface update
+- `docs/gpui-compliance.md` matrix update for popover/anchor gaps
+
+Still out of scope:
+
+- nested popover parity
+- retained/native overlay owner state; Elixir owns open/closed state
+- full select/dropdown built on top of popover
+
+### Priority 1: remaining compliance hardening
+
+Goal: reduce or explicitly defer the remaining partial/unsupported matrix rows before moving to runtime/distribution work.
 
 Initial scope:
 
-- popover/anchored overlay primitive only if GPUI 0.2.2 APIs support it cleanly
-- focus/close lifecycle behavior
-- examples and matrix updates for `examples/popover.rs` and `examples/anchor.rs`
+- add focused smoke tests where existing primitives already cover a row
+- explicitly mark rows out of scope where they are platform APIs or GPUI internals
+- leave high-effort primitives such as animation, grid, canvas, menus, and rich text as future work unless specifically prioritized
 
 ## Ongoing maintenance while expanding primitives
 

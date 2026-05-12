@@ -14,6 +14,7 @@ defmodule Guppy.Component do
   - `<radio />`
   - `<scroll>`
   - `<uniform_list />`
+  - `<popover>`
   - `<image />`
   - `<icon />`
   - `<spacer />`

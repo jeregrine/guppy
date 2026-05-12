@@ -55,6 +55,9 @@ defmodule Guppy.TemplateExample do
         </div>
       </scroll>
       <uniform_list id="virtual_items" items={@uniform_items} class="h-[120px]" item_class="p-2" click="uniform_item_clicked" />
+      <popover id="help_popover" label="Help" open={@popover_open} click="open_help" close="close_help" popover_class="p-4">
+        <text>Popover content</text>
+      </popover>
       <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" />
       <textarea id="notes_input" value={@notes} placeholder="Notes" class="w-[240px] h-[120px]" change="notes_changed" />
       {if @show_footer, do: Guppy.IR.text("Footer ready", id: "footer")}
@@ -219,6 +222,22 @@ defmodule GuppyTest do
     assert uniform_list_ir.kind == :uniform_list
     assert length(uniform_list_ir.items) == 2
     assert uniform_list_ir.events == %{click: "item_clicked"}
+
+    popover_ir =
+      Guppy.IR.popover(
+        "Help",
+        true,
+        [Guppy.IR.text("Popover content", id: "popover_text")],
+        id: "help_popover",
+        style: [:p_2],
+        popover_style: [:p_4, :shadow_lg],
+        events: %{click: "open_help", close: "close_help"}
+      )
+
+    assert :ok = Guppy.IR.validate(popover_ir)
+    assert popover_ir.kind == :popover
+    assert popover_ir.open == true
+    assert popover_ir.events == %{click: "open_help", close: "close_help"}
 
     radio_ir =
       Guppy.IR.radio(
@@ -688,6 +707,9 @@ defmodule GuppyTest do
     assert {:error, {:invalid_uniform_list_item, %{id: "item", label: 123}}} =
              Guppy.IR.validate(Guppy.IR.uniform_list([%{id: "item", label: 123}]))
 
+    assert {:error, {:invalid_ir, %{kind: :popover, label: "Help", open: "yes", children: []}}} =
+             Guppy.IR.validate(%{kind: :popover, label: "Help", open: "yes", children: []})
+
     assert {:error, {:invalid_ir, %{kind: :text_input, value: 123}}} =
              Guppy.IR.validate(%{kind: :text_input, value: 123})
 
@@ -915,6 +937,7 @@ defmodule GuppyTest do
         value: "Jason",
         notes: "Line one\nLine two",
         priority: "high",
+        popover_open: true,
         show_footer: true
       })
 
@@ -934,6 +957,7 @@ defmodule GuppyTest do
       image,
       scroll,
       uniform_list,
+      popover,
       text_input,
       textarea,
       footer
@@ -990,6 +1014,14 @@ defmodule GuppyTest do
     assert {:h_px, 120} in uniform_list.style
     assert :p_2 in uniform_list.item_style
     assert uniform_list.events == %{click: "uniform_item_clicked"}
+
+    assert popover.kind == :popover
+    assert popover.id == "help_popover"
+    assert popover.label == "Help"
+    assert popover.open == true
+    assert popover.events == %{click: "open_help", close: "close_help"}
+    assert :p_4 in popover.popover_style
+    assert [%{kind: :text, content: "Popover content"}] = popover.children
 
     assert text_input.kind == :text_input
     assert text_input.id == "name_input"
@@ -1247,6 +1279,18 @@ defmodule GuppyTest do
                    Guppy.IR.div([Guppy.IR.text("Hover for tooltip")],
                      id: "tooltip_target",
                      tooltip: "Native tooltip smoke"
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
+                   Guppy.IR.popover(
+                     "Help",
+                     true,
+                     [Guppy.IR.text("Native popover body")],
+                     id: "native_popover",
+                     events: %{click: "open_popover", close: "close_popover"}
                    )
                  )
 
