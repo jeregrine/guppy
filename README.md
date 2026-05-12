@@ -45,6 +45,7 @@ Current native event coverage includes:
 
 - click
 - hover
+- tooltip display on div nodes
 - focus / blur
 - key down / key up
 - shortcut-dispatched actions
@@ -435,7 +436,7 @@ Still missing or intentionally narrow:
 - full editor/rich-text parity
 - select primitive
 - fully generic list item renderers
-- tooltip/popover primitives
+- popover / anchored overlay primitives
 - richer text runs/highlights
 - letter spacing
 

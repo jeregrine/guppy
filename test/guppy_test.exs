@@ -36,7 +36,7 @@ defmodule Guppy.TemplateExample do
 
   def render(assigns) do
     ~G"""
-    <div id="root" class="flex flex-col gap-4 p-4 bg-[#0f172a] text-[#f8fafc]">
+    <div id="root" tooltip="Template root" class="flex flex-col gap-4 p-4 bg-[#0f172a] text-[#f8fafc]">
       <text id="title" class="text-3xl font-black">{@title}</text>
       <button id="save_button" click="save" class="p-2 rounded-lg border-1 border-blue bg-blue text-[#ffffff]">
         Save
@@ -320,6 +320,7 @@ defmodule GuppyTest do
       Guppy.IR.div(
         [Guppy.IR.text("hello")],
         id: "root",
+        tooltip: "Helpful root tooltip",
         hover_style: [{:bg_hex, "#101010"}, {:opacity, 0.9}, :cursor_pointer],
         focus_style: [{:bg_hex, "#202020"}, {:text_color, :yellow}],
         in_focus_style: [{:border_color, :yellow}, :shadow_md],
@@ -501,6 +502,7 @@ defmodule GuppyTest do
     assert styled_ir.stack_priority == 7
     assert styled_ir.occlude == true
     assert styled_ir.focusable == true
+    assert styled_ir.tooltip == "Helpful root tooltip"
     assert styled_ir.tab_stop == true
     assert styled_ir.tab_index == 3
 
@@ -713,6 +715,9 @@ defmodule GuppyTest do
     assert {:error, {:disabled, "yes"}} =
              Guppy.IR.validate(Guppy.IR.text_input("Jason", disabled: "yes"))
 
+    assert {:error, {:tooltip, 123}} =
+             Guppy.IR.validate(Guppy.IR.div([], tooltip: 123))
+
     assert {:error, {:invalid_actions, [:nope]}} =
              Guppy.IR.validate(Guppy.IR.div([], actions: [:nope]))
 
@@ -916,6 +921,7 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(ir)
     assert ir.kind == :div
     assert ir.id == "root"
+    assert ir.tooltip == "Template root"
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
@@ -1232,6 +1238,15 @@ defmodule GuppyTest do
                      ],
                      id: "scroll_root",
                      style: [{:h_px, 180}, :p_2, :rounded_md, :border_1, {:border_color, :white}]
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
+                   Guppy.IR.div([Guppy.IR.text("Hover for tooltip")],
+                     id: "tooltip_target",
+                     tooltip: "Native tooltip smoke"
                    )
                  )
 

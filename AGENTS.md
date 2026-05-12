@@ -144,7 +144,7 @@ Still missing higher-value nodes/primitives:
 - full editor/rich-text parity
 - select primitive
 - fully generic list item renderers
-- tooltip / popover primitives
+- popover primitives
 
 ## Current preferred authoring model
 
@@ -319,7 +319,7 @@ Follow `PLAN.md`. The active phase is primitive expansion: add missing high-valu
 
 Current priority order:
 
-1. tooltip/popover primitives to unblock anchored overlays and eventual select/dropdown
+1. popover primitives to unblock anchored overlays and eventual select/dropdown
 2. more generic list/uniform-list rendering if the text-row primitive proves too narrow
 3. runtime and distribution hardening after the primitive surface is more useful
 4. full editor/rich-text parity only if explicitly scoped

@@ -226,6 +226,7 @@ defmodule Guppy.IR do
           optional(:tab_index) => integer(),
           optional(:track_scroll) => boolean(),
           optional(:anchor_scroll) => boolean(),
+          optional(:tooltip) => String.t(),
           optional(:actions) => action_bindings(),
           optional(:shortcuts) => [shortcut_binding()],
           optional(:events) => div_events()
@@ -541,6 +542,7 @@ defmodule Guppy.IR do
     tab_index = Keyword.get(opts, :tab_index)
     track_scroll = Keyword.get(opts, :track_scroll)
     anchor_scroll = Keyword.get(opts, :anchor_scroll)
+    tooltip = Keyword.get(opts, :tooltip)
     actions = Keyword.get(opts, :actions)
     shortcuts = Keyword.get(opts, :shortcuts)
 
@@ -560,6 +562,7 @@ defmodule Guppy.IR do
     |> maybe_put(:tab_index, tab_index)
     |> maybe_put(:track_scroll, track_scroll)
     |> maybe_put(:anchor_scroll, anchor_scroll)
+    |> maybe_put(:tooltip, tooltip)
     |> maybe_put(:actions, actions)
     |> maybe_put(:shortcuts, shortcuts)
     |> maybe_put(:events, events)
@@ -774,6 +777,7 @@ defmodule Guppy.IR do
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
          :ok <- validate_optional_boolean(Map.get(node, :track_scroll), :track_scroll),
          :ok <- validate_optional_boolean(Map.get(node, :anchor_scroll), :anchor_scroll),
+         :ok <- validate_optional_string(Map.get(node, :tooltip), :tooltip),
          :ok <- validate_actions(Map.get(node, :actions)),
          :ok <- validate_shortcuts(Map.get(node, :shortcuts), Map.get(node, :actions)),
          :ok <-

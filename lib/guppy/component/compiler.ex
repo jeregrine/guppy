@@ -88,7 +88,8 @@ defmodule Guppy.Component.Compiler do
     {"focusable", :boolean},
     {"tab_stop", :boolean},
     {"track_scroll", :boolean},
-    {"anchor_scroll", :boolean}
+    {"anchor_scroll", :boolean},
+    {"tooltip", :string_or_expr}
   ]
 
   def compile!(template, caller) when is_binary(template) do

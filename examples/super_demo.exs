@@ -811,6 +811,12 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text(
           "Use Tab to focus clickable cards and buttons, then press Enter or Space to activate them."
         ),
+        Guppy.IR.div(
+          [Guppy.IR.text("Hover this row to exercise the native tooltip path.")],
+          id: "tooltip_demo_row",
+          tooltip: "Tooltips use GPUI's native tooltip mechanism.",
+          style: [:p_2, :rounded_md, :border_1, {:border_color, :yellow}]
+        ),
         Guppy.IR.text("div_clicks = #{state.div_clicks}"),
         action_button("Increment div clicks", "div_button", "div_increment", :blue),
         Guppy.IR.text("Disabled button below should not increment div_clicks."),

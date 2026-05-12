@@ -9,8 +9,8 @@ use crate::ir::{DivNode, ShortcutBinding};
 use gpui::{
     AnyElement, AppContext, Context, Div, Empty, FocusHandle, InteractiveElement, IntoElement,
     KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
-    ParentElement, ScrollAnchor, ScrollHandle, Stateful, StatefulInteractiveElement, Window,
-    deferred, div,
+    ParentElement, Render, ScrollAnchor, ScrollHandle, Stateful, StatefulInteractiveElement,
+    Styled, Window, deferred, div, px, rgb,
 };
 
 struct DisabledEventFilter {
@@ -125,6 +125,7 @@ pub(crate) fn render(
         parent_scroll_handle.as_ref(),
     );
     let styled_div = attach_pointer_and_keyboard_interactions(styled_div, &prepared, &retained);
+    let styled_div = attach_tooltip(styled_div, node);
     let styled_div = apply_stateful_style_refinements(styled_div, node);
 
     finalize_div_layering(styled_div, node)
@@ -500,6 +501,40 @@ fn attach_pointer_and_keyboard_interactions(
             })
         }
         None => styled_div,
+    }
+}
+
+fn attach_tooltip(mut styled_div: Stateful<Div>, node: &DivNode) -> Stateful<Div> {
+    if node.disabled {
+        return styled_div;
+    }
+
+    if let Some(tooltip) = node.tooltip.as_ref() {
+        let tooltip = tooltip.clone();
+        styled_div = styled_div.tooltip(move |_, cx| {
+            cx.new(|_| TooltipView {
+                text: tooltip.clone(),
+            })
+            .into()
+        });
+    }
+
+    styled_div
+}
+
+struct TooltipView {
+    text: String,
+}
+
+impl Render for TooltipView {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .p(px(6.0))
+            .rounded_md()
+            .border_1()
+            .bg(rgb(0x111827))
+            .text_color(rgb(0xf9fafb))
+            .child(self.text.clone())
     }
 }
 

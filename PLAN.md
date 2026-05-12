@@ -138,13 +138,31 @@ Still out of scope:
 - data-table/grid parity
 - row selection ownership beyond normal Elixir event handling
 
-### Priority 1: tooltip/popover primitives
+### Completed in primitive expansion: tooltip
 
-Goal: unlock anchored overlay scenarios after core form/list work.
+Guppy now supports simple tooltip text on `div` nodes via GPUI's native tooltip mechanism.
+
+Delivered scope:
+
+- `tooltip` option on `Guppy.IR.div/2`
+- `tooltip` template attribute on `<div>`
+- native GPUI tooltip rendering for non-disabled divs
+- example coverage in `examples/super_demo.exs`
+- `README.md` supported-surface update
+- `docs/gpui-compliance.md` matrix update for tooltip/popover gaps
+
+Still out of scope:
+
+- arbitrary tooltip child IR
+- hoverable tooltip content
+- anchored popovers / overlay close lifecycle
+
+### Priority 1: popover primitives
+
+Goal: unlock anchored overlay scenarios and eventual native select/dropdown support.
 
 Initial scope:
 
-- tooltip primitive if lightweight
 - popover/anchored overlay primitive only if GPUI 0.2.2 APIs support it cleanly
 - focus/close lifecycle behavior
 - examples and matrix updates for `examples/popover.rs` and `examples/anchor.rs`
