@@ -65,8 +65,8 @@ impl BridgeView {
 #[cfg(test)]
 mod tests {
     use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
-    use crate::ir::IrNode;
-    use gpui::{Render, ScrollHandle};
+    use crate::ir::{DivNode, IrNode, StyleOp};
+    use gpui::{Modifiers, Render, ScrollHandle, point, px};
 
     #[test]
     fn prune_retained_state_drops_dead_scroll_handles() {
@@ -95,6 +95,23 @@ mod tests {
     }
 
     #[gpui::test]
+    fn simulated_gpui_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+        let before = crate::native_event_send_snapshot_for_test();
+        let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 42,
+            ir: clickable_div(),
+            retained: BridgeRetainedState::default(),
+        });
+
+        cx.update(|window, cx| window.draw(cx).clear());
+        cx.simulate_click(point(px(10.), px(10.)), Modifiers::none());
+
+        let after = crate::native_event_send_snapshot_for_test();
+        assert!(after.0 > before.0);
+        assert!(after.1 > before.1);
+    }
+
+    #[gpui::test]
     fn render_prunes_dead_text_input_entities(cx: &mut gpui::TestAppContext) {
         let (view, cx) = cx.add_window_view(|_, _| BridgeView {
             view_id: 9,
@@ -118,5 +135,41 @@ mod tests {
             let _ = view.render(window, view_cx);
             assert!(view.retained.text_inputs.is_empty());
         });
+    }
+
+    fn clickable_div() -> IrNode {
+        IrNode::Div(Box::new(DivNode {
+            id: Some("click_target".into()),
+            style: vec![StyleOp::W96, StyleOp::H32, StyleOp::P4, StyleOp::Border1].into(),
+            hover_style: Vec::new().into(),
+            focus_style: Vec::new().into(),
+            in_focus_style: Vec::new().into(),
+            active_style: Vec::new().into(),
+            disabled_style: Vec::new().into(),
+            disabled: false,
+            stack_priority: None,
+            occlude: false,
+            focusable: false,
+            tab_stop: None,
+            tab_index: None,
+            track_scroll: false,
+            anchor_scroll: false,
+            shortcuts: Vec::new(),
+            children: vec![IrNode::text("click me")],
+            click: Some("clicked".into()),
+            hover: None,
+            focus: None,
+            blur: None,
+            key_down: None,
+            key_up: None,
+            context_menu: None,
+            drag_start: None,
+            drag_move: None,
+            drop: None,
+            mouse_down: None,
+            mouse_up: None,
+            mouse_move: None,
+            scroll_wheel: None,
+        }))
     }
 }

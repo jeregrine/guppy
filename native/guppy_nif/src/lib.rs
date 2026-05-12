@@ -6,7 +6,7 @@ mod window_options;
 
 use crate::ir::IrNode;
 use crate::window_options::WindowOptionsConfig;
-use rustler::{Atom, Encoder, Env, Error, LocalPid, NifResult, OwnedEnv, Term};
+use rustler::{Atom, Encoder, Env, Error, LocalPid, NifResult, Term};
 use std::ffi::{CString, c_char, c_void};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Sender};
@@ -380,27 +380,38 @@ pub(crate) fn send_window_closed_event(view_id: u64) -> i32 {
 
 fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -> Term<'a>) -> i32 {
     let started_at = Instant::now();
-    let target = {
-        let target = EVENT_TARGET.lock().expect("event target lock poisoned");
-        *target
-    };
 
-    let Some(target) = target else {
+    #[cfg(test)]
+    {
+        let _ = (view_id, event, payload);
         record_event_send(started_at, false);
-        return 0;
-    };
+        0
+    }
 
-    let mut msg_env = OwnedEnv::new();
-    match msg_env.send_and_clear(&target, |env| {
-        (guppy_native_event(), view_id, event, payload(env)).encode(env)
-    }) {
-        Ok(()) => {
-            record_event_send(started_at, true);
-            1
-        }
-        Err(_) => {
+    #[cfg(not(test))]
+    {
+        let target = {
+            let target = EVENT_TARGET.lock().expect("event target lock poisoned");
+            *target
+        };
+
+        let Some(target) = target else {
             record_event_send(started_at, false);
-            0
+            return 0;
+        };
+
+        let mut msg_env = rustler::OwnedEnv::new();
+        match msg_env.send_and_clear(&target, |env| {
+            (guppy_native_event(), view_id, event, payload(env)).encode(env)
+        }) {
+            Ok(()) => {
+                record_event_send(started_at, true);
+                1
+            }
+            Err(_) => {
+                record_event_send(started_at, false);
+                0
+            }
         }
     }
 }
@@ -482,6 +493,14 @@ fn duration_to_u64_nanos(duration: Duration) -> u64 {
     duration.as_nanos().min(u128::from(u64::MAX)) as u64
 }
 
+#[cfg(test)]
+pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
+    (
+        NATIVE_EVENT_SEND_COUNT.load(Ordering::Relaxed),
+        NATIVE_EVENT_SEND_FAILURE_COUNT.load(Ordering::Relaxed),
+    )
+}
+
 fn send_id_callback_event(view_id: u64, event: Atom, node_id: &str, callback_id: &str) -> i32 {
     let node_id = node_id.to_owned();
     let callback_id = callback_id.to_owned();
@@ -504,6 +523,15 @@ pub extern "C" fn guppy_c_send_click_event(
     let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
         return 0;
     };
+
+    #[cfg(test)]
+    {
+        let _ = (view_id, node_id, callback_id);
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
     send_id_callback_event(view_id, click(), &node_id, &callback_id)
 }
 

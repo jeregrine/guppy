@@ -60,6 +60,7 @@ After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.ex
 - `Guppy.native_performance_counters/0` exposes native-side counters for Rust boundary IR/options encode-decode timing and native event send timing/failures.
 - `Guppy.IR.validated!/1` can wrap static or trusted trees after one validation pass so repeated `open_window`/`render` calls skip Elixir-side validation while still unwrapping before native decode.
 - `bench/native_event_probe.exs` provides a manual GPUI-generated event probe. It measures route-to-rerender latency after actual native click delivery; it does not include OS input latency before GPUI emits the event.
+- Native tests include automated GPUI simulated-click coverage for the event bridge. That coverage verifies delivery into the native event bridge, but does not measure BEAM/NIF end-to-end timing.
 - The repeated routed-event snapshot is measurement-only; current release results do not justify default `Guppy.Window` batching/debounce without stronger evidence of user-visible pressure.
 - Current high-frequency payload encode measurements for mouse move, drag move, and scroll wheel are sub-microsecond and do not justify adding default event coalescing without native delivery evidence.
 - Use release native builds for interactive/manual performance checks:

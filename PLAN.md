@@ -78,6 +78,7 @@ Current known benchmark coverage:
 - native-side performance counters for Rust boundary IR/options encode-decode timing and native event sends
 - event-to-rerender proxy latency
 - `Guppy.Window` routed event-to-rerender latency and repeated routed-event pressure through native-shaped server event delivery; current release measurements do not justify default rerender batching/debounce
+- automated GPUI simulated click regression coverage for the native event bridge
 - manual GPUI-generated native click-to-rerender probe in `bench/native_event_probe.exs`
 - high-frequency event payload pressure: mouse move, drag move, scroll wheel; current payload encode measurements do not justify default coalescing
 - kanban scenario: initial render, add card, move card, edit card, scroll interaction
@@ -86,7 +87,7 @@ Current known benchmark coverage:
 
 Remaining performance work:
 
-1. Add an automated GPUI-generated event benchmark if GPUI/platform test APIs make actual native input delivery scriptable.
+- None required before Phase 2. Actual GPUI event timing is covered by the manual `bench/native_event_probe.exs` probe; the automated GPUI test platform now covers simulated click delivery into the native event bridge, but not BEAM/NIF end-to-end timing.
 
 ## Phase 2: GPUI compliance hardening
 
