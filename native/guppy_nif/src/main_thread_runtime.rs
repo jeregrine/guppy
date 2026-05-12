@@ -11,11 +11,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Mutex, OnceLock};
 
-unsafe extern "C" {
-    fn guppy_c_gui_started(status: i32);
-    fn guppy_c_send_window_closed_event(view_id: u64) -> i32;
-}
-
 thread_local! {
     static APP: RefCell<Option<AsyncApp>> = const { RefCell::new(None) };
     static WINDOWS: RefCell<HashMap<u64, gpui::WindowHandle<BridgeView>>> = RefCell::new(HashMap::new());
@@ -59,7 +54,7 @@ pub fn run_app() {
         bridge_text_input::bind_keys(cx);
         register_main_thread_dispatcher(cx);
 
-        unsafe { guppy_c_gui_started(1) };
+        crate::notify_gui_started(1);
     });
 }
 
@@ -108,9 +103,7 @@ pub fn open_window(view_id: u64, ir: IrNode, options: WindowOptionsConfig) -> i3
                             windows.borrow_mut().remove(&view_id);
                         });
 
-                        unsafe {
-                            let _ = guppy_c_send_window_closed_event(view_id);
-                        }
+                        let _ = crate::send_window_closed_event(view_id);
                         true
                     });
                 });

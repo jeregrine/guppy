@@ -24,11 +24,25 @@ defmodule Mix.Tasks.Guppy.Native.Build do
 
         source = Path.join([native_dir, "target", profile, cargo_library_filename()])
         File.cp!(source, destination)
+        maybe_codesign(destination)
 
         Mix.shell().info("Installed #{destination}")
 
       {output, status} ->
         Mix.raise("cargo build failed with status #{status}\n\n#{output}")
+    end
+  end
+
+  defp maybe_codesign(path) do
+    case :os.type() do
+      {:unix, :darwin} ->
+        case System.cmd("codesign", ["--force", "--sign", "-", path], stderr_to_stdout: true) do
+          {_output, 0} -> :ok
+          {output, status} -> Mix.raise("codesign failed with status #{status}\n\n#{output}")
+        end
+
+      _ ->
+        :ok
     end
   end
 

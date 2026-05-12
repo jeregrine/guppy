@@ -34,11 +34,11 @@ Current high-level flow:
 1. Elixir builds IR and calls the public API in `lib/guppy.ex`
 2. `Guppy.Server` owns view ids, ownership, and event routing
 3. `Guppy.Native.Nif` dispatches directly into NIF entrypoints
-4. the C shim handles NIF bootstrap and macOS main-thread handoff
+4. Rustler handles NIF bootstrap, exports, and BEAM interop
 5. Rust decodes ETF into native IR
 6. Rust enqueues main-thread requests directly into the GPUI runtime queue
 7. `BridgeView` renders IR into GPUI elements
-8. native events go back through the C shim into the BEAM
+8. native events go back through Rustler into the BEAM
 9. `Guppy.Server` forwards them to the owning Elixir process
 
 Important current invariants:
@@ -61,6 +61,7 @@ Important current invariants:
 
 ### Native side
 
+- the old C shim was removed; Rustler now owns NIF entrypoints and BEAM interop
 - the extra Rust runtime thread was removed
 - NIF entrypoints enqueue requests directly into the main-thread runtime queue
 - main-thread request drain scheduling is coalesced with an atomic scheduled flag
@@ -177,7 +178,7 @@ The native side is intentionally NIF-first.
 Keep these assumptions unless there is a strong reason to replace them:
 
 - ship a single native NIF artifact per target
-- keep the C layer focused on bootstrap and BEAM interop
+- keep NIF bootstrap and BEAM interop in Rustler/Rust
 - keep most runtime logic in Rust
 - on macOS, preserve the OTP/wx-style main-thread strategy unless replacing it deliberately
 - do **not** reintroduce `gpui_platform` casually
@@ -204,8 +205,7 @@ Files you will most often need:
 - `lib/guppy/component/compiler.ex` — template compiler
 - `lib/guppy/native/nif.ex` — direct Elixir NIF wrapper
 - `lib/guppy/ir.ex` — Elixir IR validation/helpers
-- `native/guppy_nif/c_src/guppy_nif.c` — C shim, NIF entrypoints, main-thread bootstrap
-- `native/guppy_nif/src/lib.rs` — Rust NIF entrypoints and request path
+- `native/guppy_nif/src/lib.rs` — Rustler NIF entrypoints, event encoding, and request path
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI app bootstrap, request drain, window registry
 - `native/guppy_nif/src/bridge_view.rs` — native root renderer
 - `native/guppy_nif/src/bridge_view/` — render pass, style mapping, event bridge, identity, per-node renderers
@@ -267,7 +267,6 @@ mix run examples/kanban_todo.exs
 
 Especially if you change:
 
-- `native/guppy_nif/c_src/guppy_nif.c`
 - `native/guppy_nif/src/lib.rs`
 - `native/guppy_nif/src/main_thread_runtime.rs`
 - `native/guppy_nif/src/bridge_view.rs`
@@ -312,9 +311,8 @@ If you need to get oriented quickly:
 1. read `README.md`
 2. read `lib/guppy.ex`, `lib/guppy/server.ex`, `lib/guppy/window.ex`, and `lib/guppy/native/nif.ex`
 3. read `lib/guppy/component.ex`, `lib/guppy/component/compiler.ex`, and `lib/guppy/ir.ex`
-4. read `native/guppy_nif/c_src/guppy_nif.c`
-5. read `native/guppy_nif/src/lib.rs` and `native/guppy_nif/src/main_thread_runtime.rs`
-6. read `native/guppy_nif/src/bridge_view.rs` and the relevant files under `native/guppy_nif/src/bridge_view/`
-7. run `mix guppy.native.build`
-8. run `mix test`
-9. run `mix run examples/kanban_todo.exs` or `mix run examples/super_demo.exs` for an interactive smoke test
+4. read `native/guppy_nif/src/lib.rs` and `native/guppy_nif/src/main_thread_runtime.rs`
+5. read `native/guppy_nif/src/bridge_view.rs` and the relevant files under `native/guppy_nif/src/bridge_view/`
+6. run `mix guppy.native.build`
+7. run `mix test`
+8. run `mix run examples/kanban_todo.exs` or `mix run examples/super_demo.exs` for an interactive smoke test

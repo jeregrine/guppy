@@ -1,12 +1,9 @@
 defmodule Guppy.Native.Nif do
   @moduledoc """
-  NIF-backed native bridge scaffold.
+  NIF-backed native bridge wrapper.
 
-  The long-term shape is expected to be:
-
-  - a narrow Elixir wrapper for lifecycle and request routing
-  - a small C shim that owns `ERL_NIF_INIT` and low-level bootstrap
-  - a Rust core linked into the same final native library
+  Rustler owns the NIF entrypoints and lifecycle. This module keeps the
+  Elixir-facing dispatch and load-status normalization narrow.
   """
 
   @behaviour Guppy.Native
@@ -106,24 +103,27 @@ defmodule Guppy.Native.Nif do
 
   def build_info do
     case load_status() do
-      :ok -> {:ok, native_build_info() |> List.to_string()}
+      :ok -> {:ok, native_build_info() |> native_string_to_string()}
       {:error, reason} -> {:error, reason}
     end
   end
 
   def runtime_status do
     case load_status() do
-      :ok -> {:ok, native_runtime_status() |> List.to_string()}
+      :ok -> {:ok, native_runtime_status() |> native_string_to_string()}
       {:error, reason} -> {:error, reason}
     end
   end
 
   def gui_status do
     case load_status() do
-      :ok -> {:ok, native_gui_status() |> List.to_string()}
+      :ok -> {:ok, native_gui_status() |> native_string_to_string()}
       {:error, reason} -> {:error, reason}
     end
   end
+
+  defp native_string_to_string(value) when is_binary(value), do: value
+  defp native_string_to_string(value) when is_list(value), do: List.to_string(value)
 
   defp dispatch({:ping, []}) do
     with_loaded(fn -> {:ok, native_ping()} end)

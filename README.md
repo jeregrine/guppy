@@ -409,7 +409,7 @@ Key files:
 - `lib/guppy/component/compiler.ex` — template compiler
 - `lib/guppy/native/nif.ex` — direct Elixir wrapper around the NIF module
 - `lib/guppy/ir.ex` — Elixir IR validation/helpers
-- `native/guppy_nif/c_src/guppy_nif.c` — C shim and NIF entrypoints
+- `native/guppy_nif/src/lib.rs` — Rustler NIF entrypoints and BEAM interop
 - `native/guppy_nif/src/lib.rs` — Rust NIF entrypoints and request path
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI main-thread runtime and window registry
 - `native/guppy_nif/src/bridge_view.rs` — root native renderer
