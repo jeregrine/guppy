@@ -174,12 +174,26 @@ defmodule Guppy.Window do
   end
 
   defp rerender(%State{window: %__MODULE__{view_id: view_id} = window, module: module} = state) do
-    case Guppy.render(view_id, module.render(window)) do
+    start_time = System.monotonic_time()
+    result = Guppy.render(view_id, module.render(window))
+    duration = System.monotonic_time() - start_time
+
+    :telemetry.execute(
+      [:guppy, :window, :rerender],
+      %{duration: duration},
+      %{module: module, view_id: view_id, status: telemetry_status(result)}
+    )
+
+    case result do
       :ok -> {:noreply, state}
       {:error, :unknown_view_id} -> {:stop, :normal, state}
       {:error, reason} -> {:stop, {:render_failed, reason}, state}
     end
   end
+
+  defp telemetry_status(:ok), do: :ok
+  defp telemetry_status({:error, reason}), do: {:error, reason}
+  defp telemetry_status(other), do: other
 
   defp invoke_callback(module, function, args) do
     apply(module, function, args)

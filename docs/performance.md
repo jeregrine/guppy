@@ -32,13 +32,17 @@ Selected results from `mix run bench/guppy_bench.exs`:
 | ETF encode/decode proxy 10 nodes | 8.62 μs | 13.13 μs |
 | ETF encode/decode proxy 100 nodes | 82.19 μs | 122.68 μs |
 | ETF encode/decode proxy 1,000 nodes | 842.63 μs | 1033.59 μs |
-| Kanban initial render tree build | 131.41 μs | 213.25 μs |
+| `Guppy.Window` routed event-to-rerender latency | 502.50 μs | 4712.28 μs |
+| `Guppy.render/2` native request latency | 50.58 ms | 61.01 ms |
+| Kanban initial render tree build | 149.42 μs | 231.22 μs |
+| Kanban scroll interaction tree build | 150.01 μs | 228.91 μs |
 | High-frequency scroll payload encode | 0.49 μs | 0.54 μs |
 
 ## Notes
 
 - This is a baseline, not a promise of stable performance yet.
-- Native request latency and event-to-rerender latency still need more realistic end-to-end coverage.
+- Runtime telemetry is available at `[:guppy, :native, :nif]` for direct Rustler NIF call latency, `[:guppy, :native, :request]` for server-mediated native request latency, `[:guppy, :event, :route]` for native event routing, and `[:guppy, :window, :rerender]` for `Guppy.Window` rerender latency.
+- `Guppy.Window` routed event-to-rerender coverage uses native-shaped server delivery; actual GPUI-generated event delivery still needs end-to-end coverage.
 - Use release native builds for interactive/manual performance checks:
 
 ```sh

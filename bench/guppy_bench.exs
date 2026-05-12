@@ -12,6 +12,40 @@ defmodule Guppy.Bench.Template do
   end
 end
 
+defmodule Guppy.Bench.Telemetry do
+  @moduledoc false
+
+  def forward_window_rerender(_event, _measurements, metadata, parent) do
+    send(parent, {:bench_rerender, metadata.view_id, metadata.status})
+  end
+end
+
+defmodule Guppy.Bench.CounterWindow do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(_arg, window) do
+    {:ok,
+     window
+     |> put_window_opts(show: false)
+     |> assign(:count, 0)}
+  end
+
+  @impl Guppy.Window
+  def render(window) do
+    Guppy.IR.div(
+      [Guppy.IR.text("count = #{window.assigns.count}", id: "bench_counter_label")],
+      id: "bench_counter_button",
+      events: %{click: "increment"}
+    )
+  end
+
+  @impl Guppy.Window
+  def handle_event("increment", _event, window) do
+    {:noreply, update(window, :count, &(&1 + 1))}
+  end
+end
+
 defmodule Guppy.Bench do
   @moduledoc false
 
@@ -25,9 +59,10 @@ defmodule Guppy.Bench do
     Benchee.run(static_scenarios(), benchee_opts())
 
     if include_native? do
+      native_event_to_rerender_latency()
       native_render_latency()
     else
-      IO.puts("skip native render/request latency; rerun with --native to open a hidden GPUI window")
+      IO.puts("skip native event/rerender and render/request latency; rerun with --native to open a hidden GPUI window")
     end
   end
 
@@ -65,6 +100,9 @@ defmodule Guppy.Bench do
        end},
       {"kanban edit card tree build", fn ->
          edit_kanban_card(kanban)
+       end},
+      {"kanban scroll interaction tree build", fn ->
+         kanban_tree(columns: 4, cards: 40, active_scroll_card: {1, 20})
        end},
       {"event-to-rerender proxy latency", fn ->
          :change
@@ -112,19 +150,24 @@ defmodule Guppy.Bench do
   defp kanban_tree(opts) do
     column_count = Keyword.fetch!(opts, :columns)
     card_count = Keyword.fetch!(opts, :cards)
+    active_scroll_card = Keyword.get(opts, :active_scroll_card)
 
     columns =
       for column <- 1..column_count do
         cards =
           for card <- 1..card_count do
+            active_scroll_card? = active_scroll_card == {column, card}
+
             Guppy.IR.div(
               [
                 Guppy.IR.text("Card #{column}.#{card}", id: "card_title_#{column}_#{card}"),
                 Guppy.IR.text_input("", id: "card_edit_#{column}_#{card}", placeholder: "Edit card")
               ],
               id: "card_#{column}_#{card}",
-              style: [:p_2, :rounded_md, :border_1],
-              events: %{drag_move: "move_card", scroll_wheel: "scroll_card"}
+              style: kanban_card_style(active_scroll_card?),
+              events: %{drag_move: "move_card", scroll_wheel: "scroll_card"},
+              track_scroll: true,
+              anchor_scroll: active_scroll_card?
             )
           end
 
@@ -133,6 +176,9 @@ defmodule Guppy.Bench do
 
     Guppy.IR.div(columns, id: "kanban", style: [:flex, :flex_row, :gap_4])
   end
+
+  defp kanban_card_style(false), do: [:p_2, :rounded_md, :border_1]
+  defp kanban_card_style(true), do: [:p_2, :rounded_md, :border_1, {:border_color, :blue}]
 
   defp add_kanban_card(kanban) do
     update_in(kanban, [:children, Access.at(0), :children], fn cards ->
@@ -168,6 +214,53 @@ defmodule Guppy.Bench do
     }
   end
 
+  defp native_event_to_rerender_latency do
+    Benchee.run(
+      %{
+        "Guppy.Window routed event-to-rerender latency" =>
+          {fn {view_id, _pid, handler_id} ->
+             send(Guppy.server(), {
+               :guppy_native_event,
+               view_id,
+               :click,
+               %{id: "bench_counter_button", callback: "increment"}
+             })
+
+             receive do
+               {:bench_rerender, ^view_id, :ok} -> :ok
+             after
+               1_000 -> raise "timed out waiting for window rerender telemetry"
+             end
+
+             handler_id
+           end,
+           before_scenario: fn _input ->
+             {:ok, pid} = Guppy.Bench.CounterWindow.start_link(nil)
+             view_id = Guppy.Window.view_id(pid)
+             handler_id = {__MODULE__, self(), :window_rerender, make_ref()}
+
+             :ok =
+               :telemetry.attach(
+                 handler_id,
+                 [:guppy, :window, :rerender],
+                 &Guppy.Bench.Telemetry.forward_window_rerender/4,
+                 self()
+               )
+
+             {view_id, pid, handler_id}
+           end,
+           after_scenario: fn {_view_id, pid, handler_id} ->
+             :telemetry.detach(handler_id)
+             if Process.alive?(pid), do: GenServer.stop(pid, :normal)
+           end}
+      },
+      benchee_opts()
+    )
+  rescue
+    error ->
+      IO.puts("skip native event-to-rerender latency; benchmark setup failed: #{Exception.message(error)}")
+  end
+
   defp native_render_latency do
     Benchee.run(
       %{
@@ -189,6 +282,14 @@ defmodule Guppy.Bench do
   rescue
     error ->
       IO.puts("skip native render/request latency; benchmark setup failed: #{Exception.message(error)}")
+  end
+
+  defp maybe_close(view_id) do
+    case Guppy.close_window(view_id) do
+      :ok -> :ok
+      {:error, :unknown_view_id} -> :ok
+      {:error, :nif_not_loaded} -> :ok
+    end
   end
 end
 

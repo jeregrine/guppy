@@ -715,6 +715,67 @@ defmodule GuppyTest do
     end
   end
 
+  test "native requests emit telemetry" do
+    handler_id = {__MODULE__, self(), :native_request_telemetry}
+
+    :ok = attach_forwarding_telemetry(handler_id, [:guppy, :native, :request])
+
+    try do
+      _ = Guppy.ping()
+
+      assert_receive {:telemetry_event, [:guppy, :native, :request], %{duration: duration},
+                      %{command: :ping, status: status}}
+
+      assert is_integer(duration)
+      assert status in [:ok, {:error, :nif_not_loaded}]
+    after
+      :telemetry.detach(handler_id)
+    end
+  end
+
+  test "direct NIF calls emit telemetry when native code is loaded" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        handler_id = {__MODULE__, self(), :native_nif_telemetry}
+
+        :ok = attach_forwarding_telemetry(handler_id, [:guppy, :native, :nif])
+
+        try do
+          assert {:ok, :pong} = Guppy.ping()
+
+          assert_receive {:telemetry_event, [:guppy, :native, :nif], %{duration: duration},
+                          %{command: :ping, status: :ok}}
+
+          assert is_integer(duration)
+        after
+          :telemetry.detach(handler_id)
+        end
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.ping()
+    end
+  end
+
+  test "native event routing emits telemetry" do
+    handler_id = {__MODULE__, self(), :event_route_telemetry}
+
+    :ok = attach_forwarding_telemetry(handler_id, [:guppy, :event, :route])
+
+    try do
+      send(Guppy.server(), {
+        :guppy_native_event,
+        -1,
+        :click,
+        %{id: "missing", callback: "missing"}
+      })
+
+      assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
+                      %{view_id: -1, type: :click, status: :unknown_view_id}}
+    after
+      :telemetry.detach(handler_id)
+    end
+  end
+
   test "Guppy.Component compiles ~G templates into valid IR" do
     ir =
       Guppy.TemplateExample.render(%{
@@ -1460,6 +1521,10 @@ defmodule GuppyTest do
         assert Map.get(Guppy.info().views, view_id) == pid
         assert Guppy.native_view_count() == {:ok, starting_count + 1}
 
+        handler_id = {__MODULE__, self(), :window_rerender_telemetry}
+        :ok = attach_forwarding_telemetry(handler_id, [:guppy, :window, :rerender])
+        on_exit(fn -> :telemetry.detach(handler_id) end)
+
         send(Guppy.server(), {
           :guppy_native_event,
           view_id,
@@ -1468,6 +1533,11 @@ defmodule GuppyTest do
         })
 
         wait_until(fn -> Guppy.Window.state(pid).assigns.count == 1 end)
+
+        assert_receive {:telemetry_event, [:guppy, :window, :rerender], %{duration: duration},
+                        %{module: Guppy.TestCounterWindow, view_id: ^view_id, status: :ok}}
+
+        assert is_integer(duration)
 
         send(pid, {:set_count, 5})
         wait_until(fn -> Guppy.Window.state(pid).assigns.count == 5 end)
@@ -1479,6 +1549,14 @@ defmodule GuppyTest do
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} = Guppy.TestCounterWindow.start_link(0)
     end
+  end
+
+  def forward_telemetry(event, measurements, metadata, parent) do
+    send(parent, {:telemetry_event, event, measurements, metadata})
+  end
+
+  defp attach_forwarding_telemetry(handler_id, event_name) do
+    :telemetry.attach(handler_id, event_name, &__MODULE__.forward_telemetry/4, self())
   end
 
   defp native_view_count! do

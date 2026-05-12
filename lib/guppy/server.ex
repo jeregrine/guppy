@@ -82,12 +82,12 @@ defmodule Guppy.Server do
   end
 
   def handle_call(:ping, _from, state) do
-    reply = state.native.request(state.native_server, {:ping, []})
+    reply = native_request(state, :ping, {:ping, []})
     {:reply, reply, state}
   end
 
   def handle_call(:view_count, _from, state) do
-    reply = state.native.request(state.native_server, {:view_count, []})
+    reply = native_request(state, :view_count, {:view_count, []})
     {:reply, reply, state}
   end
 
@@ -99,7 +99,7 @@ defmodule Guppy.Server do
            {:ok, opts} <- validate_window_options(opts) do
         view_id = state.next_view_id
 
-        case state.native.request(state.native_server, {:open_window, [view_id, ir, opts]}) do
+        case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}) do
           :ok ->
             state =
               state
@@ -129,7 +129,7 @@ defmodule Guppy.Server do
   def handle_call({:render, view_id, ir}, {caller, _tag}, state) do
     case validate_owned_view_ir(state, caller, view_id, ir) do
       :ok ->
-        reply = state.native.request(state.native_server, {:render, [view_id, ir]})
+        reply = native_request(state, :render, {:render, [view_id, ir]})
         {:reply, normalize_native_reply(reply), state}
 
       error ->
@@ -140,7 +140,7 @@ defmodule Guppy.Server do
   def handle_call({:close_window, view_id}, {caller, _tag}, state) do
     case validate_owned_view(state, caller, view_id) do
       :ok ->
-        case state.native.request(state.native_server, {:close_window, [view_id]}) do
+        case native_request(state, :close_window, {:close_window, [view_id]}) do
           :ok -> {:reply, :ok, delete_view(state, view_id)}
           {:ok, _payload} -> {:reply, :ok, delete_view(state, view_id)}
           {:error, reason} -> {:reply, {:error, reason}, state}
@@ -179,9 +179,11 @@ defmodule Guppy.Server do
     case Map.fetch(state.views, view_id) do
       {:ok, owner} ->
         send(owner, {:guppy_event, view_id, Map.put(payload, :type, type)})
+        emit_event_route_telemetry(view_id, type, :ok)
         {:noreply, state}
 
       :error ->
+        emit_event_route_telemetry(view_id, type, :unknown_view_id)
         {:noreply, state}
     end
   end
@@ -191,9 +193,11 @@ defmodule Guppy.Server do
     case Map.fetch(state.views, view_id) do
       {:ok, owner} ->
         send(owner, {:guppy_event, view_id, %{type: :window_closed}})
+        emit_event_route_telemetry(view_id, :window_closed, :ok)
         {:noreply, delete_view(state, view_id)}
 
       :error ->
+        emit_event_route_telemetry(view_id, :window_closed, :unknown_view_id)
         {:noreply, state}
     end
   end
@@ -224,12 +228,39 @@ defmodule Guppy.Server do
   end
 
   defp maybe_register_event_target(state) do
-    case state.native.request(state.native_server, {:set_event_target, [self()]}) do
+    case native_request(state, :set_event_target, {:set_event_target, [self()]}) do
       :ok -> state
       {:ok, _payload} -> state
       {:error, _reason} -> state
     end
   end
+
+  defp native_request(state, command, request) do
+    start_time = System.monotonic_time()
+    reply = state.native.request(state.native_server, request)
+    duration = System.monotonic_time() - start_time
+
+    :telemetry.execute(
+      [:guppy, :native, :request],
+      %{duration: duration},
+      %{command: command, status: telemetry_status(reply)}
+    )
+
+    reply
+  end
+
+  defp emit_event_route_telemetry(view_id, type, status) do
+    :telemetry.execute(
+      [:guppy, :event, :route],
+      %{count: 1},
+      %{view_id: view_id, type: type, status: status}
+    )
+  end
+
+  defp telemetry_status(:ok), do: :ok
+  defp telemetry_status({:ok, _payload}), do: :ok
+  defp telemetry_status({:error, reason}), do: {:error, reason}
+  defp telemetry_status(other), do: other
 
   defp normalize_native_reply(:ok), do: :ok
   defp normalize_native_reply({:ok, _payload}), do: :ok

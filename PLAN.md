@@ -74,22 +74,22 @@ Current known benchmark coverage:
 - IR validation cost
 - ETF encode/decode proxy cost
 - `Guppy.render/2` hidden-window native request latency
+- runtime telemetry for direct NIF call latency, native request latency, native event routing, and `Guppy.Window` rerender latency
 - event-to-rerender proxy latency
+- `Guppy.Window` routed event-to-rerender latency through native-shaped server event delivery
 - high-frequency event payload pressure: mouse move, drag move, scroll wheel
-- kanban scenario: initial render, add card, move card, edit card
+- kanban scenario: initial render, add card, move card, edit card, scroll interaction
 
 Remaining performance work:
 
-1. Add better native encode/decode timing around the actual Rustler NIF boundary, not only ETF proxy timing.
-2. Add a more realistic end-to-end event-to-rerender benchmark using native event delivery.
-3. Add kanban scroll interaction coverage to the benchmark suite.
-4. Coalesce high-frequency native events where measurement shows pressure:
+1. Add finer-grained native encode/decode timing inside the Rust NIF boundary where Rustler-safe instrumentation allows it.
+2. Add a GPUI-generated end-to-end event-to-rerender benchmark using actual native event delivery.
+3. Coalesce high-frequency native events where measurement shows pressure:
    - mouse move
    - drag move
    - scroll wheel
-5. Batch or debounce `Guppy.Window` rerenders where measurement shows repeated render pressure.
-6. Avoid repeated validation for static or trusted subtrees where benchmarks justify it.
-7. Add telemetry/logging hooks for render latency and native request latency.
+4. Batch or debounce `Guppy.Window` rerenders where measurement shows repeated render pressure.
+5. Avoid repeated validation for static or trusted subtrees where benchmarks justify it.
 
 ## Phase 2: GPUI compliance hardening
 

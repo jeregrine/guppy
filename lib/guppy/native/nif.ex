@@ -126,27 +126,35 @@ defmodule Guppy.Native.Nif do
   defp native_string_to_string(value) when is_list(value), do: List.to_string(value)
 
   defp dispatch({:ping, []}) do
-    with_loaded(fn -> {:ok, native_ping()} end)
+    with_loaded(fn -> native_call(:ping, fn -> {:ok, native_ping()} end) end)
   end
 
   defp dispatch({:open_window, [view_id, ir, opts]}) do
-    with_loaded(fn -> normalize_status(native_open_window(view_id, ir, opts)) end)
+    with_loaded(fn ->
+      native_call(:open_window, fn -> normalize_status(native_open_window(view_id, ir, opts)) end)
+    end)
   end
 
   defp dispatch({:set_event_target, [pid]}) when is_pid(pid) do
-    with_loaded(fn -> normalize_status(native_set_event_target(pid)) end)
+    with_loaded(fn ->
+      native_call(:set_event_target, fn -> normalize_status(native_set_event_target(pid)) end)
+    end)
   end
 
   defp dispatch({:render, [view_id, ir]}) do
-    with_loaded(fn -> normalize_status(native_render(view_id, ir)) end)
+    with_loaded(fn ->
+      native_call(:render, fn -> normalize_status(native_render(view_id, ir)) end)
+    end)
   end
 
   defp dispatch({:close_window, [view_id]}) do
-    with_loaded(fn -> normalize_status(native_close_window(view_id)) end)
+    with_loaded(fn ->
+      native_call(:close_window, fn -> normalize_status(native_close_window(view_id)) end)
+    end)
   end
 
   defp dispatch({:view_count, []}) do
-    with_loaded(fn -> {:ok, native_view_count()} end)
+    with_loaded(fn -> native_call(:view_count, fn -> {:ok, native_view_count()} end) end)
   end
 
   defp dispatch(_command) do
@@ -159,6 +167,25 @@ defmodule Guppy.Native.Nif do
       {:error, _reason} -> {:error, :nif_not_loaded}
     end
   end
+
+  defp native_call(command, fun) do
+    start_time = System.monotonic_time()
+    reply = fun.()
+    duration = System.monotonic_time() - start_time
+
+    :telemetry.execute(
+      [:guppy, :native, :nif],
+      %{duration: duration},
+      %{command: command, status: telemetry_status(reply)}
+    )
+
+    reply
+  end
+
+  defp telemetry_status(:ok), do: :ok
+  defp telemetry_status({:ok, _payload}), do: :ok
+  defp telemetry_status({:error, reason}), do: {:error, reason}
+  defp telemetry_status(other), do: other
 
   defp normalize_status({:error, reason}), do: {:error, reason}
   defp normalize_status(status) when is_atom(status), do: status
