@@ -238,6 +238,7 @@ Reference-only paths:
 - `PLAN.md` — active forward-looking project plan
 - `docs/performance.md` — benchmark commands, telemetry/counter notes, and baseline results
 - `docs/gpui-compliance.md` — GPUI compatibility matrix
+- `docs/distribution.md` — source-build and future precompiled artifact plan
 - `bench/native_event_probe.exs` — manual GPUI-generated event timing probe
 - `~/projects/otp` — OTP/wx internals
 
@@ -317,15 +318,15 @@ Especially if you change:
 
 ## What to prioritize next
 
-Follow `PLAN.md`. The active phase is runtime hardening; primitive expansion has a useful baseline and remaining large widgets should stay deferred unless explicitly reprioritized.
+Follow `PLAN.md`. The active phase is distribution hardening; primitive expansion and runtime hardening have useful baselines, and remaining large widgets should stay deferred unless explicitly reprioritized.
 
 Current priority order:
 
-1. runtime lifecycle hardening, especially close-request and owner cleanup
-2. stronger native runtime failure/restart behavior
-3. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
-4. full editor/rich-text parity only if explicitly scoped
-5. distribution/precompiled artifact work after runtime behavior is stable
+1. plan `rustler_precompiled` artifact naming/loading while preserving local source builds
+2. add CI artifact validation for supported targets before publishing
+3. document the native artifact release process
+4. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
+5. full editor/rich-text parity only if explicitly scoped
 
 Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
 

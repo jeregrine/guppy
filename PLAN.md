@@ -192,15 +192,23 @@ Deferred primitive areas:
 - full data-table/tree virtualization parity
 - full select/dropdown parity on top of richer popover behavior
 
-### Started in runtime hardening: native request containment and lifecycle telemetry
+### Completed in runtime hardening: native request containment and lifecycle telemetry
 
-Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage. Known and unknown native close events are covered by event-route telemetry tests. Native window close attempts now emit `window_close_requested` before `window_closed`, so owners can observe close intent before server cleanup. Server-mediated native requests now contain native wrapper crashes/exits and report `{:error, :runtime_unavailable}` instead of crashing `Guppy.Server`.
+Runtime hardening is complete enough to unblock distribution planning.
 
-Remaining runtime scope:
+Delivered scope:
 
-- native runtime restart/reinitialization strategy after hard failures
-- keyed subtree diffing only if benchmarks demand it
-- cross-platform strategy beyond macOS
+- owner process cleanup routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry
+- owner cleanup has automated coverage
+- known and unknown native close events have event-route telemetry coverage
+- native window close attempts emit `window_close_requested` before `window_closed`, so owners can observe close intent before server cleanup
+- server-mediated native requests contain native wrapper crashes/exits and report `{:error, :runtime_unavailable}` instead of crashing `Guppy.Server`
+
+Current runtime decisions:
+
+- a full native runtime restart/reinitialization strategy is deferred; hard NIF/runtime failures are not safely restartable inside the same BEAM process today
+- keyed subtree diffing remains deferred until benchmarks show full-tree replacement is the bottleneck
+- cross-platform behavior beyond macOS remains a distribution/support strategy item, not a blocker for the current local source build
 
 ## Ongoing maintenance while expanding primitives
 
@@ -213,13 +221,21 @@ Keep these current as part of feature work:
 
 Performance guidance remains: do not add default scroll debounce, high-frequency event coalescing, or `Guppy.Window` rerender batching without measurements proving the need.
 
-## Later work
+## Active next phase: distribution hardening
 
-Distribution hardening comes after runtime lifecycle behavior is stable:
+Distribution hardening is the next major phase.
 
-- `rustler_precompiled` packaging once native behavior is stable enough
+Started scope:
+
+- source-build targets and current macOS-first assumptions are documented in `docs/distribution.md`
+- precompiled artifact gates and the initial target matrix are documented in `docs/distribution.md`
+
+Remaining scope:
+
+- add `rustler_precompiled` only after source builds remain green and artifact naming/loading is clear
 - CI artifact validation for supported targets
 - release-process documentation for native artifact production
+- preserve local source builds as the fallback path
 
 ## Non-goals for now
 

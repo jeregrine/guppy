@@ -414,6 +414,12 @@ mix guppy.native.build --release
 
 Debug native builds are much slower and can make scrolling feel worse than the architecture really is.
 
+## Distribution status
+
+Guppy is source-build first today. Use `mix guppy.native.build` to build and copy the NIF into `priv/native/`; precompiled artifacts are planned only after CI can build and load-test each advertised target.
+
+See `docs/distribution.md` for the current target assumptions and precompiled artifact plan.
+
 ## Project layout
 
 Key files:
@@ -432,6 +438,7 @@ Key files:
 - `native/guppy_nif/src/bridge_view/` — per-node renderers, style mapping, events, identity
 - `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
 - `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
+- `docs/distribution.md` — source-build and future precompiled artifact plan
 
 ## Known limits
 
