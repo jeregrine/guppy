@@ -56,6 +56,7 @@ defmodule Guppy.Component.Compiler do
   @text_events ["click"]
   @checkbox_events ["change", "focus", "blur"]
   @text_input_events ["change"]
+  @input_attrs ["id", "value", "placeholder", "class", "style", "disabled", "tab_index"]
 
   @style_attr_pairs [
     {"class", :style},
@@ -144,6 +145,7 @@ defmodule Guppy.Component.Compiler do
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
         "text_input" -> compile_text_input(attrs, caller)
+        "textarea" -> compile_textarea(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
         "image" -> compile_image(attrs, xmlElement(element, :content), caller)
         "icon" -> compile_icon(attrs, xmlElement(element, :content), caller)
@@ -185,7 +187,15 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp compile_text_input(attrs, caller) do
-    assert_allowed_attrs!(attrs, text_input_allowed_attrs(), "text_input", caller)
+    compile_input(:text_input, "text_input", attrs, caller)
+  end
+
+  defp compile_textarea(attrs, caller) do
+    compile_input(:textarea, "textarea", attrs, caller)
+  end
+
+  defp compile_input(function, tag, attrs, caller) do
+    assert_allowed_attrs!(attrs, input_allowed_attrs(), tag, caller)
     value = fetch_required_attr!(attrs, "value", :string_or_expr, caller)
 
     opts =
@@ -199,7 +209,7 @@ defmodule Guppy.Component.Compiler do
       ])
 
     quote do
-      Guppy.IR.text_input(unquote(value), unquote(opts))
+      Guppy.IR.unquote(function)(unquote(value), unquote(opts))
     end
   end
 
@@ -982,9 +992,8 @@ defmodule Guppy.Component.Compiler do
     [":if", ":for", "id", "class", "style"] ++ @text_events
   end
 
-  defp text_input_allowed_attrs do
-    [":if", ":for", "id", "value", "placeholder", "class", "style", "disabled", "tab_index"] ++
-      @text_input_events
+  defp input_allowed_attrs do
+    [":if", ":for" | @input_attrs] ++ @text_input_events
   end
 
   defp scroll_allowed_attrs do

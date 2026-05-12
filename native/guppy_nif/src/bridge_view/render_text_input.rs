@@ -13,6 +13,7 @@ pub(crate) struct TextInputSpec<'a> {
     pub disabled: bool,
     pub tab_index: Option<isize>,
     pub change: Option<&'a str>,
+    pub multiline: bool,
 }
 
 fn upsert_text_input_entity(
@@ -36,6 +37,7 @@ fn upsert_text_input_entity(
                     change: spec.change.map(str::to_owned),
                     disabled: spec.disabled,
                     tab_index: spec.tab_index,
+                    multiline: spec.multiline,
                 },
             );
             pass.insert_text_input_entity(node_id, entity.clone());
@@ -50,6 +52,7 @@ fn upsert_text_input_entity(
             spec.change,
             spec.disabled,
             spec.tab_index,
+            spec.multiline,
         );
     });
 
@@ -103,6 +106,7 @@ mod tests {
                     disabled: false,
                     tab_index: Some(1),
                     change: Some("name_changed"),
+                    multiline: false,
                 },
                 view_cx,
             );
@@ -119,6 +123,7 @@ mod tests {
                     disabled: true,
                     tab_index: Some(3),
                     change: Some("person_changed"),
+                    multiline: true,
                 },
                 view_cx,
             );
@@ -135,6 +140,7 @@ mod tests {
                 assert_eq!(input.change.as_deref(), Some("person_changed"));
                 assert!(input.disabled);
                 assert_eq!(input.tab_index, Some(3));
+                assert!(input.multiline);
             });
         });
     }

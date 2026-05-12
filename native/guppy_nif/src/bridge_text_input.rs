@@ -2,8 +2,8 @@ use gpui::{
     App, Bounds, Context, CursorStyle, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, IntoElement, KeyBinding, LayoutId,
     MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render,
-    SharedString, Style, TextRun, UTF16Selection, UnderlineStyle, Window, actions, div, fill, hsla,
-    point, prelude::*, px, relative, rgb, rgba,
+    SharedString, Style, TextRun, UTF16Selection, Window, actions, div, fill, hsla, point,
+    prelude::*, px, relative, rgb, rgba,
 };
 use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
@@ -32,6 +32,7 @@ actions!(
         SelectAll,
         Home,
         End,
+        Newline,
         ShowCharacterPalette,
         Paste,
         Cut,
@@ -48,6 +49,7 @@ pub fn bind_keys(cx: &mut App) {
         KeyBinding::new("shift-left", SelectLeft, None),
         KeyBinding::new("shift-right", SelectRight, None),
         KeyBinding::new("cmd-a", SelectAll, None),
+        KeyBinding::new("enter", Newline, None),
         KeyBinding::new("cmd-v", Paste, None),
         KeyBinding::new("cmd-c", Copy, None),
         KeyBinding::new("cmd-x", Cut, None),
@@ -65,6 +67,7 @@ pub struct BridgeTextInputOptions {
     pub change: Option<String>,
     pub disabled: bool,
     pub tab_index: Option<isize>,
+    pub multiline: bool,
 }
 
 pub struct BridgeTextInput {
@@ -75,11 +78,12 @@ pub struct BridgeTextInput {
     pub change: Option<String>,
     pub disabled: bool,
     pub tab_index: Option<isize>,
+    pub multiline: bool,
     focus_handle: FocusHandle,
     selected_range: Range<usize>,
     selection_reversed: bool,
     marked_range: Option<Range<usize>>,
-    last_layout: Option<gpui::ShapedLine>,
+    last_lines: Vec<LineLayout>,
     last_bounds: Option<Bounds<Pixels>>,
     is_selecting: bool,
 }
@@ -97,6 +101,7 @@ impl BridgeTextInput {
             change,
             disabled,
             tab_index,
+            multiline,
         } = options;
 
         cx.new(|cx| Self {
@@ -107,11 +112,12 @@ impl BridgeTextInput {
             change,
             disabled,
             tab_index,
+            multiline,
             focus_handle: focus_handle_for(cx, tab_index),
             selected_range: 0..0,
             selection_reversed: false,
             marked_range: None,
-            last_layout: None,
+            last_lines: Vec::new(),
             last_bounds: None,
             is_selecting: false,
         })
@@ -124,6 +130,7 @@ impl BridgeTextInput {
         change: Option<&str>,
         disabled: bool,
         tab_index: Option<isize>,
+        multiline: bool,
     ) {
         if self.value.as_ref() != value {
             self.value = value.to_owned().into();
@@ -137,6 +144,7 @@ impl BridgeTextInput {
         self.change = change.map(str::to_owned);
         self.disabled = disabled;
         self.tab_index = tab_index;
+        self.multiline = multiline;
         self.focus_handle = match tab_index {
             Some(index) => self.focus_handle.clone().tab_stop(true).tab_index(index),
             None => self.focus_handle.clone().tab_stop(true),
@@ -294,13 +302,26 @@ impl BridgeTextInput {
         window.show_character_palette();
     }
 
+    fn newline(&mut self, _: &Newline, window: &mut Window, cx: &mut Context<Self>) {
+        if self.disabled || !self.multiline {
+            return;
+        }
+
+        self.replace_text_in_range(None, "\n", window, cx);
+    }
+
     fn paste(&mut self, _: &Paste, window: &mut Window, cx: &mut Context<Self>) {
         if self.disabled {
             return;
         }
 
         if let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) {
-            self.replace_text_in_range(None, &text.replace("\n", " "), window, cx);
+            let text = if self.multiline {
+                text
+            } else {
+                text.replace("\n", " ")
+            };
+            self.replace_text_in_range(None, &text, window, cx);
         }
     }
 
@@ -347,8 +368,7 @@ impl BridgeTextInput {
             return 0;
         }
 
-        let (Some(bounds), Some(line)) = (self.last_bounds.as_ref(), self.last_layout.as_ref())
-        else {
+        let Some(bounds) = self.last_bounds.as_ref() else {
             return 0;
         };
         if position.y < bounds.top() {
@@ -357,7 +377,15 @@ impl BridgeTextInput {
         if position.y > bounds.bottom() {
             return self.value.len();
         }
-        line.closest_index_for_x(position.x - bounds.left())
+        let local_y = position.y - bounds.top();
+        let line = self
+            .last_lines
+            .iter()
+            .find(|line| local_y >= line.top && local_y <= line.bottom)
+            .or_else(|| self.last_lines.last());
+
+        line.map(|line| line.start + line.layout.closest_index_for_x(position.x - bounds.left()))
+            .unwrap_or(0)
     }
 
     fn select_to(&mut self, offset: usize, cx: &mut Context<Self>) {
@@ -424,6 +452,13 @@ impl BridgeTextInput {
             .grapheme_indices(true)
             .find_map(|(idx, _)| (idx > offset).then_some(idx))
             .unwrap_or(self.value.len())
+    }
+
+    fn line_for_offset(&self, offset: usize) -> Option<&LineLayout> {
+        self.last_lines
+            .iter()
+            .find(|line| offset >= line.start && offset <= line.end)
+            .or_else(|| self.last_lines.last())
     }
 }
 
@@ -533,16 +568,22 @@ impl EntityInputHandler for BridgeTextInput {
         _window: &mut Window,
         _cx: &mut Context<Self>,
     ) -> Option<Bounds<Pixels>> {
-        let last_layout = self.last_layout.as_ref()?;
         let range = self.range_from_utf16(&range_utf16);
+        let line = self.line_for_offset(range.start)?;
         Some(Bounds::from_corners(
             point(
-                bounds.left() + last_layout.x_for_index(range.start),
-                bounds.top(),
+                bounds.left()
+                    + line
+                        .layout
+                        .x_for_index(range.start.saturating_sub(line.start)),
+                bounds.top() + line.top,
             ),
             point(
-                bounds.left() + last_layout.x_for_index(range.end),
-                bounds.bottom(),
+                bounds.left()
+                    + line
+                        .layout
+                        .x_for_index(range.end.min(line.end).saturating_sub(line.start)),
+                bounds.top() + line.bottom,
             ),
         ))
     }
@@ -554,8 +595,12 @@ impl EntityInputHandler for BridgeTextInput {
         _cx: &mut Context<Self>,
     ) -> Option<usize> {
         let line_point = self.last_bounds?.localize(&point)?;
-        let last_layout = self.last_layout.as_ref()?;
-        let utf8_index = last_layout.index_for_x(line_point.x)?;
+        let line = self
+            .last_lines
+            .iter()
+            .find(|line| line_point.y >= line.top && line_point.y <= line.bottom)
+            .or_else(|| self.last_lines.last())?;
+        let utf8_index = line.start + line.layout.index_for_x(line_point.x)?;
         Some(self.offset_to_utf16(utf8_index))
     }
 }
@@ -564,10 +609,18 @@ struct TextElement {
     input: Entity<BridgeTextInput>,
 }
 
+struct LineLayout {
+    start: usize,
+    end: usize,
+    top: Pixels,
+    bottom: Pixels,
+    layout: gpui::ShapedLine,
+}
+
 struct PrepaintState {
-    line: Option<gpui::ShapedLine>,
+    lines: Vec<LineLayout>,
     cursor: Option<PaintQuad>,
-    selection: Option<PaintQuad>,
+    selections: Vec<PaintQuad>,
 }
 
 impl IntoElement for TextElement {
@@ -597,9 +650,14 @@ impl Element for TextElement {
         window: &mut Window,
         cx: &mut App,
     ) -> (LayoutId, Self::RequestLayoutState) {
+        let input = self.input.read(cx);
         let mut style = Style::default();
         style.size.width = relative(1.).into();
-        style.size.height = window.line_height().into();
+        style.size.height = if input.multiline {
+            (window.line_height() * 5.).into()
+        } else {
+            window.line_height().into()
+        };
         (window.request_layout(style, [], cx), ())
     }
 
@@ -624,80 +682,73 @@ impl Element for TextElement {
             (content, style.color)
         };
 
-        let run = TextRun {
-            len: display_text.len(),
-            font: style.font(),
-            color: text_color,
-            background_color: None,
-            underline: None,
-            strikethrough: None,
-        };
-        let runs = if let Some(marked_range) = input.marked_range.as_ref() {
-            vec![
-                TextRun {
-                    len: marked_range.start,
-                    ..run.clone()
-                },
-                TextRun {
-                    len: marked_range.end - marked_range.start,
-                    underline: Some(UnderlineStyle {
-                        color: Some(run.color),
-                        thickness: px(1.0),
-                        wavy: false,
-                    }),
-                    ..run.clone()
-                },
-                TextRun {
-                    len: display_text.len() - marked_range.end,
-                    ..run
-                },
-            ]
-            .into_iter()
-            .filter(|run| run.len > 0)
-            .collect()
-        } else {
-            vec![run]
-        };
-
         let font_size = style.font_size.to_pixels(window.rem_size());
-        let line = window
-            .text_system()
-            .shape_line(display_text, font_size, &runs, None);
+        let line_height = window.line_height();
+        let mut lines = Vec::new();
+        let mut selections = Vec::new();
+        let mut cursor_quad = None;
 
-        let cursor_pos = line.x_for_index(cursor);
-        let (selection, cursor) = if selected_range.is_empty() {
-            (
-                None,
-                Some(fill(
+        for (line_index, (start, end)) in line_ranges(display_text.as_ref()).into_iter().enumerate()
+        {
+            let line_text = display_text[start..end].to_string();
+            let run = TextRun {
+                len: line_text.len(),
+                font: style.font(),
+                color: text_color,
+                background_color: None,
+                underline: None,
+                strikethrough: None,
+            };
+            let layout = window
+                .text_system()
+                .shape_line(line_text.into(), font_size, &[run], None);
+            let top = line_height * line_index as f32;
+            let bottom = top + line_height;
+
+            if selected_range.is_empty() && cursor >= start && cursor <= end {
+                let cursor_pos = layout.x_for_index(cursor.saturating_sub(start));
+                cursor_quad = Some(fill(
                     Bounds::new(
-                        point(bounds.left() + cursor_pos, bounds.top()),
-                        gpui::size(px(2.), bounds.bottom() - bounds.top()),
+                        point(bounds.left() + cursor_pos, bounds.top() + top),
+                        gpui::size(px(2.), line_height),
                     ),
                     gpui::blue(),
-                )),
-            )
-        } else {
-            (
-                Some(fill(
-                    Bounds::from_corners(
-                        point(
-                            bounds.left() + line.x_for_index(selected_range.start),
-                            bounds.top(),
+                ));
+            } else if !selected_range.is_empty() {
+                let selection_start = selected_range.start.max(start);
+                let selection_end = selected_range.end.min(end);
+                if selection_start < selection_end {
+                    selections.push(fill(
+                        Bounds::from_corners(
+                            point(
+                                bounds.left()
+                                    + layout.x_for_index(selection_start.saturating_sub(start)),
+                                bounds.top() + top,
+                            ),
+                            point(
+                                bounds.left()
+                                    + layout.x_for_index(selection_end.saturating_sub(start)),
+                                bounds.top() + bottom,
+                            ),
                         ),
-                        point(
-                            bounds.left() + line.x_for_index(selected_range.end),
-                            bounds.bottom(),
-                        ),
-                    ),
-                    rgba(0x3311ff30),
-                )),
-                None,
-            )
-        };
+                        rgba(0x3311ff30),
+                    ));
+                }
+            }
+
+            lines.push(LineLayout {
+                start,
+                end,
+                top,
+                bottom,
+                layout,
+            });
+        }
+
         PrepaintState {
-            line: Some(line),
-            cursor,
-            selection,
+            lines,
+            cursor: cursor_quad,
+            selections,
         }
     }
 
@@ -720,12 +771,20 @@ impl Element for TextElement {
                 cx,
             );
         }
-        if let Some(selection) = prepaint.selection.take() {
+        for selection in prepaint.selections.drain(..) {
             window.paint_quad(selection)
         }
-        let line = prepaint.line.take().unwrap();
-        line.paint(bounds.origin, window.line_height(), window, cx)
-            .unwrap();
+
+        for line in &prepaint.lines {
+            line.layout
+                .paint(
+                    point(bounds.left(), bounds.top() + line.top),
+                    window.line_height(),
+                    window,
+                    cx,
+                )
+                .unwrap();
+        }
 
         if focus_handle.is_focused(window)
             && let Some(cursor) = prepaint.cursor.take()
@@ -734,11 +793,29 @@ impl Element for TextElement {
             window.paint_quad(cursor);
         }
 
+        let lines = std::mem::take(&mut prepaint.lines);
         self.input.update(cx, |input, _cx| {
-            input.last_layout = Some(line);
+            input.last_lines = lines;
             input.last_bounds = Some(bounds);
         });
     }
+}
+
+fn line_ranges(text: &str) -> Vec<(usize, usize)> {
+    if text.is_empty() {
+        return vec![(0, 0)];
+    }
+
+    let mut ranges = Vec::new();
+    let mut start = 0;
+    for (index, ch) in text.char_indices() {
+        if ch == '\n' {
+            ranges.push((start, index));
+            start = index + ch.len_utf8();
+        }
+    }
+    ranges.push((start, text.len()));
+    ranges
 }
 
 impl Render for BridgeTextInput {
@@ -778,6 +855,7 @@ impl Render for BridgeTextInput {
             .on_action(cx.listener(Self::select_all))
             .on_action(cx.listener(Self::home))
             .on_action(cx.listener(Self::end))
+            .on_action(cx.listener(Self::newline))
             .on_action(cx.listener(Self::show_character_palette))
             .on_action(cx.listener(Self::paste))
             .on_action(cx.listener(Self::cut))
@@ -789,7 +867,7 @@ impl Render for BridgeTextInput {
             .child(
                 div()
                     .w_full()
-                    .h(px(36.0))
+                    .h(if self.multiline { px(120.0) } else { px(36.0) })
                     .p(px(6.0))
                     .rounded_md()
                     .border_1()
@@ -811,5 +889,17 @@ fn focus_handle_for(cx: &mut Context<BridgeTextInput>, tab_index: Option<isize>)
     match tab_index {
         Some(index) => cx.focus_handle().tab_stop(true).tab_index(index),
         None => cx.focus_handle().tab_stop(true),
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::line_ranges;
+
+    #[test]
+    fn line_ranges_preserve_empty_multiline_segments() {
+        assert_eq!(line_ranges(""), vec![(0, 0)]);
+        assert_eq!(line_ranges("one\ntwo"), vec![(0, 3), (4, 7)]);
+        assert_eq!(line_ranges("one\n"), vec![(0, 3), (4, 4)]);
+        assert_eq!(line_ranges("one\n\nthree"), vec![(0, 3), (4, 4), (5, 10)]);
     }
 }

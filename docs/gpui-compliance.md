@@ -13,7 +13,7 @@ Statuses:
 | --- | --- | --- | --- | --- |
 | `examples/hello_world.rs` | `examples/hello_world.exs`, `test/guppy_test.exs` template checks | supported | none known for static text/window open | automated IR/template tests; manual example smoke |
 | `examples/scrollable.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; native scroll tests | partial | GPUI parity for every scroll option not mapped; no default high-frequency coalescing planned from current measurements | Rust scroll-axis unit test; GPUI render smoke retains explicit scroll handles; manual kanban smoke |
-| `examples/input.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; text input retained-state tests | partial | textarea/editor, rich input behavior, full focus semantics | Rust text-input retained-state unit test; manual example smoke |
+| `examples/input.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; text input and textarea retained-state tests | partial | rich editor behavior and full focus semantics | Rust retained-state unit test; ExUnit IR/template/native hidden-window coverage; manual example smoke |
 | `examples/drag_drop.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs` drag/drop callbacks | partial | native drag payload parity and drop target model are narrower than GPUI; no default event coalescing planned from current measurements | Elixir server routing tests cover drag_start/drag_move/drop payloads; manual kanban smoke |
 | `examples/tab_stop.rs` | text input/button/checkbox/div `tab_index` and `tab_stop` IR fields | partial | full GPUI tab traversal ordering parity not covered | IR validation; GPUI render smoke retains focus handle for tab-stop div |
 | `examples/image/image.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs`, `test/guppy_test.exs` image template checks | partial | complete async image loading states and asset pipeline parity | automated IR/template tests; Rust image source/object-fit mapping tests; manual gallery smoke |
@@ -43,7 +43,7 @@ Statuses:
 | `examples/set_menus.rs` | none | unsupported | menu APIs | none |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |
-| `examples/text.rs` | `text` node | partial | rich text runs/layout controls incomplete | IR/template tests |
+| `examples/text.rs` | `text` node; practical multiline input via `textarea` | partial | rich text runs/layout controls and full editor parity incomplete | IR/template tests; textarea example/manual smoke |
 | `examples/text_layout.rs` | text style tokens | partial | advanced text layout/rich runs | IR/style validation |
 | `examples/text_wrapper.rs` | text style tokens | partial | wrapping measurement parity | IR/style validation |
 | `examples/tree.rs` | nested `div`/`text` IR | partial | tree-specific interaction/virtualization | template/IR tests |
@@ -56,7 +56,7 @@ Statuses:
 
 1. `hello_world`: keep as the basic smoke target.
 2. `scrollable`: automated native smoke covers explicit scroll handle retention; broader GPUI scroll-option parity remains tracked as partial.
-3. `input`: retained text-input behavior and server-routed change/focus coverage are automated; textarea/editor remains a missing primitive.
+3. `input`: retained text-input and textarea behavior plus server-routed change/focus coverage are automated; rich editor parity remains out of scope.
 4. `drag_drop`: server-routed drag/drop payload regression coverage is automated; native GPUI drag simulation remains manual.
 5. `tab_stop`: native render smoke covers tab-stop focus-handle retention; full traversal ordering remains partial.
 6. `image` / `svg`: source/object-fit mapping and template coverage are automated; async loading success/failure remains manual/partial.

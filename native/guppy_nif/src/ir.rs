@@ -372,6 +372,15 @@ pub enum IrNode {
         tab_index: Option<isize>,
         change: Option<String>,
     },
+    Textarea {
+        id: Option<String>,
+        value: String,
+        placeholder: String,
+        style: DivStyle,
+        disabled: bool,
+        tab_index: Option<isize>,
+        change: Option<String>,
+    },
     Scroll {
         id: Option<String>,
         axis: ScrollAxis,
@@ -424,6 +433,15 @@ impl IrNode {
                 click: get_click_event(map)?,
             }),
             "text_input" => Ok(Self::TextInput {
+                id,
+                value: get_string_field(map, "value")?,
+                placeholder: get_optional_string_field(map, "placeholder")?.unwrap_or_default(),
+                style: get_div_style(map)?,
+                disabled: get_boolean_field(map, "disabled")?,
+                tab_index: get_optional_integer_field(map, "tab_index")?,
+                change: get_change_event(map)?,
+            }),
+            "textarea" => Ok(Self::Textarea {
                 id,
                 value: get_string_field(map, "value")?,
                 placeholder: get_optional_string_field(map, "placeholder")?.unwrap_or_default(),

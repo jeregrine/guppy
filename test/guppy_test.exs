@@ -52,6 +52,7 @@ defmodule Guppy.TemplateExample do
         </div>
       </scroll>
       <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" />
+      <textarea id="notes_input" value={@notes} placeholder="Notes" class="w-[240px] h-[120px]" change="notes_changed" />
       {if @show_footer, do: Guppy.IR.text("Footer ready", id: "footer")}
     </div>
     """
@@ -254,6 +255,23 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(text_input_ir)
     assert text_input_ir.placeholder == "Type a name"
     assert text_input_ir.tab_index == 4
+
+    textarea_ir =
+      Guppy.IR.textarea(
+        "Line one\nLine two",
+        id: "notes_input",
+        placeholder: "Notes",
+        style: [{:w_px, 320}, {:h_px, 120}],
+        disabled: false,
+        tab_index: 5,
+        events: %{change: "notes_changed"}
+      )
+
+    assert :ok = Guppy.IR.validate(textarea_ir)
+    assert textarea_ir.kind == :textarea
+    assert textarea_ir.value == "Line one\nLine two"
+    assert textarea_ir.placeholder == "Notes"
+    assert textarea_ir.tab_index == 5
 
     styled_ir =
       Guppy.IR.div(
@@ -622,11 +640,17 @@ defmodule GuppyTest do
     assert {:error, {:invalid_ir, %{kind: :text_input, value: 123}}} =
              Guppy.IR.validate(%{kind: :text_input, value: 123})
 
+    assert {:error, {:invalid_ir, %{kind: :textarea, value: 123}}} =
+             Guppy.IR.validate(%{kind: :textarea, value: 123})
+
     assert {:error, {:invalid_event, :drag_start, "nope"}} =
              Guppy.IR.validate(Guppy.IR.button("Save", events: %{drag_start: "nope"}))
 
     assert {:error, {:invalid_event, :click, "nope"}} =
              Guppy.IR.validate(Guppy.IR.text_input("Jason", events: %{click: "nope"}))
+
+    assert {:error, {:invalid_event, :click, "nope"}} =
+             Guppy.IR.validate(Guppy.IR.textarea("Notes", events: %{click: "nope"}))
 
     assert {:error, {:placeholder, 123}} =
              Guppy.IR.validate(Guppy.IR.text_input("Jason", placeholder: 123))
@@ -828,6 +852,7 @@ defmodule GuppyTest do
         title: "Template demo",
         items: [%{id: 1, label: "One"}, %{id: 2, label: "Two"}],
         value: "Jason",
+        notes: "Line one\nLine two",
         show_footer: true
       })
 
@@ -837,7 +862,8 @@ defmodule GuppyTest do
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
-    [title_wrapper, button, checkbox, icon, image, scroll, text_input, footer] = ir.children
+    [title_wrapper, button, checkbox, icon, image, scroll, text_input, textarea, footer] =
+      ir.children
 
     assert title_wrapper.kind == :div
     assert title_wrapper.children == [%{kind: :text, content: "Template demo", id: "title"}]
@@ -881,6 +907,13 @@ defmodule GuppyTest do
     assert text_input.value == "Jason"
     assert text_input.placeholder == "Type here"
     assert text_input.events == %{change: "name_changed"}
+
+    assert textarea.kind == :textarea
+    assert textarea.id == "notes_input"
+    assert textarea.value == "Line one\nLine two"
+    assert textarea.placeholder == "Notes"
+    assert textarea.events == %{change: "notes_changed"}
+    assert {:h_px, 120} in textarea.style
 
     assert footer == %{kind: :text, content: "Footer ready", id: "footer"}
   end
@@ -1116,6 +1149,18 @@ defmodule GuppyTest do
                      ],
                      id: "scroll_root",
                      style: [{:h_px, 180}, :p_2, :rounded_md, :border_1, {:border_color, :white}]
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
+                   Guppy.IR.textarea(
+                     "Line one\nLine two",
+                     id: "native_notes",
+                     placeholder: "Notes",
+                     style: [{:w_px, 320}, {:h_px, 120}],
+                     events: %{change: "notes_changed"}
                    )
                  )
 

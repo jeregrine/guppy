@@ -34,6 +34,7 @@ Guppy currently supports these native node kinds:
 - `button`
 - `checkbox`
 - `text_input`
+- `textarea`
 - `image`
 - `icon`
 - `spacer`
@@ -50,7 +51,7 @@ Current native event coverage includes:
 - mouse down / mouse up / mouse move
 - scroll wheel
 - checkbox change
-- text input change
+- text input / textarea change
 - window closed
 
 That is still intentionally selective. Guppy is not pretending to be a complete widget toolkit yet.
@@ -200,6 +201,7 @@ IR helpers:
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
 - `Guppy.IR.text_input/2`
+- `Guppy.IR.textarea/2`
 - `Guppy.IR.image/2`
 - `Guppy.IR.icon/2`
 - `Guppy.IR.spacer/1`
@@ -277,6 +279,7 @@ Built-in template tags currently include:
 - `<icon />`
 - `<spacer />`
 - `<text_input />`
+- `<textarea />`
 
 It also supports first-pass function components.
 
@@ -414,14 +417,14 @@ Key files:
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI main-thread runtime and window registry
 - `native/guppy_nif/src/bridge_view.rs` — root native renderer
 - `native/guppy_nif/src/bridge_view/` — per-node renderers, style mapping, events, identity
-- `native/guppy_nif/src/bridge_text_input.rs` — retained text input implementation
+- `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
 - `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
 
 ## Known limits
 
 Still missing or intentionally narrow:
 
-- `textarea/editor`
+- full editor/rich-text parity
 - radio/select primitives
 - list/uniform-list primitive
 - tooltip/popover primitives

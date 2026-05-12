@@ -323,6 +323,17 @@ defmodule Guppy.IR do
           optional(:events) => text_input_events()
         }
 
+  @type textarea_node :: %{
+          required(:kind) => :textarea,
+          required(:value) => String.t(),
+          optional(:id) => node_id(),
+          optional(:placeholder) => String.t(),
+          optional(:style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => text_input_events()
+        }
+
   @type ir_node ::
           text_node()
           | div_node()
@@ -333,6 +344,7 @@ defmodule Guppy.IR do
           | checkbox_node()
           | spacer_node()
           | text_input_node()
+          | textarea_node()
 
   @style_flag_tokens [
     :flex,
@@ -628,6 +640,15 @@ defmodule Guppy.IR do
 
   @spec text_input(String.t(), keyword()) :: text_input_node()
   def text_input(value, opts \\ []) when is_binary(value) and is_list(opts) do
+    input_node(:text_input, value, opts)
+  end
+
+  @spec textarea(String.t(), keyword()) :: textarea_node()
+  def textarea(value, opts \\ []) when is_binary(value) and is_list(opts) do
+    input_node(:textarea, value, opts)
+  end
+
+  defp input_node(kind, value, opts) do
     id = Keyword.get(opts, :id)
     placeholder = Keyword.get(opts, :placeholder)
     style = Keyword.get(opts, :style)
@@ -635,7 +656,7 @@ defmodule Guppy.IR do
     tab_index = Keyword.get(opts, :tab_index)
     events = Keyword.get(opts, :events)
 
-    %{kind: :text_input, value: value}
+    %{kind: kind, value: value}
     |> maybe_put(:id, id)
     |> maybe_put(:placeholder, placeholder)
     |> maybe_put(:style, style)
@@ -800,7 +821,8 @@ defmodule Guppy.IR do
     end
   end
 
-  defp validate_node(%{kind: :text_input, value: value} = node) when is_binary(value) do
+  defp validate_node(%{kind: kind, value: value} = node)
+       when kind in [:text_input, :textarea] and is_binary(value) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_optional_string(Map.get(node, :placeholder), :placeholder),
          :ok <- validate_style(Map.get(node, :style)),

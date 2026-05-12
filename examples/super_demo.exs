@@ -21,6 +21,8 @@ defmodule Guppy.SuperDemo do
         text_clicks: 0,
         text_input_value: "Type here",
         text_input_changes: 0,
+        textarea_value: "Line one\nLine two",
+        textarea_changes: 0,
         mouse_downs: 0,
         mouse_ups: 0,
         mouse_moves: 0,
@@ -222,6 +224,13 @@ defmodule Guppy.SuperDemo do
 
   defp handle_change(state, view_id, %{id: node_id, callback: callback_id, value: value}) do
     cond do
+      view_id == state.main_view_id and node_id == "demo_textarea" ->
+        state
+        |> Map.put(:textarea_value, value)
+        |> Map.update!(:textarea_changes, &(&1 + 1))
+        |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+        |> rerender!()
+
       view_id == state.main_view_id ->
         state
         |> Map.put(:text_input_value, value)
@@ -807,6 +816,15 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.text("text_input_value = #{inspect(state.text_input_value)}"),
         Guppy.IR.text("text_input_changes = #{state.text_input_changes}"),
+        Guppy.IR.textarea(
+          state.textarea_value,
+          id: "demo_textarea",
+          placeholder: "Type multiple lines",
+          style: [:w_full, {:h_px, 120}],
+          events: %{change: "demo_textarea_changed"}
+        ),
+        Guppy.IR.text("textarea_value = #{inspect(state.textarea_value)}"),
+        Guppy.IR.text("textarea_changes = #{state.textarea_changes}"),
         Guppy.IR.div(
           [
             Guppy.IR.text("Pointer pad", id: "pointer_pad_title"),

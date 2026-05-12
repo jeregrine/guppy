@@ -62,28 +62,28 @@ Every new primitive needs:
 - `README.md` supported-surface update
 - `docs/gpui-compliance.md` matrix update
 
-### Priority 1: textarea/editor
+### Completed in primitive expansion: textarea
 
-Goal: provide a practical multiline text input primitive without pretending to expose full Zed editor parity.
+Guppy now has a practical multiline `textarea` primitive without claiming full Zed editor parity.
 
-Initial scope:
+Delivered scope:
 
-- `Guppy.IR.textarea/2` or clearly named equivalent
+- `Guppy.IR.textarea/2`
 - `textarea` template tag
-- value, placeholder, disabled, style, tab index
-- change/focus/blur events if supported by the retained native implementation
-- retained native state keyed by stable node identity
-- example coverage in `examples/super_demo.exs` or a focused example
-- matrix update for `examples/input.rs`, `examples/text.rs`, and editor/textarea-related gaps
+- value, placeholder, disabled, style, tab index, and change events
+- retained native state keyed by stable node identity through the shared text input implementation
+- example coverage in `examples/super_demo.exs`
+- `README.md` supported-surface update
+- `docs/gpui-compliance.md` matrix update for input/text-related gaps
 
-Out of initial scope unless evidence makes it cheap:
+Still out of scope:
 
 - rich text runs
 - syntax highlighting
 - collaborative/editor entity semantics
 - full Zed editor parity
 
-### Priority 2: radio/select primitives
+### Priority 1: radio/select primitives
 
 Goal: cover common form controls with predictable Elixir-owned state.
 
@@ -95,7 +95,7 @@ Initial scope:
 - keyboard/focus behavior as far as GPUI 0.2.2 supports cleanly
 - form-focused example coverage
 
-### Priority 3: list / uniform-list primitive
+### Priority 2: list / uniform-list primitive
 
 Goal: support larger repeated UI without forcing every example through giant full trees forever.
 
@@ -108,7 +108,7 @@ Initial scope:
 - benchmark before/after for large lists
 - compliance matrix updates for `examples/list_example.rs`, `examples/uniform_list.rs`, and data-table/tree gaps
 
-### Priority 4: tooltip/popover primitives
+### Priority 3: tooltip/popover primitives
 
 Goal: unlock anchored overlay scenarios after core form/list work.
 

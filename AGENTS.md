@@ -115,6 +115,7 @@ Useful IR helpers today:
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
 - `Guppy.IR.text_input/2`
+- `Guppy.IR.textarea/2`
 - `Guppy.IR.image/2`
 - `Guppy.IR.icon/2`
 - `Guppy.IR.spacer/1`
@@ -129,13 +130,14 @@ Supported native nodes today:
 - `:button`
 - `:checkbox`
 - `:text_input`
+- `:textarea`
 - `:image`
 - `:icon`
 - `:spacer`
 
 Still missing higher-value nodes/primitives:
 
-- `textarea/editor`
+- full editor/rich-text parity
 - radio/select primitives
 - list / uniform list primitive
 - tooltip / popover primitives
@@ -218,7 +220,7 @@ Files you will most often need:
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI app bootstrap, request drain, window registry
 - `native/guppy_nif/src/bridge_view.rs` — native root renderer
 - `native/guppy_nif/src/bridge_view/` — render pass, style mapping, event bridge, identity, per-node renderers
-- `native/guppy_nif/src/bridge_text_input.rs` — retained text input implementation
+- `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
 - `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
 - `examples/` — runnable demos
 - `test/guppy_test.exs` — current coverage
@@ -313,10 +315,10 @@ Follow `PLAN.md`. The active phase is primitive expansion: add missing high-valu
 
 Current priority order:
 
-1. `textarea/editor` as a practical multiline input, not full Zed editor parity
-2. radio/select primitives for common form controls
-3. list / uniform-list primitive for larger repeated UI and scroll retention
-4. tooltip/popover primitives after form/list work
+1. radio/select primitives for common form controls
+2. list / uniform-list primitive for larger repeated UI and scroll retention
+3. tooltip/popover primitives after form/list work
+4. full editor/rich-text parity only if explicitly scoped
 5. runtime and distribution hardening after the primitive surface is more useful
 
 Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
