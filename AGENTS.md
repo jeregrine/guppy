@@ -112,6 +112,7 @@ Useful IR helpers today:
 - `Guppy.IR.text/2`
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
+- `Guppy.IR.uniform_list/2`
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
 - `Guppy.IR.radio/4`
@@ -128,6 +129,7 @@ Supported native nodes today:
 - `:text`
 - `:div`
 - `:scroll`
+- `:uniform_list`
 - `:button`
 - `:checkbox`
 - `:radio`
@@ -141,7 +143,7 @@ Still missing higher-value nodes/primitives:
 
 - full editor/rich-text parity
 - select primitive
-- list / uniform list primitive
+- fully generic list item renderers
 - tooltip / popover primitives
 
 ## Current preferred authoring model
@@ -317,9 +319,9 @@ Follow `PLAN.md`. The active phase is primitive expansion: add missing high-valu
 
 Current priority order:
 
-1. select primitive for common form controls
-2. list / uniform-list primitive for larger repeated UI and scroll retention
-3. tooltip/popover primitives after form/list work
+1. tooltip/popover primitives to unblock anchored overlays and eventual select/dropdown
+2. more generic list/uniform-list rendering if the text-row primitive proves too narrow
+3. runtime and distribution hardening after the primitive surface is more useful
 4. full editor/rich-text parity only if explicitly scoped
 5. runtime and distribution hardening after the primitive surface is more useful
 

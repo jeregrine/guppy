@@ -13,6 +13,7 @@ defmodule Guppy.Component do
   - `<checkbox />`
   - `<radio />`
   - `<scroll>`
+  - `<uniform_list />`
   - `<image />`
   - `<icon />`
   - `<spacer />`

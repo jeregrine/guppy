@@ -22,7 +22,7 @@ Statuses:
 | `examples/active_state_bug.rs` | style states on button/checkbox/div | partial | exact active state regression not ported | IR validation only |
 | `examples/anchor.rs` | none | unsupported | anchor/anchored overlay primitives | none |
 | `examples/animation.rs` | none | unsupported | animation primitives | none |
-| `examples/data_table.rs` | none | unsupported | grid/data-table/list primitives | none |
+| `examples/data_table.rs` | `uniform_list` text-row primitive covers only simple repeated rows | partial | grid/data-table layout, columns, cells, and virtualization semantics beyond simple rows | IR/template/native smoke for `uniform_list`; no data-table port |
 | `examples/focus_visible.rs` | focus/blur callbacks | partial | focus-visible styling semantics | IR validation only |
 | `examples/gif_viewer.rs` | image node | partial | animated GIF controls/loading states | manual only |
 | `examples/gradient.rs` | none | unsupported | gradient style primitives | none |
@@ -30,7 +30,7 @@ Statuses:
 | `examples/image_gallery.rs` | image node examples | partial | gallery layout primitives and loading states | manual only |
 | `examples/image_loading.rs` | image node | partial | async loading/error state parity | manual only |
 | `examples/layer_shell.rs` | none | out of scope | platform shell/layer APIs | none |
-| `examples/list_example.rs` | none | unsupported | list/uniform-list primitive | none |
+| `examples/list_example.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | variable-height `list`/`ListState` behavior and custom scrollbar parity | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/mouse_pressure.rs` | mouse event callbacks | partial | pressure payload and native event parity | none |
 | `examples/move_entity_between_windows.rs` | none | unsupported | multi-window entity migration semantics | none |
 | `examples/on_window_close_quit.rs` | `Guppy.close_window/2` | partial | close-request event lifecycle parity | tests cover close API, not native close-request event |
@@ -46,8 +46,8 @@ Statuses:
 | `examples/text.rs` | `text` node; practical multiline input via `textarea` | partial | rich text runs/layout controls and full editor parity incomplete | IR/template tests; textarea example/manual smoke |
 | `examples/text_layout.rs` | text style tokens | partial | advanced text layout/rich runs | IR/style validation |
 | `examples/text_wrapper.rs` | text style tokens | partial | wrapping measurement parity | IR/style validation |
-| `examples/tree.rs` | nested `div`/`text` IR | partial | tree-specific interaction/virtualization | template/IR tests |
-| `examples/uniform_list.rs` | none | unsupported | virtualized/uniform list primitive | none |
+| `examples/tree.rs` | nested `div`/`text` IR; simple repeated text rows via `uniform_list` | partial | tree-specific interaction/virtualization and arbitrary row renderers | template/IR tests |
+| `examples/uniform_list.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | only text-row items are supported; arbitrary per-row IR renderers not exposed | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/window.rs` | window options | partial | full GPUI window API parity | option validation tests |
 | `examples/window_shadow.rs` | window decorations/background options | partial | full shadow/window-frame parity | option validation tests |
 | `tests/action_macros.rs` | `actions` / `shortcuts` IR fields and native shortcut matching tests | partial | Rust macro parity is out of scope; shortcut behavior still narrow | Rust shortcut unit tests |

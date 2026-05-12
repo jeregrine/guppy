@@ -321,6 +321,17 @@ defmodule Guppy.IR do
           optional(:events) => checkbox_events()
         }
 
+  @type uniform_list_item :: %{required(:id) => node_id(), required(:label) => String.t()}
+
+  @type uniform_list_node :: %{
+          required(:kind) => :uniform_list,
+          required(:items) => [uniform_list_item()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:item_style) => style(),
+          optional(:events) => text_events()
+        }
+
   @type spacer_node :: %{
           required(:kind) => :spacer,
           optional(:id) => node_id(),
@@ -360,6 +371,7 @@ defmodule Guppy.IR do
           | button_node()
           | checkbox_node()
           | radio_node()
+          | uniform_list_node()
           | spacer_node()
           | text_input_node()
           | textarea_node()
@@ -563,6 +575,20 @@ defmodule Guppy.IR do
     |> maybe_put(:id, id)
     |> maybe_put(:axis, axis)
     |> maybe_put(:style, style)
+  end
+
+  @spec uniform_list([uniform_list_item()], keyword()) :: uniform_list_node()
+  def uniform_list(items, opts \\ []) when is_list(items) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    item_style = Keyword.get(opts, :item_style)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :uniform_list, items: items}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+    |> maybe_put(:item_style, item_style)
+    |> maybe_put(:events, events)
   end
 
   @spec image(image_source(), keyword()) :: image_node()
@@ -781,6 +807,16 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_node(%{kind: :uniform_list, items: items} = node) when is_list(items) do
+    with :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :item_style)),
+         :ok <- validate_events(Map.get(node, :events), [:click]),
+         :ok <- validate_uniform_list_items(items) do
+      :ok
+    end
+  end
+
   defp validate_node(%{kind: :image, source: source} = node) do
     with :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_image_source(source),
@@ -874,6 +910,16 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_uniform_list_items(items) do
+    Enum.reduce_while(items, :ok, fn
+      %{id: id, label: label}, :ok when is_binary(id) and is_binary(label) ->
+        {:cont, :ok}
+
+      item, :ok ->
+        {:halt, {:error, {:invalid_uniform_list_item, item}}}
+    end)
+  end
+
   defp validate_children(children) do
     Enum.reduce_while(children, :ok, fn child, :ok ->
       case validate_node(child) do
@@ -906,6 +952,16 @@ defmodule Guppy.IR do
       case collect_ids(child, acc_ids) do
         {:ok, next_ids} -> {:cont, {:ok, next_ids}}
         {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp collect_child_ids(%{kind: :uniform_list, items: items}, ids) when is_list(items) do
+    Enum.reduce_while(items, {:ok, ids}, fn %{id: id}, {:ok, acc_ids} ->
+      if MapSet.member?(acc_ids, id) do
+        {:halt, {:error, {:duplicate_id, id}}}
+      else
+        {:cont, {:ok, MapSet.put(acc_ids, id)}}
       end
     end)
   end

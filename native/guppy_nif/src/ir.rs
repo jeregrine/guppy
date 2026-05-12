@@ -15,8 +15,10 @@ struct IrFieldKeys {
     value: Term,
     placeholder: Term,
     children: Term,
+    items: Term,
     axis: Term,
     style: Term,
+    item_style: Term,
     hover_style: Term,
     focus_style: Term,
     in_focus_style: Term,
@@ -64,8 +66,10 @@ impl IrFieldKeys {
             value: atom_term("value"),
             placeholder: atom_term("placeholder"),
             children: atom_term("children"),
+            items: atom_term("items"),
             axis: atom_term("axis"),
             style: atom_term("style"),
+            item_style: atom_term("item_style"),
             hover_style: atom_term("hover_style"),
             focus_style: atom_term("focus_style"),
             in_focus_style: atom_term("in_focus_style"),
@@ -341,6 +345,12 @@ pub struct RadioNode {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct UniformListItem {
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct DivNode {
     pub id: Option<String>,
     pub style: DivStyle,
@@ -420,6 +430,13 @@ pub enum IrNode {
     },
     Checkbox(Box<CheckboxNode>),
     Radio(Box<RadioNode>),
+    UniformList {
+        id: Option<String>,
+        items: Vec<UniformListItem>,
+        style: DivStyle,
+        item_style: DivStyle,
+        click: Option<String>,
+    },
     Spacer {
         id: Option<String>,
         style: DivStyle,
@@ -486,6 +503,13 @@ impl IrNode {
                     children,
                 })
             }
+            "uniform_list" => Ok(Self::UniformList {
+                id,
+                items: get_uniform_list_items_field(map)?,
+                style: get_div_style(map)?,
+                item_style: get_style_list_field(map, "item_style")?,
+                click: get_click_event(map)?,
+            }),
             "image" => Ok(Self::Image {
                 id,
                 source: get_image_source_field(map)?,
@@ -655,8 +679,10 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "value" => &keys.value,
         "placeholder" => &keys.placeholder,
         "children" => &keys.children,
+        "items" => &keys.items,
         "axis" => &keys.axis,
         "style" => &keys.style,
+        "item_style" => &keys.item_style,
         "hover_style" => &keys.hover_style,
         "focus_style" => &keys.focus_style,
         "in_focus_style" => &keys.in_focus_style,
@@ -760,6 +786,23 @@ fn get_string_field(map: &HashMap<Term, Term>, key: &str) -> Result<String, Stri
         Some(term) => term_to_string(term),
         None => Err(format!("missing required field: {key}")),
     }
+}
+
+fn get_uniform_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<UniformListItem>, String> {
+    let Some(items_term) = get_field(map, "items") else {
+        return Err("missing required field: items".into());
+    };
+
+    get_list(items_term)?
+        .iter()
+        .map(|term| {
+            let item = expect_map(term)?;
+            Ok(UniformListItem {
+                id: get_string_field(item, "id")?,
+                label: get_string_field(item, "label")?,
+            })
+        })
+        .collect()
 }
 
 fn get_optional_string_field(

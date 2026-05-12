@@ -143,6 +143,7 @@ defmodule Guppy.Component.Compiler do
       case tag do
         "div" -> compile_div(attrs, xmlElement(element, :content), caller)
         "scroll" -> compile_scroll(attrs, xmlElement(element, :content), caller)
+        "uniform_list" -> compile_uniform_list(attrs, xmlElement(element, :content), caller)
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
         "radio" -> compile_radio(attrs, xmlElement(element, :content), caller)
@@ -175,6 +176,24 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.scroll(unquote(children), unquote(opts))
+    end
+  end
+
+  defp compile_uniform_list(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, uniform_list_allowed_attrs(), "uniform_list", caller)
+    assert_empty_element!(content, "uniform_list", caller)
+    items = fetch_required_attr!(attrs, "items", :expr_only, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "item_class", "item_style", :item_style),
+        events_entry(attrs, @text_events, caller)
+      ])
+
+    quote do
+      Guppy.IR.uniform_list(unquote(items), unquote(opts))
     end
   end
 
@@ -1014,6 +1033,10 @@ defmodule Guppy.Component.Compiler do
 
   defp scroll_allowed_attrs do
     [":if", ":for", "id", "axis", "class", "style"]
+  end
+
+  defp uniform_list_allowed_attrs do
+    [":if", ":for", "id", "items", "class", "style", "item_class", "item_style"] ++ @text_events
   end
 
   defp image_allowed_attrs do

@@ -115,20 +115,30 @@ Deferred scope:
 
 Revisit after tooltip/popover/anchored-overlay support exists.
 
-### Priority 1: list / uniform-list primitive
+### Completed in primitive expansion: uniform text list
 
-Goal: support larger repeated UI without forcing every example through giant full trees forever.
+Guppy now has a focused `uniform_list` primitive for large lists of text rows with stable item ids. It wraps GPUI's `uniform_list` for lazy visible-range rendering while keeping Elixir as the owner of item data and selection state.
 
-Initial scope:
+Delivered scope:
 
-- determine whether to wrap GPUI uniform list or provide a Guppy-specific retained list primitive
-- stable item identity
-- scroll retention
-- item event routing back to the owning Elixir process
-- benchmark before/after for large lists
-- compliance matrix updates for `examples/list_example.rs`, `examples/uniform_list.rs`, and data-table/tree gaps
+- `Guppy.IR.uniform_list/2`
+- `uniform_list` template tag
+- stable item ids and labels
+- list-level style and item-row style
+- item click routing back to the owning Elixir process using stable item identity
+- GPUI `uniform_list` native render path
+- example coverage in `examples/super_demo.exs`
+- `README.md` supported-surface update
+- `docs/gpui-compliance.md` matrix update for list/uniform-list gaps
 
-### Priority 2: tooltip/popover primitives
+Still out of scope:
+
+- arbitrary per-item child IR renderers
+- variable-height `list`/`ListState` parity
+- data-table/grid parity
+- row selection ownership beyond normal Elixir event handling
+
+### Priority 1: tooltip/popover primitives
 
 Goal: unlock anchored overlay scenarios after core form/list work.
 

@@ -54,6 +54,7 @@ defmodule Guppy.TemplateExample do
           <text>{item.label}</text>
         </div>
       </scroll>
+      <uniform_list id="virtual_items" items={@uniform_items} class="h-[120px]" item_class="p-2" click="uniform_item_clicked" />
       <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" />
       <textarea id="notes_input" value={@notes} placeholder="Notes" class="w-[240px] h-[120px]" change="notes_changed" />
       {if @show_footer, do: Guppy.IR.text("Footer ready", id: "footer")}
@@ -204,6 +205,20 @@ defmodule GuppyTest do
     assert checkbox_ir.checked == true
     assert checkbox_ir.tab_index == 5
     assert checkbox_ir.events == %{change: "toggle_ship", focus: "focus_ship", blur: "blur_ship"}
+
+    uniform_list_ir =
+      Guppy.IR.uniform_list(
+        [%{id: "item_1", label: "Item one"}, %{id: "item_2", label: "Item two"}],
+        id: "uniform_items",
+        style: [{:h_px, 160}, :overflow_y_scroll],
+        item_style: [:p_2, :border_b_1],
+        events: %{click: "item_clicked"}
+      )
+
+    assert :ok = Guppy.IR.validate(uniform_list_ir)
+    assert uniform_list_ir.kind == :uniform_list
+    assert length(uniform_list_ir.items) == 2
+    assert uniform_list_ir.events == %{click: "item_clicked"}
 
     radio_ir =
       Guppy.IR.radio(
@@ -668,6 +683,9 @@ defmodule GuppyTest do
     assert {:error, {:invalid_ir, %{kind: :radio, label: "High", value: 123, checked: true}}} =
              Guppy.IR.validate(%{kind: :radio, label: "High", value: 123, checked: true})
 
+    assert {:error, {:invalid_uniform_list_item, %{id: "item", label: 123}}} =
+             Guppy.IR.validate(Guppy.IR.uniform_list([%{id: "item", label: 123}]))
+
     assert {:error, {:invalid_ir, %{kind: :text_input, value: 123}}} =
              Guppy.IR.validate(%{kind: :text_input, value: 123})
 
@@ -885,6 +903,10 @@ defmodule GuppyTest do
       Guppy.TemplateExample.render(%{
         title: "Template demo",
         items: [%{id: 1, label: "One"}, %{id: 2, label: "Two"}],
+        uniform_items: [
+          %{id: "uniform_1", label: "Uniform one"},
+          %{id: "uniform_2", label: "Uniform two"}
+        ],
         value: "Jason",
         notes: "Line one\nLine two",
         priority: "high",
@@ -897,7 +919,19 @@ defmodule GuppyTest do
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
-    [title_wrapper, button, checkbox, radio, icon, image, scroll, text_input, textarea, footer] =
+    [
+      title_wrapper,
+      button,
+      checkbox,
+      radio,
+      icon,
+      image,
+      scroll,
+      uniform_list,
+      text_input,
+      textarea,
+      footer
+    ] =
       ir.children
 
     assert title_wrapper.kind == :div
@@ -943,6 +977,13 @@ defmodule GuppyTest do
     assert length(scroll.children) == 2
 
     assert Enum.map(scroll.children, & &1.id) == ["item_1", "item_2"]
+
+    assert uniform_list.kind == :uniform_list
+    assert uniform_list.id == "virtual_items"
+    assert Enum.map(uniform_list.items, & &1.id) == ["uniform_1", "uniform_2"]
+    assert {:h_px, 120} in uniform_list.style
+    assert :p_2 in uniform_list.item_style
+    assert uniform_list.events == %{click: "uniform_item_clicked"}
 
     assert text_input.kind == :text_input
     assert text_input.id == "name_input"
@@ -1191,6 +1232,18 @@ defmodule GuppyTest do
                      ],
                      id: "scroll_root",
                      style: [{:h_px, 180}, :p_2, :rounded_md, :border_1, {:border_color, :white}]
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
+                   Guppy.IR.uniform_list(
+                     [%{id: "native_item_1", label: "Native item 1"}],
+                     id: "native_uniform_items",
+                     style: [{:h_px, 120}],
+                     item_style: [:p_2],
+                     events: %{click: "native_item_clicked"}
                    )
                  )
 

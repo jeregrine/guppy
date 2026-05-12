@@ -376,6 +376,11 @@ defmodule Guppy.SuperDemo do
         |> Map.put(:last_event, "text click via #{node_id}")
         |> rerender!()
 
+      "uniform_item_clicked" ->
+        state
+        |> Map.put(:last_event, "uniform list click via #{node_id}")
+        |> rerender!()
+
       "underlay_click" ->
         state
         |> Map.update!(:underlay_clicks, &(&1 + 1))
@@ -845,6 +850,13 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.text("selected_priority = #{state.selected_priority}"),
         Guppy.IR.text("radio_changes = #{state.radio_changes}"),
+        Guppy.IR.uniform_list(
+          Enum.map(1..100, &%{id: "uniform_demo_item_#{&1}", label: "Uniform item #{&1}"}),
+          id: "interaction_uniform_list",
+          style: [{:h_px, 160}, :border_1, {:border_color, :white}],
+          item_style: [:p_2, :border_b_1],
+          events: %{click: "uniform_item_clicked"}
+        ),
         Guppy.IR.div(
           [
             Guppy.IR.text("Pointer pad", id: "pointer_pad_title"),
