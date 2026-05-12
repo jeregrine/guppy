@@ -192,9 +192,9 @@ Deferred primitive areas:
 - full data-table/tree virtualization parity
 - full select/dropdown parity on top of richer popover behavior
 
-### Started in runtime hardening: owner cleanup telemetry
+### Started in runtime hardening: owner cleanup and close-event telemetry
 
-Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage.
+Owner process cleanup now routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry and giving owner-cleanup behavior automated coverage. Unknown native close events are also covered by event-route telemetry tests.
 
 Remaining runtime scope:
 

@@ -920,6 +920,11 @@ defmodule GuppyTest do
 
       assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
                       %{view_id: -1, type: :click, status: :unknown_view_id}}
+
+      send(Guppy.server(), {:guppy_native_event, -1, :window_closed, :undefined})
+
+      assert_receive {:telemetry_event, [:guppy, :event, :route], %{count: 1},
+                      %{view_id: -1, type: :window_closed, status: :unknown_view_id}}
     after
       :telemetry.detach(handler_id)
     end
