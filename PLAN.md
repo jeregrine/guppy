@@ -165,6 +165,8 @@ Required changes after measurement:
 
 Create a tracked matrix for upstream GPUI examples and high-level test cases.
 
+Current matrix: `docs/gpui-compliance.md`.
+
 Use the latest cloned Zed/GPUI repository as the source of truth, and periodically refresh the matrix against upstream changes so Guppy does not accidentally target stale examples or tests.
 
 For each GPUI example/test:
