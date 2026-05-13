@@ -53,7 +53,7 @@ Guppy is not trying to expose all of GPUI. It currently targets a documented sub
 
 ## Quick start
 
-Run a small example. The Rust NIF builds automatically during normal Mix compilation:
+Run a small example. The Rust NIF builds automatically during normal Mix compilation, so the source-build alpha path requires a working Rust toolchain:
 
 ```bash
 mix run examples/hello_world.exs

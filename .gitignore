@@ -19,8 +19,9 @@ erl_crash.dump
 # Also ignore archive artifacts (built via "mix archive.build").
 *.ez
 
-# Ignore package tarball (built via "mix hex.build").
+# Ignore package tarball/unpack output (built via "mix hex.build").
 guppy-*.tar
+/guppy-*/
 
 # Native build artifacts.
 /native/**/target/

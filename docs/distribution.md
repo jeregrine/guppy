@@ -60,7 +60,7 @@ Until precompiled artifacts exist, a release is source-only:
 1. Run `scripts/check`.
 2. Run `scripts/clean_install_load_test`.
 3. Run `scripts/package_smoke`.
-4. Audit package contents with `mix hex.build --unpack`.
+4. Audit package contents with `mix hex.build --unpack --output /tmp/guppy-hex-unpack`.
 5. Run `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs` on macOS.
 6. Confirm `docs/gpui-compliance.md` still records the current `../zed/crates/gpui` reference.
 7. Update `CHANGELOG.md` and the package version for the release.

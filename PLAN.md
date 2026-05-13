@@ -66,7 +66,7 @@ Before cutting or claiming a source-build release, rerun and audit:
 scripts/check
 scripts/clean_install_load_test
 scripts/package_smoke
-mix hex.build --unpack
+mix hex.build --unpack --output /tmp/guppy-hex-unpack
 GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs
 ```
 
