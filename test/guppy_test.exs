@@ -1088,6 +1088,21 @@ defmodule GuppyTest do
     end
   end
 
+  test "native decode errors preserve reasons instead of raising badarg" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        assert {:error, {:decode_error, reason}} =
+                 Guppy.Native.Nif.request(Guppy.Native.Nif, {:render, [1, %{kind: :text}]})
+
+        assert is_binary(reason)
+        assert reason != ""
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} =
+                 Guppy.Native.Nif.request(Guppy.Native.Nif, {:render, [1, %{kind: :text}]})
+    end
+  end
+
   test "direct NIF calls emit telemetry when native code is loaded" do
     case Guppy.Native.Nif.load_status() do
       :ok ->

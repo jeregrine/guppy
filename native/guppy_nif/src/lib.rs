@@ -6,9 +6,7 @@ mod window_options;
 
 use crate::ir::IrNode;
 use crate::window_options::WindowOptionsConfig;
-use rustler::{
-    Atom, Encoder, Env, Error, LocalPid, Monitor, NifResult, Resource, ResourceArc, Term,
-};
+use rustler::{Atom, Encoder, Env, LocalPid, Monitor, Resource, ResourceArc, Term};
 use std::ffi::{CString, c_char, c_void};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Sender};
@@ -43,6 +41,7 @@ rustler::atoms! {
     delta_kind,
     delta_x,
     delta_y,
+    decode_error,
     drag_move,
     drag_start,
     drop,
@@ -71,6 +70,7 @@ rustler::atoms! {
     navigate_forward,
     nil,
     none,
+    options_decode_error,
     pixels,
     platform,
     pong,
@@ -204,7 +204,7 @@ fn native_open_window<'a>(
     ir: Term<'a>,
     opts: Term<'a>,
     timeout_ms: u64,
-) -> NifResult<Term<'a>> {
+) -> Term<'a> {
     let to_binary_started_at = Instant::now();
     let ir_binary = ir.to_binary();
     record_counter(
@@ -216,8 +216,10 @@ fn native_open_window<'a>(
     let opts_binary = opts.to_binary();
 
     let options_decode_started_at = Instant::now();
-    let options =
-        WindowOptionsConfig::decode_etf(opts_binary.as_slice()).map_err(|_| Error::BadArg)?;
+    let options = match WindowOptionsConfig::decode_etf(opts_binary.as_slice()) {
+        Ok(options) => options,
+        Err(reason) => return error_reason_tuple(env, options_decode_error(), reason),
+    };
     record_counter(
         &OPEN_OPTIONS_DECODE_COUNT,
         &OPEN_OPTIONS_DECODE_NANOS,
@@ -225,7 +227,10 @@ fn native_open_window<'a>(
     );
 
     let ir_decode_started_at = Instant::now();
-    let ir = IrNode::decode_etf(ir_binary.as_slice()).map_err(|_| Error::BadArg)?;
+    let ir = match IrNode::decode_etf(ir_binary.as_slice()) {
+        Ok(ir) => ir,
+        Err(reason) => return error_reason_tuple(env, decode_error(), reason),
+    };
     record_counter(
         &OPEN_IR_DECODE_COUNT,
         &OPEN_IR_DECODE_NANOS,
@@ -241,16 +246,19 @@ fn native_open_window<'a>(
         }
     });
 
-    Ok(status_result(env, result, duplicate_view_id()))
+    status_result(env, result, duplicate_view_id())
 }
 
 #[rustler::nif]
-fn native_set_event_target(env: Env, pid: LocalPid) -> Atom {
+fn native_set_event_target<'a>(env: Env<'a>, pid: LocalPid) -> Term<'a> {
     let generation = EVENT_TARGET_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     let resource = ResourceArc::new(EventTargetMonitor { generation });
     let monitor = env.monitor(&resource, &pid);
 
-    let mut target = EVENT_TARGET.lock().expect("event target lock poisoned");
+    let Ok(mut target) = EVENT_TARGET.lock() else {
+        return error_tuple(env, runtime_unavailable());
+    };
+
     *target = Some(EventTargetRegistration {
         pid,
         generation,
@@ -258,12 +266,14 @@ fn native_set_event_target(env: Env, pid: LocalPid) -> Atom {
         _monitor: monitor,
     });
 
-    rustler::types::atom::ok()
+    rustler::types::atom::ok().encode(env)
 }
 
 #[rustler::nif]
 fn native_event_target_status<'a>(env: Env<'a>) -> Term<'a> {
-    let target = EVENT_TARGET.lock().expect("event target lock poisoned");
+    let Ok(target) = EVENT_TARGET.lock() else {
+        return error_tuple(env, runtime_unavailable());
+    };
 
     match target.as_ref() {
         Some(target) => (some(), target.generation).encode(env),
@@ -272,12 +282,7 @@ fn native_event_target_status<'a>(env: Env<'a>) -> Term<'a> {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-fn native_render<'a>(
-    env: Env<'a>,
-    view_id: u64,
-    ir: Term<'a>,
-    timeout_ms: u64,
-) -> NifResult<Term<'a>> {
+fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>, timeout_ms: u64) -> Term<'a> {
     let to_binary_started_at = Instant::now();
     let ir_binary = ir.to_binary();
     record_counter(
@@ -287,7 +292,10 @@ fn native_render<'a>(
     );
 
     let ir_decode_started_at = Instant::now();
-    let ir = IrNode::decode_etf(ir_binary.as_slice()).map_err(|_| Error::BadArg)?;
+    let ir = match IrNode::decode_etf(ir_binary.as_slice()) {
+        Ok(ir) => ir,
+        Err(reason) => return error_reason_tuple(env, decode_error(), reason),
+    };
     record_counter(
         &RENDER_IR_DECODE_COUNT,
         &RENDER_IR_DECODE_NANOS,
@@ -298,7 +306,7 @@ fn native_render<'a>(
         main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply }
     });
 
-    Ok(status_result(env, result, unknown_view_id()))
+    status_result(env, result, unknown_view_id())
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -348,6 +356,10 @@ fn error_tuple<'a>(env: Env<'a>, reason: Atom) -> Term<'a> {
     (rustler::types::atom::error(), reason).encode(env)
 }
 
+fn error_reason_tuple<'a>(env: Env<'a>, kind: Atom, reason: String) -> Term<'a> {
+    (rustler::types::atom::error(), (kind, reason)).encode(env)
+}
+
 struct EventTargetRegistration {
     pid: LocalPid,
     generation: u64,
@@ -363,7 +375,9 @@ impl Resource for EventTargetMonitor {
     const IMPLEMENTS_DOWN: bool = true;
 
     fn down<'a>(&'a self, _env: Env<'a>, pid: LocalPid, _monitor: Monitor) {
-        let mut target = EVENT_TARGET.lock().expect("event target lock poisoned");
+        let Ok(mut target) = EVENT_TARGET.lock() else {
+            return;
+        };
 
         if matches!(target.as_ref(), Some(current) if current.generation == self.generation && current.pid == pid)
         {
@@ -501,7 +515,11 @@ fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -
     #[cfg(not(test))]
     {
         let target = {
-            let target = EVENT_TARGET.lock().expect("event target lock poisoned");
+            let Ok(target) = EVENT_TARGET.lock() else {
+                record_event_send(started_at, false);
+                return 0;
+            };
+
             target.as_ref().map(|target| target.pid)
         };
 
