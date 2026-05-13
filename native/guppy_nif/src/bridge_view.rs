@@ -19,8 +19,8 @@ mod style;
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
 use gpui::{
-    App, Context, Entity, FocusHandle, KeyBinding, ListState, Render, ScrollHandle, Subscription,
-    Window, actions, div, prelude::*,
+    App, Context, Entity, FocusHandle, KeyBinding, ListState, MouseDownEvent, Render, ScrollHandle,
+    Subscription, Window, actions, div, prelude::*,
 };
 use std::collections::HashMap;
 
@@ -36,6 +36,7 @@ pub(crate) fn bind_focus_keys(cx: &mut App) {
 #[derive(Default)]
 pub(crate) struct BridgeRetainedState {
     pub root_focus_handle: Option<FocusHandle>,
+    pub focus_visible: bool,
     pub scroll_handles: HashMap<String, ScrollHandle>,
     pub list_states: HashMap<String, ListState>,
     pub focus_handles: HashMap<String, FocusHandle>,
@@ -74,6 +75,7 @@ impl Render for BridgeView {
         div()
             .size_full()
             .track_focus(&root_focus_handle)
+            .on_any_mouse_down(cx.listener(Self::hide_focus_visible))
             .on_action(cx.listener(Self::focus_next))
             .on_action(cx.listener(Self::focus_prev))
             .child(root)
@@ -82,11 +84,17 @@ impl Render for BridgeView {
 
 impl BridgeView {
     fn focus_next(&mut self, _: &FocusNext, window: &mut Window, _: &mut Context<Self>) {
+        self.retained.focus_visible = true;
         window.focus_next();
     }
 
     fn focus_prev(&mut self, _: &FocusPrev, window: &mut Window, _: &mut Context<Self>) {
+        self.retained.focus_visible = true;
         window.focus_prev();
+    }
+
+    fn hide_focus_visible(&mut self, _: &MouseDownEvent, _: &mut Window, _: &mut Context<Self>) {
+        self.retained.focus_visible = false;
     }
 
     fn prune_retained_state(&mut self, state: render_pass::RenderPassState) {
@@ -193,6 +201,7 @@ mod tests {
                 style: Vec::new().into(),
                 hover_style: Vec::new().into(),
                 focus_style: Vec::new().into(),
+                focus_visible_style: Vec::new().into(),
                 in_focus_style: Vec::new().into(),
                 active_style: Vec::new().into(),
                 disabled_style: Vec::new().into(),
@@ -232,6 +241,7 @@ mod tests {
         cx.simulate_keystrokes("tab");
 
         view.update_in(cx, |view, window, _view_cx| {
+            assert!(view.retained.focus_visible);
             assert!(view.retained.focus_handles["first"].is_focused(window));
             assert!(!view.retained.focus_handles["second"].is_focused(window));
         });
@@ -239,8 +249,15 @@ mod tests {
         cx.simulate_keystrokes("tab");
 
         view.update_in(cx, |view, window, _view_cx| {
+            assert!(view.retained.focus_visible);
             assert!(!view.retained.focus_handles["first"].is_focused(window));
             assert!(view.retained.focus_handles["second"].is_focused(window));
+        });
+
+        cx.simulate_click(point(px(10.), px(10.)), Modifiers::none());
+
+        view.update_in(cx, |view, _window, _view_cx| {
+            assert!(!view.retained.focus_visible);
         });
     }
 
@@ -307,6 +324,7 @@ mod tests {
             style: vec![StyleOp::W96, StyleOp::H32].into(),
             hover_style: Vec::new().into(),
             focus_style: Vec::new().into(),
+            focus_visible_style: vec![StyleOp::Border1].into(),
             in_focus_style: Vec::new().into(),
             active_style: Vec::new().into(),
             disabled_style: Vec::new().into(),
@@ -344,6 +362,7 @@ mod tests {
             style: vec![StyleOp::W96, StyleOp::H32, StyleOp::P4, StyleOp::Border1].into(),
             hover_style: Vec::new().into(),
             focus_style: Vec::new().into(),
+            focus_visible_style: Vec::new().into(),
             in_focus_style: Vec::new().into(),
             active_style: Vec::new().into(),
             disabled_style: Vec::new().into(),

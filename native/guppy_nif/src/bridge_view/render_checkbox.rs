@@ -80,6 +80,16 @@ pub(crate) fn render(
         checkbox = checkbox.hover(move |style| apply_refinement_style(style, &hover_ops));
     }
 
+    if !node.disabled
+        && !node.focus_visible_style.is_empty()
+        && pass.focus_visible()
+        && focus_handle
+            .as_ref()
+            .is_some_and(|handle| handle.is_focused(window))
+    {
+        checkbox = apply_div_style(checkbox, &node.focus_visible_style);
+    }
+
     if !node.disabled && !node.focus_style.is_empty() {
         let focus_ops = node.focus_style.clone();
         checkbox = checkbox.focus(move |style| apply_refinement_style(style, &focus_ops));

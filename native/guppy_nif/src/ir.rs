@@ -24,6 +24,7 @@ struct IrFieldKeys {
     option_style: Term,
     hover_style: Term,
     focus_style: Term,
+    focus_visible_style: Term,
     in_focus_style: Term,
     active_style: Term,
     disabled_style: Term,
@@ -89,6 +90,7 @@ impl IrFieldKeys {
             option_style: atom_term("option_style"),
             hover_style: atom_term("hover_style"),
             focus_style: atom_term("focus_style"),
+            focus_visible_style: atom_term("focus_visible_style"),
             in_focus_style: atom_term("in_focus_style"),
             active_style: atom_term("active_style"),
             disabled_style: atom_term("disabled_style"),
@@ -364,6 +366,7 @@ pub struct CheckboxNode {
     pub style: DivStyle,
     pub hover_style: DivStyle,
     pub focus_style: DivStyle,
+    pub focus_visible_style: DivStyle,
     pub in_focus_style: DivStyle,
     pub active_style: DivStyle,
     pub disabled_style: DivStyle,
@@ -383,6 +386,7 @@ pub struct RadioNode {
     pub style: DivStyle,
     pub hover_style: DivStyle,
     pub focus_style: DivStyle,
+    pub focus_visible_style: DivStyle,
     pub in_focus_style: DivStyle,
     pub active_style: DivStyle,
     pub disabled_style: DivStyle,
@@ -437,6 +441,7 @@ pub struct DivNode {
     pub style: DivStyle,
     pub hover_style: DivStyle,
     pub focus_style: DivStyle,
+    pub focus_visible_style: DivStyle,
     pub in_focus_style: DivStyle,
     pub active_style: DivStyle,
     pub disabled_style: DivStyle,
@@ -704,6 +709,7 @@ impl IrNode {
                 style: get_div_style(map)?,
                 hover_style: get_div_hover_style(map)?,
                 focus_style: get_div_focus_style(map)?,
+                focus_visible_style: get_div_focus_visible_style(map)?,
                 in_focus_style: get_div_in_focus_style(map)?,
                 active_style: get_div_active_style(map)?,
                 disabled_style: get_div_disabled_style(map)?,
@@ -721,6 +727,7 @@ impl IrNode {
                 style: get_div_style(map)?,
                 hover_style: get_div_hover_style(map)?,
                 focus_style: get_div_focus_style(map)?,
+                focus_visible_style: get_div_focus_visible_style(map)?,
                 in_focus_style: get_div_in_focus_style(map)?,
                 active_style: get_div_active_style(map)?,
                 disabled_style: get_div_disabled_style(map)?,
@@ -741,6 +748,7 @@ impl IrNode {
                 let hover_style = get_div_hover_style(map)?;
                 let focus_style =
                     prepend_style(default_button_focus_style(), get_div_focus_style(map)?);
+                let focus_visible_style = get_div_focus_visible_style(map)?;
                 let in_focus_style = get_div_in_focus_style(map)?;
                 let active_style =
                     prepend_style(default_button_active_style(), get_div_active_style(map)?);
@@ -754,6 +762,7 @@ impl IrNode {
                     style,
                     hover_style,
                     focus_style,
+                    focus_visible_style,
                     in_focus_style,
                     active_style,
                     disabled_style,
@@ -800,6 +809,7 @@ impl IrNode {
                     style: get_div_style(map)?,
                     hover_style: get_div_hover_style(map)?,
                     focus_style: get_div_focus_style(map)?,
+                    focus_visible_style: get_div_focus_visible_style(map)?,
                     in_focus_style: get_div_in_focus_style(map)?,
                     active_style: get_div_active_style(map)?,
                     disabled_style: get_div_disabled_style(map)?,
@@ -865,6 +875,7 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "option_style" => &keys.option_style,
         "hover_style" => &keys.hover_style,
         "focus_style" => &keys.focus_style,
+        "focus_visible_style" => &keys.focus_visible_style,
         "in_focus_style" => &keys.in_focus_style,
         "active_style" => &keys.active_style,
         "disabled_style" => &keys.disabled_style,
@@ -1246,6 +1257,10 @@ fn get_div_hover_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
 
 fn get_div_focus_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
     get_style_list_field(map, "focus_style")
+}
+
+fn get_div_focus_visible_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {
+    get_style_list_field(map, "focus_visible_style")
 }
 
 fn get_div_in_focus_style(map: &HashMap<Term, Term>) -> Result<DivStyle, String> {

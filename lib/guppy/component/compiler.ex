@@ -67,6 +67,8 @@ defmodule Guppy.Component.Compiler do
     {"hover_style", :hover_style},
     {"focus_class", :focus_style},
     {"focus_style", :focus_style},
+    {"focus_visible_class", :focus_visible_style},
+    {"focus_visible_style", :focus_visible_style},
     {"in_focus_class", :in_focus_style},
     {"in_focus_style", :in_focus_style},
     {"active_class", :active_style},
@@ -338,6 +340,12 @@ defmodule Guppy.Component.Compiler do
       style_entry(attrs, "class", "style", :style),
       style_entry(attrs, "hover_class", "hover_style", :hover_style),
       style_entry(attrs, "focus_class", "focus_style", :focus_style),
+      style_entry(
+        attrs,
+        "focus_visible_class",
+        "focus_visible_style",
+        :focus_visible_style
+      ),
       style_entry(attrs, "in_focus_class", "in_focus_style", :in_focus_style),
       style_entry(attrs, "active_class", "active_style", :active_style),
       style_entry(attrs, "disabled_class", "disabled_style", :disabled_style),
@@ -661,6 +669,14 @@ defmodule Guppy.Component.Compiler do
 
         {"focus_class", _} ->
           style_entry(attrs, "focus_class", "focus_style", :focus_style)
+
+        {"focus_visible_class", _} ->
+          style_entry(
+            attrs,
+            "focus_visible_class",
+            "focus_visible_style",
+            :focus_visible_style
+          )
 
         {"in_focus_class", _} ->
           style_entry(attrs, "in_focus_class", "in_focus_style", :in_focus_style)

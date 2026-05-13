@@ -63,6 +63,7 @@ defmodule Guppy.ComponentTest do
     assert button.kind == :button
     assert button.id == "save_button"
     assert button.label == "Save"
+    assert button.focus_visible_style == [{:border_color, :yellow}, :shadow_lg]
     assert button.events == %{click: "save"}
 
     assert checkbox.kind == :checkbox

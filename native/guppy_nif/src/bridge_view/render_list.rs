@@ -182,6 +182,7 @@ mod tests {
                 style: Vec::new().into(),
                 hover_style: Vec::new().into(),
                 focus_style: Vec::new().into(),
+                focus_visible_style: Vec::new().into(),
                 in_focus_style: Vec::new().into(),
                 active_style: Vec::new().into(),
                 disabled_style: Vec::new().into(),

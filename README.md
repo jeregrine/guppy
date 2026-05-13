@@ -283,6 +283,7 @@ Stateful style lists are explicit:
 
 - `hover_style`
 - `focus_style`
+- `focus_visible_style`
 - `in_focus_style`
 - `active_style`
 - `disabled_style`
@@ -312,7 +313,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 - full editor/rich-text parity beyond current text style-token support
 - richer select/dropdown menu semantics beyond the current Elixir-owned select
 - stateful controls inside generic virtualized list rows and custom scrollbar parity
-- focus-visible styling semantics and exact traversal edge-case parity
+- exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
 - animation, gradient, grid, canvas/custom painting, pattern painting, and menu APIs
 - published precompiled native artifacts

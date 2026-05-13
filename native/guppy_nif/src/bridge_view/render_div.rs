@@ -126,7 +126,7 @@ pub(crate) fn render(
     );
     let styled_div = attach_pointer_and_keyboard_interactions(styled_div, &prepared, &retained);
     let styled_div = attach_tooltip(styled_div, node);
-    let styled_div = apply_stateful_style_refinements(styled_div, node);
+    let styled_div = apply_stateful_style_refinements(styled_div, pass, node, &retained, window);
 
     finalize_div_layering(styled_div, node)
 }
@@ -176,6 +176,7 @@ fn prepare_div<'a>(view_id: u64, path: &str, node: &'a DivNode) -> DivPrepared<'
             || tab_stop.is_some()
             || tab_index.is_some()
             || !node.focus_style.is_empty()
+            || !node.focus_visible_style.is_empty()
             || !node.in_focus_style.is_empty()
             || interactions.focus.is_some()
             || interactions.blur.is_some()
@@ -540,8 +541,22 @@ impl Render for TooltipView {
 
 fn apply_stateful_style_refinements(
     mut styled_div: Stateful<Div>,
+    pass: &RenderPass<'_>,
     node: &DivNode,
+    retained: &DivRetainedState,
+    window: &Window,
 ) -> Stateful<Div> {
+    if !node.disabled
+        && !node.focus_visible_style.is_empty()
+        && pass.focus_visible()
+        && retained
+            .focus_handle
+            .as_ref()
+            .is_some_and(|handle| handle.is_focused(window))
+    {
+        styled_div = apply_div_style(styled_div, &node.focus_visible_style);
+    }
+
     if !node.disabled && !node.focus_style.is_empty() {
         let focus_ops = node.focus_style.clone();
         styled_div = styled_div.focus(move |style| apply_refinement_style(style, &focus_ops));

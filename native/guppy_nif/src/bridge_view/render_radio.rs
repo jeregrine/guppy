@@ -80,6 +80,16 @@ pub(crate) fn render(
         radio = radio.hover(move |style| apply_refinement_style(style, &hover_ops));
     }
 
+    if !node.disabled
+        && !node.focus_visible_style.is_empty()
+        && pass.focus_visible()
+        && focus_handle
+            .as_ref()
+            .is_some_and(|handle| handle.is_focused(window))
+    {
+        radio = apply_div_style(radio, &node.focus_visible_style);
+    }
+
     if !node.disabled && !node.focus_style.is_empty() {
         let focus_ops = node.focus_style.clone();
         radio = radio.focus(move |style| apply_refinement_style(style, &focus_ops));

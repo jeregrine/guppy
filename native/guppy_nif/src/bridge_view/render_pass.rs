@@ -42,6 +42,10 @@ impl<'a> RenderPass<'a> {
         self.view_id
     }
 
+    pub fn focus_visible(&self) -> bool {
+        self.retained.focus_visible
+    }
+
     pub fn render_node(
         &mut self,
         path: &str,

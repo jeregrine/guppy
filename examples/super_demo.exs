@@ -1020,7 +1020,8 @@ defmodule Guppy.SuperDemo do
           focusable: true,
           tab_stop: true,
           tab_index: 1,
-          focus_style: [{:bg_hex, "#204060"}, {:border_color, :yellow}],
+          focus_style: [{:bg_hex, "#204060"}],
+          focus_visible_style: [{:border_color, :yellow}, :shadow_lg],
           in_focus_style: [:shadow_lg],
           active_style: [{:bg_hex, "#10263c"}, {:opacity, 0.92}],
           actions: %{

@@ -631,6 +631,7 @@ defmodule Guppy.ServerNativeTest do
                      "Save via button node",
                      id: "save_button",
                      style: [{:bg, :blue}],
+                     focus_visible_style: [{:border_color, :yellow}, :shadow_lg],
                      events: %{click: "save"}
                    )
                  )

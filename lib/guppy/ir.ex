@@ -216,6 +216,7 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:hover_style) => style(),
           optional(:focus_style) => style(),
+          optional(:focus_visible_style) => style(),
           optional(:in_focus_style) => style(),
           optional(:active_style) => style(),
           optional(:disabled_style) => style(),
@@ -274,6 +275,7 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:hover_style) => style(),
           optional(:focus_style) => style(),
+          optional(:focus_visible_style) => style(),
           optional(:in_focus_style) => style(),
           optional(:active_style) => style(),
           optional(:disabled_style) => style(),
@@ -298,6 +300,7 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:hover_style) => style(),
           optional(:focus_style) => style(),
+          optional(:focus_visible_style) => style(),
           optional(:in_focus_style) => style(),
           optional(:active_style) => style(),
           optional(:disabled_style) => style(),
@@ -315,6 +318,7 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:hover_style) => style(),
           optional(:focus_style) => style(),
+          optional(:focus_visible_style) => style(),
           optional(:in_focus_style) => style(),
           optional(:active_style) => style(),
           optional(:disabled_style) => style(),
@@ -607,6 +611,7 @@ defmodule Guppy.IR do
     events = Keyword.get(opts, :events)
     hover_style = Keyword.get(opts, :hover_style)
     focus_style = Keyword.get(opts, :focus_style)
+    focus_visible_style = Keyword.get(opts, :focus_visible_style)
     in_focus_style = Keyword.get(opts, :in_focus_style)
     active_style = Keyword.get(opts, :active_style)
     disabled_style = Keyword.get(opts, :disabled_style)
@@ -627,6 +632,7 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
     |> maybe_put(:hover_style, hover_style)
     |> maybe_put(:focus_style, focus_style)
+    |> maybe_put(:focus_visible_style, focus_visible_style)
     |> maybe_put(:in_focus_style, in_focus_style)
     |> maybe_put(:active_style, active_style)
     |> maybe_put(:disabled_style, disabled_style)
@@ -796,6 +802,7 @@ defmodule Guppy.IR do
     events = Keyword.get(opts, :events)
     hover_style = Keyword.get(opts, :hover_style)
     focus_style = Keyword.get(opts, :focus_style)
+    focus_visible_style = Keyword.get(opts, :focus_visible_style)
     in_focus_style = Keyword.get(opts, :in_focus_style)
     active_style = Keyword.get(opts, :active_style)
     disabled_style = Keyword.get(opts, :disabled_style)
@@ -808,6 +815,7 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
     |> maybe_put(:hover_style, hover_style)
     |> maybe_put(:focus_style, focus_style)
+    |> maybe_put(:focus_visible_style, focus_visible_style)
     |> maybe_put(:in_focus_style, in_focus_style)
     |> maybe_put(:active_style, active_style)
     |> maybe_put(:disabled_style, disabled_style)
@@ -823,6 +831,7 @@ defmodule Guppy.IR do
     events = Keyword.get(opts, :events)
     hover_style = Keyword.get(opts, :hover_style)
     focus_style = Keyword.get(opts, :focus_style)
+    focus_visible_style = Keyword.get(opts, :focus_visible_style)
     in_focus_style = Keyword.get(opts, :in_focus_style)
     active_style = Keyword.get(opts, :active_style)
     disabled_style = Keyword.get(opts, :disabled_style)
@@ -836,6 +845,7 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
     |> maybe_put(:hover_style, hover_style)
     |> maybe_put(:focus_style, focus_style)
+    |> maybe_put(:focus_visible_style, focus_visible_style)
     |> maybe_put(:in_focus_style, in_focus_style)
     |> maybe_put(:active_style, active_style)
     |> maybe_put(:disabled_style, disabled_style)
@@ -912,6 +922,7 @@ defmodule Guppy.IR do
       :style,
       :hover_style,
       :focus_style,
+      :focus_visible_style,
       :in_focus_style,
       :active_style,
       :disabled_style,
@@ -975,6 +986,7 @@ defmodule Guppy.IR do
       :style,
       :hover_style,
       :focus_style,
+      :focus_visible_style,
       :in_focus_style,
       :active_style,
       :disabled_style,
@@ -991,6 +1003,7 @@ defmodule Guppy.IR do
       :style,
       :hover_style,
       :focus_style,
+      :focus_visible_style,
       :in_focus_style,
       :active_style,
       :disabled_style,
@@ -1005,6 +1018,7 @@ defmodule Guppy.IR do
       :style,
       :hover_style,
       :focus_style,
+      :focus_visible_style,
       :in_focus_style,
       :active_style,
       :disabled_style,
@@ -1033,6 +1047,7 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
          :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :focus_visible_style)),
          :ok <- validate_style(Map.get(node, :in_focus_style)),
          :ok <- validate_style(Map.get(node, :active_style)),
          :ok <- validate_style(Map.get(node, :disabled_style)),
@@ -1187,6 +1202,7 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
          :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :focus_visible_style)),
          :ok <- validate_style(Map.get(node, :in_focus_style)),
          :ok <- validate_style(Map.get(node, :active_style)),
          :ok <- validate_style(Map.get(node, :disabled_style)),
@@ -1241,6 +1257,7 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
          :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :focus_visible_style)),
          :ok <- validate_style(Map.get(node, :in_focus_style)),
          :ok <- validate_style(Map.get(node, :active_style)),
          :ok <- validate_style(Map.get(node, :disabled_style)),
