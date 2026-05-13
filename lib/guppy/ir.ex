@@ -323,6 +323,35 @@ defmodule Guppy.IR do
           optional(:events) => checkbox_events()
         }
 
+  @type select_option :: %{
+          required(:value) => String.t(),
+          required(:label) => String.t(),
+          optional(:disabled) => boolean()
+        }
+
+  @type select_events :: %{
+          optional(:click) => String.t(),
+          optional(:change) => String.t(),
+          optional(:close) => String.t(),
+          optional(:focus) => String.t(),
+          optional(:blur) => String.t()
+        }
+
+  @type select_node :: %{
+          required(:kind) => :select,
+          required(:options) => [select_option()],
+          optional(:id) => node_id(),
+          optional(:value) => String.t(),
+          optional(:open) => boolean(),
+          optional(:placeholder) => String.t(),
+          optional(:style) => style(),
+          optional(:list_style) => style(),
+          optional(:option_style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => select_events()
+        }
+
   @type uniform_list_item :: %{required(:id) => node_id(), required(:label) => String.t()}
 
   @type uniform_list_node :: %{
@@ -399,6 +428,7 @@ defmodule Guppy.IR do
           | button_node()
           | checkbox_node()
           | radio_node()
+          | select_node()
           | uniform_list_node()
           | popover_node()
           | spacer_node()
@@ -657,6 +687,32 @@ defmodule Guppy.IR do
     |> maybe_put(:events, events)
   end
 
+  @spec select([select_option()], keyword()) :: select_node()
+  def select(options, opts \\ []) when is_list(options) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    value = Keyword.get(opts, :value)
+    open = Keyword.get(opts, :open)
+    placeholder = Keyword.get(opts, :placeholder)
+    style = Keyword.get(opts, :style)
+    list_style = Keyword.get(opts, :list_style)
+    option_style = Keyword.get(opts, :option_style)
+    disabled = Keyword.get(opts, :disabled)
+    tab_index = Keyword.get(opts, :tab_index)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :select, options: options}
+    |> maybe_put(:id, id)
+    |> maybe_put(:value, value)
+    |> maybe_put(:open, open)
+    |> maybe_put(:placeholder, placeholder)
+    |> maybe_put(:style, style)
+    |> maybe_put(:list_style, list_style)
+    |> maybe_put(:option_style, option_style)
+    |> maybe_put(:disabled, disabled)
+    |> maybe_put(:tab_index, tab_index)
+    |> maybe_put(:events, events)
+  end
+
   @spec image(image_source(), keyword()) :: image_node()
   def image(source, opts \\ []) when is_list(opts) do
     id = Keyword.get(opts, :id)
@@ -863,6 +919,20 @@ defmodule Guppy.IR do
       :events
     ],
     uniform_list: [:kind, :items, :id, :style, :item_style, :events],
+    select: [
+      :kind,
+      :options,
+      :id,
+      :value,
+      :open,
+      :placeholder,
+      :style,
+      :list_style,
+      :option_style,
+      :disabled,
+      :tab_index,
+      :events
+    ],
     image: [:kind, :source, :id, :style, :object_fit, :grayscale],
     icon: [:kind, :source, :id, :style],
     spacer: [:kind, :id, :style],
@@ -1014,6 +1084,23 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_node(%{kind: :select, options: options} = node) when is_list(options) do
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_optional_string(Map.get(node, :value), :value),
+         :ok <- validate_optional_boolean(Map.get(node, :open), :open),
+         :ok <- validate_optional_string(Map.get(node, :placeholder), :placeholder),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :list_style)),
+         :ok <- validate_style(Map.get(node, :option_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
+         :ok <- validate_events(Map.get(node, :events), [:click, :change, :close, :focus, :blur]),
+         :ok <- validate_select_options(options) do
+      :ok
+    end
+  end
+
   defp validate_node(%{kind: :image, source: source} = node) do
     with :ok <- validate_node_keys(node),
          :ok <- validate_id(Map.get(node, :id)),
@@ -1131,6 +1218,33 @@ defmodule Guppy.IR do
         {:halt, {:error, {:invalid_uniform_list_item, item}}}
     end)
   end
+
+  defp validate_select_options(options) do
+    Enum.reduce_while(options, {:ok, MapSet.new()}, fn
+      %{value: value, label: label} = option, {:ok, seen}
+      when is_binary(value) and is_binary(label) ->
+        cond do
+          MapSet.member?(seen, value) ->
+            {:halt, {:error, {:duplicate_select_value, value}}}
+
+          not valid_select_option_disabled?(option) ->
+            {:halt, {:error, {:invalid_select_option, option}}}
+
+          true ->
+            {:cont, {:ok, MapSet.put(seen, value)}}
+        end
+
+      option, {:ok, _seen} ->
+        {:halt, {:error, {:invalid_select_option, option}}}
+    end)
+    |> case do
+      {:ok, _seen} -> :ok
+      error -> error
+    end
+  end
+
+  defp valid_select_option_disabled?(%{disabled: disabled}), do: is_boolean(disabled)
+  defp valid_select_option_disabled?(_option), do: true
 
   defp validate_children(children) do
     Enum.reduce_while(children, :ok, fn child, :ok ->

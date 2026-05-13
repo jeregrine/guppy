@@ -132,6 +132,38 @@ defmodule Guppy.IRTest do
              blur: "blur_priority"
            }
 
+    select_ir =
+      Guppy.IR.select(
+        [
+          %{value: "todo", label: "Todo"},
+          %{value: "done", label: "Done", disabled: true}
+        ],
+        id: "status_select",
+        value: "todo",
+        open: true,
+        placeholder: "Pick status",
+        style: [:p_2, :border_1],
+        list_style: [:p_1, :shadow_lg],
+        option_style: [:p_2],
+        disabled: false,
+        tab_index: 6,
+        events: %{
+          click: "toggle_status",
+          change: "status_changed",
+          close: "close_status",
+          focus: "focus_status",
+          blur: "blur_status"
+        }
+      )
+
+    assert :ok = Guppy.IR.validate(select_ir)
+    assert select_ir.kind == :select
+    assert select_ir.value == "todo"
+    assert select_ir.open == true
+    assert select_ir.placeholder == "Pick status"
+    assert Enum.map(select_ir.options, & &1.value) == ["todo", "done"]
+    assert select_ir.tab_index == 6
+
     icon_ir =
       Guppy.IR.icon({:path, "/tmp/release.svg"},
         id: "release_icon",
@@ -607,6 +639,20 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_event, :click, "nope"}} =
              Guppy.IR.validate(Guppy.IR.textarea("Notes", events: %{click: "nope"}))
+
+    assert {:error, {:invalid_select_option, %{label: "Todo", value: 1}}} =
+             Guppy.IR.validate(Guppy.IR.select([%{value: 1, label: "Todo"}]))
+
+    assert {:error, {:duplicate_select_value, "todo"}} =
+             Guppy.IR.validate(
+               Guppy.IR.select([
+                 %{value: "todo", label: "Todo"},
+                 %{value: "todo", label: "Duplicate"}
+               ])
+             )
+
+    assert {:error, {:invalid_event, :hover, "hover_status"}} =
+             Guppy.IR.validate(Guppy.IR.select([], events: %{hover: "hover_status"}))
 
     assert {:error, {:placeholder, 123}} =
              Guppy.IR.validate(Guppy.IR.text_input("Jason", placeholder: 123))

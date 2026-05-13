@@ -56,6 +56,7 @@ defmodule Guppy.Component.Compiler do
   @text_events ["click"]
   @checkbox_events ["change", "focus", "blur"]
   @radio_events ["change", "focus", "blur"]
+  @select_events ["click", "change", "close", "focus", "blur"]
   @text_input_events ["change"]
   @input_attrs ["id", "value", "placeholder", "class", "style", "disabled", "tab_index"]
 
@@ -149,6 +150,7 @@ defmodule Guppy.Component.Compiler do
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
         "radio" -> compile_radio(attrs, xmlElement(element, :content), caller)
+        "select" -> compile_select(attrs, xmlElement(element, :content), caller)
         "text_input" -> compile_text_input(attrs, caller)
         "textarea" -> compile_textarea(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
@@ -234,6 +236,30 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.button(unquote(label), unquote(opts))
+    end
+  end
+
+  defp compile_select(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, select_allowed_attrs(), "select", caller)
+    assert_empty_element!(content, "select", caller)
+    options = fetch_required_attr!(attrs, "options", :expr_only, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        maybe_attr_entry(attrs, "value", :string_or_expr, caller),
+        maybe_attr_entry(attrs, "open", :boolean, caller),
+        maybe_attr_entry(attrs, "placeholder", :string_or_expr, caller),
+        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "list_class", "list_style", :list_style),
+        style_entry(attrs, "option_class", "option_style", :option_style),
+        maybe_attr_entry(attrs, "disabled", :boolean, caller),
+        maybe_attr_entry(attrs, "tab_index", :integer, caller),
+        events_entry(attrs, @select_events, caller)
+      ])
+
+    quote do
+      Guppy.IR.select(unquote(options), unquote(opts))
     end
   end
 
@@ -1118,6 +1144,26 @@ defmodule Guppy.Component.Compiler do
 
   defp scroll_allowed_attrs do
     [":if", ":for", "id", "axis", "class", "style"]
+  end
+
+  defp select_allowed_attrs do
+    [
+      ":if",
+      ":for",
+      "id",
+      "value",
+      "open",
+      "options",
+      "placeholder",
+      "class",
+      "style",
+      "list_class",
+      "list_style",
+      "option_class",
+      "option_style",
+      "disabled",
+      "tab_index"
+    ] ++ @select_events
   end
 
   defp uniform_list_allowed_attrs do

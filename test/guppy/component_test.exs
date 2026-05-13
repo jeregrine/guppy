@@ -13,6 +13,12 @@ defmodule Guppy.ComponentTest do
         value: "Jason",
         notes: "Line one\nLine two",
         priority: "high",
+        status: "todo",
+        status_open: true,
+        status_options: [
+          %{value: "todo", label: "Todo"},
+          %{value: "done", label: "Done"}
+        ],
         popover_open: true,
         show_footer: true
       })
@@ -34,6 +40,7 @@ defmodule Guppy.ComponentTest do
       scroll,
       uniform_list,
       popover,
+      select,
       text_input,
       textarea,
       footer
@@ -105,6 +112,23 @@ defmodule Guppy.ComponentTest do
     assert popover.stack_priority == 2
     assert :p_4 in popover.popover_style
     assert [%{kind: :text, content: "Popover content"}] = popover.children
+
+    assert select.kind == :select
+    assert select.id == "status_select"
+    assert select.value == "todo"
+    assert select.open == true
+    assert select.placeholder == "Pick status"
+    assert Enum.map(select.options, & &1.value) == ["todo", "done"]
+
+    assert select.events == %{
+             click: "toggle_status",
+             change: "status_changed",
+             close: "close_status"
+           }
+
+    assert {:w_px, 240} in select.style
+    assert :p_1 in select.list_style
+    assert :p_2 in select.option_style
 
     assert text_input.kind == :text_input
     assert text_input.id == "name_input"
