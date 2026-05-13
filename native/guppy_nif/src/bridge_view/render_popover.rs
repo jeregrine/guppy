@@ -1,9 +1,10 @@
 use super::{events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
 use crate::bridge_view::BridgeView;
-use crate::ir::{DivStyle, IrNode};
+use crate::ir::{DivStyle, IrNode, PopoverAnchor, PopoverAnchorFit, PopoverAnchorPositionMode};
 use gpui::{
-    AnyElement, Context, Corner, InteractiveElement, IntoElement, ParentElement, SharedString,
-    StatefulInteractiveElement, Styled, Window, anchored, deferred, div, px, rgb,
+    AnchoredPositionMode, AnyElement, Context, Corner, InteractiveElement, IntoElement,
+    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, anchored, deferred,
+    div, point, px, rgb,
 };
 
 pub(crate) struct PopoverSpec<'a> {
@@ -13,6 +14,14 @@ pub(crate) struct PopoverSpec<'a> {
     pub open: bool,
     pub style: &'a DivStyle,
     pub popover_style: &'a DivStyle,
+    pub anchor: PopoverAnchor,
+    pub anchor_position: Option<(f32, f32)>,
+    pub anchor_offset: Option<(f32, f32)>,
+    pub anchor_position_mode: PopoverAnchorPositionMode,
+    pub anchor_fit: PopoverAnchorFit,
+    pub snap_margin: f32,
+    pub close_on_click_outside: bool,
+    pub stack_priority: usize,
     pub disabled: bool,
     pub click: Option<&'a str>,
     pub close: Option<&'a str>,
@@ -84,33 +93,69 @@ pub(crate) fn render(
             spec.popover_style,
         );
 
-        if !spec.disabled
+        if spec.close_on_click_outside
+            && !spec.disabled
             && let Some(callback_id) = spec.close
         {
             let close_node_id = format!("{node_key}.popover");
             let callback_id = callback_id.to_owned();
             content = content.on_mouse_down_out(move |_, _, _| {
-                events::emit_click(view_id, &close_node_id, &callback_id);
+                events::emit_close(view_id, &close_node_id, &callback_id);
             });
         }
 
         trigger = trigger.child(
-            deferred(
-                anchored()
-                    .anchor(Corner::TopLeft)
-                    .snap_to_window_with_margin(px(8.0))
-                    .child(content),
-            )
-            .priority(1),
+            deferred(build_anchored_popover(&spec).child(content)).priority(spec.stack_priority),
         );
     }
 
     trigger.into_any_element()
 }
 
+fn build_anchored_popover(spec: &PopoverSpec<'_>) -> gpui::Anchored {
+    let anchored = anchored()
+        .anchor(to_gpui_corner(spec.anchor))
+        .position_mode(to_gpui_position_mode(spec.anchor_position_mode));
+
+    let anchored = match spec.anchor_position {
+        Some((x, y)) => anchored.position(point(px(x), px(y))),
+        None => anchored,
+    };
+
+    let anchored = match spec.anchor_offset {
+        Some((x, y)) => anchored.offset(point(px(x), px(y))),
+        None => anchored,
+    };
+
+    match spec.anchor_fit {
+        PopoverAnchorFit::SwitchAnchor => anchored,
+        PopoverAnchorFit::SnapToWindow => anchored.snap_to_window(),
+        PopoverAnchorFit::SnapToWindowWithMargin => {
+            anchored.snap_to_window_with_margin(px(spec.snap_margin))
+        }
+    }
+}
+
+fn to_gpui_corner(anchor: PopoverAnchor) -> Corner {
+    match anchor {
+        PopoverAnchor::TopLeft => Corner::TopLeft,
+        PopoverAnchor::TopRight => Corner::TopRight,
+        PopoverAnchor::BottomLeft => Corner::BottomLeft,
+        PopoverAnchor::BottomRight => Corner::BottomRight,
+    }
+}
+
+fn to_gpui_position_mode(mode: PopoverAnchorPositionMode) -> AnchoredPositionMode {
+    match mode {
+        PopoverAnchorPositionMode::Window => AnchoredPositionMode::Window,
+        PopoverAnchorPositionMode::Local => AnchoredPositionMode::Local,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::PopoverSpec;
+    use crate::ir::{PopoverAnchor, PopoverAnchorFit, PopoverAnchorPositionMode};
 
     #[test]
     fn popover_spec_tracks_open_and_callbacks() {
@@ -122,6 +167,14 @@ mod tests {
             open: true,
             style: &style,
             popover_style: &style,
+            anchor: PopoverAnchor::BottomRight,
+            anchor_position: Some((4.0, 8.0)),
+            anchor_offset: Some((0.0, 12.0)),
+            anchor_position_mode: PopoverAnchorPositionMode::Local,
+            anchor_fit: PopoverAnchorFit::SnapToWindowWithMargin,
+            snap_margin: 12.0,
+            close_on_click_outside: false,
+            stack_priority: 2,
             disabled: false,
             click: Some("open_menu"),
             close: Some("close_menu"),
@@ -129,6 +182,11 @@ mod tests {
         };
 
         assert!(spec.open);
+        assert_eq!(spec.anchor, PopoverAnchor::BottomRight);
+        assert_eq!(spec.anchor_offset, Some((0.0, 12.0)));
+        assert_eq!(spec.anchor_position_mode, PopoverAnchorPositionMode::Local);
+        assert_eq!(spec.stack_priority, 2);
+        assert!(!spec.close_on_click_outside);
         assert_eq!(spec.click, Some("open_menu"));
         assert_eq!(spec.close, Some("close_menu"));
     }

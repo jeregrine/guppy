@@ -335,6 +335,10 @@ defmodule Guppy.IR do
         }
 
   @type popover_events :: %{optional(:click) => String.t(), optional(:close) => String.t()}
+  @type popover_anchor :: :top_left | :top_right | :bottom_left | :bottom_right
+  @type popover_anchor_position_mode :: :window | :local
+  @type popover_anchor_fit :: :switch_anchor | :snap_to_window | :snap_to_window_with_margin
+  @type point :: {number(), number()}
 
   @type popover_node :: %{
           required(:kind) => :popover,
@@ -344,6 +348,14 @@ defmodule Guppy.IR do
           optional(:id) => node_id(),
           optional(:style) => style(),
           optional(:popover_style) => style(),
+          optional(:anchor) => popover_anchor(),
+          optional(:anchor_position) => point(),
+          optional(:anchor_offset) => point(),
+          optional(:anchor_position_mode) => popover_anchor_position_mode(),
+          optional(:anchor_fit) => popover_anchor_fit(),
+          optional(:snap_margin) => number(),
+          optional(:close_on_click_outside) => boolean(),
+          optional(:stack_priority) => non_neg_integer(),
           optional(:disabled) => boolean(),
           optional(:events) => popover_events()
         }
@@ -604,6 +616,14 @@ defmodule Guppy.IR do
     id = Keyword.get(opts, :id)
     style = Keyword.get(opts, :style)
     popover_style = Keyword.get(opts, :popover_style)
+    anchor = Keyword.get(opts, :anchor)
+    anchor_position = Keyword.get(opts, :anchor_position)
+    anchor_offset = Keyword.get(opts, :anchor_offset)
+    anchor_position_mode = Keyword.get(opts, :anchor_position_mode)
+    anchor_fit = Keyword.get(opts, :anchor_fit)
+    snap_margin = Keyword.get(opts, :snap_margin)
+    close_on_click_outside = Keyword.get(opts, :close_on_click_outside)
+    stack_priority = Keyword.get(opts, :stack_priority)
     disabled = Keyword.get(opts, :disabled)
     events = Keyword.get(opts, :events)
 
@@ -611,6 +631,14 @@ defmodule Guppy.IR do
     |> maybe_put(:id, id)
     |> maybe_put(:style, style)
     |> maybe_put(:popover_style, popover_style)
+    |> maybe_put(:anchor, anchor)
+    |> maybe_put(:anchor_position, anchor_position)
+    |> maybe_put(:anchor_offset, anchor_offset)
+    |> maybe_put(:anchor_position_mode, anchor_position_mode)
+    |> maybe_put(:anchor_fit, anchor_fit)
+    |> maybe_put(:snap_margin, snap_margin)
+    |> maybe_put(:close_on_click_outside, close_on_click_outside)
+    |> maybe_put(:stack_priority, stack_priority)
     |> maybe_put(:disabled, disabled)
     |> maybe_put(:events, events)
   end
@@ -815,7 +843,25 @@ defmodule Guppy.IR do
       :events
     ],
     scroll: [:kind, :children, :id, :axis, :style],
-    popover: [:kind, :label, :open, :children, :id, :style, :popover_style, :disabled, :events],
+    popover: [
+      :kind,
+      :label,
+      :open,
+      :children,
+      :id,
+      :style,
+      :popover_style,
+      :anchor,
+      :anchor_position,
+      :anchor_offset,
+      :anchor_position_mode,
+      :anchor_fit,
+      :snap_margin,
+      :close_on_click_outside,
+      :stack_priority,
+      :disabled,
+      :events
+    ],
     uniform_list: [:kind, :items, :id, :style, :item_style, :events],
     image: [:kind, :source, :id, :style, :object_fit, :grayscale],
     icon: [:kind, :source, :id, :style],
@@ -938,6 +984,18 @@ defmodule Guppy.IR do
          :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :popover_style)),
+         :ok <- validate_popover_anchor(Map.get(node, :anchor)),
+         :ok <- validate_optional_point(Map.get(node, :anchor_position), :anchor_position),
+         :ok <- validate_optional_point(Map.get(node, :anchor_offset), :anchor_offset),
+         :ok <- validate_popover_anchor_position_mode(Map.get(node, :anchor_position_mode)),
+         :ok <- validate_popover_anchor_fit(Map.get(node, :anchor_fit)),
+         :ok <- validate_optional_non_neg_number(Map.get(node, :snap_margin), :snap_margin),
+         :ok <-
+           validate_optional_boolean(
+             Map.get(node, :close_on_click_outside),
+             :close_on_click_outside
+           ),
+         :ok <- validate_optional_non_neg_integer(Map.get(node, :stack_priority), :stack_priority),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_events(Map.get(node, :events), [:click, :close]),
          :ok <- validate_children(children) do
@@ -1145,9 +1203,44 @@ defmodule Guppy.IR do
 
   defp validate_optional_non_neg_integer(value, field), do: {:error, {field, value}}
 
+  defp validate_optional_non_neg_number(nil, _field), do: :ok
+
+  defp validate_optional_non_neg_number(value, _field) when is_number(value) and value >= 0,
+    do: :ok
+
+  defp validate_optional_non_neg_number(value, field), do: {:error, {field, value}}
+
   defp validate_scroll_axis(nil), do: :ok
   defp validate_scroll_axis(axis) when axis in [:x, :y, :both], do: :ok
   defp validate_scroll_axis(axis), do: {:error, {:invalid_scroll_axis, axis}}
+
+  defp validate_popover_anchor(nil), do: :ok
+
+  defp validate_popover_anchor(anchor)
+       when anchor in [:top_left, :top_right, :bottom_left, :bottom_right],
+       do: :ok
+
+  defp validate_popover_anchor(anchor), do: {:error, {:invalid_popover_anchor, anchor}}
+
+  defp validate_popover_anchor_position_mode(nil), do: :ok
+  defp validate_popover_anchor_position_mode(mode) when mode in [:window, :local], do: :ok
+
+  defp validate_popover_anchor_position_mode(mode),
+    do: {:error, {:invalid_popover_anchor_position_mode, mode}}
+
+  defp validate_popover_anchor_fit(nil), do: :ok
+
+  defp validate_popover_anchor_fit(fit)
+       when fit in [:switch_anchor, :snap_to_window, :snap_to_window_with_margin],
+       do: :ok
+
+  defp validate_popover_anchor_fit(fit), do: {:error, {:invalid_popover_anchor_fit, fit}}
+
+  defp validate_optional_point(nil, _field), do: :ok
+
+  defp validate_optional_point({x, y}, _field) when is_number(x) and is_number(y), do: :ok
+
+  defp validate_optional_point(value, field), do: {:error, {:invalid_point, field, value}}
 
   defp validate_image_source(source) when is_binary(source), do: :ok
 

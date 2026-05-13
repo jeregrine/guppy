@@ -833,6 +833,12 @@ defmodule Guppy.SuperDemo do
           id: "demo_popover",
           style: [:p_2, :rounded_md, :border_1, {:border_color, :blue}],
           popover_style: [:p_4, :gap_2],
+          anchor: :bottom_left,
+          anchor_offset: {0, 8},
+          anchor_position_mode: :local,
+          anchor_fit: :snap_to_window_with_margin,
+          snap_margin: 8,
+          stack_priority: 2,
           events: %{click: "open_popover", close: "close_popover"}
         ),
         Guppy.IR.div(

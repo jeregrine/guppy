@@ -96,6 +96,13 @@ defmodule Guppy.ComponentTest do
     assert popover.label == "Help"
     assert popover.open == true
     assert popover.events == %{click: "open_help", close: "close_help"}
+    assert popover.anchor == :bottom_right
+    assert popover.anchor_position_mode == :local
+    assert popover.anchor_fit == :snap_to_window_with_margin
+    assert popover.anchor_offset == {0, 12}
+    assert popover.snap_margin == 12
+    assert popover.close_on_click_outside == false
+    assert popover.stack_priority == 2
     assert :p_4 in popover.popover_style
     assert [%{kind: :text, content: "Popover content"}] = popover.children
 

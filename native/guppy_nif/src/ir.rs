@@ -56,6 +56,13 @@ struct IrFieldKeys {
     tooltip: Term,
     source: Term,
     popover_style: Term,
+    anchor: Term,
+    anchor_position: Term,
+    anchor_offset: Term,
+    anchor_position_mode: Term,
+    anchor_fit: Term,
+    snap_margin: Term,
+    close_on_click_outside: Term,
     object_fit: Term,
     grayscale: Term,
     checked: Term,
@@ -111,6 +118,13 @@ impl IrFieldKeys {
             tooltip: atom_term("tooltip"),
             source: atom_term("source"),
             popover_style: atom_term("popover_style"),
+            anchor: atom_term("anchor"),
+            anchor_position: atom_term("anchor_position"),
+            anchor_offset: atom_term("anchor_offset"),
+            anchor_position_mode: atom_term("anchor_position_mode"),
+            anchor_fit: atom_term("anchor_fit"),
+            snap_margin: atom_term("snap_margin"),
+            close_on_click_outside: atom_term("close_on_click_outside"),
             object_fit: atom_term("object_fit"),
             grayscale: atom_term("grayscale"),
             checked: atom_term("checked"),
@@ -315,6 +329,27 @@ pub enum ImageObjectFit {
     None,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PopoverAnchor {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PopoverAnchorPositionMode {
+    Window,
+    Local,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PopoverAnchorFit {
+    SwitchAnchor,
+    SnapToWindow,
+    SnapToWindowWithMargin,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct CheckboxNode {
     pub id: Option<String>,
@@ -453,6 +488,14 @@ pub enum IrNode {
         open: bool,
         style: DivStyle,
         popover_style: DivStyle,
+        anchor: PopoverAnchor,
+        anchor_position: Option<(f32, f32)>,
+        anchor_offset: Option<(f32, f32)>,
+        anchor_position_mode: PopoverAnchorPositionMode,
+        anchor_fit: PopoverAnchorFit,
+        snap_margin: f32,
+        close_on_click_outside: bool,
+        stack_priority: Option<usize>,
         disabled: bool,
         click: Option<String>,
         close: Option<String>,
@@ -548,6 +591,15 @@ impl IrNode {
                     open: get_required_boolean_field(map, "open")?,
                     style: get_div_style(map)?,
                     popover_style: get_style_list_field(map, "popover_style")?,
+                    anchor: get_popover_anchor_field(map)?,
+                    anchor_position: get_optional_point_field(map, "anchor_position")?,
+                    anchor_offset: get_optional_point_field(map, "anchor_offset")?,
+                    anchor_position_mode: get_popover_anchor_position_mode_field(map)?,
+                    anchor_fit: get_popover_anchor_fit_field(map)?,
+                    snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
+                    close_on_click_outside: get_boolean_field(map, "close_on_click_outside")?
+                        || get_field(map, "close_on_click_outside").is_none(),
+                    stack_priority: get_optional_usize_field(map, "stack_priority")?.or(Some(1)),
                     disabled: get_boolean_field(map, "disabled")?,
                     click: get_click_event(map)?,
                     close: get_close_event(map)?,
@@ -766,6 +818,13 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "tooltip" => &keys.tooltip,
         "source" => &keys.source,
         "popover_style" => &keys.popover_style,
+        "anchor" => &keys.anchor,
+        "anchor_position" => &keys.anchor_position,
+        "anchor_offset" => &keys.anchor_offset,
+        "anchor_position_mode" => &keys.anchor_position_mode,
+        "anchor_fit" => &keys.anchor_fit,
+        "snap_margin" => &keys.snap_margin,
+        "close_on_click_outside" => &keys.close_on_click_outside,
         "object_fit" => &keys.object_fit,
         "grayscale" => &keys.grayscale,
         "checked" => &keys.checked,
@@ -828,6 +887,88 @@ fn get_image_object_fit_field(map: &HashMap<Term, Term>) -> Result<ImageObjectFi
         Some(Term::Atom(atom)) if atom.name == "none" => Ok(ImageObjectFit::None),
         Some(other) => Err(format!("expected image object_fit atom, got {other}")),
         None => Ok(ImageObjectFit::Contain),
+    }
+}
+
+fn get_popover_anchor_field(map: &HashMap<Term, Term>) -> Result<PopoverAnchor, String> {
+    match get_field(map, "anchor") {
+        Some(Term::Atom(atom)) if atom.name == "top_left" => Ok(PopoverAnchor::TopLeft),
+        Some(Term::Atom(atom)) if atom.name == "top_right" => Ok(PopoverAnchor::TopRight),
+        Some(Term::Atom(atom)) if atom.name == "bottom_left" => Ok(PopoverAnchor::BottomLeft),
+        Some(Term::Atom(atom)) if atom.name == "bottom_right" => Ok(PopoverAnchor::BottomRight),
+        Some(other) => Err(format!("expected popover anchor atom, got {other}")),
+        None => Ok(PopoverAnchor::TopLeft),
+    }
+}
+
+fn get_popover_anchor_position_mode_field(
+    map: &HashMap<Term, Term>,
+) -> Result<PopoverAnchorPositionMode, String> {
+    match get_field(map, "anchor_position_mode") {
+        Some(Term::Atom(atom)) if atom.name == "window" => Ok(PopoverAnchorPositionMode::Window),
+        Some(Term::Atom(atom)) if atom.name == "local" => Ok(PopoverAnchorPositionMode::Local),
+        Some(other) => Err(format!(
+            "expected popover anchor_position_mode atom, got {other}"
+        )),
+        None => Ok(PopoverAnchorPositionMode::Window),
+    }
+}
+
+fn get_popover_anchor_fit_field(map: &HashMap<Term, Term>) -> Result<PopoverAnchorFit, String> {
+    match get_field(map, "anchor_fit") {
+        Some(Term::Atom(atom)) if atom.name == "switch_anchor" => {
+            Ok(PopoverAnchorFit::SwitchAnchor)
+        }
+        Some(Term::Atom(atom)) if atom.name == "snap_to_window" => {
+            Ok(PopoverAnchorFit::SnapToWindow)
+        }
+        Some(Term::Atom(atom)) if atom.name == "snap_to_window_with_margin" => {
+            Ok(PopoverAnchorFit::SnapToWindowWithMargin)
+        }
+        Some(other) => Err(format!("expected popover anchor_fit atom, got {other}")),
+        None => Ok(PopoverAnchorFit::SnapToWindowWithMargin),
+    }
+}
+
+fn get_optional_point_field(
+    map: &HashMap<Term, Term>,
+    key: &str,
+) -> Result<Option<(f32, f32)>, String> {
+    let Some(term) = get_field(map, key) else {
+        return Ok(None);
+    };
+
+    let Term::Tuple(Tuple { elements }) = term else {
+        return Err(format!(
+            "expected optional point tuple field {key}, got {term}"
+        ));
+    };
+
+    if elements.len() != 2 {
+        return Err(format!(
+            "expected optional point tuple field {key} with 2 elements, got {term}"
+        ));
+    }
+
+    Ok(Some((parse_f32(&elements[0])?, parse_f32(&elements[1])?)))
+}
+
+fn get_non_neg_f32_field(
+    map: &HashMap<Term, Term>,
+    key: &str,
+    default: f32,
+) -> Result<f32, String> {
+    let Some(term) = get_field(map, key) else {
+        return Ok(default);
+    };
+
+    let value = parse_f32(term)?;
+    if value >= 0.0 {
+        Ok(value)
+    } else {
+        Err(format!(
+            "expected non-negative numeric field {key}, got {term}"
+        ))
     }
 }
 

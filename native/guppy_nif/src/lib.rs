@@ -36,6 +36,7 @@ rustler::atoms! {
     change,
     checked,
     click,
+    close,
     click_count,
     context_menu,
     control,
@@ -695,6 +696,23 @@ pub extern "C" fn guppy_c_send_click_event(
 
     #[cfg(not(test))]
     send_id_callback_event(view_id, click(), &node_id, &callback_id)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn guppy_c_send_close_event(
+    view_id: u64,
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+) -> i32 {
+    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
+        return 0;
+    };
+    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+        return 0;
+    };
+    send_id_callback_event(view_id, close(), &node_id, &callback_id)
 }
 
 #[unsafe(no_mangle)]

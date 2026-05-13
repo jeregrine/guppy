@@ -161,6 +161,7 @@ defmodule Guppy.Server do
       when is_integer(view_id) and is_atom(type) and
              type in [
                :click,
+               :close,
                :hover,
                :focus,
                :blur,

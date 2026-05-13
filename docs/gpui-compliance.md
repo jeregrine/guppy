@@ -17,7 +17,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 - **Rich editor / rich text**: rich runs, highlights, advanced layout, syntax/editor semantics, and full editor parity are not exposed.
 - **Generic list / variable-height list**: current `uniform_list` is a focused text-row primitive; arbitrary row IR renderers and `ListState` parity are missing.
 - **Data table / tree**: simple nested `div`/`text` and text-row `uniform_list` cover only basic scenarios; table/tree-specific virtualization and interaction are missing.
-- **Full popover / anchored overlay controls**: current popover support is minimal and Elixir-owned; nested popovers, explicit anchor placement, and advanced deferred-layer behavior are missing.
+- **Full popover / anchored overlay controls**: popovers now expose anchor corner, optional anchor position/offset, fit mode, close-on-outside-click, and deferred-layer priority; deeper nested-overlay edge cases and richer lifecycle semantics remain partial.
 - **Animation primitives**: timing/lifecycle APIs need a design that fits Elixir-owned full-tree rendering.
 - **Gradient style primitives**: not exposed in the style surface today.
 - **Grid layout**: flex/div remains the current layout surface.
@@ -46,7 +46,7 @@ Intentionally narrow parity areas:
 | `examples/svg/svg.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs` via `icon`/embedded image sources | partial | full SVG rendering controls and sizing parity | automated IR/template checks for icon/image; Rust embedded image-source mapping test; manual smoke |
 | `examples/window_positioning.rs` | window options validation in `Guppy.Server` tests; hidden native window smoke | partial | complete multi-display/window positioning behavior not covered in CI | automated option validation; hidden-window native smoke with bounds/min-size/kind/decorations/background |
 | `examples/active_state_bug.rs` | style states on button/checkbox/div | partial | exact active state regression not ported | IR validation only |
-| `examples/anchor.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | explicit anchor choice/positioning controls not exposed yet | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
+| `examples/anchor.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | corner anchors, optional position/offset, local/window position mode, and snap-fit controls are exposed; center/edge anchors and hover-driven anchor demo parity remain missing | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/animation.rs` | none | unsupported | animation primitives deferred; requires timing/lifecycle design outside current Elixir-owned static IR | explicitly deferred in PLAN; no implementation |
 | `examples/data_table.rs` | `uniform_list` text-row primitive covers only simple repeated rows | partial | grid/data-table layout, columns, cells, and virtualization semantics beyond simple rows | IR/template/native smoke for `uniform_list`; no data-table port |
 | `examples/focus_visible.rs` | focus/blur callbacks | partial | focus-visible styling semantics | IR validation only |
@@ -65,7 +65,7 @@ Intentionally narrow parity areas:
 | `examples/painting.rs` | none | unsupported | custom painting/canvas deferred; would require a new retained drawing primitive | explicitly deferred in PLAN; no implementation |
 | `examples/paths_bench.rs` | none | out of scope | GPUI internal path benchmark | none |
 | `examples/pattern.rs` | none | unsupported | pattern painting deferred with custom painting/canvas work | explicitly deferred in PLAN; no implementation |
-| `examples/popover.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | nested popover parity and advanced deferred-layer controls | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
+| `examples/popover.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | close-on-outside-click and deferred priority are exposed; deeper nested popover parity and advanced deferred-layer lifecycle controls remain incomplete | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/set_menus.rs` | none | unsupported | menu APIs deferred to runtime/window API hardening, not core IR primitives | explicitly deferred in PLAN; no implementation |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |

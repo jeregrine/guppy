@@ -83,12 +83,28 @@ defmodule Guppy.IRTest do
         id: "help_popover",
         style: [:p_2],
         popover_style: [:p_4, :shadow_lg],
+        anchor: :bottom_right,
+        anchor_position: {4, 8},
+        anchor_offset: {0, 12},
+        anchor_position_mode: :local,
+        anchor_fit: :snap_to_window_with_margin,
+        snap_margin: 12,
+        close_on_click_outside: false,
+        stack_priority: 2,
         events: %{click: "open_help", close: "close_help"}
       )
 
     assert :ok = Guppy.IR.validate(popover_ir)
     assert popover_ir.kind == :popover
     assert popover_ir.open == true
+    assert popover_ir.anchor == :bottom_right
+    assert popover_ir.anchor_position == {4, 8}
+    assert popover_ir.anchor_offset == {0, 12}
+    assert popover_ir.anchor_position_mode == :local
+    assert popover_ir.anchor_fit == :snap_to_window_with_margin
+    assert popover_ir.snap_margin == 12
+    assert popover_ir.close_on_click_outside == false
+    assert popover_ir.stack_priority == 2
     assert popover_ir.events == %{click: "open_help", close: "close_help"}
 
     radio_ir =
@@ -561,6 +577,18 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_ir, %{kind: :popover, label: "Help", open: "yes", children: []}}} =
              Guppy.IR.validate(%{kind: :popover, label: "Help", open: "yes", children: []})
+
+    assert {:error, {:invalid_popover_anchor, :middle}} =
+             Guppy.IR.validate(Guppy.IR.popover("Help", true, [], anchor: :middle))
+
+    assert {:error, {:invalid_popover_anchor_fit, :float}} =
+             Guppy.IR.validate(Guppy.IR.popover("Help", true, [], anchor_fit: :float))
+
+    assert {:error, {:invalid_point, :anchor_offset, {0, "down"}}} =
+             Guppy.IR.validate(Guppy.IR.popover("Help", true, [], anchor_offset: {0, "down"}))
+
+    assert {:error, {:snap_margin, -1}} =
+             Guppy.IR.validate(Guppy.IR.popover("Help", true, [], snap_margin: -1))
 
     assert {:error, {:invalid_ir, %{kind: :text_input, value: 123}}} =
              Guppy.IR.validate(%{kind: :text_input, value: 123})

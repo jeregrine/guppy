@@ -139,6 +139,8 @@ Template tags:
 
 Native event coverage includes click, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio changes, uniform-list item clicks, popover callbacks, text input/textarea changes, and window close lifecycle events.
 
+Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
+
 `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 
 ## Public API

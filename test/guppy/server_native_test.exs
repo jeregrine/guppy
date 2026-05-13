@@ -515,6 +515,12 @@ defmodule Guppy.ServerNativeTest do
                      true,
                      [Guppy.IR.text("Native popover body")],
                      id: "native_popover",
+                     anchor: :bottom_right,
+                     anchor_offset: {0, 10},
+                     anchor_position_mode: :local,
+                     anchor_fit: :snap_to_window_with_margin,
+                     snap_margin: 10,
+                     stack_priority: 2,
                      events: %{click: "open_popover", close: "close_popover"}
                    )
                  )
@@ -591,6 +597,20 @@ defmodule Guppy.ServerNativeTest do
 
         assert_receive {:guppy_event, ^view_id,
                         %{type: :click, id: "increment_text", callback: "increment"}}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
+          :close,
+          %{id: "native_popover.popover", callback: "close_popover"}
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :close,
+                          id: "native_popover.popover",
+                          callback: "close_popover"
+                        }}
 
         send(Guppy.server(), {
           :guppy_native_event,

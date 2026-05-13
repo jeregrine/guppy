@@ -210,6 +210,14 @@ defmodule Guppy.Component.Compiler do
         maybe_attr_entry(attrs, "id", :string, caller),
         style_entry(attrs, "class", "style", :style),
         style_entry(attrs, "popover_class", "popover_style", :popover_style),
+        maybe_attr_entry(attrs, "anchor", :popover_anchor, caller),
+        maybe_attr_entry(attrs, "anchor_position", :expr_only, caller),
+        maybe_attr_entry(attrs, "anchor_offset", :expr_only, caller),
+        maybe_attr_entry(attrs, "anchor_position_mode", :anchor_position_mode, caller),
+        maybe_attr_entry(attrs, "anchor_fit", :popover_anchor_fit, caller),
+        maybe_attr_entry(attrs, "snap_margin", :number, caller),
+        maybe_attr_entry(attrs, "close_on_click_outside", :boolean, caller),
+        maybe_attr_entry(attrs, "stack_priority", :integer, caller),
         maybe_attr_entry(attrs, "disabled", :boolean, caller),
         events_entry(attrs, ["click", "close"], caller)
       ])
@@ -786,6 +794,65 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
+  defp parse_static_value(value, :popover_anchor, caller) do
+    case value do
+      "top_left" ->
+        :top_left
+
+      "top_right" ->
+        :top_right
+
+      "bottom_left" ->
+        :bottom_left
+
+      "bottom_right" ->
+        :bottom_right
+
+      _ ->
+        raise_compile_error!(
+          caller,
+          "expected anchor to be top_left, top_right, bottom_left, or bottom_right"
+        )
+    end
+  end
+
+  defp parse_static_value(value, :anchor_position_mode, caller) do
+    case value do
+      "window" -> :window
+      "local" -> :local
+      _ -> raise_compile_error!(caller, "expected anchor_position_mode to be window or local")
+    end
+  end
+
+  defp parse_static_value(value, :popover_anchor_fit, caller) do
+    case value do
+      "switch_anchor" ->
+        :switch_anchor
+
+      "snap_to_window" ->
+        :snap_to_window
+
+      "snap_to_window_with_margin" ->
+        :snap_to_window_with_margin
+
+      _ ->
+        raise_compile_error!(
+          caller,
+          "expected anchor_fit to be switch_anchor, snap_to_window, or snap_to_window_with_margin"
+        )
+    end
+  end
+
+  defp parse_static_value(value, :number, caller) do
+    case Float.parse(value) do
+      {number, ""} ->
+        number
+
+      _ ->
+        raise_compile_error!(caller, "expected numeric attribute value, got: #{inspect(value)}")
+    end
+  end
+
   defp parse_static_value(value, :object_fit, caller) do
     case value do
       "fill" ->
@@ -1068,6 +1135,14 @@ defmodule Guppy.Component.Compiler do
       "style",
       "popover_class",
       "popover_style",
+      "anchor",
+      "anchor_position",
+      "anchor_offset",
+      "anchor_position_mode",
+      "anchor_fit",
+      "snap_margin",
+      "close_on_click_outside",
+      "stack_priority",
       "disabled",
       "click",
       "close"

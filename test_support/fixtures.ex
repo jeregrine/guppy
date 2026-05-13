@@ -112,7 +112,7 @@ defmodule Guppy.TemplateExample do
         </div>
       </scroll>
       <uniform_list id="virtual_items" items={@uniform_items} class="h-[120px]" item_class="p-2" click="uniform_item_clicked" />
-      <popover id="help_popover" label="Help" open={@popover_open} click="open_help" close="close_help" popover_class="p-4">
+      <popover id="help_popover" label="Help" open={@popover_open} click="open_help" close="close_help" popover_class="p-4" anchor="bottom_right" anchor_position_mode="local" anchor_fit="snap_to_window_with_margin" anchor_offset={{0, 12}} snap_margin="12" close_on_click_outside="false" stack_priority="2">
         <text>Popover content</text>
       </popover>
       <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" />
