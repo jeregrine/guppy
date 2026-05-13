@@ -498,10 +498,6 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp build_string_content_ast(content, caller) do
-    case Enum.filter(content, &(elem(&1, 0) in [:xmlText])) do
-      _ -> :ok
-    end
-
     if Enum.any?(content, &(elem(&1, 0) == :xmlElement)) do
       raise_compile_error!(
         caller,
