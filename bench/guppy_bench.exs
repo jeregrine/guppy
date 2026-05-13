@@ -309,7 +309,7 @@ defmodule Guppy.Bench do
            end,
            before_scenario: fn _input ->
              ir = kanban_tree(columns: 4, cards: 40)
-             {:ok, view_id} = Guppy.open_window(ir, self(), show: false)
+             {:ok, view_id} = Guppy.open_window(ir, show: false)
              {view_id, ir}
            end,
            after_scenario: fn {view_id, _ir} ->
@@ -322,7 +322,7 @@ defmodule Guppy.Bench do
            before_scenario: fn _input ->
              ir = kanban_tree(columns: 4, cards: 40)
              validated_ir = Guppy.IR.validated!(ir)
-             {:ok, view_id} = Guppy.open_window(validated_ir, self(), show: false)
+             {:ok, view_id} = Guppy.open_window(validated_ir, show: false)
              {view_id, validated_ir}
            end,
            after_scenario: fn {view_id, _ir} ->

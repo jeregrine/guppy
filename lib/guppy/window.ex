@@ -17,6 +17,10 @@ defmodule Guppy.Window do
 
   - `c:handle_event/3`
   - `c:handle_info/2`
+
+  Missing optional callbacks and unmatched callback clauses are treated as no-op
+  handlers that skip rerendering. `use Guppy.Window` also defines `child_spec/1`,
+  so window modules can be supervised directly.
   """
 
   @type t :: %__MODULE__{
@@ -50,6 +54,18 @@ defmodule Guppy.Window do
 
       @behaviour Guppy.Window
 
+      def child_spec(arg) do
+        %{
+          id: __MODULE__,
+          start: {__MODULE__, :start_link, [arg]},
+          type: :worker,
+          restart: :permanent,
+          shutdown: 5_000
+        }
+      end
+
+      defoverridable child_spec: 1
+
       def start_link(arg, opts \\ []) do
         GenServer.start_link(__MODULE__, {:guppy_window, arg}, opts)
       end
@@ -72,7 +88,7 @@ defmodule Guppy.Window do
         ir = module.render(window)
         window_options = Map.get(window.private, :window_options, [])
 
-        case Guppy.open_window(ir, self(), window_options) do
+        case Guppy.open_window(ir, window_options) do
           {:ok, view_id} ->
             {:ok,
              %State{
@@ -210,7 +226,7 @@ defmodule Guppy.Window do
   end
 
   defp safe_open_window(ir, window_options) do
-    Guppy.open_window(ir, self(), window_options)
+    Guppy.open_window(ir, window_options)
   catch
     :exit, _reason -> {:error, :server_unavailable}
   end
@@ -252,11 +268,22 @@ defmodule Guppy.Window do
     apply(module, function, args)
   rescue
     error in FunctionClauseError ->
-      if error.module == module and error.function == function do
+      if callback_error?(error, module, function, args) do
         {:noreply, List.last(args), :skip_render}
       else
         reraise error, __STACKTRACE__
       end
+
+    error in UndefinedFunctionError ->
+      if callback_error?(error, module, function, args) do
+        {:noreply, List.last(args), :skip_render}
+      else
+        reraise error, __STACKTRACE__
+      end
+  end
+
+  defp callback_error?(error, module, function, args) do
+    error.module == module and error.function == function and error.arity == length(args)
   end
 
   defp event_data(event) do

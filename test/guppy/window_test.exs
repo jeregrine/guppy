@@ -1,7 +1,49 @@
+defmodule Guppy.DefaultCallbackWindow do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(:ok, window), do: {:ok, window}
+
+  @impl Guppy.Window
+  def render(_window), do: Guppy.IR.text("default callback window")
+end
+
 defmodule Guppy.WindowTest do
   use ExUnit.Case
 
   import Guppy.TestSupport
+
+  test "Guppy.Window modules expose a supervisor child spec" do
+    assert %{
+             id: Guppy.DefaultCallbackWindow,
+             start: {Guppy.DefaultCallbackWindow, :start_link, [:ok]},
+             type: :worker,
+             restart: :permanent,
+             shutdown: 5_000
+           } = Guppy.DefaultCallbackWindow.child_spec(:ok)
+  end
+
+  test "Guppy.Window default optional callbacks ignore unmatched events and messages" do
+    state = %Guppy.Window.State{
+      module: Guppy.DefaultCallbackWindow,
+      window: %Guppy.Window{view_id: 123, assigns: %{mounted: true}},
+      server_monitor: nil
+    }
+
+    assert {:noreply, event_state} =
+             Guppy.Window.handle_window_message(
+               Guppy.DefaultCallbackWindow,
+               {:guppy_event, 123, %{type: :click, callback: "missing"}},
+               state
+             )
+
+    assert event_state.window.assigns == %{mounted: true}
+
+    assert {:noreply, message_state} =
+             Guppy.Window.handle_window_message(Guppy.DefaultCallbackWindow, :ignored, state)
+
+    assert message_state.window.assigns == %{mounted: true}
+  end
 
   test "Guppy.Window skips rerender while reopen retry has no native view" do
     state = %Guppy.Window.State{

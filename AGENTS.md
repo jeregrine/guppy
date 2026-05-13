@@ -98,9 +98,8 @@ Useful top-level API:
 
 - `Guppy.ping/0`
 - `Guppy.open_window/1`
-- `Guppy.open_window/2`
-- `Guppy.open_window/3`
-- `Guppy.open_window/4`
+- `Guppy.open_window/2` (`Guppy.open_window(ir, opts)`)
+- `Guppy.open_window/3` (`Guppy.open_window(ir, opts, timeout)`)
 - `Guppy.render/2`
 - `Guppy.close_window/1`
 - `Guppy.native_view_count/0`
@@ -167,9 +166,11 @@ Prefer this style unless the task is explicitly lower-level:
 Current `Guppy.Window` callback shape:
 
 - `mount(arg, window)`
-- `handle_event(event_name, event_data, window)`
-- `handle_info(message, window)`
 - `render(window)`
+- optional `handle_event(event_name, event_data, window)`
+- optional `handle_info(message, window)`
+
+`use Guppy.Window` generates `child_spec/1`; missing optional callbacks and unmatched callback clauses are no-op handlers that skip rerendering. Preferred `Guppy.Window` modules currently drive lifecycle from `window_closed`; `window_close_requested` remains lower-level informational state and is not exposed as a veto callback.
 
 ## Window options
 

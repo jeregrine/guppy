@@ -140,9 +140,8 @@ Native event coverage includes click, hover, focus/blur, key down/up, shortcut a
 Top-level API:
 
 - `Guppy.open_window/1`
-- `Guppy.open_window/2`
-- `Guppy.open_window/3`
-- `Guppy.open_window/4`
+- `Guppy.open_window/2` (`Guppy.open_window(ir, opts)`)
+- `Guppy.open_window/3` (`Guppy.open_window(ir, opts, timeout)`)
 - `Guppy.render/2`
 - `Guppy.close_window/1`
 - `Guppy.ping/0`
@@ -174,12 +173,14 @@ IR helpers:
 
 ## Window processes
 
-`Guppy.Window` modules use these callbacks:
+`Guppy.Window` modules can be supervised directly via their generated `child_spec/1` and use these callbacks:
 
 - `mount(arg, window)`
-- `handle_event(event_name, event_data, window)`
-- `handle_info(message, window)`
 - `render(window)`
+- optional `handle_event(event_name, event_data, window)`
+- optional `handle_info(message, window)`
+
+Missing optional callbacks and unmatched callback clauses are treated as no-op handlers that skip rerendering.
 
 Helpers imported by `use Guppy.Window` include:
 
@@ -189,7 +190,9 @@ Helpers imported by `use Guppy.Window` include:
 - `put_private/3`
 - `put_window_opts/2`
 
-`Guppy.Window` monitors the Guppy runtime server. If the supervised server restarts, the window process reopens from its current assigns. Lower-level callers using `Guppy.open_window/1..4` own their own recovery policy.
+`Guppy.Window` monitors the Guppy runtime server. If the supervised server restarts, the window process reopens from its current assigns. Lower-level callers using `Guppy.open_window/1..3` own their own recovery policy.
+
+Preferred `Guppy.Window` modules treat `window_closed` as lifecycle-driving today. `window_close_requested` remains informational for lower-level owners and is not exposed as a veto callback by `Guppy.Window`.
 
 ## Templates and components
 

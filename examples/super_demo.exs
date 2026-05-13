@@ -57,7 +57,6 @@ defmodule Guppy.SuperDemo do
     {:ok, main_view_id} =
       Guppy.open_window(
         render(initial_state),
-        self(),
         window_bounds: [width: 1320, height: 920],
         window_min_size: [width: 1120, height: 760],
         titlebar: [title: "Guppy super demo"]
@@ -592,7 +591,6 @@ defmodule Guppy.SuperDemo do
   defp open_aux_window(state, node_id) do
     case Guppy.open_window(
            aux_window_ir(),
-           self(),
            window_bounds: [width: 560, height: 420],
            titlebar: [title: "Guppy super demo auxiliary window"]
          ) do
@@ -2276,7 +2274,6 @@ defmodule Guppy.SuperDemo do
     {:ok, view_id} =
       Guppy.open_window(
         child_owner_ir(),
-        self(),
         window_bounds: [width: 640, height: 420],
         titlebar: [title: "Guppy child owner window"]
       )

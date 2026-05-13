@@ -25,6 +25,25 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  test "open_window/2 treats a keyword list as options for a caller-owned window" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        starting_count = native_view_count!()
+
+        assert {:ok, view_id} = Guppy.open_window(Guppy.IR.text("opts smoke"), show: false)
+        on_exit(fn -> maybe_close(view_id) end)
+
+        assert Map.get(Guppy.info().views, view_id) == self()
+        assert Guppy.native_view_count() == {:ok, starting_count + 1}
+        assert :ok = Guppy.close_window(view_id)
+        assert Guppy.native_view_count() == {:ok, starting_count}
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} =
+                 Guppy.open_window(Guppy.IR.text("opts smoke"), show: false)
+    end
+  end
+
   test "native request crashes are contained and reported" do
     server = :"guppy_crashing_native_#{System.unique_integer([:positive])}"
     handler_id = {__MODULE__, self(), :crashing_native_request_telemetry}
@@ -279,7 +298,7 @@ defmodule Guppy.ServerNativeTest do
         assert is_integer(before_counters["native_event_send_failure_count"])
 
         ir = Guppy.IR.text("counter probe", id: "counter_probe")
-        {:ok, view_id} = Guppy.open_window(ir, self(), show: false)
+        {:ok, view_id} = Guppy.open_window(ir, show: false)
         on_exit(fn -> maybe_close(view_id) end)
         assert :ok = Guppy.render(view_id, ir)
 
@@ -398,7 +417,6 @@ defmodule Guppy.ServerNativeTest do
         {:ok, view_id} =
           Guppy.open_window(
             Guppy.IR.text("positioning smoke"),
-            self(),
             show: false,
             focus: false,
             window_bounds: [x: 24, y: 32, width: 320, height: 240],
@@ -415,7 +433,7 @@ defmodule Guppy.ServerNativeTest do
 
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} =
-                 Guppy.open_window(Guppy.IR.text("positioning smoke"), self(), show: false)
+                 Guppy.open_window(Guppy.IR.text("positioning smoke"), show: false)
     end
   end
 
@@ -423,7 +441,10 @@ defmodule Guppy.ServerNativeTest do
     parent = self()
 
     spawn(fn ->
-      send(parent, {:owner_mismatch, Guppy.open_window(Guppy.IR.text("nope"), parent)})
+      send(
+        parent,
+        {:owner_mismatch, Guppy.Server.open_window(Guppy.Server, parent, Guppy.IR.text("nope"))}
+      )
     end)
 
     assert_receive {:owner_mismatch, {:error, :owner_mismatch}}
@@ -993,7 +1014,7 @@ defmodule Guppy.ServerNativeTest do
         assert Guppy.native_view_count() == {:ok, starting_count}
 
         owner = self()
-        {:ok, owned_view_id} = Guppy.open_window(Guppy.IR.text("owned by owner"), owner)
+        {:ok, owned_view_id} = Guppy.open_window(Guppy.IR.text("owned by owner"))
         on_exit(fn -> maybe_close(owned_view_id) end)
 
         assert Map.get(Guppy.info().views, owned_view_id) == owner
@@ -1004,7 +1025,7 @@ defmodule Guppy.ServerNativeTest do
 
         pid =
           spawn(fn ->
-            {:ok, transient_view_id} = Guppy.open_window(Guppy.IR.text("transient"), self())
+            {:ok, transient_view_id} = Guppy.open_window(Guppy.IR.text("transient"))
             send(owner, {:opened_view, transient_view_id})
             Process.sleep(:infinity)
           end)
