@@ -276,7 +276,7 @@ Text nodes and div-like nodes support the current style-token surface where appl
 
 Guppy is source-build first. Rustler builds and copies the NIF into `priv/native/` during normal Mix compilation. The macOS source-build path and clean-install/load smoke are covered by CI.
 
-Precompiled artifacts are deferred until release/publishing work is explicitly prioritized and CI can build and load-test each advertised target. See [`docs/distribution.md`](docs/distribution.md).
+`rustler_precompiled` is wired in, but source builds remain the default until release artifacts and checksums are published. See [`docs/distribution.md`](docs/distribution.md).
 
 ## Known limits
 
@@ -287,7 +287,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 - fully generic list item renderers and variable-height list parity
 - full popover parity, including nested/deferred layer edge cases
 - animation, gradient, grid, canvas/custom painting, pattern painting, and menu APIs
-- precompiled native artifacts
+- published precompiled native artifacts
 
 ## Hacking on Guppy
 

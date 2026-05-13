@@ -1,8 +1,8 @@
 # Distribution and native artifacts
 
-Guppy is currently source-build first. The native runtime is a single Rustler NIF built from `native/guppy_nif`; Rustler builds and copies it into `priv/native/` during normal Mix compilation.
+Guppy is currently source-build first, with `rustler_precompiled` wired in for the future artifact path. The native runtime is a single Rustler NIF built from `native/guppy_nif`; Rustler builds and copies it into `priv/native/` during normal Mix compilation.
 
-The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, and clean-install NIF loading. Distribution is still source-build-first until release/publishing work explicitly prioritizes precompiled artifacts.
+The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, and clean-install NIF loading. Distribution defaults to source builds until CI publishes checksummed precompiled artifacts.
 
 ## Current supported path
 
@@ -26,10 +26,11 @@ Current development and smoke coverage are macOS-first.
 Important assumptions:
 
 - the active GPUI dependency is `gpui = "0.2.2"` from crates.io
+- precompiled target scope should stay aligned with platforms GPUI itself supports
 - native bootstrap uses Rustler directly; there is no C shim
 - the app uses the OTP/wx-style macOS main-thread strategy
 - the shipped native artifact shape should remain one NIF per target
-- local source builds must continue to work even after precompiled artifacts are added
+- local source builds must continue to work after precompiled artifacts are published
 
 ## CI status
 
@@ -40,7 +41,7 @@ Important assumptions:
 3. run `scripts/check`
 4. run `scripts/clean_install_load_test` to verify a fresh Mix project can depend on Guppy and load the built NIF
 
-This validates the fallback source-build path before any precompiled artifact support is introduced.
+This validates the fallback source-build path while precompiled artifacts are not yet published.
 
 ## Release process draft
 
@@ -62,24 +63,25 @@ Future native artifact release flow:
 
 ## Precompiled artifact plan
 
-Do not add `rustler_precompiled` until release/publishing work is explicitly prioritized. The source-build path and runtime hardening baseline are in place; the next blocker is a deliberate artifact/release process, not opportunistic packaging.
+`rustler_precompiled` is now part of the NIF module, but Guppy still forces source builds by default because no release artifacts or checksum file are published yet. The remaining work is the artifact/release process:
 
-When adding precompiled artifacts, preserve these gates:
-
-1. Keep Rustler source compilation as the fallback path.
-2. Define target triples and artifact names before publishing.
-3. Add CI jobs that build the NIF for every advertised target.
-4. Add CI jobs that install/load the produced artifact and run at least `mix test`.
+1. Keep the advertised target list constrained to GPUI-supported desktop targets.
+2. Add CI jobs that build the NIF for every advertised target.
+3. Add CI jobs that install/load the produced artifact and run at least `mix test`.
+4. Generate and package the required `checksum-*.exs` file with `mix rustler_precompiled.download Guppy.Native.Nif --all --print` after release artifacts exist.
 5. Document how release artifacts are produced, signed when needed, and attached.
-6. Keep `scripts/check`, `mix compile`, and `scripts/clean_install_load_test` green for source builds.
+6. Flip the default from source-build to precompiled-download only after the advertised artifact set is built and load-tested.
+7. Keep Rustler source compilation as the fallback path.
+8. Keep `scripts/check`, `mix compile`, and `scripts/clean_install_load_test` green for source builds.
 
 ## Initial target matrix
 
 | Target | Status | Notes |
 | --- | --- | --- |
-| macOS arm64 | source-build supported | primary local development target |
-| macOS x86_64 | planned | needs CI/build-host confirmation |
-| Linux x86_64 | planned | GPUI runtime behavior needs validation |
-| Windows x86_64 | deferred | GPUI/runtime bootstrap needs separate validation |
+| `aarch64-apple-darwin` | source-build supported; precompiled planned | primary local development target |
+| `x86_64-apple-darwin` | precompiled planned | needs CI/build-host confirmation |
+| `aarch64-unknown-linux-gnu` | precompiled planned | GPUI runtime behavior needs validation |
+| `x86_64-unknown-linux-gnu` | precompiled planned | GPUI runtime behavior needs validation |
+| `x86_64-pc-windows-msvc` | precompiled planned | GPUI/runtime bootstrap needs validation |
 
-Do not claim a target as precompiled-supported until CI builds and load-tests the artifact.
+Do not claim a target as precompiled-supported until CI builds and load-tests the artifact. Avoid publishing broader RustlerPrecompiled defaults such as musl, Windows GNU, ARMv7, or RISC-V unless GPUI support and CI load tests prove them viable.

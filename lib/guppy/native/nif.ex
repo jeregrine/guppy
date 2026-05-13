@@ -8,7 +8,29 @@ defmodule Guppy.Native.Nif do
 
   @behaviour Guppy.Native
 
-  use Rustler, otp_app: :guppy, crate: :guppy_nif
+  @version Mix.Project.config()[:version]
+
+  @native_mode if Mix.env() == :prod or
+                    System.get_env("GUPPY_NATIVE_RELEASE") in ["1", "true", "TRUE", "yes"],
+                  do: :release,
+                  else: :debug
+
+  @force_build System.get_env("GUPPY_NATIVE_PRECOMPILED") not in ["1", "true", "TRUE", "yes"]
+
+  use RustlerPrecompiled,
+    otp_app: :guppy,
+    crate: "guppy_nif",
+    base_url: "https://github.com/jeregrine/guppy/releases/download/v#{@version}",
+    version: @version,
+    targets: [
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc"
+    ],
+    mode: @native_mode,
+    force_build: @force_build
 
   @type load_status :: :ok | {:error, term()}
 

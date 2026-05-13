@@ -55,7 +55,7 @@ For performance-sensitive changes, run benchmarks or probes from `docs/performan
 3. Keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes.
 4. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.
 5. Add new primitives only when explicitly prioritized and implemented end-to-end.
-6. Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
+6. Publish precompiled artifacts only when release/publishing work is explicitly prioritized.
 
 ## Production readiness baseline
 
@@ -74,12 +74,12 @@ Use OTP semantics as the default recovery model:
 Future production/release work, when explicitly prioritized, should focus on:
 
 - release packaging/versioning/changelog policy
-- precompiled artifact CI and load tests per advertised target
+- precompiled artifact CI, checksum generation, and load tests per advertised target
 - broader platform validation beyond the current macOS-first source-build path
 - more manual and automated example smoke coverage, especially around window lifecycle and interactive controls
 - clearer user-facing guidance for external restart requirements after BEAM-killing NIF crashes or unrecoverable GPUI process failures
 
-Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
+`rustler_precompiled` is wired in, but source builds remain the default until release artifacts and checksums exist.
 
 ## New primitive definition of done
 

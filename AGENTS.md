@@ -73,6 +73,7 @@ Important current invariants:
 - main-thread request drain scheduling is coalesced with an atomic scheduled flag
 - ETF IR field lookup keys are cached in Rust
 - native style lists use `Arc<[StyleOp]>`
+- native compilation/loading is wired through `RustlerPrecompiled`; source builds are forced by default until release artifacts/checksums exist
 - native event emission is implemented in Rust through Rustler `OwnedEnv`/`LocalPid` support
 - the registered event target is monitored with a Rustler resource; monitor generations prevent stale `down` callbacks from clearing newer registrations
 - event-target loss clears native event delivery state and enqueues best-effort native window cleanup
@@ -328,7 +329,7 @@ Current priority order:
 2. fix bugs found by real example usage or tests
 3. keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes
 4. improve existing primitives only when a real gap is identified
-5. add new primitives or `rustler_precompiled` only when explicitly prioritized
+5. add new primitives or publish precompiled artifacts only when explicitly prioritized
 
 Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
 

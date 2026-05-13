@@ -23,6 +23,7 @@ defmodule Guppy.MixProject do
       {:benchee, "~> 1.3", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:rustler, "~> 0.37.3"},
+      {:rustler_precompiled, "~> 0.9.0"},
       {:telemetry, "~> 1.3"}
     ]
   end
