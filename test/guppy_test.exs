@@ -2097,6 +2097,19 @@ defmodule GuppyTest do
     end
   end
 
+  test "Guppy.Window skips rerender while reopen retry has no native view" do
+    state = %Guppy.Window.State{
+      module: Guppy.TestCounterWindow,
+      window: %Guppy.Window{view_id: nil, assigns: %{count: 0}},
+      server_monitor: nil
+    }
+
+    assert {:noreply, next_state} =
+             Guppy.Window.handle_window_message(Guppy.TestCounterWindow, {:set_count, 7}, state)
+
+    assert %Guppy.Window{view_id: nil, assigns: %{count: 7}} = next_state.window
+  end
+
   test "Guppy.Window reopens after Guppy.Server restarts" do
     case Guppy.Native.Nif.load_status() do
       :ok ->

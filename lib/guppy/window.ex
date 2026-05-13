@@ -222,6 +222,10 @@ defmodule Guppy.Window do
     end
   end
 
+  defp rerender(%State{window: %__MODULE__{view_id: nil}} = state) do
+    {:noreply, state}
+  end
+
   defp rerender(%State{window: %__MODULE__{view_id: view_id} = window, module: module} = state) do
     start_time = System.monotonic_time()
     result = Guppy.render(view_id, module.render(window))
