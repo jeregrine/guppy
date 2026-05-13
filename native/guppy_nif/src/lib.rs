@@ -254,7 +254,9 @@ fn native_open_window<'a>(
 fn native_set_event_target<'a>(env: Env<'a>, pid: LocalPid) -> Term<'a> {
     let generation = EVENT_TARGET_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     let resource = ResourceArc::new(EventTargetMonitor { generation });
-    let monitor = env.monitor(&resource, &pid);
+    let Some(monitor) = env.monitor(&resource, &pid) else {
+        return error_tuple(env, runtime_unavailable());
+    };
 
     let Ok(mut target) = EVENT_TARGET.lock() else {
         return error_tuple(env, runtime_unavailable());
@@ -264,7 +266,7 @@ fn native_set_event_target<'a>(env: Env<'a>, pid: LocalPid) -> Term<'a> {
         pid,
         generation,
         _resource: resource,
-        _monitor: monitor,
+        _monitor: Some(monitor),
     });
 
     rustler::types::atom::ok().encode(env)
