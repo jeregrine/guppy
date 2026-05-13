@@ -3,9 +3,9 @@ defmodule Guppy.Markdown do
   Small Markdown-to-Guppy component.
 
   GPUI 0.2.2 does not expose a standalone markdown viewer in the dependency surface Guppy
-  uses, so this component renders a deliberately small Markdown subset into ordinary Guppy IR.
-  Supported today: headings, paragraphs, unordered lists, and inline `**bold**`, `*italic*`,
-  and `` `code` `` runs.
+  uses, so this component parses Markdown with Erlang/OTP's `:shell_docs_markdown` and
+  renders a deliberately small subset into ordinary Guppy IR. Supported today: headings,
+  paragraphs, unordered/ordered lists, and inline bold/italic/code/link-ish runs.
   """
 
   use Guppy.Component
@@ -31,116 +31,102 @@ defmodule Guppy.Markdown do
 
   defp parse_blocks(source) do
     source
-    |> String.split("\n")
-    |> parse_lines([])
-    |> Enum.reverse()
+    |> :shell_docs_markdown.parse_md()
+    |> Enum.flat_map(&block_to_nodes/1)
   end
 
-  defp parse_lines([], acc), do: acc
+  defp block_to_nodes({:h1, _attrs, children}),
+    do: [inline_text(children, [:text_2xl, :font_bold])]
 
-  defp parse_lines([line | rest], acc) do
-    cond do
-      blank?(line) ->
-        parse_lines(rest, acc)
+  defp block_to_nodes({:h2, _attrs, children}),
+    do: [inline_text(children, [:text_xl, :font_bold])]
 
-      heading = parse_heading(line) ->
-        parse_lines(rest, [heading | acc])
+  defp block_to_nodes({:h3, _attrs, children}),
+    do: [inline_text(children, [:text_lg, :font_bold])]
 
-      list_item?(line) ->
-        {items, remaining} = Enum.split_while([line | rest], &list_item?/1)
-        parse_lines(remaining, [render_list(items) | acc])
+  defp block_to_nodes({:h4, _attrs, children}),
+    do: [inline_text(children, [:text_base, :font_bold])]
 
-      true ->
-        {paragraph_lines, remaining} =
-          Enum.split_while([line | rest], fn candidate ->
-            not blank?(candidate) and is_nil(parse_heading(candidate)) and
-              not list_item?(candidate)
-          end)
+  defp block_to_nodes({:p, _attrs, children}), do: [inline_text(children, [:text_base])]
+  defp block_to_nodes({:ul, _attrs, items}), do: [list_block(items, :unordered)]
+  defp block_to_nodes({:ol, _attrs, items}), do: [list_block(items, :ordered)]
+  defp block_to_nodes({:pre, _attrs, children}), do: [inline_text(children, [{:bg, :gray}, :p_2])]
+  defp block_to_nodes(text) when is_binary(text), do: [Guppy.IR.text(text)]
 
-        text = Enum.map_join(paragraph_lines, " ", &String.trim/1)
-        parse_lines(remaining, [rich_text(text, [:text_base]) | acc])
-    end
+  defp block_to_nodes({_tag, _attrs, children}) when is_list(children),
+    do: Enum.flat_map(children, &block_to_nodes/1)
+
+  defp block_to_nodes(_other), do: []
+
+  defp list_block(items, kind) do
+    rows =
+      items
+      |> Enum.with_index(1)
+      |> Enum.map(fn {item, index} -> list_item_row(item, list_marker(kind, index)) end)
+
+    Guppy.IR.div(rows, style: [:flex, :flex_col, :gap_1])
   end
 
-  defp blank?(line), do: String.trim(line) == ""
+  defp list_marker(:unordered, _index), do: "•"
+  defp list_marker(:ordered, index), do: "#{index}."
 
-  defp parse_heading(line) do
-    cond do
-      String.starts_with?(line, "### ") ->
-        rich_text(String.trim_leading(line, "### "), [:text_lg, :font_bold])
+  defp list_item_row({:li, _attrs, children}, marker) do
+    {inline_children, block_children} = split_leading_inline(children)
 
-      String.starts_with?(line, "## ") ->
-        rich_text(String.trim_leading(line, "## "), [:text_xl, :font_bold])
+    content =
+      case inline_children do
+        [] ->
+          Enum.flat_map(block_children, &block_to_nodes/1)
 
-      String.starts_with?(line, "# ") ->
-        rich_text(String.trim_leading(line, "# "), [:text_2xl, :font_bold])
+        inline ->
+          [inline_text(inline, [:text_base]) | Enum.flat_map(block_children, &block_to_nodes/1)]
+      end
 
-      true ->
-        nil
-    end
+    Guppy.IR.div(
+      [Guppy.IR.text(marker, style: [:font_bold]) | content],
+      style: [:flex, :flex_row, :gap_2]
+    )
   end
 
-  defp list_item?(line), do: line |> String.trim_leading() |> String.starts_with?("- ")
-
-  defp render_list(items) do
-    children =
-      Enum.map(items, fn item ->
-        text = item |> String.trim_leading() |> String.trim_leading("- ")
-
-        Guppy.IR.div(
-          [
-            Guppy.IR.text("•", style: [:font_bold]),
-            rich_text(text, [:text_base])
-          ],
-          style: [:flex, :flex_row, :gap_2]
-        )
-      end)
-
-    Guppy.IR.div(children, style: [:flex, :flex_col, :gap_1])
+  defp list_item_row(other, marker) do
+    Guppy.IR.div(
+      [Guppy.IR.text(marker, style: [:font_bold]) | block_to_nodes(other)],
+      style: [:flex, :flex_row, :gap_2]
+    )
   end
 
-  defp rich_text(text, style) do
-    Guppy.IR.rich_text(inline_runs(text), style: style)
+  defp split_leading_inline([{:p, _attrs, inline_children} | rest]), do: {inline_children, rest}
+  defp split_leading_inline(children), do: {[], children}
+
+  defp inline_text(children, style) do
+    Guppy.IR.rich_text(inline_runs(children), style: style)
   end
 
-  defp inline_runs(text), do: inline_runs(text, []) |> Enum.reverse() |> merge_plain_runs([])
-
-  defp inline_runs("", acc), do: acc
-
-  defp inline_runs("**" <> rest, acc), do: delimited_run(rest, "**", [:font_bold], acc)
-  defp inline_runs("*" <> rest, acc), do: delimited_run(rest, "*", [:italic], acc)
-
-  defp inline_runs("`" <> rest, acc),
-    do: delimited_run(rest, "`", [{:bg, :gray}, :font_semibold], acc)
-
-  defp inline_runs(text, acc) do
-    {plain, rest} = take_until_marker(text)
-    inline_runs(rest, [%{text: plain} | acc])
+  defp inline_runs(children) when is_list(children) do
+    children
+    |> Enum.flat_map(&inline_runs(&1, []))
+    |> merge_plain_runs([])
   end
 
-  defp delimited_run(rest, delimiter, style, acc) do
-    case String.split(rest, delimiter, parts: 2) do
-      [content, remaining] -> inline_runs(remaining, [%{text: content, style: style} | acc])
-      [_] -> inline_runs(rest, [%{text: delimiter} | acc])
-    end
+  defp inline_runs(child), do: inline_runs([child])
+
+  defp inline_runs(text, style) when is_binary(text), do: [text_run(text, style)]
+
+  defp inline_runs({tag, attrs, children}, style) when is_list(children) do
+    child_style = style ++ inline_style(tag, attrs)
+    Enum.flat_map(children, &inline_runs(&1, child_style))
   end
 
-  defp take_until_marker(text) do
-    markers = ["**", "*", "`"]
+  defp inline_runs(_other, _style), do: []
 
-    index =
-      markers
-      |> Enum.flat_map(fn marker ->
-        case :binary.match(text, marker) do
-          {index, _length} -> [index]
-          :nomatch -> []
-        end
-      end)
-      |> Enum.min(fn -> byte_size(text) end)
+  defp inline_style(tag, _attrs) when tag in [:em, :strong, :b], do: [:font_bold]
+  defp inline_style(tag, _attrs) when tag in [:i], do: [:italic]
+  defp inline_style(:code, _attrs), do: [{:bg, :gray}, :font_semibold]
+  defp inline_style(:a, _attrs), do: [:underline, {:text_color, :blue}]
+  defp inline_style(_tag, _attrs), do: []
 
-    <<plain::binary-size(index), rest::binary>> = text
-    {plain, rest}
-  end
+  defp text_run(text, []), do: %{text: text}
+  defp text_run(text, style), do: %{text: text, style: style}
 
   defp merge_plain_runs([], acc), do: Enum.reverse(acc)
 
