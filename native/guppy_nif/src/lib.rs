@@ -31,6 +31,7 @@ rustler::atoms! {
     action,
     alt,
     blur,
+    button,
     callback,
     change,
     checked,
@@ -1129,7 +1130,7 @@ pub extern "C" fn guppy_c_send_mouse_down_event(
         let mut pairs = base_payload(env, &node_id, &callback_id);
         pairs.extend([
             (
-                rustler::Atom::from_str(env, "button").unwrap().encode(env),
+                button().encode(env),
                 mouse_button_atom(button_code).encode(env),
             ),
             (x().encode(env), event_x.encode(env)),
@@ -1179,11 +1180,10 @@ pub extern "C" fn guppy_c_send_mouse_up_event(
         return 0;
     };
     send_event(view_id, mouse_up(), move |env| {
-        let button_atom = rustler::Atom::from_str(env, "button").unwrap();
         let mut pairs = base_payload(env, &node_id, &callback_id);
         pairs.extend([
             (
-                button_atom.encode(env),
+                button().encode(env),
                 mouse_button_atom(button_code).encode(env),
             ),
             (x().encode(env), event_x.encode(env)),
