@@ -99,7 +99,8 @@ pub(crate) fn render(
         radio = apply_div_style(radio, &node.disabled_style);
     }
 
-    if let Some(callback_id) = node.change.as_ref() {
+    if should_attach_change_handlers(node.disabled, node.change.as_ref()) {
+        let callback_id = node.change.as_ref().expect("change callback checked above");
         let click_callback_id = callback_id.clone();
         let click_node_id = node_key.clone();
         let click_value = node.value.clone();
@@ -120,6 +121,10 @@ pub(crate) fn render(
     }
 
     radio.into_any_element()
+}
+
+fn should_attach_change_handlers(disabled: bool, callback: Option<&String>) -> bool {
+    !disabled && callback.is_some()
 }
 
 fn radio_indicator(checked: bool, disabled: bool) -> AnyElement {
@@ -172,8 +177,17 @@ fn is_radio_toggle_key(event: &KeyDownEvent) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_radio_toggle_key;
+    use super::{is_radio_toggle_key, should_attach_change_handlers};
     use gpui::{KeyDownEvent, Keystroke};
+
+    #[test]
+    fn disabled_radio_does_not_attach_change_handlers() {
+        let callback = "priority_changed".to_string();
+
+        assert!(should_attach_change_handlers(false, Some(&callback)));
+        assert!(!should_attach_change_handlers(true, Some(&callback)));
+        assert!(!should_attach_change_handlers(false, None));
+    }
 
     #[test]
     fn radio_toggle_keys_match_space_and_enter() {

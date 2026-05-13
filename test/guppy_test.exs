@@ -217,6 +217,14 @@ defmodule GuppyTest do
     assert is_binary(Guppy.nif_path())
   end
 
+  test "ir validation rejects unknown node keys" do
+    assert {:error, {:unknown_ir_keys, :text, [:typo]}} =
+             Guppy.IR.validate(Map.put(Guppy.IR.text("hello"), :typo, true))
+
+    assert {:error, {:unknown_ir_keys, :div, [:bogus]}} =
+             Guppy.IR.validate(Map.put(Guppy.IR.div([], id: "root"), :bogus, "nope"))
+  end
+
   test "ir validation accepts ordered style lists and rejects invalid values" do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))

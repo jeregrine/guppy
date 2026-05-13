@@ -786,15 +786,99 @@ defmodule Guppy.IR do
     end
   end
 
+  @allowed_node_keys %{
+    text: [:kind, :content, :id, :style, :events],
+    div: [
+      :kind,
+      :children,
+      :id,
+      :style,
+      :hover_style,
+      :focus_style,
+      :in_focus_style,
+      :active_style,
+      :disabled_style,
+      :disabled,
+      :stack_priority,
+      :occlude,
+      :focusable,
+      :tab_stop,
+      :tab_index,
+      :track_scroll,
+      :anchor_scroll,
+      :tooltip,
+      :actions,
+      :shortcuts,
+      :events
+    ],
+    scroll: [:kind, :children, :id, :axis, :style],
+    popover: [:kind, :label, :open, :children, :id, :style, :popover_style, :disabled, :events],
+    uniform_list: [:kind, :items, :id, :style, :item_style, :events],
+    image: [:kind, :source, :id, :style, :object_fit, :grayscale],
+    icon: [:kind, :source, :id, :style],
+    spacer: [:kind, :id, :style],
+    checkbox: [
+      :kind,
+      :label,
+      :checked,
+      :id,
+      :style,
+      :hover_style,
+      :focus_style,
+      :in_focus_style,
+      :active_style,
+      :disabled_style,
+      :disabled,
+      :tab_index,
+      :events
+    ],
+    radio: [
+      :kind,
+      :label,
+      :value,
+      :checked,
+      :id,
+      :style,
+      :hover_style,
+      :focus_style,
+      :in_focus_style,
+      :active_style,
+      :disabled_style,
+      :disabled,
+      :tab_index,
+      :events
+    ],
+    button: [
+      :kind,
+      :label,
+      :id,
+      :style,
+      :hover_style,
+      :focus_style,
+      :in_focus_style,
+      :active_style,
+      :disabled_style,
+      :disabled,
+      :tab_index,
+      :actions,
+      :shortcuts,
+      :events
+    ],
+    text_input: [:kind, :value, :id, :placeholder, :style, :disabled, :tab_index, :events],
+    textarea: [:kind, :value, :id, :placeholder, :style, :disabled, :tab_index, :events]
+  }
+
   defp validate_node(%{kind: :text, content: content} = node) when is_binary(content) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_events(Map.get(node, :events), [:click]) do
       :ok
     end
   end
 
   defp validate_node(%{kind: :div, children: children} = node) when is_list(children) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
          :ok <- validate_style(Map.get(node, :focus_style)),
@@ -835,7 +919,8 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(%{kind: :scroll, children: children} = node) when is_list(children) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_scroll_axis(Map.get(node, :axis)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_children(children) do
@@ -845,7 +930,8 @@ defmodule Guppy.IR do
 
   defp validate_node(%{kind: :popover, label: label, open: open, children: children} = node)
        when is_binary(label) and is_boolean(open) and is_list(children) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :popover_style)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
@@ -856,7 +942,8 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(%{kind: :uniform_list, items: items} = node) when is_list(items) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :item_style)),
          :ok <- validate_events(Map.get(node, :events), [:click]),
@@ -866,7 +953,8 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(%{kind: :image, source: source} = node) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_image_source(source),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_image_object_fit(Map.get(node, :object_fit)),
@@ -876,7 +964,8 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(%{kind: :icon, source: source} = node) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_image_source(source),
          :ok <- validate_style(Map.get(node, :style)) do
       :ok
@@ -884,7 +973,8 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(%{kind: :spacer} = node) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)) do
       :ok
     end
@@ -901,7 +991,8 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(%{kind: :button, label: label} = node) when is_binary(label) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
          :ok <- validate_style(Map.get(node, :focus_style)),
@@ -931,7 +1022,8 @@ defmodule Guppy.IR do
 
   defp validate_node(%{kind: kind, value: value} = node)
        when kind in [:text_input, :textarea] and is_binary(value) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_optional_string(Map.get(node, :placeholder), :placeholder),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
@@ -943,8 +1035,18 @@ defmodule Guppy.IR do
 
   defp validate_node(other), do: {:error, {:invalid_ir, other}}
 
+  defp validate_node_keys(%{kind: kind} = node) do
+    allowed = Map.fetch!(@allowed_node_keys, kind)
+
+    case Map.keys(node) -- allowed do
+      [] -> :ok
+      unknown -> {:error, {:unknown_ir_keys, kind, Enum.sort(unknown)}}
+    end
+  end
+
   defp validate_choice_node(node) do
-    with :ok <- validate_id(Map.get(node, :id)),
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :hover_style)),
          :ok <- validate_style(Map.get(node, :focus_style)),

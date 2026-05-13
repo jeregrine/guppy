@@ -99,7 +99,8 @@ pub(crate) fn render(
         checkbox = apply_div_style(checkbox, &node.disabled_style);
     }
 
-    if let Some(callback_id) = node.change.as_ref() {
+    if should_attach_change_handlers(node.disabled, node.change.as_ref()) {
+        let callback_id = node.change.as_ref().expect("change callback checked above");
         let click_callback_id = callback_id.clone();
         let click_node_id = node_key.clone();
         let next_checked = !node.checked;
@@ -119,6 +120,10 @@ pub(crate) fn render(
     }
 
     checkbox.into_any_element()
+}
+
+fn should_attach_change_handlers(disabled: bool, callback: Option<&String>) -> bool {
+    !disabled && callback.is_some()
 }
 
 fn checkbox_indicator(checked: bool, disabled: bool) -> AnyElement {
@@ -169,4 +174,18 @@ fn emit_checkbox_change(view_id: u64, node_id: &str, callback_id: &str, checked:
 
 fn is_checkbox_toggle_key(event: &KeyDownEvent) -> bool {
     matches!(event.keystroke.key.as_str(), "space" | "enter")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_attach_change_handlers;
+
+    #[test]
+    fn disabled_checkbox_does_not_attach_change_handlers() {
+        let callback = "toggle".to_string();
+
+        assert!(should_attach_change_handlers(false, Some(&callback)));
+        assert!(!should_attach_change_handlers(true, Some(&callback)));
+        assert!(!should_attach_change_handlers(false, None));
+    }
 }

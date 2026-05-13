@@ -61,6 +61,8 @@ Current native event coverage includes:
 - text input / textarea change
 - window close requested / window closed
 
+`window_close_requested` is informational in the current API: native close requests are not vetoable, and a successful close is followed by `window_closed`.
+
 That is still intentionally selective. Guppy is not pretending to be a complete widget toolkit yet.
 
 Guppy is **not** all of GPUI from Elixir. It is an Elixir-owned state/render loop targeting a documented GPUI subset. The tracked compatibility matrix lives in [`docs/gpui-compliance.md`](docs/gpui-compliance.md). New primitives are not planned speculatively; they should only be added when explicitly prioritized and considered supported when they have:
