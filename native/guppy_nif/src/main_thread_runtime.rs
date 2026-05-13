@@ -195,10 +195,15 @@ pub(crate) fn init_request_queue() {
 
 fn register_main_thread_dispatcher(cx: &mut App) {
     let dispatcher = cx.foreground_executor().dispatcher.clone();
-    let slot = MAIN_THREAD_DISPATCHER
-        .get()
-        .expect("main-thread dispatcher slot not initialized");
-    let mut slot = slot.lock().expect("dispatcher lock poisoned");
+
+    let Some(slot) = MAIN_THREAD_DISPATCHER.get() else {
+        return;
+    };
+
+    let Ok(mut slot) = slot.lock() else {
+        return;
+    };
+
     *slot = Some(dispatcher);
 }
 
@@ -247,7 +252,7 @@ fn drain_requests() {
 
 fn try_next_request() -> Option<MainThreadRequest> {
     let receiver = REQUEST_RX.get()?;
-    let guard = receiver.lock().expect("request queue lock poisoned");
+    let guard = receiver.lock().ok()?;
     guard.try_recv().ok()
 }
 

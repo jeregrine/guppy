@@ -157,6 +157,8 @@ fn radio_label(node: &RadioNode) -> AnyElement {
 }
 
 fn emit_radio_change(view_id: u64, node_id: &str, callback_id: &str, value: &str) {
+    // SAFETY: the FFI call copies the provided string bytes before returning; node_id,
+    // callback_id, and value are valid Rust string slices for the duration of the call.
     unsafe {
         let _ = guppy_c_send_change_event(
             view_id,

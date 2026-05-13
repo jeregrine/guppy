@@ -159,6 +159,8 @@ fn checkbox_label(node: &CheckboxNode) -> AnyElement {
 }
 
 fn emit_checkbox_change(view_id: u64, node_id: &str, callback_id: &str, checked: bool) {
+    // SAFETY: the FFI call copies the provided string bytes before returning; node_id and
+    // callback_id are valid Rust string slices for the duration of the call.
     unsafe {
         let _ = guppy_c_send_checkbox_change_event(
             view_id,

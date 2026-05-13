@@ -440,6 +440,9 @@ fn maybe_start_main_thread_runtime() -> bool {
 
         let mut thread_id: ErlNifTid = std::ptr::null_mut();
         let name = CString::new("guppy_gpui").expect("static thread name has no nul");
+        // SAFETY: OTP exposes erl_drv_steal_main_thread for NIF/bootstrap code. The thread name
+        // is a live CString for the duration of the call, dtid points to valid stack storage, and
+        // the callback has the required extern "C" ABI.
         let result = unsafe {
             erl_drv_steal_main_thread(
                 name.as_ptr().cast_mut(),
@@ -549,6 +552,8 @@ fn binary_str(ptr: *const u8, len: usize) -> Option<String> {
         return None;
     }
 
+    // SAFETY: native event shims pass a non-null pointer and byte length for data that remains
+    // valid for this call; this function checks for null before constructing the borrowed slice.
     let bytes = unsafe { std::slice::from_raw_parts(ptr, len) };
     std::str::from_utf8(bytes).map(str::to_owned).ok()
 }

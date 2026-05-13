@@ -10,6 +10,9 @@ pub(crate) struct BridgeDragState {
 }
 
 mod ffi {
+    // SAFETY: these declarations match the Rust NIF event bridge functions exported from
+    // native/guppy_nif/src/lib.rs. Callers pass borrowed Rust string bytes that are copied by
+    // the callee during the call.
     unsafe extern "C" {
         pub(super) fn guppy_c_send_click_event(
             view_id: u64,
