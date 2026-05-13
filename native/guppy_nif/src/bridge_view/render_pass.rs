@@ -48,9 +48,12 @@ impl<'a> RenderPass<'a> {
         cx: &mut Context<BridgeView>,
     ) -> AnyElement {
         match ir {
-            IrNode::Text { id, content, click } => {
-                render_text::render(self, path, id.as_deref(), content, click.as_deref())
-            }
+            IrNode::Text {
+                id,
+                content,
+                style,
+                click,
+            } => render_text::render(self, path, id.as_deref(), content, style, click.as_deref()),
             IrNode::TextInput {
                 id,
                 value,

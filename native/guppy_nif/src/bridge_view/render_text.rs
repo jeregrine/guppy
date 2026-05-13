@@ -1,11 +1,16 @@
-use super::{events, identity::NodeIdentity, render_pass::RenderPass};
-use gpui::{AnyElement, InteractiveText, IntoElement, StyledText};
+use super::{events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
+use crate::ir::DivStyle;
+use gpui::{
+    AnyElement, InteractiveElement, InteractiveText, IntoElement, ParentElement, SharedString,
+    StyledText, div,
+};
 
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
     path: &str,
     id: Option<&str>,
     content: &str,
+    style: &DivStyle,
     click: Option<&str>,
 ) -> AnyElement {
     let view_id = pass.view_id();
@@ -15,7 +20,7 @@ pub(crate) fn render(
         StyledText::new(content.to_owned()),
     );
 
-    match click {
+    let element = match click {
         Some(callback_id) if !content.is_empty() => {
             let callback_id = callback_id.to_owned();
             let click_node_id = node_id.to_string();
@@ -28,5 +33,16 @@ pub(crate) fn render(
                 .into_any_element()
         }
         _ => interactive_text.into_any_element(),
+    };
+
+    if style.is_empty() {
+        element
+    } else {
+        apply_div_style(
+            div().id(SharedString::from(format!("{}::text_style", node_id))),
+            style,
+        )
+        .child(element)
+        .into_any_element()
     }
 }

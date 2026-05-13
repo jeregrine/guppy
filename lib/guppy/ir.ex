@@ -205,6 +205,7 @@ defmodule Guppy.IR do
           required(:kind) => :text,
           required(:content) => String.t(),
           optional(:id) => node_id(),
+          optional(:style) => style(),
           optional(:events) => text_events()
         }
 
@@ -532,10 +533,12 @@ defmodule Guppy.IR do
   @spec text(String.t(), keyword()) :: text_node()
   def text(content, opts \\ []) when is_binary(content) and is_list(opts) do
     id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
     events = Keyword.get(opts, :events)
 
     %{kind: :text, content: content}
     |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
     |> maybe_put(:events, events)
   end
 
@@ -871,6 +874,7 @@ defmodule Guppy.IR do
   defp validate_node(%{kind: :text, content: content} = node) when is_binary(content) do
     with :ok <- validate_node_keys(node),
          :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_events(Map.get(node, :events), [:click]) do
       :ok
     end

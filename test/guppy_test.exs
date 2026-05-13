@@ -229,6 +229,9 @@ defmodule GuppyTest do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))
 
+    assert {:error, {:invalid_style_op, :not_a_style}} =
+             Guppy.IR.validate(Guppy.IR.text("hello", style: [:not_a_style]))
+
     scroll_ir =
       Guppy.IR.scroll(
         [Guppy.IR.text("inside scroll")],

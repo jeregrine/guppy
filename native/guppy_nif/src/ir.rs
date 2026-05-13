@@ -399,6 +399,7 @@ pub enum IrNode {
     Text {
         id: Option<String>,
         content: String,
+        style: DivStyle,
         click: Option<String>,
     },
     TextInput {
@@ -469,6 +470,7 @@ impl IrNode {
         Self::Text {
             id: None,
             content: content.into(),
+            style: Vec::new().into(),
             click: None,
         }
     }
@@ -487,6 +489,7 @@ impl IrNode {
             "text" => Ok(Self::Text {
                 id,
                 content: get_string_field(map, "content")?,
+                style: get_div_style(map)?,
                 click: get_click_event(map)?,
             }),
             "text_input" => Ok(Self::TextInput {
