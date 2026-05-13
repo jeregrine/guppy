@@ -227,7 +227,8 @@ defmodule Guppy.SuperDemo do
 
   defp handle_change(state, view_id, %{id: node_id, callback: callback_id, value: value}) do
     cond do
-      view_id == state.main_view_id and node_id in ["priority_low", "priority_medium", "priority_high"] ->
+      view_id == state.main_view_id and
+          node_id in ["priority_low", "priority_medium", "priority_high"] ->
         state
         |> Map.put(:selected_priority, value)
         |> Map.update!(:radio_changes, &(&1 + 1))

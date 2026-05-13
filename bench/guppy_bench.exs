@@ -62,7 +62,9 @@ defmodule Guppy.Bench do
       native_event_to_rerender_latency()
       native_render_latency()
     else
-      IO.puts("skip native event/rerender and render/request latency; rerun with --native to open a hidden GPUI window")
+      IO.puts(
+        "skip native event/rerender and render/request latency; rerun with --native to open a hidden GPUI window"
+      )
     end
   end
 
@@ -74,13 +76,16 @@ defmodule Guppy.Bench do
         ir = tree(count)
 
         [
-          {"~G template render #{count} nodes", fn ->
+          {"~G template render #{count} nodes",
+           fn ->
              Guppy.Bench.Template.render(%{items: items})
            end},
-          {"IR validation #{count} nodes", fn ->
+          {"IR validation #{count} nodes",
+           fn ->
              :ok = Guppy.IR.validate(ir)
            end},
-          {"ETF encode/decode proxy #{count} nodes", fn ->
+          {"ETF encode/decode proxy #{count} nodes",
+           fn ->
              ir |> :erlang.term_to_binary() |> :erlang.binary_to_term()
            end}
         ]
@@ -89,33 +94,42 @@ defmodule Guppy.Bench do
     kanban = kanban_tree(columns: 4, cards: 40)
 
     kanban_scenarios = [
-      {"kanban initial render tree build", fn ->
+      {"kanban initial render tree build",
+       fn ->
          kanban_tree(columns: 4, cards: 40)
        end},
-      {"kanban add card tree build", fn ->
+      {"kanban add card tree build",
+       fn ->
          add_kanban_card(kanban)
        end},
-      {"kanban move card tree build", fn ->
+      {"kanban move card tree build",
+       fn ->
          move_kanban_card(kanban)
        end},
-      {"kanban edit card tree build", fn ->
+      {"kanban edit card tree build",
+       fn ->
          edit_kanban_card(kanban)
        end},
-      {"kanban scroll interaction tree build", fn ->
+      {"kanban scroll interaction tree build",
+       fn ->
          kanban_tree(columns: 4, cards: 40, active_scroll_card: {1, 20})
        end},
-      {"event-to-rerender proxy latency", fn ->
+      {"event-to-rerender proxy latency",
+       fn ->
          :change
          |> event_payload()
          |> apply_event_to_kanban(kanban)
        end},
-      {"high-frequency event pressure: mouse_move payload encode", fn ->
+      {"high-frequency event pressure: mouse_move payload encode",
+       fn ->
          :mouse_move |> event_payload() |> :erlang.term_to_binary()
        end},
-      {"high-frequency event pressure: drag_move payload encode", fn ->
+      {"high-frequency event pressure: drag_move payload encode",
+       fn ->
          :drag_move |> event_payload() |> :erlang.term_to_binary()
        end},
-      {"high-frequency event pressure: scroll_wheel payload encode", fn ->
+      {"high-frequency event pressure: scroll_wheel payload encode",
+       fn ->
          :scroll_wheel |> event_payload() |> :erlang.term_to_binary()
        end}
     ]
@@ -161,7 +175,10 @@ defmodule Guppy.Bench do
             Guppy.IR.div(
               [
                 Guppy.IR.text("Card #{column}.#{card}", id: "card_title_#{column}_#{card}"),
-                Guppy.IR.text_input("", id: "card_edit_#{column}_#{card}", placeholder: "Edit card")
+                Guppy.IR.text_input("",
+                  id: "card_edit_#{column}_#{card}",
+                  placeholder: "Edit card"
+                )
               ],
               id: "card_#{column}_#{card}",
               style: kanban_card_style(active_scroll_card?),
@@ -238,7 +255,9 @@ defmodule Guppy.Bench do
     )
   rescue
     error ->
-      IO.puts("skip native event-to-rerender latency; benchmark setup failed: #{Exception.message(error)}")
+      IO.puts(
+        "skip native event-to-rerender latency; benchmark setup failed: #{Exception.message(error)}"
+      )
   end
 
   defp start_counter_window_scenario(_input) do
@@ -314,7 +333,9 @@ defmodule Guppy.Bench do
     )
   rescue
     error ->
-      IO.puts("skip native render/request latency; benchmark setup failed: #{Exception.message(error)}")
+      IO.puts(
+        "skip native render/request latency; benchmark setup failed: #{Exception.message(error)}"
+      )
   end
 
   defp maybe_close(view_id) do
