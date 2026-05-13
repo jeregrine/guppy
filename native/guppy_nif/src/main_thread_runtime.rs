@@ -38,6 +38,10 @@ pub(crate) enum MainThreadRequest {
         view_id: u64,
         reply: Sender<i32>,
     },
+    CloseAll {
+        reply: Sender<i32>,
+    },
+    CloseAllNoReply,
     ViewCount {
         reply: Sender<u64>,
     },
@@ -118,6 +122,16 @@ pub fn open_window(view_id: u64, ir: IrNode, options: WindowOptionsConfig) -> i3
             Err(_) => -1,
         }
     })
+}
+
+pub fn close_all_windows() -> i32 {
+    let view_ids = WINDOWS.with(|windows| windows.borrow().keys().copied().collect::<Vec<_>>());
+
+    for view_id in view_ids {
+        let _ = close_window(view_id);
+    }
+
+    1
 }
 
 pub fn close_window(view_id: u64) -> i32 {
@@ -252,6 +266,12 @@ fn handle_request(request: MainThreadRequest) {
         }
         MainThreadRequest::CloseWindow { view_id, reply } => {
             let _ = reply.send(close_window(view_id));
+        }
+        MainThreadRequest::CloseAll { reply } => {
+            let _ = reply.send(close_all_windows());
+        }
+        MainThreadRequest::CloseAllNoReply => {
+            let _ = close_all_windows();
         }
         MainThreadRequest::ViewCount { reply } => {
             let _ = reply.send(view_count());

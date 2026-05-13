@@ -52,6 +52,42 @@ defmodule Guppy.TimeoutRecordingNative do
   end
 end
 
+defmodule Guppy.RestartRecordingNative do
+  def request(agent, request, _timeout) do
+    Agent.update(agent, fn state -> update_state(state, request) end)
+
+    case request do
+      {:ping, []} -> {:ok, :pong}
+      {:view_count, []} -> {:ok, Agent.get(agent, &map_size(&1.views))}
+      _ -> :ok
+    end
+  end
+
+  defp update_state(state, {:set_event_target, [pid]}) do
+    %{state | event_targets: state.event_targets ++ [pid], current_event_target: pid}
+  end
+
+  defp update_state(state, {:open_window, [view_id, _ir, _opts]}) do
+    %{state | views: Map.put(state.views, view_id, true)}
+  end
+
+  defp update_state(state, {:render, [view_id, _ir]}) do
+    %{state | renders: [view_id | state.renders]}
+  end
+
+  defp update_state(state, {:close_window, [view_id]}) do
+    %{state | views: Map.delete(state.views, view_id)}
+  end
+
+  defp update_state(state, {:close_all, []}) do
+    %{state | views: %{}, close_all_count: state.close_all_count + 1}
+  end
+
+  defp update_state(state, request) do
+    %{state | unknown_requests: [request | state.unknown_requests]}
+  end
+end
+
 defmodule Guppy.TemplateExample do
   use Guppy.Component
 
@@ -922,6 +958,108 @@ defmodule GuppyTest do
 
     assert {:ok, :pong} = Guppy.Server.ping(server, 37)
     assert_receive {:guppy_test_native_request, {:ping, []}, 37}
+  end
+
+  test "native event target monitor clears dead target without clearing newer registrations" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        original_server = Guppy.server()
+
+        on_exit(fn ->
+          Guppy.Native.Nif.request(Guppy.Native.Nif, {:set_event_target, [original_server]})
+        end)
+
+        first_target = spawn(fn -> Process.sleep(:infinity) end)
+
+        assert :ok =
+                 Guppy.Native.Nif.request(Guppy.Native.Nif, {:set_event_target, [first_target]})
+
+        assert {:ok, {:some, first_generation}} = Guppy.Native.Nif.event_target_status()
+
+        second_target = spawn(fn -> Process.sleep(:infinity) end)
+
+        assert :ok =
+                 Guppy.Native.Nif.request(Guppy.Native.Nif, {:set_event_target, [second_target]})
+
+        assert {:ok, {:some, second_generation}} = Guppy.Native.Nif.event_target_status()
+        assert second_generation > first_generation
+
+        Process.exit(first_target, :kill)
+        Process.sleep(50)
+        assert {:ok, {:some, ^second_generation}} = Guppy.Native.Nif.event_target_status()
+
+        Process.exit(second_target, :kill)
+
+        wait_until(fn ->
+          status = apply(Guppy.Native.Nif, :event_target_status, [])
+          match?({:ok, :none}, status)
+        end)
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.Native.Nif.event_target_status()
+    end
+  end
+
+  test "server restart re-registers the event target and resets native views" do
+    server = :"guppy_restart_native_#{System.unique_integer([:positive])}"
+
+    {:ok, native_state} =
+      start_supervised(
+        {Agent,
+         fn ->
+           %{
+             event_targets: [],
+             current_event_target: nil,
+             views: %{99 => true},
+             renders: [],
+             close_all_count: 0,
+             unknown_requests: []
+           }
+         end}
+      )
+
+    supervisor_name = :"guppy_restart_supervisor_#{System.unique_integer([:positive])}"
+
+    {:ok, supervisor} =
+      start_supervised(%{
+        id: supervisor_name,
+        start:
+          {Supervisor, :start_link,
+           [
+             [
+               {Guppy.Server,
+                name: server,
+                native: Guppy.RestartRecordingNative,
+                native_server: native_state,
+                native_request_timeout: 25}
+             ],
+             [strategy: :one_for_one, name: supervisor_name]
+           ]}
+      })
+
+    first_server = Process.whereis(server)
+    assert is_pid(first_server)
+
+    assert %{event_targets: [^first_server], views: %{}, close_all_count: 1} =
+             Agent.get(native_state, & &1)
+
+    {:ok, view_id} = Guppy.Server.open_window(server, self(), Guppy.IR.text("restart"), [], 25)
+    assert view_id == 1
+    assert {:ok, 1} = Guppy.Server.view_count(server, 25)
+
+    Process.exit(first_server, :kill)
+
+    wait_until(fn ->
+      pid = Process.whereis(server)
+      is_pid(pid) and pid != first_server
+    end)
+
+    restarted_server = Process.whereis(server)
+
+    assert %{event_targets: [^first_server, ^restarted_server], views: %{}, close_all_count: 2} =
+             Agent.get(native_state, & &1)
+
+    assert Supervisor.which_children(supervisor) != []
   end
 
   test "native requests emit telemetry" do
@@ -1918,6 +2056,33 @@ defmodule GuppyTest do
 
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} = Guppy.open_window(Guppy.IR.text("hello"))
+    end
+  end
+
+  test "Guppy.Window reopens after Guppy.Server restarts" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        {:ok, pid} = Guppy.TestCounterWindow.start_link(0)
+        original_server = Guppy.server()
+        assert is_pid(original_server)
+
+        Process.exit(original_server, :kill)
+
+        wait_until(fn ->
+          server = Guppy.server()
+          is_pid(server) and server != original_server and Map.has_key?(Guppy.info().owners, pid)
+        end)
+
+        assert Process.alive?(pid)
+        assert %Guppy.Window{view_id: view_id, assigns: %{count: 0}} = Guppy.Window.state(pid)
+        assert is_integer(view_id)
+        assert Map.get(Guppy.info().views, view_id) == pid
+
+        send(Guppy.server(), {:guppy_native_event, view_id, :window_closed, :undefined})
+        wait_until(fn -> not Process.alive?(pid) end)
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.TestCounterWindow.start_link(0)
     end
   end
 

@@ -6,7 +6,9 @@ mod window_options;
 
 use crate::ir::IrNode;
 use crate::window_options::WindowOptionsConfig;
-use rustler::{Atom, Encoder, Env, Error, LocalPid, NifResult, Term};
+use rustler::{
+    Atom, Encoder, Env, Error, LocalPid, Monitor, NifResult, Resource, ResourceArc, Term,
+};
 use std::ffi::{CString, c_char, c_void};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Sender};
@@ -68,6 +70,7 @@ rustler::atoms! {
     navigate_back,
     navigate_forward,
     nil,
+    none,
     pixels,
     platform,
     pong,
@@ -79,6 +82,7 @@ rustler::atoms! {
     shift,
     shortcut,
     source_id,
+    some,
     unknown_view_id,
     value,
     window_close_requested,
@@ -91,7 +95,8 @@ static RUNTIME_RUNNING: AtomicBool = AtomicBool::new(false);
 static GUI_STARTED: AtomicBool = AtomicBool::new(false);
 static GUI_STATUS: Mutex<i32> = Mutex::new(0);
 static GUI_STATUS_COND: Condvar = Condvar::new();
-static EVENT_TARGET: Mutex<Option<LocalPid>> = Mutex::new(None);
+static EVENT_TARGET: Mutex<Option<EventTargetRegistration>> = Mutex::new(None);
+static EVENT_TARGET_GENERATION: AtomicU64 = AtomicU64::new(0);
 static OPEN_IR_TO_BINARY_COUNT: AtomicU64 = AtomicU64::new(0);
 static OPEN_IR_TO_BINARY_NANOS: AtomicU64 = AtomicU64::new(0);
 static OPEN_IR_DECODE_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -109,7 +114,11 @@ static NATIVE_EVENT_SEND_FAILURE_COUNT: AtomicU64 = AtomicU64::new(0);
 #[cfg(target_os = "macos")]
 static GUI_THREAD: Mutex<Option<usize>> = Mutex::new(None);
 
-fn load(_env: Env, _term: Term) -> bool {
+fn load(env: Env, _term: Term) -> bool {
+    if env.register::<EventTargetMonitor>().is_err() {
+        return false;
+    }
+
     main_thread_runtime::init_request_queue();
     RUNTIME_RUNNING.store(true, Ordering::SeqCst);
     maybe_start_main_thread_runtime()
@@ -236,10 +245,30 @@ fn native_open_window<'a>(
 }
 
 #[rustler::nif]
-fn native_set_event_target(pid: LocalPid) -> Atom {
+fn native_set_event_target(env: Env, pid: LocalPid) -> Atom {
+    let generation = EVENT_TARGET_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    let resource = ResourceArc::new(EventTargetMonitor { generation });
+    let monitor = env.monitor(&resource, &pid);
+
     let mut target = EVENT_TARGET.lock().expect("event target lock poisoned");
-    *target = Some(pid);
+    *target = Some(EventTargetRegistration {
+        pid,
+        generation,
+        _resource: resource,
+        _monitor: monitor,
+    });
+
     rustler::types::atom::ok()
+}
+
+#[rustler::nif]
+fn native_event_target_status<'a>(env: Env<'a>) -> Term<'a> {
+    let target = EVENT_TARGET.lock().expect("event target lock poisoned");
+
+    match target.as_ref() {
+        Some(target) => (some(), target.generation).encode(env),
+        None => none().encode(env),
+    }
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
@@ -282,6 +311,15 @@ fn native_close_window<'a>(env: Env<'a>, view_id: u64, timeout_ms: u64) -> Term<
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+fn native_close_all<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
+    let result = request_i32(timeout_ms, |reply| {
+        main_thread_runtime::MainThreadRequest::CloseAll { reply }
+    });
+
+    status_result(env, result, runtime_unavailable())
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
 fn native_view_count<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
     match request_u64(timeout_ms, |reply| {
         main_thread_runtime::MainThreadRequest::ViewCount { reply }
@@ -308,6 +346,33 @@ fn status_result<'a>(
 
 fn error_tuple<'a>(env: Env<'a>, reason: Atom) -> Term<'a> {
     (rustler::types::atom::error(), reason).encode(env)
+}
+
+struct EventTargetRegistration {
+    pid: LocalPid,
+    generation: u64,
+    _resource: ResourceArc<EventTargetMonitor>,
+    _monitor: Option<Monitor>,
+}
+
+struct EventTargetMonitor {
+    generation: u64,
+}
+
+impl Resource for EventTargetMonitor {
+    const IMPLEMENTS_DOWN: bool = true;
+
+    fn down<'a>(&'a self, _env: Env<'a>, pid: LocalPid, _monitor: Monitor) {
+        let mut target = EVENT_TARGET.lock().expect("event target lock poisoned");
+
+        if matches!(target.as_ref(), Some(current) if current.generation == self.generation && current.pid == pid)
+        {
+            *target = None;
+            let _ = main_thread_runtime::enqueue_request(
+                main_thread_runtime::MainThreadRequest::CloseAllNoReply,
+            );
+        }
+    }
 }
 
 enum NativeRequestResult<T> {
@@ -437,7 +502,7 @@ fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -
     {
         let target = {
             let target = EVENT_TARGET.lock().expect("event target lock poisoned");
-            *target
+            target.as_ref().map(|target| target.pid)
         };
 
         let Some(target) = target else {

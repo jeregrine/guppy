@@ -97,6 +97,10 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_event_target_status do
+    {:error, :nif_not_loaded}
+  end
+
   def native_render(_view_id, _ir) do
     {:error, :nif_not_loaded}
   end
@@ -110,6 +114,10 @@ defmodule Guppy.Native.Nif do
   end
 
   def native_close_window(_view_id, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
+  def native_close_all(_timeout) do
     {:error, :nif_not_loaded}
   end
 
@@ -149,6 +157,13 @@ defmodule Guppy.Native.Nif do
     end
   end
 
+  def event_target_status do
+    case load_status() do
+      :ok -> {:ok, native_event_target_status()}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp native_string_to_string(value) when is_binary(value), do: value
   defp native_string_to_string(value) when is_list(value), do: List.to_string(value)
 
@@ -170,6 +185,12 @@ defmodule Guppy.Native.Nif do
     end)
   end
 
+  defp dispatch({:event_target_status, []}, _timeout) do
+    with_loaded(fn ->
+      native_call(:event_target_status, fn -> {:ok, native_event_target_status()} end)
+    end)
+  end
+
   defp dispatch({:render, [view_id, ir]}, timeout) do
     with_loaded(fn ->
       native_call(:render, fn -> normalize_status(native_render(view_id, ir, timeout)) end)
@@ -179,6 +200,12 @@ defmodule Guppy.Native.Nif do
   defp dispatch({:close_window, [view_id]}, timeout) do
     with_loaded(fn ->
       native_call(:close_window, fn -> normalize_status(native_close_window(view_id, timeout)) end)
+    end)
+  end
+
+  defp dispatch({:close_all, []}, timeout) do
+    with_loaded(fn ->
+      native_call(:close_all, fn -> normalize_status(native_close_all(timeout)) end)
     end)
   end
 

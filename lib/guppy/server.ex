@@ -76,7 +76,7 @@ defmodule Guppy.Server do
       nif_path: Keyword.get(opts, :nif_path, Application.get_env(:guppy, :nif_path))
     }
 
-    {:ok, maybe_register_event_target(state)}
+    {:ok, state |> maybe_register_event_target() |> maybe_reset_native_views()}
   end
 
   @impl true
@@ -256,6 +256,14 @@ defmodule Guppy.Server do
            {:set_event_target, [self()]},
            state.native_request_timeout
          ) do
+      :ok -> state
+      {:ok, _payload} -> state
+      {:error, _reason} -> state
+    end
+  end
+
+  defp maybe_reset_native_views(state) do
+    case native_request(state, :close_all, {:close_all, []}, state.native_request_timeout) do
       :ok -> state
       {:ok, _payload} -> state
       {:error, _reason} -> state

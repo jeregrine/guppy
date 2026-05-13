@@ -267,6 +267,8 @@ The current callback shape is:
 - `handle_info(message, window)`
 - `render(window)`
 
+`Guppy.Window` monitors the Guppy runtime server. If the supervised server restarts, native windows are treated as disposable projections; the window process reopens from its current assigns and renders again. Lower-level callers using `Guppy.open_window/1..4` own their own recovery policy and should reopen explicitly after a runtime/server restart.
+
 Helpers imported by `use Guppy.Window` include:
 
 - `assign/2`

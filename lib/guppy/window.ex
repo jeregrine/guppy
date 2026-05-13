@@ -41,7 +41,7 @@ defmodule Guppy.Window do
 
   defmodule State do
     @moduledoc false
-    defstruct module: nil, window: nil
+    defstruct module: nil, window: nil, server_monitor: nil
   end
 
   defmacro __using__(_opts) do
@@ -74,7 +74,12 @@ defmodule Guppy.Window do
 
         case Guppy.open_window(ir, self(), window_options) do
           {:ok, view_id} ->
-            {:ok, %State{module: module, window: %{window | view_id: view_id}}}
+            {:ok,
+             %State{
+               module: module,
+               window: %{window | view_id: view_id},
+               server_monitor: monitor_server()
+             }}
 
           {:error, reason} ->
             {:stop, reason}
@@ -83,6 +88,18 @@ defmodule Guppy.Window do
       {:stop, reason} ->
         {:stop, reason}
     end
+  end
+
+  def handle_window_message(
+        _module,
+        {:DOWN, monitor_ref, :process, _pid, _reason},
+        %State{server_monitor: monitor_ref} = state
+      ) do
+    reopen(state)
+  end
+
+  def handle_window_message(_module, :guppy_reopen_after_server_restart, %State{} = state) do
+    reopen(state)
   end
 
   def handle_window_message(
@@ -171,6 +188,38 @@ defmodule Guppy.Window do
 
   defp apply_callback(state, {:stop, reason, window}, _window_closed?) do
     {:stop, reason, %{state | window: window}}
+  end
+
+  defp reopen(%State{module: module, window: window, server_monitor: old_monitor} = state) do
+    if is_reference(old_monitor) do
+      Process.demonitor(old_monitor, [:flush])
+    end
+
+    ir = module.render(window)
+    window_options = Map.get(window.private, :window_options, [])
+
+    case safe_open_window(ir, window_options) do
+      {:ok, view_id} ->
+        {:noreply,
+         %{state | window: %{window | view_id: view_id}, server_monitor: monitor_server()}}
+
+      {:error, _reason} ->
+        Process.send_after(self(), :guppy_reopen_after_server_restart, 50)
+        {:noreply, %{state | window: %{window | view_id: nil}, server_monitor: monitor_server()}}
+    end
+  end
+
+  defp safe_open_window(ir, window_options) do
+    Guppy.open_window(ir, self(), window_options)
+  catch
+    :exit, _reason -> {:error, :server_unavailable}
+  end
+
+  defp monitor_server do
+    case Guppy.server() do
+      pid when is_pid(pid) -> Process.monitor(pid)
+      nil -> nil
+    end
   end
 
   defp rerender(%State{window: %__MODULE__{view_id: view_id} = window, module: module} = state) do
