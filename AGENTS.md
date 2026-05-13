@@ -156,6 +156,7 @@ Still missing higher-value nodes/primitives:
 
 - full editor parity and advanced text layout beyond current rich text runs/highlights
 - full popover parity / nested overlay edge cases
+- advanced grid/data-table semantics beyond current grid style ops
 
 ## Current preferred authoring model
 

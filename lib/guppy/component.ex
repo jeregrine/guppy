@@ -298,6 +298,9 @@ defmodule Guppy.Component do
       opacity_style = parse_opacity_style(token) ->
         opacity_style
 
+      grid_style = parse_grid_style(token) ->
+        grid_style
+
       flag_style = parse_flag_style(token) ->
         flag_style
 
@@ -342,6 +345,18 @@ defmodule Guppy.Component do
   defp parse_opacity_style(token) do
     case Regex.run(~r/^opacity-\[([0-9]+(?:\.[0-9]+)?)\]$/, token, capture: :all_but_first) do
       [number] -> {:opacity, parse_number!(number)}
+      _ -> nil
+    end
+  end
+
+  defp parse_grid_style(token) do
+    case Regex.run(~r/^(grid-cols|grid-rows|col-span|row-span)-\[([0-9]+)\]$/, token,
+           capture: :all_but_first
+         ) do
+      ["grid-cols", integer] -> {:grid_cols, String.to_integer(integer)}
+      ["grid-rows", integer] -> {:grid_rows, String.to_integer(integer)}
+      ["col-span", integer] -> {:col_span, String.to_integer(integer)}
+      ["row-span", integer] -> {:row_span, String.to_integer(integer)}
       _ -> nil
     end
   end

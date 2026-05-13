@@ -528,6 +528,21 @@ defmodule Guppy.ServerNativeTest do
         assert :ok =
                  Guppy.render(
                    view_id,
+                   Guppy.IR.div(
+                     [
+                       Guppy.IR.div([Guppy.IR.text("Header")], style: [:col_span_full]),
+                       Guppy.IR.div([Guppy.IR.text("Content")],
+                         style: [{:col_span, 3}, {:row_span, 2}]
+                       )
+                     ],
+                     id: "native_grid",
+                     style: [:grid, {:grid_cols, 5}, {:grid_rows, 3}, :gap_1]
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
                    Guppy.IR.rich_text(
                      [
                        %{text: "Native ", style: [:font_bold]},

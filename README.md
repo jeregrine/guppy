@@ -290,7 +290,7 @@ Stateful style lists are explicit:
 - `active_style`
 - `disabled_style`
 
-Text nodes and div-like nodes support the current style-token surface where applicable.
+Text nodes and div-like nodes support the current style-token surface where applicable. Grid style ops include `:grid`, `{:grid_cols, n}`, `{:grid_rows, n}`, `{:col_span, n}`, `:col_span_full`, `{:row_span, n}`, and `:row_span_full`.
 
 ## Distribution
 
@@ -317,7 +317,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 - stateful controls inside generic virtualized list rows and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
-- animation, gradient, grid, canvas/custom painting, pattern painting, and menu APIs
+- animation, gradient, canvas/custom painting, pattern painting, and menu APIs
 - published precompiled native artifacts
 
 ## Hacking on Guppy

@@ -29,7 +29,8 @@ defmodule Guppy.IR do
   @type color_token :: :red | :green | :blue | :yellow | :black | :white | :gray
 
   @type style_flag ::
-          :flex
+          :grid
+          | :flex
           | :flex_col
           | :flex_row
           | :flex_wrap
@@ -40,6 +41,8 @@ defmodule Guppy.IR do
           | :flex_shrink
           | :flex_shrink_0
           | :flex_1
+          | :col_span_full
+          | :row_span_full
           | :size_full
           | :w_full
           | :h_full
@@ -165,6 +168,10 @@ defmodule Guppy.IR do
           | {:text_color_hex, String.t()}
           | {:border_color_hex, String.t()}
           | {:opacity, number()}
+          | {:grid_cols, pos_integer()}
+          | {:grid_rows, pos_integer()}
+          | {:col_span, pos_integer()}
+          | {:row_span, pos_integer()}
           | {:w_px, number()}
           | {:w_rem, number()}
           | {:w_frac, number()}
@@ -458,6 +465,7 @@ defmodule Guppy.IR do
           | textarea_node()
 
   @style_flag_tokens [
+    :grid,
     :flex,
     :flex_col,
     :flex_row,
@@ -469,6 +477,8 @@ defmodule Guppy.IR do
     :flex_shrink,
     :flex_shrink_0,
     :flex_1,
+    :col_span_full,
+    :row_span_full,
     :size_full,
     :w_full,
     :h_full,
@@ -592,6 +602,7 @@ defmodule Guppy.IR do
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
   @fraction_value_tokens [:w_frac, :h_frac]
   @scrollbar_value_tokens [:scrollbar_width_px, :scrollbar_width_rem]
+  @grid_value_tokens [:grid_cols, :grid_rows, :col_span, :row_span]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
 
   @spec text(String.t(), keyword()) :: text_node()
@@ -1564,6 +1575,10 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:opacity, value})
        when is_number(value) and value >= 0.0 and value <= 1.0,
+       do: :ok
+
+  defp validate_style_op({key, value})
+       when key in @grid_value_tokens and is_integer(value) and value >= 1 and value <= 65_535,
        do: :ok
 
   defp validate_style_op({key, value})

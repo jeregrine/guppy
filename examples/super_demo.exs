@@ -1637,7 +1637,31 @@ defmodule Guppy.SuperDemo do
       [
         Guppy.IR.text("Flex layout behavior tokens"),
         Guppy.IR.text(
-          "This page exercises wrap/nowrap, grow/shrink, and spacing tokens in the ordered style list."
+          "This page exercises wrap/nowrap, grow/shrink, grid, and spacing tokens in the ordered style list."
+        ),
+        Guppy.IR.div(
+          [
+            grid_cell("grid_header", "Header", [
+              :col_span_full,
+              {:bg, :white},
+              {:text_color, :black}
+            ]),
+            grid_cell("grid_nav", "Nav", [{:col_span, 1}, {:row_span, 2}, {:bg, :blue}]),
+            grid_cell("grid_content", "Content", [
+              {:col_span, 3},
+              {:row_span, 2},
+              {:bg, :green},
+              {:text_color, :black}
+            ]),
+            grid_cell("grid_side", "Aside", [{:col_span, 1}, {:row_span, 2}, {:bg, :red}]),
+            grid_cell("grid_footer", "Footer", [
+              :col_span_full,
+              {:bg, :black},
+              {:text_color, :white}
+            ])
+          ],
+          id: "grid_examples",
+          style: [:grid, {:grid_cols, 5}, {:grid_rows, 4}, :gap_1, :w_full, {:h_px, 220}, :p_2]
         ),
         Guppy.IR.div(
           [
@@ -2265,6 +2289,16 @@ defmodule Guppy.SuperDemo do
       id: id,
       style:
         [:p_2, :h_32, :rounded_md, :border_1, {:border_color, :white}, {:text_color, :white}] ++
+          style
+    )
+  end
+
+  defp grid_cell(id, label, style) do
+    Guppy.IR.div(
+      [Guppy.IR.text(label, id: "#{id}_label")],
+      id: id,
+      style:
+        [:flex, :items_center, :justify_center, :rounded_md, :border_1, {:border_color, :white}] ++
           style
     )
   end

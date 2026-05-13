@@ -10,6 +10,7 @@ where
 {
     for op in style.iter() {
         element = match op {
+            StyleOp::Grid => element.grid(),
             StyleOp::Flex => element.flex(),
             StyleOp::FlexCol => element.flex_col(),
             StyleOp::FlexRow => element.flex_row(),
@@ -21,6 +22,8 @@ where
             StyleOp::FlexShrink => element.flex_shrink(),
             StyleOp::FlexShrink0 => element.flex_shrink_0(),
             StyleOp::Flex1 => element.flex_1(),
+            StyleOp::ColSpanFull => element.col_span_full(),
+            StyleOp::RowSpanFull => element.row_span_full(),
             StyleOp::SizeFull => element.size_full(),
             StyleOp::WFull => element.w_full(),
             StyleOp::HFull => element.h_full(),
@@ -146,6 +149,10 @@ where
             StyleOp::TextColorHex(value) => element.text_color(hex_color_to_color(value)),
             StyleOp::BorderColorHex(value) => element.border_color(hex_color_to_color(value)),
             StyleOp::Opacity(value) => element.opacity(value.to_owned()),
+            StyleOp::GridCols(value) => element.grid_cols(*value),
+            StyleOp::GridRows(value) => element.grid_rows(*value),
+            StyleOp::ColSpan(value) => element.col_span(*value),
+            StyleOp::RowSpan(value) => element.row_span(*value),
             StyleOp::WPx(value) => element.w(px(value.to_owned())),
             StyleOp::WRem(value) => element.w(rems(value.to_owned())),
             StyleOp::WFrac(value) => element.w(relative(value.to_owned())),
@@ -209,7 +216,8 @@ pub(crate) fn apply_refinement_style(
 ) -> StyleRefinement {
     for op in ops.iter() {
         style = match op {
-            StyleOp::Flex
+            StyleOp::Grid
+            | StyleOp::Flex
             | StyleOp::FlexCol
             | StyleOp::FlexRow
             | StyleOp::FlexWrap
@@ -220,6 +228,8 @@ pub(crate) fn apply_refinement_style(
             | StyleOp::FlexShrink
             | StyleOp::FlexShrink0
             | StyleOp::Flex1
+            | StyleOp::ColSpanFull
+            | StyleOp::RowSpanFull
             | StyleOp::SizeFull
             | StyleOp::WFull
             | StyleOp::HFull
@@ -275,7 +285,11 @@ pub(crate) fn apply_refinement_style(
             | StyleOp::OverflowYScroll
             | StyleOp::OverflowHidden
             | StyleOp::OverflowXHidden
-            | StyleOp::OverflowYHidden => style,
+            | StyleOp::OverflowYHidden
+            | StyleOp::GridCols(_)
+            | StyleOp::GridRows(_)
+            | StyleOp::ColSpan(_)
+            | StyleOp::RowSpan(_) => style,
             StyleOp::TextLeft => style.text_left(),
             StyleOp::TextCenter => style.text_center(),
             StyleOp::TextRight => style.text_right(),

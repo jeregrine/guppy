@@ -47,6 +47,21 @@ defmodule Guppy.IRTest do
       )
 
     assert :ok = Guppy.IR.validate(scroll_ir)
+
+    grid_ir =
+      Guppy.IR.div([],
+        style: [
+          :grid,
+          {:grid_cols, 5},
+          {:grid_rows, 5},
+          {:col_span, 3},
+          :col_span_full,
+          {:row_span, 2},
+          :row_span_full
+        ]
+      )
+
+    assert :ok = Guppy.IR.validate(grid_ir)
     assert scroll_ir.axis == :both
 
     image_ir =
@@ -644,6 +659,12 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:bg_hex, "#12"}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:bg_hex, "#12"}]))
+
+    assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))
+
+    assert {:error, {:invalid_style_op, {:col_span, 70_000}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:col_span, 70_000}]))
 
     assert {:error, {:invalid_style_op, :bogus}} =
              Guppy.IR.validate(Guppy.IR.div([], active_style: [:bogus]))

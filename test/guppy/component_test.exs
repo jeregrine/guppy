@@ -74,9 +74,13 @@ defmodule Guppy.ComponentTest do
              %{text: "intro", style: [{:text_color, :yellow}]}
            ]
 
+    assert {:col_span, 3} in rich_intro.style
+    assert {:row_span, 2} in rich_intro.style
+
     assert button.kind == :button
     assert button.id == "save_button"
     assert button.label == "Save"
+    assert :col_span_full in button.style
     assert button.focus_visible_style == [{:border_color, :yellow}, :shadow_lg]
     assert button.events == %{click: "save"}
 

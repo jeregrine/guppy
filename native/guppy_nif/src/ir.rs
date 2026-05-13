@@ -162,6 +162,7 @@ pub struct ShortcutBinding {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
+    Grid,
     Flex,
     FlexCol,
     FlexRow,
@@ -173,6 +174,8 @@ pub enum StyleOp {
     FlexShrink,
     FlexShrink0,
     Flex1,
+    ColSpanFull,
+    RowSpanFull,
     SizeFull,
     WFull,
     HFull,
@@ -296,6 +299,10 @@ pub enum StyleOp {
     TextColorHex(String),
     BorderColorHex(String),
     Opacity(f32),
+    GridCols(u16),
+    GridRows(u16),
+    ColSpan(u16),
+    RowSpan(u16),
     WPx(f32),
     WRem(f32),
     WFrac(f32),
@@ -1418,6 +1425,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "text_color_hex" => Ok(StyleOp::TextColorHex(term_to_string(&elements[1])?)),
                 "border_color_hex" => Ok(StyleOp::BorderColorHex(term_to_string(&elements[1])?)),
                 "opacity" => Ok(StyleOp::Opacity(parse_f32(&elements[1])?)),
+                "grid_cols" => Ok(StyleOp::GridCols(parse_grid_u16(&elements[1])?)),
+                "grid_rows" => Ok(StyleOp::GridRows(parse_grid_u16(&elements[1])?)),
+                "col_span" => Ok(StyleOp::ColSpan(parse_grid_u16(&elements[1])?)),
+                "row_span" => Ok(StyleOp::RowSpan(parse_grid_u16(&elements[1])?)),
                 "w_px" => Ok(StyleOp::WPx(parse_f32(&elements[1])?)),
                 "w_rem" => Ok(StyleOp::WRem(parse_f32(&elements[1])?)),
                 "w_frac" => Ok(StyleOp::WFrac(parse_f32(&elements[1])?)),
@@ -1435,6 +1446,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
 
 fn parse_style_flag(token: &str) -> Result<StyleOp, String> {
     match token {
+        "grid" => Ok(StyleOp::Grid),
         "flex" => Ok(StyleOp::Flex),
         "flex_col" => Ok(StyleOp::FlexCol),
         "flex_row" => Ok(StyleOp::FlexRow),
@@ -1446,6 +1458,8 @@ fn parse_style_flag(token: &str) -> Result<StyleOp, String> {
         "flex_shrink" => Ok(StyleOp::FlexShrink),
         "flex_shrink_0" => Ok(StyleOp::FlexShrink0),
         "flex_1" => Ok(StyleOp::Flex1),
+        "col_span_full" => Ok(StyleOp::ColSpanFull),
+        "row_span_full" => Ok(StyleOp::RowSpanFull),
         "size_full" => Ok(StyleOp::SizeFull),
         "w_full" => Ok(StyleOp::WFull),
         "h_full" => Ok(StyleOp::HFull),
@@ -1571,6 +1585,23 @@ fn parse_atom_color(term: &Term) -> Result<ColorToken, String> {
         Term::Atom(atom) => parse_color_token(&atom.name),
         other => Err(format!("expected style tuple value atom, got {other}")),
     }
+}
+
+fn parse_grid_u16(term: &Term) -> Result<u16, String> {
+    let value = match term {
+        Term::FixInteger(value) => value.value,
+        Term::BigInteger(value) => value
+            .value
+            .clone()
+            .try_into()
+            .map_err(|_| format!("expected positive grid integer <= 65535, got {term}"))?,
+        other => return Err(format!("expected positive grid integer, got {other}")),
+    };
+
+    u16::try_from(value)
+        .ok()
+        .filter(|value| *value >= 1)
+        .ok_or_else(|| format!("expected positive grid integer <= 65535, got {term}"))
 }
 
 fn parse_f32(term: &Term) -> Result<f32, String> {
