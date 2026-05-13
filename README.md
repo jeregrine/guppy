@@ -1,32 +1,115 @@
 # Guppy
 
-Guppy is an Elixir UI framework that opens real native windows through GPUI.
+Guppy is an Elixir UI framework for native desktop windows. Your Elixir process owns state, renders it to a small IR tree, and a Rustler NIF renders that tree through GPUI.
 
-The basic idea is simple:
+```elixir
+defmodule CounterWindow do
+  use Guppy.Window
 
-- your Elixir process owns the UI state
-- your Elixir code renders that state into a tree-shaped IR
-- native code turns that IR into GPUI elements
-- GPUI handles layout, paint, focus, scrolling, and windows
-- native events come back to the owning Elixir process
+  def mount(_arg, window) do
+    {:ok,
+     window
+     |> put_window_opts(
+       window_bounds: [width: 760, height: 560],
+       titlebar: [title: "Counter"]
+     )
+     |> assign(:count, 0)}
+  end
 
-Guppy is still unreleased, but it has a useful baseline: it can load a native NIF, boot GPUI on macOS, open real windows, render full trees, preserve retained native state where needed, and route native events back into BEAM processes. The project is currently in stabilization/maintenance mode unless new feature work is explicitly scoped.
+  def render(window) do
+    count = window.assigns.count
 
-## What Guppy feels like today
+    ~G"""
+    <div class="flex flex-col gap-2 p-4 bg-[#0f172a] text-[#f8fafc]">
+      <text id="count_label" class="text-2xl font-bold">count = {count}</text>
+      <button id="increment_button" click="increment" class="p-2 rounded-md border-1">
+        Increment
+      </button>
+    </div>
+    """
+  end
 
-If you want the shortest honest description:
+  def handle_event("increment", _event_data, window) do
+    {:noreply, update(window, :count, &(&1 + 1))}
+  end
+end
 
-- **state lives in Elixir**
-- **rendering is full-tree replacement**
-- **windows can be owned by normal Elixir processes**
-- **the preferred authoring path is `use Guppy.Window` + `~G`**
-- **the low-level IR stays close to GPUI concepts**
+{:ok, _pid} = CounterWindow.start_link(:ok)
+```
 
-This means Guppy is a good fit for exploring a LiveView-style desktop UI loop, while still keeping the native renderer fairly explicit and predictable.
+## Status
 
-## Current status
+Guppy is unreleased and macOS-first today. It can open native GPUI windows, render full trees, keep retained native state such as focus/scroll/text-input state by stable node identity, and route native events back to BEAM processes.
 
-Guppy currently supports these native node kinds:
+The preferred authoring model is:
+
+- `use Guppy.Window`
+- assign/update helpers
+- `~G` templates
+- local function components
+- full-tree rerendering from Elixir-owned state
+
+Guppy is not trying to expose all of GPUI. It currently targets a documented subset; see [`docs/gpui-compliance.md`](docs/gpui-compliance.md) for the compatibility matrix.
+
+## Quick start
+
+Build and install the native library:
+
+```bash
+mix guppy.native.build
+```
+
+Run a small example:
+
+```bash
+mix run examples/hello_world.exs
+```
+
+For interactive demos, especially scroll-heavy examples, use a release native build:
+
+```bash
+mix guppy.native.build --release
+mix run examples/super_demo.exs
+```
+
+Run tests:
+
+```bash
+mix test
+```
+
+Full local check suite:
+
+```bash
+scripts/check
+```
+
+## Examples
+
+```bash
+mix guppy.native.build --release
+mix run examples/super_demo.exs
+```
+
+Broad tour of the bridge: multiple node kinds, multiple windows, scrolling, focus, pointer/keyboard events, actions, shortcuts, drag/drop, and owner cleanup.
+
+```bash
+mix guppy.native.build --release
+mix run examples/kanban_todo.exs
+```
+
+Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render/1`, `~G`, and local function components.
+
+```bash
+mix guppy.native.build
+mix run examples/hello_world.exs
+```
+
+Shortest bring-up smoke test.
+
+## Supported UI surface
+
+Native node kinds:
 
 - `text`
 - `div`
@@ -42,147 +125,27 @@ Guppy currently supports these native node kinds:
 - `icon`
 - `spacer`
 
-Current native event coverage includes:
+Template tags:
 
-- click
-- hover
-- tooltip display on div nodes
-- focus / blur
-- key down / key up
-- shortcut-dispatched actions
-- context menu
-- drag start / drag move / drop
-- mouse down / mouse up / mouse move
-- scroll wheel
-- checkbox change
-- radio change
-- uniform list item click
-- popover trigger/close click callbacks
-- text input / textarea change
-- window close requested / window closed
+- `<div>`
+- `<text>`
+- `<button>`
+- `<checkbox>`
+- `<radio>`
+- `<scroll>`
+- `<uniform_list />`
+- `<popover>`
+- `<image />`
+- `<icon />`
+- `<spacer />`
+- `<text_input />`
+- `<textarea />`
 
-`window_close_requested` is informational in the current API: native close requests are not vetoable, and a successful close is followed by `window_closed`.
+Native event coverage includes click, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio changes, uniform-list item clicks, popover callbacks, text input/textarea changes, and window close lifecycle events.
 
-That is still intentionally selective. Guppy is not pretending to be a complete widget toolkit yet.
+`window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 
-Guppy is **not** all of GPUI from Elixir. It is an Elixir-owned state/render loop targeting a documented GPUI subset. The tracked compatibility matrix lives in [`docs/gpui-compliance.md`](docs/gpui-compliance.md). New primitives are not planned speculatively; they should only be added when explicitly prioritized and considered supported when they have:
-
-- Elixir IR validation
-- Rust decode support
-- native render implementation
-- event behavior if interactive
-- retained-state behavior if applicable
-- unit or integration tests
-- example or compliance-port coverage
-
-## Quick start
-
-Build and install the native library:
-
-```bash
-cd guppy
-mix guppy.native.build
-```
-
-For interactive examples, especially scroll-heavy ones, use a release native build:
-
-```bash
-cd guppy
-mix guppy.native.build --release
-```
-
-Run tests:
-
-```bash
-cd guppy
-mix test
-```
-
-Sanity check the native runtime:
-
-```bash
-cd guppy
-mix run -e 'IO.inspect(Guppy.Native.Nif.load_status()); IO.inspect(Guppy.native_build_info()); IO.inspect(Guppy.native_runtime_status()); IO.inspect(Guppy.native_gui_status()); IO.inspect(Guppy.ping())'
-```
-
-A healthy result looks roughly like:
-
-```elixir
-:ok
-{:ok, "guppy_nif_rust_core"}
-{:ok, "started"}
-{:ok, "started"}
-{:ok, :pong}
-```
-
-## Recommended examples
-
-### Best overall demo
-
-```bash
-cd guppy
-mix guppy.native.build --release
-mix run examples/super_demo.exs
-```
-
-This gives the broadest tour of the bridge today:
-
-- multiple node kinds
-- multiple windows
-- scroll behavior
-- focus behavior
-- pointer and keyboard events
-- actions and shortcuts
-- drag and drop
-- owner cleanup
-
-### Flagship app-style example
-
-```bash
-cd guppy
-mix guppy.native.build --release
-mix run examples/kanban_todo.exs
-```
-
-This is the best example of the preferred Elixir authoring model:
-
-- `use Guppy.Window`
-- assign-based state
-- `handle_event/3`
-- `render/1`
-- `~G` templates
-- local function components
-- full-tree rerendering from Elixir-owned state
-
-### Small bring-up example
-
-```bash
-cd guppy
-mix guppy.native.build
-mix run examples/hello_world.exs
-```
-
-Use this when you want the shortest happy-path check.
-
-## The main mental model
-
-A useful way to think about Guppy today:
-
-1. your Elixir process owns the state
-2. Guppy opens a native window for that process
-3. your process renders a full IR tree
-4. native decodes the IR and renders it through `BridgeView`
-5. retained native bits like focus handles, scroll handles, and text inputs are reused by stable node identity
-6. native events go back to the owning process
-7. your process updates assigns and renders the next full tree
-
-Important invariant:
-
-- **rendering is full-tree replacement from Elixir's point of view**
-
-That is the right thing to keep in your head while reading or extending the system.
-
-## Public API worth knowing
+## Public API
 
 Top-level API:
 
@@ -221,55 +184,12 @@ IR helpers:
 
 ## Window processes
 
-`Guppy.Window` is the preferred Elixir-side abstraction.
-
-A window module looks like this:
-
-```elixir
-defmodule CounterWindow do
-  use Guppy.Window
-
-  def mount(_arg, window) do
-    {:ok,
-     window
-     |> put_window_opts(
-       window_bounds: [width: 760, height: 560],
-       titlebar: [title: "Counter"]
-     )
-     |> assign(:count, 0)}
-  end
-
-  def render(window) do
-    count = window.assigns.count
-
-    ~G"""
-    <div class="flex flex-col gap-2 p-4 bg-[#0f172a] text-[#f8fafc]">
-      <text id="count_label">count = {count}</text>
-      <button id="increment_button" click="increment">Increment</button>
-    </div>
-    """
-  end
-
-  def handle_event("increment", _event_data, window) do
-    {:noreply, update(window, :count, &(&1 + 1))}
-  end
-end
-```
-
-Start it like any normal process:
-
-```elixir
-{:ok, pid} = CounterWindow.start_link(:ok)
-```
-
-The current callback shape is:
+`Guppy.Window` modules use these callbacks:
 
 - `mount(arg, window)`
 - `handle_event(event_name, event_data, window)`
 - `handle_info(message, window)`
 - `render(window)`
-
-`Guppy.Window` monitors the Guppy runtime server. If the supervised server restarts, native windows are treated as disposable projections; the window process reopens from its current assigns and renders again. Lower-level callers using `Guppy.open_window/1..4` own their own recovery policy and should reopen explicitly after a runtime/server restart.
 
 Helpers imported by `use Guppy.Window` include:
 
@@ -279,29 +199,13 @@ Helpers imported by `use Guppy.Window` include:
 - `put_private/3`
 - `put_window_opts/2`
 
+`Guppy.Window` monitors the Guppy runtime server. If the supervised server restarts, the window process reopens from its current assigns. Lower-level callers using `Guppy.open_window/1..4` own their own recovery policy.
+
 ## Templates and components
 
-`Guppy.Component` provides the `~G` sigil.
+`Guppy.Component` provides `~G` templates and first-pass function components.
 
-Built-in template tags currently include:
-
-- `<div>`
-- `<text>`
-- `<button>`
-- `<checkbox>`
-- `<radio>`
-- `<scroll>`
-- `<uniform_list />`
-- `<popover>`
-- `<image />`
-- `<icon />`
-- `<spacer />`
-- `<text_input />`
-- `<textarea />`
-
-It also supports first-pass function components.
-
-Local lower-case tags call a function in the same module with assigns:
+Local lower-case tags call a function in the same module:
 
 ```elixir
 <stat_badge stat={stat} />
@@ -315,16 +219,11 @@ Remote tags call `render/1` on the referenced module:
 
 Nested content is passed as `@children`.
 
-Components can declare props with `prop/3` and `prop/4` for:
-
-- required props
-- defaults
-- unknown prop rejection
-- simple type validation
+Components can declare props with `prop/3` and `prop/4` for required props, defaults, unknown prop rejection, and simple type validation.
 
 ## Window options
 
-You can configure native GPUI window behavior during `mount/2`:
+Configure native GPUI window behavior during `mount/2`:
 
 ```elixir
 def mount(_arg, window) do
@@ -346,7 +245,7 @@ def mount(_arg, window) do
 end
 ```
 
-Current supported window options match the `gpui = 0.2.2` surface Guppy is actually using:
+Supported options match the `gpui = 0.2.2` surface Guppy uses:
 
 - `window_bounds: [width: integer, height: integer, x: integer, y: integer, state: :windowed | :maximized | :fullscreen]`
 - `titlebar: false | [title: String.t(), appears_transparent: boolean, traffic_light_position: [x: non_neg_integer, y: non_neg_integer]]`
@@ -363,25 +262,17 @@ Current supported window options match the `gpui = 0.2.2` surface Guppy is actua
 - `window_decorations: :server | :client`
 - `tabbing_identifier: String.t()`
 
-Notes:
+## Styling
 
-- omitted options use GPUI defaults
-- validation happens on the Elixir side before going native
-- Guppy intentionally tracks the real crates.io dependency surface, not newer upstream-only APIs
-
-## Styling today
-
-Styling is explicit and ordered.
-
-A style is an ordered list of style ops, not a map:
+Styles are ordered lists of style ops:
 
 ```elixir
 style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 ```
 
-Later ops win over earlier ones, and that order is preserved through the bridge.
+Later ops win over earlier ones, and order is preserved through the bridge.
 
-Stateful style lists are also explicit:
+Stateful style lists are explicit:
 
 - `hover_style`
 - `focus_style`
@@ -389,97 +280,45 @@ Stateful style lists are also explicit:
 - `active_style`
 - `disabled_style`
 
-This is intentionally simple and close to the native renderer.
+Text nodes and div-like nodes support the current style-token surface where applicable.
 
-## Identity and retained state
+## Distribution
 
-Retained native behavior depends on stable node identity.
+Guppy is source-build first. Use `mix guppy.native.build` to build and copy the NIF into `priv/native/`. The macOS source-build path and clean-install/load smoke are covered by CI.
 
-Rules today:
-
-- explicit `id` wins
-- otherwise Guppy generates a stable path-based id like `guppy-{view_id}-{path}`
-
-That identity is what lets native safely retain and prune things like:
-
-- scroll handles
-- focus handles
-- focus subscriptions
-- text input entities
-
-If a node has stateful or retained native behavior, prefer explicit ids.
-
-## Performance note
-
-For interactive demos, especially big scrollable UIs like the kanban example, use:
-
-```bash
-mix guppy.native.build --release
-```
-
-Debug native builds are much slower and can make scrolling feel worse than the architecture really is.
-
-## Distribution status
-
-Guppy is source-build first today. Use `mix guppy.native.build` to build and copy the NIF into `priv/native/`. The macOS source-build path is covered by CI. Precompiled artifacts are deferred until release/publishing work is explicitly prioritized and CI can build and load-test each advertised target.
-
-See `docs/distribution.md` for the current target assumptions and precompiled artifact plan.
-
-## Project layout
-
-Key files:
-
-- `lib/guppy.ex` — public API
-- `lib/guppy/server.ex` — ownership, lifecycle, and event routing
-- `lib/guppy/window.ex` — per-window Elixir process abstraction
-- `lib/guppy/component.ex` — `~G` and component helpers
-- `lib/guppy/component/compiler.ex` — template compiler
-- `lib/guppy/native/nif.ex` — direct Elixir wrapper around the NIF module
-- `lib/guppy/ir.ex` — Elixir IR validation/helpers
-- `native/guppy_nif/src/lib.rs` — Rustler NIF entrypoints, BEAM interop, event encoding, and request path
-- `native/guppy_nif/src/main_thread_runtime.rs` — GPUI main-thread runtime and window registry
-- `native/guppy_nif/src/bridge_view.rs` — root native renderer
-- `native/guppy_nif/src/bridge_view/` — per-node renderers, style mapping, events, identity
-- `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
-- `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
-- `docs/distribution.md` — source-build and future precompiled artifact plan
+Precompiled artifacts are deferred until release/publishing work is explicitly prioritized and CI can build and load-test each advertised target. See [`docs/distribution.md`](docs/distribution.md).
 
 ## Known limits
 
-Still missing, intentionally narrow, or deferred unless explicitly scoped:
+Still missing or intentionally narrow unless explicitly scoped:
 
-- full editor/rich-text parity and richer text runs/highlights
+- full editor/rich-text parity beyond current text style-token support
 - select/dropdown primitive with native-quality anchored overlay behavior
 - fully generic list item renderers and variable-height list parity
 - full popover parity, including nested/deferred layer edge cases
 - animation, gradient, grid, canvas/custom painting, pattern painting, and menu APIs
 - precompiled native artifacts
 
-## Contributing / hacking on it
+## Hacking on Guppy
 
-For meaningful changes, run the local check suite:
+For meaningful changes:
 
 ```bash
 scripts/check
 ```
 
-If you touch native code, also run:
+If you touch native code:
 
 ```bash
 mix guppy.native.build
 mix test
 ```
 
-If you care about interactive feel, also check with a release build:
+If you care about interactive feel:
 
 ```bash
 mix guppy.native.build --release
 mix run examples/kanban_todo.exs
 ```
-
-For macOS bootstrap changes, study OTP wx first:
-
-- `~/projects/otp/lib/wx/c_src/wxe_main.cpp`
-- `~/projects/otp/lib/wx/c_src/wxe_nif.c`
 
 The active GPUI dependency is currently `gpui = "0.2.2"` from crates.io.

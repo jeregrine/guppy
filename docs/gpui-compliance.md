@@ -27,6 +27,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 
 Intentionally narrow parity areas:
 
+- `window_close_requested` is an informational event, not a synchronous close-veto protocol
 - async image loading/error-state APIs
 - complete SVG/image asset pipeline controls
 - full GPUI window API parity
@@ -58,7 +59,7 @@ Intentionally narrow parity areas:
 | `examples/list_example.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | variable-height `list`/`ListState` behavior and custom scrollbar parity | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/mouse_pressure.rs` | mouse event callbacks | partial | pressure payload is not exposed; basic mouse down/up/move payloads are routed | server routing tests cover pointer events; pressure explicitly deferred |
 | `examples/move_entity_between_windows.rs` | none | out of scope | direct GPUI entity migration conflicts with Elixir-owned IR/window ownership model | explicitly out of scope for current architecture |
-| `examples/on_window_close_quit.rs` | `Guppy.close_window/2`; native `window_close_requested` and `window_closed` events | partial | close-request cannot be vetoed synchronously by Elixir yet | server route tests cover close-request and closed lifecycle events |
+| `examples/on_window_close_quit.rs` | `Guppy.close_window/2`; native `window_close_requested` and `window_closed` events | partial | close-request is intentionally informational today; no synchronous Elixir veto protocol | README documents semantics; server route tests cover close-request and closed lifecycle events |
 | `examples/opacity.rs` | style token `{:opacity, value}` | partial | exact visual parity not smoke-tested | IR/style validation |
 | `examples/ownership_post.rs` | `Guppy.Server` owner tracking | partial | direct GPUI entity ownership scenario not ported | server tests |
 | `examples/painting.rs` | none | unsupported | custom painting/canvas deferred; would require a new retained drawing primitive | explicitly deferred in PLAN; no implementation |
@@ -68,9 +69,9 @@ Intentionally narrow parity areas:
 | `examples/set_menus.rs` | none | unsupported | menu APIs deferred to runtime/window API hardening, not core IR primitives | explicitly deferred in PLAN; no implementation |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |
-| `examples/text.rs` | `text` node; practical multiline input via `textarea` | partial | rich text runs/layout controls and full editor parity incomplete | IR/template tests; textarea example/manual smoke |
-| `examples/text_layout.rs` | text style tokens | partial | advanced text layout/rich runs | IR/style validation |
-| `examples/text_wrapper.rs` | text style tokens | partial | wrapping measurement parity | IR/style validation |
+| `examples/text.rs` | `text` node with style-token support; practical multiline input via `textarea` | partial | rich text runs/layout controls and full editor parity incomplete | IR/template tests; text style validation/decode/render coverage; textarea example/manual smoke |
+| `examples/text_layout.rs` | text style tokens | partial | advanced text layout/rich runs | IR/style validation and native text style decode/render coverage |
+| `examples/text_wrapper.rs` | text style tokens | partial | wrapping measurement parity | IR/style validation and native text style decode/render coverage |
 | `examples/tree.rs` | nested `div`/`text` IR; simple repeated text rows via `uniform_list` | partial | tree-specific interaction/virtualization and arbitrary row renderers | template/IR tests |
 | `examples/uniform_list.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | only text-row items are supported; arbitrary per-row IR renderers not exposed | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/window.rs` | window options | partial | full GPUI window API parity | option validation tests |
@@ -81,7 +82,7 @@ Intentionally narrow parity areas:
 
 1. `hello_world`: keep as the basic smoke target.
 2. `scrollable`: automated native smoke covers explicit scroll handle retention; broader GPUI scroll-option parity remains tracked as partial.
-3. `input`: retained text-input/textarea behavior, radio IR/template/render coverage, and server-routed change/focus coverage are automated; rich editor and select/dropdown parity remain out of scope.
+3. `input`: retained text-input/textarea behavior, radio IR/template/render coverage, server-routed change/focus coverage, and disabled checkbox/radio callback suppression are automated; rich editor and select/dropdown parity remain out of scope.
 4. `drag_drop`: server-routed drag/drop payload regression coverage is automated; native GPUI drag simulation remains manual.
 5. `tab_stop`: native render smoke covers tab-stop focus-handle retention; full traversal ordering remains partial.
 6. `image` / `svg`: source/object-fit mapping and template coverage are automated; async loading success/failure remains manual/partial.

@@ -57,6 +57,7 @@ After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.ex
 
 - This is a baseline, not a promise of stable performance yet.
 - Runtime telemetry is available at `[:guppy, :native, :nif]` for direct Rustler NIF call latency, `[:guppy, :native, :request]` for server-mediated native request latency, `[:guppy, :event, :route]` for native event routing, and `[:guppy, :window, :rerender]` for `Guppy.Window` rerender latency.
+- Native request timeouts are a containment mechanism, not a performance optimization: timed-out queued main-thread requests carry deadlines and expire before mutating native state.
 - `Guppy.native_performance_counters/0` exposes native-side counters for Rust boundary IR/options encode-decode timing and native event send timing/failures.
 - `Guppy.IR.validated!/1` can wrap static or trusted trees after one validation pass so repeated `open_window`/`render` calls skip Elixir-side validation while still unwrapping before native decode.
 - `bench/native_event_probe.exs` provides a manual GPUI-generated event probe. It measures route-to-rerender latency after actual native click delivery; it does not include OS input latency before GPUI emits the event.

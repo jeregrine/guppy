@@ -2,6 +2,8 @@
 
 Guppy is currently source-build first. The native runtime is a single Rustler NIF built from `native/guppy_nif` and copied into `priv/native/` by `mix guppy.native.build`.
 
+The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, and clean-install NIF loading. Distribution is still source-build-first until release/publishing work explicitly prioritizes precompiled artifacts.
+
 ## Current supported path
 
 Local source builds are the supported path today:
@@ -64,7 +66,7 @@ Future native artifact release flow:
 
 ## Precompiled artifact plan
 
-Do not add `rustler_precompiled` until the source-build path and runtime behavior stay stable.
+Do not add `rustler_precompiled` until release/publishing work is explicitly prioritized. The source-build path and runtime hardening baseline are in place; the next blocker is a deliberate artifact/release process, not opportunistic packaging.
 
 When adding precompiled artifacts, preserve these gates:
 
@@ -73,7 +75,7 @@ When adding precompiled artifacts, preserve these gates:
 3. Add CI jobs that build the NIF for every advertised target.
 4. Add CI jobs that install/load the produced artifact and run at least `mix test`.
 5. Document how release artifacts are produced, signed when needed, and attached.
-6. Keep `scripts/check` green for source builds.
+6. Keep `scripts/check`, `mix guppy.native.build`, and `scripts/clean_install_load_test` green for source builds.
 
 ## Initial target matrix
 
