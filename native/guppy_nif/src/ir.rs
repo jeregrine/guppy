@@ -483,6 +483,8 @@ pub enum IrNode {
         disabled: bool,
         tab_index: Option<isize>,
         change: Option<String>,
+        focus: Option<String>,
+        blur: Option<String>,
     },
     Textarea {
         id: Option<String>,
@@ -492,6 +494,8 @@ pub enum IrNode {
         disabled: bool,
         tab_index: Option<isize>,
         change: Option<String>,
+        focus: Option<String>,
+        blur: Option<String>,
     },
     Scroll {
         id: Option<String>,
@@ -589,6 +593,8 @@ impl IrNode {
                 disabled: get_boolean_field(map, "disabled")?,
                 tab_index: get_optional_integer_field(map, "tab_index")?,
                 change: get_change_event(map)?,
+                focus: get_focus_event(map)?,
+                blur: get_blur_event(map)?,
             }),
             "textarea" => Ok(Self::Textarea {
                 id,
@@ -598,6 +604,8 @@ impl IrNode {
                 disabled: get_boolean_field(map, "disabled")?,
                 tab_index: get_optional_integer_field(map, "tab_index")?,
                 change: get_change_event(map)?,
+                focus: get_focus_event(map)?,
+                blur: get_blur_event(map)?,
             }),
             "scroll" => {
                 let children = match get_field(map, "children") {

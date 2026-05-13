@@ -149,13 +149,24 @@ defmodule Guppy.ComponentTest do
     assert text_input.id == "name_input"
     assert text_input.value == "Jason"
     assert text_input.placeholder == "Type here"
-    assert text_input.events == %{change: "name_changed"}
+
+    assert text_input.events == %{
+             change: "name_changed",
+             focus: "name_focused",
+             blur: "name_blurred"
+           }
 
     assert textarea.kind == :textarea
     assert textarea.id == "notes_input"
     assert textarea.value == "Line one\nLine two"
     assert textarea.placeholder == "Notes"
-    assert textarea.events == %{change: "notes_changed"}
+
+    assert textarea.events == %{
+             change: "notes_changed",
+             focus: "notes_focused",
+             blur: "notes_blurred"
+           }
+
     assert {:h_px, 120} in textarea.style
 
     assert footer == %{kind: :text, content: "Footer ready", id: "footer"}

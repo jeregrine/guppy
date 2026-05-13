@@ -151,6 +151,10 @@ impl BridgeTextInput {
         };
     }
 
+    pub fn focus_handle(&self) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+
     fn send_change_event(&self) {
         let Some(callback_id) = self.change.as_ref() else {
             return;

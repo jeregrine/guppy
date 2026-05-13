@@ -281,6 +281,8 @@ mod tests {
                 disabled: false,
                 tab_index: None,
                 change: Some("name_changed".into()),
+                focus: Some("name_focused".into()),
+                blur: Some("name_blurred".into()),
             },
             retained: BridgeRetainedState::default(),
         });

@@ -2,7 +2,7 @@ use super::{identity::NodeIdentity, render_pass::RenderPass, style::apply_div_st
 use crate::bridge_text_input::{BridgeTextInput, BridgeTextInputOptions};
 use crate::bridge_view::BridgeView;
 use crate::ir::DivStyle;
-use gpui::{AnyElement, Context, InteractiveElement, IntoElement, ParentElement, div};
+use gpui::{AnyElement, Context, InteractiveElement, IntoElement, ParentElement, Window, div};
 
 pub(crate) struct TextInputSpec<'a> {
     pub path: &'a str,
@@ -13,6 +13,8 @@ pub(crate) struct TextInputSpec<'a> {
     pub disabled: bool,
     pub tab_index: Option<isize>,
     pub change: Option<&'a str>,
+    pub focus: Option<&'a str>,
+    pub blur: Option<&'a str>,
     pub multiline: bool,
 }
 
@@ -62,10 +64,21 @@ fn upsert_text_input_entity(
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
     spec: TextInputSpec<'_>,
+    window: &mut Window,
     cx: &mut Context<BridgeView>,
 ) -> AnyElement {
     let node_id = NodeIdentity::new(pass.view_id(), spec.path, spec.id);
     let entity = upsert_text_input_entity(pass, node_id.as_ref(), &spec, cx);
+    let focus_handle = entity.read(cx).focus_handle();
+
+    pass.register_focus_callbacks(
+        node_id.as_ref(),
+        &focus_handle,
+        spec.focus,
+        spec.blur,
+        window,
+        cx,
+    );
 
     apply_div_style(
         div().id(node_id.to_shared_string()).child(entity),
@@ -106,6 +119,8 @@ mod tests {
                     disabled: false,
                     tab_index: Some(1),
                     change: Some("name_changed"),
+                    focus: Some("name_focused"),
+                    blur: Some("name_blurred"),
                     multiline: false,
                 },
                 view_cx,
@@ -123,6 +138,8 @@ mod tests {
                     disabled: true,
                     tab_index: Some(3),
                     change: Some("person_changed"),
+                    focus: Some("person_focused"),
+                    blur: Some("person_blurred"),
                     multiline: true,
                 },
                 view_cx,
@@ -142,6 +159,41 @@ mod tests {
                 assert_eq!(input.tab_index, Some(3));
                 assert!(input.multiline);
             });
+        });
+    }
+
+    #[gpui::test]
+    fn render_registers_text_input_focus_callbacks(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 12,
+            ir: IrNode::text("hello"),
+            retained: Default::default(),
+        });
+
+        view.update_in(cx, |view, window, view_cx| {
+            let mut pass = super::RenderPass::new(view.view_id, &mut view.retained);
+            let style: DivStyle = Vec::new().into();
+
+            let _element = super::render(
+                &mut pass,
+                TextInputSpec {
+                    path: "root.0",
+                    id: Some("name_input"),
+                    value: "Jason",
+                    placeholder: "Name",
+                    style: &style,
+                    disabled: false,
+                    tab_index: Some(1),
+                    change: Some("name_changed"),
+                    focus: Some("name_focused"),
+                    blur: Some("name_blurred"),
+                    multiline: false,
+                },
+                window,
+                view_cx,
+            );
+
+            assert_eq!(view.retained.focus_subscriptions.len(), 2);
         });
     }
 }

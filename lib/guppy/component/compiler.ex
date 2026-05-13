@@ -57,7 +57,7 @@ defmodule Guppy.Component.Compiler do
   @checkbox_events ["change", "focus", "blur"]
   @radio_events ["change", "focus", "blur"]
   @select_events ["click", "change", "close", "focus", "blur"]
-  @text_input_events ["change"]
+  @text_input_events ["change", "focus", "blur"]
   @input_attrs ["id", "value", "placeholder", "class", "style", "disabled", "tab_index"]
 
   @style_attr_pairs [

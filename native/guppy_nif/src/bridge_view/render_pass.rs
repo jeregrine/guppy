@@ -65,6 +65,8 @@ impl<'a> RenderPass<'a> {
                 disabled,
                 tab_index,
                 change,
+                focus,
+                blur,
             } => render_text_input::render(
                 self,
                 render_text_input::TextInputSpec {
@@ -76,8 +78,11 @@ impl<'a> RenderPass<'a> {
                     disabled: *disabled,
                     tab_index: *tab_index,
                     change: change.as_deref(),
+                    focus: focus.as_deref(),
+                    blur: blur.as_deref(),
                     multiline: false,
                 },
+                window,
                 cx,
             ),
             IrNode::Textarea {
@@ -88,6 +93,8 @@ impl<'a> RenderPass<'a> {
                 disabled,
                 tab_index,
                 change,
+                focus,
+                blur,
             } => render_text_input::render(
                 self,
                 render_text_input::TextInputSpec {
@@ -99,8 +106,11 @@ impl<'a> RenderPass<'a> {
                     disabled: *disabled,
                     tab_index: *tab_index,
                     change: change.as_deref(),
+                    focus: focus.as_deref(),
+                    blur: blur.as_deref(),
                     multiline: true,
                 },
+                window,
                 cx,
             ),
             IrNode::Scroll {

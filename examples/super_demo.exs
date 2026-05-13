@@ -890,7 +890,11 @@ defmodule Guppy.SuperDemo do
           id: "demo_text_input",
           placeholder: "Type in this field",
           style: [:w_full],
-          events: %{change: "demo_text_input_changed"}
+          events: %{
+            change: "demo_text_input_changed",
+            focus: "demo_text_input_focused",
+            blur: "demo_text_input_blurred"
+          }
         ),
         Guppy.IR.text("text_input_value = #{inspect(state.text_input_value)}"),
         Guppy.IR.text("text_input_changes = #{state.text_input_changes}"),
@@ -899,7 +903,11 @@ defmodule Guppy.SuperDemo do
           id: "demo_textarea",
           placeholder: "Type multiple lines",
           style: [:w_full, {:h_px, 120}],
-          events: %{change: "demo_textarea_changed"}
+          events: %{
+            change: "demo_textarea_changed",
+            focus: "demo_textarea_focused",
+            blur: "demo_textarea_blurred"
+          }
         ),
         Guppy.IR.text("textarea_value = #{inspect(state.textarea_value)}"),
         Guppy.IR.text("textarea_changes = #{state.textarea_changes}"),

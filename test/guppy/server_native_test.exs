@@ -595,12 +595,32 @@ defmodule Guppy.ServerNativeTest do
         assert :ok =
                  Guppy.render(
                    view_id,
+                   Guppy.IR.text_input(
+                     "Jason",
+                     id: "native_name",
+                     placeholder: "Name",
+                     style: [{:w_px, 240}],
+                     events: %{
+                       change: "name_changed",
+                       focus: "name_focused",
+                       blur: "name_blurred"
+                     }
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
                    Guppy.IR.textarea(
                      "Line one\nLine two",
                      id: "native_notes",
                      placeholder: "Notes",
                      style: [{:w_px, 320}, {:h_px, 120}],
-                     events: %{change: "notes_changed"}
+                     events: %{
+                       change: "notes_changed",
+                       focus: "notes_focused",
+                       blur: "notes_blurred"
+                     }
                    )
                  )
 
