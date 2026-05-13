@@ -60,17 +60,17 @@ For performance-sensitive changes, run benchmarks or probes from `docs/performan
 
 ## GPUI compliance feature priorities
 
-When feature work is explicitly prioritized, improve GPUI compliance in this order:
+The first-pass GPUI compliance feature baseline has landed. Current end-to-end surface now covers:
 
-1. **Anchored overlays / popover parity**: explicit anchor placement, close lifecycle, nested/deferred overlay behavior, and stronger popover semantics.
-2. **Select/dropdown primitive**: native-quality option list positioning, close behavior, keyboard navigation, and event roundtrips.
-3. **Generic and variable-height lists**: arbitrary row IR renderers, closer `ListState` parity, retained scroll/item state, and better virtualization behavior.
-4. **Focus traversal and focus-visible behavior**: tab ordering, focus-visible styling semantics, and stronger form-control keyboard behavior.
-5. **Rich text runs before full editor parity**: styled runs, highlights, and layout controls without committing immediately to full editor semantics.
-6. **Grid layout primitives**: enough grid support to port GPUI grid examples and data/table-like layouts more directly.
-7. **Animation lifecycle primitives**: timing/lifecycle APIs designed around Elixir-owned full-tree rendering.
+1. **Anchored overlays / popover parity**: explicit anchor placement options, close lifecycle events, close-on-outside-click controls, and deferred-layer priority.
+2. **Select/dropdown primitive**: Elixir-owned select IR/template support, native anchored option lists, close behavior, keyboard toggling/navigation, and event roundtrips.
+3. **Generic and variable-height lists**: `Guppy.IR.list/2` / `<list />` backed by GPUI `ListState`, retained list state, variable-height static/layout row IR, and native item click routing.
+4. **Focus traversal and focus-visible behavior**: Tab/Shift-Tab traversal bindings, `focus_visible_style`, focus/blur coverage for form controls including text inputs, and keyboard activation hardening.
+5. **Rich text runs before full editor parity**: `Guppy.IR.rich_text/2` / `<rich_text />` styled runs and native highlight rendering without committing to full editor semantics.
+6. **Grid layout primitives**: grid display, row/column counts, row/column spans, and full-span style ops sufficient for basic GPUI grid layouts.
+7. **Animation lifecycle primitives**: stable-id native opacity animations with duration, repeat, and from/to opacity designed for Elixir-owned full-tree rendering.
 
-Canvas/custom painting can wait until after these GPUI-compliance gaps are addressed.
+Remaining exact-parity gaps are tracked in `docs/gpui-compliance.md` and should be picked up as explicitly scoped hardening work. Canvas/custom painting can still wait until after those narrower compliance gaps are prioritized.
 
 ## Source-build release verification
 
