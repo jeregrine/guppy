@@ -67,37 +67,21 @@ Use OTP semantics as the default recovery model:
 - Do not attempt to reconcile arbitrary native windows after `Guppy.Server` restart unless there is a tested reason to keep them. Prefer Rustler monitor-driven event-target cleanup, best-effort native window cleanup, and owner-driven reopen/rerender.
 - A BEAM-killing NIF crash or unrecoverable GPUI process failure is outside in-VM OTP recovery; document that such failures require external application restart.
 
-Required remaining work:
+No required remaining production-hardening work is currently tracked in this plan.
 
-1. Close the native-timeout late-side-effect gap.
-   - Bounded waits exist, but `native/guppy_nif/src/lib.rs` still enqueues a main-thread request and then waits with `recv_timeout`; if the wait times out, the queued request may still run later.
-   - Thread absolute deadlines, cancellation, or request generations through `MainThreadRequest` so stale queued requests cannot mutate native state after their caller has timed out.
-   - Specifically fix `open_window` ambiguity: a timed-out open must not leave an untracked native window or allow a later reused `view_id` to point at stale native state.
-   - Add failure-injection tests for requests that time out and then drain later, including `open_window`, `render`, `close_window`, `close_all`, and `view_count` where applicable.
-2. Fix remaining native/Elixir error normalization holes.
-   - `lib/guppy/native/nif.ex`: `dispatch({:view_count, []}, timeout)` currently wraps native results as `{:ok, native_view_count(timeout)}`; native `{:error, reason}` values must be normalized instead of returned as successful payloads.
-   - Add coverage for `view_count` timeout/unavailable errors returning `{:error, reason}` at the public API boundary.
-3. Complete restart/reopen recovery edge cases.
-   - `lib/guppy/window.ex`: after a failed reopen sets `view_id: nil`, normal messages/events must not call `Guppy.render(nil, ...)` and crash/stop on `:unknown_view_id`.
-   - Add a `rerender/1` path for `view_id == nil` that reopens, skips, or defers rendering until a native view exists.
-   - Add a test for a message arriving between a failed reopen and the scheduled retry, plus restart tests that verify `Guppy.Window` reopens from current assigns.
-4. Tighten event-target monitor semantics.
-   - `native/guppy_nif/src/lib.rs`: if `Env::monitor` returns `None`, `native_set_event_target/1` should return a structured error instead of registering an unmonitored event target.
-   - Keep the event-target generation/token stale-`down` guard covered by tests.
-5. Resolve the strict-IR validation mismatch.
-   - `lib/guppy/ir.ex`: `:text` currently allows `:style`, but text style is not validated, decoded, or rendered natively.
-   - Either remove `:style` from text allowed keys or implement text style validation, native ETF decode, and native rendering.
-   - Add regression coverage so unsupported/unknown text keys do not silently cross the bridge.
-6. Remove remaining avoidable native event-path unwraps/panics.
-   - `native/guppy_nif/src/lib.rs`: add `button` to `rustler::atoms!` and replace mouse-event `Atom::from_str(...).unwrap()` calls.
-   - Continue auditing request/event paths for `unwrap`/`expect`/`panic` that can occur from external input or runtime state; keep only impossible static construction or test-only uses, and document why.
-   - Keep unsafe blocks documented at FFI/string-pointer boundaries where Rust cannot prove safety.
-7. Make close-request semantics consistent across docs and tracking.
-   - The current API documents `window_close_requested` as informational and not vetoable; keep `README.md`, `docs/gpui-compliance.md`, and this plan aligned with that decision.
-   - If a veto/decision protocol becomes required, design it as a new explicit synchronous protocol instead of overloading the current informational event.
-8. Keep production-claim gates explicit.
-   - Keep `scripts/check`, `mix guppy.native.build`, source-build CI, and `scripts/clean_install_load_test` green before any public production-readiness claim.
-   - Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
+The current hardening baseline includes:
+
+- timeout-aware native requests with stale main-thread request expiry before mutation
+- normalized native timeout/unavailable errors at the Elixir public boundary
+- event-target re-registration, Rustler monitor cleanup, generation-guarded stale `down` handling, and best-effort native view cleanup on server restart
+- `Guppy.Window` reopen recovery that tolerates `view_id: nil` between failed reopen attempts and scheduled retries
+- strict IR unknown-key checks, including validated/decoded/rendered text style support
+- disabled checkbox/radio callback suppression
+- informational `window_close_requested` semantics documented consistently; a veto/decision protocol should be a new explicit design if needed later
+- native request/event path panic reduction for recoverable runtime conditions
+- source-build, clean-install/load, format, lint, Elixir test, and native test gates
+
+Keep `scripts/check`, `mix guppy.native.build`, source-build CI, and `scripts/clean_install_load_test` green before any public production-readiness claim. Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
 
 ## New primitive definition of done
 
