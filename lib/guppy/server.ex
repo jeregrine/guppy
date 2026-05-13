@@ -10,6 +10,7 @@ defmodule Guppy.Server do
 
   defstruct native: nil,
             native_server: nil,
+            native_request_timeout: 5_000,
             nif_path: nil,
             next_view_id: 1,
             views: %{},
@@ -26,6 +27,7 @@ defmodule Guppy.Server do
   @type state :: %__MODULE__{
           native: module(),
           native_server: GenServer.server(),
+          native_request_timeout: timeout(),
           nif_path: String.t() | nil,
           next_view_id: pos_integer(),
           views: %{optional(view_id()) => pid()},
@@ -42,23 +44,23 @@ defmodule Guppy.Server do
   end
 
   def ping(server \\ __MODULE__, timeout \\ 5_000) do
-    GenServer.call(server, :ping, timeout)
+    GenServer.call(server, {:ping, timeout}, gen_call_timeout(timeout))
   end
 
   def open_window(server \\ __MODULE__, owner, ir, opts \\ [], timeout \\ 5_000) do
-    GenServer.call(server, {:open_window, owner, ir, opts}, timeout)
+    GenServer.call(server, {:open_window, owner, ir, opts, timeout}, gen_call_timeout(timeout))
   end
 
   def render(server \\ __MODULE__, view_id, ir, timeout \\ 5_000) do
-    GenServer.call(server, {:render, view_id, ir}, timeout)
+    GenServer.call(server, {:render, view_id, ir, timeout}, gen_call_timeout(timeout))
   end
 
   def close_window(server \\ __MODULE__, view_id, timeout \\ 5_000) do
-    GenServer.call(server, {:close_window, view_id}, timeout)
+    GenServer.call(server, {:close_window, view_id, timeout}, gen_call_timeout(timeout))
   end
 
   def view_count(server \\ __MODULE__, timeout \\ 5_000) do
-    GenServer.call(server, :view_count, timeout)
+    GenServer.call(server, {:view_count, timeout}, gen_call_timeout(timeout))
   end
 
   def validate_window_options_for_test(opts), do: validate_window_options(opts)
@@ -70,6 +72,7 @@ defmodule Guppy.Server do
     state = %__MODULE__{
       native: native,
       native_server: Keyword.get(opts, :native_server, native),
+      native_request_timeout: Keyword.get(opts, :native_request_timeout, 5_000),
       nif_path: Keyword.get(opts, :nif_path, Application.get_env(:guppy, :nif_path))
     }
 
@@ -81,17 +84,18 @@ defmodule Guppy.Server do
     {:reply, state, state}
   end
 
-  def handle_call(:ping, _from, state) do
-    reply = native_request(state, :ping, {:ping, []})
+  def handle_call({:ping, timeout}, _from, state) do
+    reply = native_request(state, :ping, {:ping, []}, timeout)
     {:reply, reply, state}
   end
 
-  def handle_call(:view_count, _from, state) do
-    reply = native_request(state, :view_count, {:view_count, []})
+  def handle_call({:view_count, timeout}, _from, state) do
+    reply = native_request(state, :view_count, {:view_count, []}, timeout)
     {:reply, reply, state}
   end
 
-  def handle_call({:open_window, owner, ir, opts}, {caller, _tag}, state) when is_pid(owner) do
+  def handle_call({:open_window, owner, ir, opts, timeout}, {caller, _tag}, state)
+      when is_pid(owner) do
     if owner != caller do
       {:reply, {:error, :owner_mismatch}, state}
     else
@@ -100,7 +104,7 @@ defmodule Guppy.Server do
         view_id = state.next_view_id
         ir = Guppy.IR.unwrap(ir)
 
-        case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}) do
+        case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}, timeout) do
           :ok ->
             state =
               state
@@ -127,10 +131,10 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:render, view_id, ir}, {caller, _tag}, state) do
+  def handle_call({:render, view_id, ir, timeout}, {caller, _tag}, state) do
     case validate_owned_view_ir(state, caller, view_id, ir) do
       :ok ->
-        reply = native_request(state, :render, {:render, [view_id, Guppy.IR.unwrap(ir)]})
+        reply = native_request(state, :render, {:render, [view_id, Guppy.IR.unwrap(ir)]}, timeout)
         {:reply, normalize_native_reply(reply), state}
 
       error ->
@@ -138,10 +142,10 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:close_window, view_id}, {caller, _tag}, state) do
+  def handle_call({:close_window, view_id, timeout}, {caller, _tag}, state) do
     case validate_owned_view(state, caller, view_id) do
       :ok ->
-        case native_request(state, :close_window, {:close_window, [view_id]}) do
+        case native_request(state, :close_window, {:close_window, [view_id]}, timeout) do
           :ok -> {:reply, :ok, delete_view(state, view_id)}
           {:ok, _payload} -> {:reply, :ok, delete_view(state, view_id)}
           {:error, reason} -> {:reply, {:error, reason}, state}
@@ -228,6 +232,9 @@ defmodule Guppy.Server do
     end
   end
 
+  defp gen_call_timeout(:infinity), do: :infinity
+  defp gen_call_timeout(timeout) when is_integer(timeout) and timeout >= 0, do: timeout + 1_000
+
   defp validate_owned_view_ir(state, caller, view_id, ir) do
     with :ok <- validate_owned_view(state, caller, view_id) do
       Guppy.IR.validate(ir)
@@ -243,23 +250,36 @@ defmodule Guppy.Server do
   end
 
   defp maybe_register_event_target(state) do
-    case native_request(state, :set_event_target, {:set_event_target, [self()]}) do
+    case native_request(
+           state,
+           :set_event_target,
+           {:set_event_target, [self()]},
+           state.native_request_timeout
+         ) do
       :ok -> state
       {:ok, _payload} -> state
       {:error, _reason} -> state
     end
   end
 
-  defp native_request(state, command, request) do
+  defp native_request(state, command, request, timeout) do
     start_time = System.monotonic_time()
 
+    task =
+      Task.async(fn ->
+        try do
+          state.native.request(state.native_server, request, timeout)
+        rescue
+          _error -> {:error, :runtime_unavailable}
+        catch
+          _kind, _reason -> {:error, :runtime_unavailable}
+        end
+      end)
+
     reply =
-      try do
-        state.native.request(state.native_server, request)
-      rescue
-        _error -> {:error, :runtime_unavailable}
-      catch
-        _kind, _reason -> {:error, :runtime_unavailable}
+      case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
+        {:ok, reply} -> reply
+        nil -> {:error, :native_timeout}
       end
 
     duration = System.monotonic_time() - start_time
@@ -348,7 +368,14 @@ defmodule Guppy.Server do
     case Map.fetch(state.owners, owner) do
       {:ok, %{views: views}} ->
         Enum.reduce(views, state, fn view_id, acc_state ->
-          _ = native_request(acc_state, :close_window, {:close_window, [view_id]})
+          _ =
+            native_request(
+              acc_state,
+              :close_window,
+              {:close_window, [view_id]},
+              acc_state.native_request_timeout
+            )
+
           %{acc_state | views: Map.delete(acc_state.views, view_id)}
         end)
 

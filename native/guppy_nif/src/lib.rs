@@ -61,6 +61,7 @@ rustler::atoms! {
     lines,
     middle,
     modifiers,
+    native_timeout,
     mouse_down,
     mouse_move,
     mouse_up,
@@ -193,6 +194,7 @@ fn native_open_window<'a>(
     view_id: u64,
     ir: Term<'a>,
     opts: Term<'a>,
+    timeout_ms: u64,
 ) -> NifResult<Term<'a>> {
     let to_binary_started_at = Instant::now();
     let ir_binary = ir.to_binary();
@@ -221,13 +223,14 @@ fn native_open_window<'a>(
         ir_decode_started_at.elapsed(),
     );
 
-    let result = request_i32(|reply| main_thread_runtime::MainThreadRequest::OpenWindow {
-        view_id,
-        ir,
-        options,
-        reply,
-    })
-    .unwrap_or(-1);
+    let result = request_i32(timeout_ms, |reply| {
+        main_thread_runtime::MainThreadRequest::OpenWindow {
+            view_id,
+            ir,
+            options,
+            reply,
+        }
+    });
 
     Ok(status_result(env, result, duplicate_view_id()))
 }
@@ -240,7 +243,12 @@ fn native_set_event_target(pid: LocalPid) -> Atom {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>) -> NifResult<Term<'a>> {
+fn native_render<'a>(
+    env: Env<'a>,
+    view_id: u64,
+    ir: Term<'a>,
+    timeout_ms: u64,
+) -> NifResult<Term<'a>> {
     let to_binary_started_at = Instant::now();
     let ir_binary = ir.to_binary();
     record_counter(
@@ -257,35 +265,44 @@ fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>) -> NifResult<Term
         ir_decode_started_at.elapsed(),
     );
 
-    let result =
-        request_i32(|reply| main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply })
-            .unwrap_or(-1);
+    let result = request_i32(timeout_ms, |reply| {
+        main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply }
+    });
 
     Ok(status_result(env, result, unknown_view_id()))
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-fn native_close_window<'a>(env: Env<'a>, view_id: u64) -> Term<'a> {
-    let result =
-        request_i32(|reply| main_thread_runtime::MainThreadRequest::CloseWindow { view_id, reply })
-            .unwrap_or(-1);
+fn native_close_window<'a>(env: Env<'a>, view_id: u64, timeout_ms: u64) -> Term<'a> {
+    let result = request_i32(timeout_ms, |reply| {
+        main_thread_runtime::MainThreadRequest::CloseWindow { view_id, reply }
+    });
 
     status_result(env, result, unknown_view_id())
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
-fn native_view_count<'a>(env: Env<'a>) -> Term<'a> {
-    match request_u64(|reply| main_thread_runtime::MainThreadRequest::ViewCount { reply }) {
-        Some(count) => count.encode(env),
-        None => error_tuple(env, runtime_unavailable()),
+fn native_view_count<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
+    match request_u64(timeout_ms, |reply| {
+        main_thread_runtime::MainThreadRequest::ViewCount { reply }
+    }) {
+        NativeRequestResult::Reply(count) => count.encode(env),
+        NativeRequestResult::Timeout => error_tuple(env, native_timeout()),
+        NativeRequestResult::Unavailable => error_tuple(env, runtime_unavailable()),
     }
 }
 
-fn status_result<'a>(env: Env<'a>, result: i32, zero_reason: Atom) -> Term<'a> {
+fn status_result<'a>(
+    env: Env<'a>,
+    result: NativeRequestResult<i32>,
+    zero_reason: Atom,
+) -> Term<'a> {
     match result {
-        1 => rustler::types::atom::ok().encode(env),
-        0 => error_tuple(env, zero_reason),
-        _ => error_tuple(env, runtime_unavailable()),
+        NativeRequestResult::Reply(1) => rustler::types::atom::ok().encode(env),
+        NativeRequestResult::Reply(0) => error_tuple(env, zero_reason),
+        NativeRequestResult::Reply(_) => error_tuple(env, runtime_unavailable()),
+        NativeRequestResult::Timeout => error_tuple(env, native_timeout()),
+        NativeRequestResult::Unavailable => error_tuple(env, runtime_unavailable()),
     }
 }
 
@@ -293,20 +310,41 @@ fn error_tuple<'a>(env: Env<'a>, reason: Atom) -> Term<'a> {
     (rustler::types::atom::error(), reason).encode(env)
 }
 
+enum NativeRequestResult<T> {
+    Reply(T),
+    Timeout,
+    Unavailable,
+}
+
 fn request_i32(
+    timeout_ms: u64,
     build: impl FnOnce(Sender<i32>) -> main_thread_runtime::MainThreadRequest,
-) -> Option<i32> {
-    let (reply_tx, reply_rx) = mpsc::channel();
-    main_thread_runtime::enqueue_request(build(reply_tx)).ok()?;
-    reply_rx.recv().ok()
+) -> NativeRequestResult<i32> {
+    request_with_timeout(timeout_ms, build)
 }
 
 fn request_u64(
+    timeout_ms: u64,
     build: impl FnOnce(Sender<u64>) -> main_thread_runtime::MainThreadRequest,
-) -> Option<u64> {
+) -> NativeRequestResult<u64> {
+    request_with_timeout(timeout_ms, build)
+}
+
+fn request_with_timeout<T>(
+    timeout_ms: u64,
+    build: impl FnOnce(Sender<T>) -> main_thread_runtime::MainThreadRequest,
+) -> NativeRequestResult<T> {
     let (reply_tx, reply_rx) = mpsc::channel();
-    main_thread_runtime::enqueue_request(build(reply_tx)).ok()?;
-    reply_rx.recv().ok()
+
+    if main_thread_runtime::enqueue_request(build(reply_tx)).is_err() {
+        return NativeRequestResult::Unavailable;
+    }
+
+    match reply_rx.recv_timeout(Duration::from_millis(timeout_ms)) {
+        Ok(value) => NativeRequestResult::Reply(value),
+        Err(mpsc::RecvTimeoutError::Timeout) => NativeRequestResult::Timeout,
+        Err(mpsc::RecvTimeoutError::Disconnected) => NativeRequestResult::Unavailable,
+    }
 }
 
 fn maybe_start_main_thread_runtime() -> bool {

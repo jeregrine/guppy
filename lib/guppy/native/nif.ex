@@ -14,8 +14,8 @@ defmodule Guppy.Native.Nif do
   @type load_status :: :ok | {:error, term()}
 
   @impl Guppy.Native
-  def request(_server \\ __MODULE__, command, _timeout \\ 5_000) do
-    dispatch(command)
+  def request(_server \\ __MODULE__, command, timeout \\ 5_000) do
+    dispatch(command, timeout)
   end
 
   @impl Guppy.Native
@@ -89,6 +89,10 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_open_window(_view_id, _ir, _opts, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_set_event_target(_pid) do
     {:error, :nif_not_loaded}
   end
@@ -97,11 +101,23 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_render(_view_id, _ir, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_close_window(_view_id) do
     {:error, :nif_not_loaded}
   end
 
+  def native_close_window(_view_id, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_view_count do
+    {:error, :nif_not_loaded}
+  end
+
+  def native_view_count(_timeout) do
     {:error, :nif_not_loaded}
   end
 
@@ -136,39 +152,41 @@ defmodule Guppy.Native.Nif do
   defp native_string_to_string(value) when is_binary(value), do: value
   defp native_string_to_string(value) when is_list(value), do: List.to_string(value)
 
-  defp dispatch({:ping, []}) do
+  defp dispatch({:ping, []}, _timeout) do
     with_loaded(fn -> native_call(:ping, fn -> {:ok, native_ping()} end) end)
   end
 
-  defp dispatch({:open_window, [view_id, ir, opts]}) do
+  defp dispatch({:open_window, [view_id, ir, opts]}, timeout) do
     with_loaded(fn ->
-      native_call(:open_window, fn -> normalize_status(native_open_window(view_id, ir, opts)) end)
+      native_call(:open_window, fn ->
+        normalize_status(native_open_window(view_id, ir, opts, timeout))
+      end)
     end)
   end
 
-  defp dispatch({:set_event_target, [pid]}) when is_pid(pid) do
+  defp dispatch({:set_event_target, [pid]}, _timeout) when is_pid(pid) do
     with_loaded(fn ->
       native_call(:set_event_target, fn -> normalize_status(native_set_event_target(pid)) end)
     end)
   end
 
-  defp dispatch({:render, [view_id, ir]}) do
+  defp dispatch({:render, [view_id, ir]}, timeout) do
     with_loaded(fn ->
-      native_call(:render, fn -> normalize_status(native_render(view_id, ir)) end)
+      native_call(:render, fn -> normalize_status(native_render(view_id, ir, timeout)) end)
     end)
   end
 
-  defp dispatch({:close_window, [view_id]}) do
+  defp dispatch({:close_window, [view_id]}, timeout) do
     with_loaded(fn ->
-      native_call(:close_window, fn -> normalize_status(native_close_window(view_id)) end)
+      native_call(:close_window, fn -> normalize_status(native_close_window(view_id, timeout)) end)
     end)
   end
 
-  defp dispatch({:view_count, []}) do
-    with_loaded(fn -> native_call(:view_count, fn -> {:ok, native_view_count()} end) end)
+  defp dispatch({:view_count, []}, timeout) do
+    with_loaded(fn -> native_call(:view_count, fn -> {:ok, native_view_count(timeout)} end) end)
   end
 
-  defp dispatch(_command) do
+  defp dispatch(_command, _timeout) do
     {:error, :unsupported_command}
   end
 
