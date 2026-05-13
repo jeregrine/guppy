@@ -276,7 +276,17 @@ Text nodes and div-like nodes support the current style-token surface where appl
 
 Guppy is source-build first. Rustler builds and copies the NIF into `priv/native/` during normal Mix compilation. The macOS source-build path and clean-install/load smoke are covered by CI.
 
-`rustler_precompiled` is wired in, but source builds remain the default until release artifacts and checksums are published. See [`docs/distribution.md`](docs/distribution.md).
+Current source-build support:
+
+| Target | Status |
+| --- | --- |
+| `aarch64-apple-darwin` | supported / primary development target |
+| `x86_64-apple-darwin` | planned, needs CI confirmation |
+| `aarch64-unknown-linux-gnu` | planned, needs GPUI runtime validation |
+| `x86_64-unknown-linux-gnu` | planned, needs GPUI runtime validation |
+| `x86_64-pc-windows-msvc` | planned, needs GPUI/runtime validation |
+
+`rustler_precompiled` is wired in for those GPUI-aligned targets, but source builds remain the default until release artifacts and checksums are published. See [`docs/distribution.md`](docs/distribution.md).
 
 ## Known limits
 
