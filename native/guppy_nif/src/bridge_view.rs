@@ -8,6 +8,7 @@ mod render_pass;
 mod render_popover;
 mod render_radio;
 mod render_scroll;
+mod render_select;
 mod render_spacer;
 mod render_text;
 mod render_text_input;

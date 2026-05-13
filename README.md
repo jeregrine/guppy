@@ -112,6 +112,7 @@ Native node kinds:
 - `scroll`
 - `uniform_list`
 - `popover`
+- `select`
 - `button`
 - `checkbox`
 - `radio`
@@ -131,13 +132,14 @@ Template tags:
 - `<scroll>`
 - `<uniform_list />`
 - `<popover>`
+- `<select />`
 - `<image />`
 - `<icon />`
 - `<spacer />`
 - `<text_input />`
 - `<textarea />`
 
-Native event coverage includes click, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio changes, uniform-list item clicks, popover callbacks, text input/textarea changes, and window close lifecycle events.
+Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, popover callbacks, text input/textarea changes, and window close lifecycle events.
 
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
 
@@ -170,6 +172,7 @@ IR helpers:
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
 - `Guppy.IR.popover/4`
+- `Guppy.IR.select/2`
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
 - `Guppy.IR.radio/4`

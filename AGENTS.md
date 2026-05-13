@@ -119,6 +119,7 @@ Useful IR helpers today:
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
 - `Guppy.IR.popover/4`
+- `Guppy.IR.select/2`
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
 - `Guppy.IR.radio/4`
@@ -137,6 +138,7 @@ Supported native nodes today:
 - `:scroll`
 - `:uniform_list`
 - `:popover`
+- `:select`
 - `:button`
 - `:checkbox`
 - `:radio`
@@ -149,7 +151,6 @@ Supported native nodes today:
 Still missing higher-value nodes/primitives:
 
 - full editor/rich-text parity and rich text runs/highlights
-- select primitive
 - fully generic list item renderers
 - full popover parity / nested overlay edge cases
 

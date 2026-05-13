@@ -540,6 +540,29 @@ defmodule Guppy.ServerNativeTest do
         assert :ok =
                  Guppy.render(
                    view_id,
+                   Guppy.IR.select(
+                     [
+                       %{value: "todo", label: "Todo"},
+                       %{value: "done", label: "Done"}
+                     ],
+                     id: "native_status_select",
+                     value: "todo",
+                     open: true,
+                     placeholder: "Pick status",
+                     style: [{:w_px, 240}],
+                     list_style: [:p_1, :shadow_lg],
+                     option_style: [:p_2],
+                     events: %{
+                       click: "toggle_status",
+                       change: "status_changed",
+                       close: "close_status"
+                     }
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
                    Guppy.IR.radio(
                      "High priority",
                      "high",

@@ -55,6 +55,16 @@ mod ffi {
             callback_id_len: usize,
         ) -> i32;
 
+        pub(super) fn guppy_c_send_change_event(
+            view_id: u64,
+            node_id_ptr: *const u8,
+            node_id_len: usize,
+            callback_id_ptr: *const u8,
+            callback_id_len: usize,
+            value_ptr: *const u8,
+            value_len: usize,
+        ) -> i32;
+
         pub(super) fn guppy_c_send_key_down_event(
             view_id: u64,
             node_id_ptr: *const u8,
@@ -295,6 +305,20 @@ pub(crate) fn emit_blur(view_id: u64, node_id: &str, callback_id: &str) {
             node_id.len(),
             callback_id.as_ptr(),
             callback_id.len(),
+        );
+    }
+}
+
+pub(crate) fn emit_change(view_id: u64, node_id: &str, callback_id: &str, value: &str) {
+    unsafe {
+        let _ = ffi::guppy_c_send_change_event(
+            view_id,
+            node_id.as_ptr(),
+            node_id.len(),
+            callback_id.as_ptr(),
+            callback_id.len(),
+            value.as_ptr(),
+            value.len(),
         );
     }
 }

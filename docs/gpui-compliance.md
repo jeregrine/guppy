@@ -13,7 +13,7 @@ Statuses:
 
 These are the main primitive gaps visible from the current GPUI matrix. They are not active work unless explicitly prioritized.
 
-- **Select/dropdown**: needs native-quality anchored overlay behavior, option-list positioning, close lifecycle, and keyboard navigation.
+- **Select/dropdown**: initial Elixir-owned select/dropdown support exists with anchored option lists, close events, keyboard toggling, arrow-key value changes, and change roundtrips; richer native option-list positioning and full menu semantics remain partial.
 - **Rich editor / rich text**: rich runs, highlights, advanced layout, syntax/editor semantics, and full editor parity are not exposed.
 - **Generic list / variable-height list**: current `uniform_list` is a focused text-row primitive; arbitrary row IR renderers and `ListState` parity are missing.
 - **Data table / tree**: simple nested `div`/`text` and text-row `uniform_list` cover only basic scenarios; table/tree-specific virtualization and interaction are missing.
@@ -39,7 +39,7 @@ Intentionally narrow parity areas:
 | --- | --- | --- | --- | --- |
 | `examples/hello_world.rs` | `examples/hello_world.exs`, `test/guppy_test.exs` template checks | supported | none known for static text/window open | automated IR/template tests; manual example smoke |
 | `examples/scrollable.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; native scroll tests | partial | GPUI parity for every scroll option not mapped; no default high-frequency coalescing planned from current measurements | Rust scroll-axis unit test; GPUI render smoke retains explicit scroll handles; manual kanban smoke |
-| `examples/input.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; text input, textarea, and radio form-control tests | partial | rich editor behavior, select/dropdown primitive deferred pending popover/anchored overlays, and full focus semantics | Rust retained-state/radio unit tests; ExUnit IR/template/native hidden-window coverage; manual example smoke |
+| `examples/input.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; text input, textarea, radio, and select form-control tests | partial | rich editor behavior, richer select menu semantics, and full focus semantics | Rust retained-state/radio/select unit tests; ExUnit IR/template/native hidden-window coverage; manual example smoke |
 | `examples/drag_drop.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs` drag/drop callbacks | partial | native drag payload parity and drop target model are narrower than GPUI; no default event coalescing planned from current measurements | Elixir server routing tests cover drag_start/drag_move/drop payloads; manual kanban smoke |
 | `examples/tab_stop.rs` | text input/button/checkbox/div `tab_index` and `tab_stop` IR fields | partial | full GPUI tab traversal ordering parity not covered | IR validation; GPUI render smoke retains focus handle for tab-stop div |
 | `examples/image/image.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs`, `test/guppy_test.exs` image template checks | partial | complete async image loading states and asset pipeline parity | automated IR/template tests; Rust image source/object-fit mapping tests; manual gallery smoke |

@@ -16,9 +16,12 @@ struct IrFieldKeys {
     placeholder: Term,
     children: Term,
     items: Term,
+    options: Term,
     axis: Term,
     style: Term,
     item_style: Term,
+    list_style: Term,
+    option_style: Term,
     hover_style: Term,
     focus_style: Term,
     in_focus_style: Term,
@@ -78,9 +81,12 @@ impl IrFieldKeys {
             placeholder: atom_term("placeholder"),
             children: atom_term("children"),
             items: atom_term("items"),
+            options: atom_term("options"),
             axis: atom_term("axis"),
             style: atom_term("style"),
             item_style: atom_term("item_style"),
+            list_style: atom_term("list_style"),
+            option_style: atom_term("option_style"),
             hover_style: atom_term("hover_style"),
             focus_style: atom_term("focus_style"),
             in_focus_style: atom_term("in_focus_style"),
@@ -394,6 +400,32 @@ pub struct UniformListItem {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct SelectOption {
+    pub value: String,
+    pub label: String,
+    pub disabled: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SelectNode {
+    pub id: Option<String>,
+    pub value: Option<String>,
+    pub open: bool,
+    pub placeholder: String,
+    pub options: Vec<SelectOption>,
+    pub style: DivStyle,
+    pub list_style: DivStyle,
+    pub option_style: DivStyle,
+    pub disabled: bool,
+    pub tab_index: Option<isize>,
+    pub click: Option<String>,
+    pub change: Option<String>,
+    pub close: Option<String>,
+    pub focus: Option<String>,
+    pub blur: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct DivNode {
     pub id: Option<String>,
     pub style: DivStyle,
@@ -482,6 +514,7 @@ pub enum IrNode {
         item_style: DivStyle,
         click: Option<String>,
     },
+    Select(Box<SelectNode>),
     Popover {
         id: Option<String>,
         label: String,
@@ -576,6 +609,24 @@ impl IrNode {
                 item_style: get_style_list_field(map, "item_style")?,
                 click: get_click_event(map)?,
             }),
+            "select" => Ok(Self::Select(Box::new(SelectNode {
+                id,
+                value: get_optional_string_field(map, "value")?,
+                open: get_boolean_field(map, "open")?,
+                placeholder: get_optional_string_field(map, "placeholder")?
+                    .unwrap_or_else(|| "Select…".into()),
+                options: get_select_options_field(map)?,
+                style: get_div_style(map)?,
+                list_style: get_style_list_field(map, "list_style")?,
+                option_style: get_style_list_field(map, "option_style")?,
+                disabled: get_boolean_field(map, "disabled")?,
+                tab_index: get_optional_integer_field(map, "tab_index")?,
+                click: get_click_event(map)?,
+                change: get_change_event(map)?,
+                close: get_close_event(map)?,
+                focus: get_focus_event(map)?,
+                blur: get_blur_event(map)?,
+            }))),
             "popover" => {
                 let children = match get_field(map, "children") {
                     Some(term) => get_list(term)?
@@ -778,9 +829,12 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "placeholder" => &keys.placeholder,
         "children" => &keys.children,
         "items" => &keys.items,
+        "options" => &keys.options,
         "axis" => &keys.axis,
         "style" => &keys.style,
         "item_style" => &keys.item_style,
+        "list_style" => &keys.list_style,
+        "option_style" => &keys.option_style,
         "hover_style" => &keys.hover_style,
         "focus_style" => &keys.focus_style,
         "in_focus_style" => &keys.in_focus_style,
@@ -991,6 +1045,24 @@ fn get_uniform_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<Uniform
             Ok(UniformListItem {
                 id: get_string_field(item, "id")?,
                 label: get_string_field(item, "label")?,
+            })
+        })
+        .collect()
+}
+
+fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Vec<SelectOption>, String> {
+    let Some(options_term) = get_field(map, "options") else {
+        return Err("missing required field: options".into());
+    };
+
+    get_list(options_term)?
+        .iter()
+        .map(|term| {
+            let option = expect_map(term)?;
+            Ok(SelectOption {
+                value: get_string_field(option, "value")?,
+                label: get_string_field(option, "label")?,
+                disabled: get_boolean_field(option, "disabled")?,
             })
         })
         .collect()

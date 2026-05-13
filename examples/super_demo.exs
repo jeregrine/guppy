@@ -25,6 +25,9 @@ defmodule Guppy.SuperDemo do
         textarea_changes: 0,
         selected_priority: "medium",
         radio_changes: 0,
+        selected_status: "todo",
+        status_select_open: false,
+        select_changes: 0,
         popover_open: false,
         mouse_downs: 0,
         mouse_ups: 0,
@@ -69,7 +72,7 @@ defmodule Guppy.SuperDemo do
 
   defp loop(state) do
     receive do
-      {:guppy_event, view_id, %{type: :click} = event} ->
+      {:guppy_event, view_id, %{type: type} = event} when type in [:click, :close] ->
         state
         |> handle_click(view_id, event)
         |> continue()
@@ -241,6 +244,14 @@ defmodule Guppy.SuperDemo do
         |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
         |> rerender!()
 
+      view_id == state.main_view_id and String.starts_with?(node_id, "status_select") ->
+        state
+        |> Map.put(:selected_status, value)
+        |> Map.put(:status_select_open, false)
+        |> Map.update!(:select_changes, &(&1 + 1))
+        |> Map.put(:last_event, "select change #{node_id}/#{callback_id}")
+        |> rerender!()
+
       view_id == state.main_view_id ->
         state
         |> Map.put(:text_input_value, value)
@@ -392,6 +403,18 @@ defmodule Guppy.SuperDemo do
         state
         |> Map.put(:popover_open, false)
         |> Map.put(:last_event, "closed popover via #{node_id}")
+        |> rerender!()
+
+      "toggle_status_select" ->
+        state
+        |> Map.update!(:status_select_open, &(!&1))
+        |> Map.put(:last_event, "toggled select via #{node_id}")
+        |> rerender!()
+
+      "close_status_select" ->
+        state
+        |> Map.put(:status_select_open, false)
+        |> Map.put(:last_event, "closed select via #{node_id}")
         |> rerender!()
 
       "underlay_click" ->
@@ -886,6 +909,27 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.text("selected_priority = #{state.selected_priority}"),
         Guppy.IR.text("radio_changes = #{state.radio_changes}"),
+        Guppy.IR.select(
+          [
+            %{value: "todo", label: "Todo"},
+            %{value: "doing", label: "Doing"},
+            %{value: "done", label: "Done"}
+          ],
+          id: "status_select",
+          value: state.selected_status,
+          open: state.status_select_open,
+          placeholder: "Pick status",
+          style: [:w_full],
+          list_style: [:p_1, :shadow_lg],
+          option_style: [:p_2],
+          events: %{
+            click: "toggle_status_select",
+            change: "status_select_changed",
+            close: "close_status_select"
+          }
+        ),
+        Guppy.IR.text("selected_status = #{state.selected_status}"),
+        Guppy.IR.text("select_changes = #{state.select_changes}"),
         Guppy.IR.uniform_list(
           Enum.map(1..100, &%{id: "uniform_demo_item_#{&1}", label: "Uniform item #{&1}"}),
           id: "interaction_uniform_list",

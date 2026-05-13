@@ -1,7 +1,7 @@
 use super::{
     BridgeRetainedState, BridgeView, events, render_checkbox, render_div, render_icon,
-    render_image, render_popover, render_radio, render_scroll, render_spacer, render_text,
-    render_text_input, render_uniform_list,
+    render_image, render_popover, render_radio, render_scroll, render_select, render_spacer,
+    render_text, render_text_input, render_uniform_list,
 };
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
@@ -175,6 +175,7 @@ impl<'a> RenderPass<'a> {
                 item_style,
                 click.as_deref(),
             ),
+            IrNode::Select(node) => render_select::render(self, path, node, window, cx),
             IrNode::Image {
                 id,
                 source,
