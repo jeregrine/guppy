@@ -14,7 +14,7 @@ Statuses:
 These are the main primitive gaps visible from the current GPUI matrix. They are not active work unless explicitly prioritized.
 
 - **Select/dropdown**: initial Elixir-owned select/dropdown support exists with anchored option lists, close events, keyboard toggling, arrow-key value changes, and change roundtrips; richer native option-list positioning and full menu semantics remain partial.
-- **Rich editor / rich text**: rich runs, highlights, advanced layout, syntax/editor semantics, and full editor parity are not exposed.
+- **Rich editor / rich text**: rich text runs/highlights are exposed through `Guppy.IR.rich_text/2`; advanced layout, syntax/editor semantics, and full editor parity remain missing.
 - **Generic list / variable-height list**: `list` adds GPUI `ListState`-backed variable-height rows with row IR children for static/layout content; stateful controls inside virtual rows and custom scrollbar parity remain partial.
 - **Data table / tree**: simple nested `div`/`text` and text-row `uniform_list` cover only basic scenarios; table/tree-specific virtualization and interaction are missing.
 - **Full popover / anchored overlay controls**: popovers now expose anchor corner, optional anchor position/offset, fit mode, close-on-outside-click, and deferred-layer priority; deeper nested-overlay edge cases and richer lifecycle semantics remain partial.
@@ -69,8 +69,8 @@ Intentionally narrow parity areas:
 | `examples/set_menus.rs` | none | unsupported | menu APIs deferred to runtime/window API hardening, not core IR primitives | explicitly deferred in PLAN; no implementation |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |
-| `examples/text.rs` | `text` node with style-token support; practical multiline input via `textarea` | partial | rich text runs/layout controls and full editor parity incomplete | IR/template tests; text style validation/decode/render coverage; textarea example/manual smoke |
-| `examples/text_layout.rs` | text style tokens | partial | advanced text layout/rich runs | IR/style validation and native text style decode/render coverage |
+| `examples/text.rs` | `text` node with style-token support; `Guppy.IR.rich_text/2` / `<rich_text />` runs; practical multiline input via `textarea` | partial | advanced text layout controls and full editor parity incomplete | IR/template/native hidden-window coverage; Rust rich text highlight range tests; textarea example/manual smoke |
+| `examples/text_layout.rs` | text style tokens and rich text runs | partial | advanced layout measurement/wrapping parity | IR/style validation and native text/rich-run decode/render coverage |
 | `examples/text_wrapper.rs` | text style tokens | partial | wrapping measurement parity | IR/style validation and native text style decode/render coverage |
 | `examples/tree.rs` | nested `div`/`text` IR; simple repeated text rows via `uniform_list`; variable-height static/layout rows via `list` | partial | tree-specific interaction/virtualization and stateful controls inside virtual rows | template/IR tests |
 | `examples/uniform_list.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `Guppy.IR.list/2`, `<list />`, `examples/super_demo.exs` | partial | `uniform_list` remains text-row focused; `list` covers variable-height static/layout row IR but not stateful controls inside virtual rows | ExUnit IR/template/native hidden-window coverage; Rust list-state/render helper tests; manual super_demo smoke |
@@ -82,7 +82,7 @@ Intentionally narrow parity areas:
 
 1. `hello_world`: keep as the basic smoke target.
 2. `scrollable`: automated native smoke covers explicit scroll handle retention; broader GPUI scroll-option parity remains tracked as partial.
-3. `input`: retained text-input/textarea behavior, text-input focus/blur registration, radio IR/template/render coverage, server-routed change/focus coverage, and disabled checkbox/radio callback suppression are automated; rich editor and richer select/dropdown parity remain out of scope.
+3. `input`: retained text-input/textarea behavior, text-input focus/blur registration, radio IR/template/render coverage, server-routed change/focus coverage, rich text runs, and disabled checkbox/radio callback suppression are automated; rich editor and richer select/dropdown parity remain out of scope.
 4. `drag_drop`: server-routed drag/drop payload regression coverage is automated; native GPUI drag simulation remains manual.
 5. `tab_stop` / `focus_visible`: native render smoke covers tab-stop focus-handle retention, simulated Tab ordering, and focus-visible state reset on mouse input; full grouping/input-modality edge-case parity remains partial.
 6. `image` / `svg`: source/object-fit mapping and template coverage are automated; async loading success/failure remains manual/partial.

@@ -1,6 +1,7 @@
 use crate::ir::{ColorToken, DivStyle, StyleOp};
 use gpui::{
-    FontWeight, StatefulInteractiveElement, StyleRefinement, Styled, px, relative, rems, rgb,
+    FontStyle, FontWeight, HighlightStyle, StatefulInteractiveElement, StrikethroughStyle,
+    StyleRefinement, Styled, UnderlineStyle, px, relative, rems, rgb,
 };
 
 pub(crate) fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
@@ -157,6 +158,49 @@ where
     }
 
     element
+}
+
+pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
+    let mut highlight = HighlightStyle::default();
+
+    for op in ops.iter() {
+        match op {
+            StyleOp::TextColor(color) => highlight.color = Some(color_token_to_color(*color)),
+            StyleOp::TextColorHex(value) => highlight.color = Some(hex_color_to_color(value)),
+            StyleOp::Bg(color) => {
+                highlight.background_color = Some(color_token_to_color(*color));
+            }
+            StyleOp::BgHex(value) => highlight.background_color = Some(hex_color_to_color(value)),
+            StyleOp::FontThin => highlight.font_weight = Some(FontWeight::THIN),
+            StyleOp::FontExtralight => highlight.font_weight = Some(FontWeight::EXTRA_LIGHT),
+            StyleOp::FontLight => highlight.font_weight = Some(FontWeight::LIGHT),
+            StyleOp::FontNormal => highlight.font_weight = Some(FontWeight::NORMAL),
+            StyleOp::FontMedium => highlight.font_weight = Some(FontWeight::MEDIUM),
+            StyleOp::FontSemibold => highlight.font_weight = Some(FontWeight::SEMIBOLD),
+            StyleOp::FontBold => highlight.font_weight = Some(FontWeight::BOLD),
+            StyleOp::FontExtrabold => highlight.font_weight = Some(FontWeight::EXTRA_BOLD),
+            StyleOp::FontBlack => highlight.font_weight = Some(FontWeight::BLACK),
+            StyleOp::Italic => highlight.font_style = Some(FontStyle::Italic),
+            StyleOp::NotItalic => highlight.font_style = Some(FontStyle::Normal),
+            StyleOp::Underline => {
+                highlight.underline = Some(UnderlineStyle {
+                    thickness: px(1.0),
+                    color: None,
+                    wavy: false,
+                });
+            }
+            StyleOp::LineThrough => {
+                highlight.strikethrough = Some(StrikethroughStyle {
+                    thickness: px(1.0),
+                    color: None,
+                });
+            }
+            StyleOp::Opacity(value) => highlight.fade_out = Some(1.0 - value.clamp(0.0, 1.0)),
+            _ => {}
+        }
+    }
+
+    highlight
 }
 
 pub(crate) fn apply_refinement_style(

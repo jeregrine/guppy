@@ -9,6 +9,7 @@ defmodule Guppy.Component do
 
   - `<div>`
   - `<text>`
+  - `<rich_text />`
   - `<button>`
   - `<checkbox />`
   - `<radio />`

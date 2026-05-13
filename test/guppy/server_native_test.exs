@@ -528,6 +528,19 @@ defmodule Guppy.ServerNativeTest do
         assert :ok =
                  Guppy.render(
                    view_id,
+                   Guppy.IR.rich_text(
+                     [
+                       %{text: "Native ", style: [:font_bold]},
+                       %{text: "rich text", style: [{:text_color, :yellow}, :underline]}
+                     ],
+                     id: "native_rich_text",
+                     events: %{click: "native_rich_text_clicked"}
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
                    Guppy.IR.uniform_list(
                      [%{id: "native_item_1", label: "Native item 1"}],
                      id: "native_uniform_items",

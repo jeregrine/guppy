@@ -58,9 +58,18 @@ impl<'a> RenderPass<'a> {
             IrNode::Text {
                 id,
                 content,
+                runs,
                 style,
                 click,
-            } => render_text::render(self, path, id.as_deref(), content, style, click.as_deref()),
+            } => render_text::render(
+                self,
+                path,
+                id.as_deref(),
+                content,
+                runs,
+                style,
+                click.as_deref(),
+            ),
             IrNode::TextInput {
                 id,
                 value,

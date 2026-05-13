@@ -1,8 +1,8 @@
 use super::{events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
-use crate::ir::{DivNode, DivStyle, IrNode, ListItem};
+use crate::ir::{DivNode, DivStyle, IrNode, ListItem, TextRunSegment};
 use gpui::{
     AnyElement, InteractiveElement, InteractiveText, IntoElement, ParentElement, SharedString,
-    StatefulInteractiveElement, Styled, StyledText, div, list,
+    StatefulInteractiveElement, Styled, div, list,
 };
 use std::sync::Arc;
 
@@ -77,6 +77,7 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
         IrNode::Text {
             id,
             content,
+            runs,
             style,
             click,
         } => render_static_text(
@@ -84,6 +85,7 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
             path,
             id.as_deref(),
             content,
+            runs,
             style,
             click.as_deref(),
         ),
@@ -106,13 +108,14 @@ fn render_static_text(
     path: &str,
     id: Option<&str>,
     content: &str,
+    runs: &[TextRunSegment],
     style: &DivStyle,
     click: Option<&str>,
 ) -> AnyElement {
     let node_id = NodeIdentity::new(view_id, path, id);
     let interactive_text = InteractiveText::new(
         node_id.to_shared_string(),
-        StyledText::new(content.to_owned()),
+        super::render_text::styled_text(content, runs),
     );
 
     let element = match click {

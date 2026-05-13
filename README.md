@@ -107,7 +107,7 @@ Shortest bring-up smoke test.
 
 Native node kinds:
 
-- `text`
+- `text` (including rich text runs)
 - `div`
 - `scroll`
 - `uniform_list`
@@ -127,6 +127,7 @@ Template tags:
 
 - `<div>`
 - `<text>`
+- `<rich_text />`
 - `<button>`
 - `<checkbox>`
 - `<radio>`
@@ -170,6 +171,7 @@ Preferred window abstraction:
 IR helpers:
 
 - `Guppy.IR.text/2`
+- `Guppy.IR.rich_text/2`
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
@@ -310,7 +312,7 @@ Current source-build support:
 
 Still missing or intentionally narrow unless explicitly scoped:
 
-- full editor/rich-text parity beyond current text style-token support
+- full editor parity and advanced text layout beyond current rich text runs
 - richer select/dropdown menu semantics beyond the current Elixir-owned select
 - stateful controls inside generic virtualized list rows and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics

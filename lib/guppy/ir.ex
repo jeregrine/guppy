@@ -178,6 +178,7 @@ defmodule Guppy.IR do
   @type style :: [style_op()]
 
   @type text_events :: %{optional(:click) => String.t()}
+  @type text_run :: %{required(:text) => String.t(), optional(:style) => style()}
 
   @type div_events :: %{
           optional(:click) => String.t(),
@@ -206,6 +207,7 @@ defmodule Guppy.IR do
           required(:content) => String.t(),
           optional(:id) => node_id(),
           optional(:style) => style(),
+          optional(:runs) => [text_run()],
           optional(:events) => text_events()
         }
 
@@ -604,6 +606,30 @@ defmodule Guppy.IR do
     |> maybe_put(:events, events)
   end
 
+  @spec rich_text([text_run() | String.t() | {String.t(), style()}], keyword()) :: text_node()
+  def rich_text(runs, opts \\ []) when is_list(runs) and is_list(opts) do
+    normalized_runs = Enum.map(runs, &normalize_text_run!/1)
+    content = Enum.map_join(normalized_runs, & &1.text)
+
+    text(content, opts)
+    |> Map.put(:runs, normalized_runs)
+  end
+
+  defp normalize_text_run!(text) when is_binary(text), do: %{text: text}
+
+  defp normalize_text_run!(%{text: text} = run) when is_binary(text) do
+    %{text: text}
+    |> maybe_put(:style, Map.get(run, :style))
+  end
+
+  defp normalize_text_run!({text, style}) when is_binary(text) do
+    %{text: text, style: style}
+  end
+
+  defp normalize_text_run!(other) do
+    raise ArgumentError, "invalid rich text run: #{inspect(other)}"
+  end
+
   @spec div([ir_node()], keyword()) :: div_node()
   def div(children, opts \\ []) when is_list(children) and is_list(opts) do
     id = Keyword.get(opts, :id)
@@ -914,7 +940,7 @@ defmodule Guppy.IR do
   end
 
   @allowed_node_keys %{
-    text: [:kind, :content, :id, :style, :events],
+    text: [:kind, :content, :id, :style, :runs, :events],
     div: [
       :kind,
       :children,
@@ -1036,6 +1062,7 @@ defmodule Guppy.IR do
     with :ok <- validate_node_keys(node),
          :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_text_runs(content, Map.get(node, :runs)),
          :ok <- validate_events(Map.get(node, :events), [:click]) do
       :ok
     end
@@ -1241,6 +1268,49 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(other), do: {:error, {:invalid_ir, other}}
+
+  defp validate_text_runs(_content, nil), do: :ok
+
+  defp validate_text_runs(content, runs) when is_list(runs) do
+    with {:ok, texts} <- validate_text_run_list(runs) do
+      joined = Enum.join(texts)
+
+      if joined == content do
+        :ok
+      else
+        {:error, {:text_runs_content_mismatch, content, joined}}
+      end
+    end
+  end
+
+  defp validate_text_runs(_content, runs), do: {:error, {:invalid_text_runs, runs}}
+
+  defp validate_text_run_list(runs) do
+    Enum.reduce_while(runs, {:ok, []}, fn run, {:ok, texts} ->
+      case validate_text_run(run) do
+        {:ok, text} -> {:cont, {:ok, [text | texts]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, texts} -> {:ok, Enum.reverse(texts)}
+      error -> error
+    end
+  end
+
+  defp validate_text_run(%{text: text} = run) when is_binary(text) do
+    case Map.keys(run) -- [:text, :style] do
+      [] ->
+        with :ok <- validate_style(Map.get(run, :style)) do
+          {:ok, text}
+        end
+
+      unknown ->
+        {:error, {:unknown_text_run_keys, Enum.sort(unknown)}}
+    end
+  end
+
+  defp validate_text_run(run), do: {:error, {:invalid_text_run, run}}
 
   defp validate_node_keys(%{kind: kind} = node) do
     allowed = Map.fetch!(@allowed_node_keys, kind)

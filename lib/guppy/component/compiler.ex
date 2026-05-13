@@ -157,6 +157,7 @@ defmodule Guppy.Component.Compiler do
         "text_input" -> compile_text_input(attrs, caller)
         "textarea" -> compile_textarea(attrs, caller)
         "text" -> compile_text(attrs, xmlElement(element, :content), caller)
+        "rich_text" -> compile_rich_text(attrs, xmlElement(element, :content), caller)
         "image" -> compile_image(attrs, xmlElement(element, :content), caller)
         "icon" -> compile_icon(attrs, xmlElement(element, :content), caller)
         "spacer" -> compile_spacer(attrs, xmlElement(element, :content), caller)
@@ -368,6 +369,23 @@ defmodule Guppy.Component.Compiler do
       quote do
         Guppy.IR.div([unquote(text_node)], unquote(wrapper_opts))
       end
+    end
+  end
+
+  defp compile_rich_text(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, rich_text_allowed_attrs(), "rich_text", caller)
+    assert_empty_element!(content, "rich_text", caller)
+    runs = fetch_required_attr!(attrs, "runs", :expr_only, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        events_entry(attrs, @text_events, caller)
+      ])
+
+    quote do
+      Guppy.IR.rich_text(unquote(runs), unquote(opts))
     end
   end
 
@@ -1171,6 +1189,10 @@ defmodule Guppy.Component.Compiler do
 
   defp text_allowed_attrs do
     [":if", ":for", "id", "class", "style"] ++ @text_events
+  end
+
+  defp rich_text_allowed_attrs do
+    [":if", ":for", "id", "runs", "class", "style"] ++ @text_events
   end
 
   defp input_allowed_attrs do

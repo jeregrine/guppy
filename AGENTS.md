@@ -116,6 +116,7 @@ Useful IR helpers today:
 - `Guppy.IR.validated!/1`
 - `Guppy.IR.unwrap/1`
 - `Guppy.IR.text/2`
+- `Guppy.IR.rich_text/2`
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
@@ -153,7 +154,7 @@ Supported native nodes today:
 
 Still missing higher-value nodes/primitives:
 
-- full editor/rich-text parity and rich text runs/highlights
+- full editor parity and advanced text layout beyond current rich text runs/highlights
 - full popover parity / nested overlay edge cases
 
 ## Current preferred authoring model

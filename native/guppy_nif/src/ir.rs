@@ -12,6 +12,8 @@ struct IrFieldKeys {
     kind: Term,
     id: Term,
     content: Term,
+    runs: Term,
+    text: Term,
     value: Term,
     placeholder: Term,
     children: Term,
@@ -78,6 +80,8 @@ impl IrFieldKeys {
             kind: atom_term("kind"),
             id: atom_term("id"),
             content: atom_term("content"),
+            runs: atom_term("runs"),
+            text: atom_term("text"),
             value: atom_term("value"),
             placeholder: atom_term("placeholder"),
             children: atom_term("children"),
@@ -378,6 +382,12 @@ pub struct CheckboxNode {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct TextRunSegment {
+    pub text: String,
+    pub style: DivStyle,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct RadioNode {
     pub id: Option<String>,
     pub label: String,
@@ -477,6 +487,7 @@ pub enum IrNode {
     Text {
         id: Option<String>,
         content: String,
+        runs: Vec<TextRunSegment>,
         style: DivStyle,
         click: Option<String>,
     },
@@ -568,6 +579,7 @@ impl IrNode {
         Self::Text {
             id: None,
             content: content.into(),
+            runs: Vec::new(),
             style: Vec::new().into(),
             click: None,
         }
@@ -584,12 +596,18 @@ impl IrNode {
         let id = get_optional_string_field(map, "id")?;
 
         match kind.as_str() {
-            "text" => Ok(Self::Text {
-                id,
-                content: get_string_field(map, "content")?,
-                style: get_div_style(map)?,
-                click: get_click_event(map)?,
-            }),
+            "text" => {
+                let content = get_string_field(map, "content")?;
+                let runs = get_text_runs_field(map, &content)?;
+
+                Ok(Self::Text {
+                    id,
+                    content,
+                    runs,
+                    style: get_div_style(map)?,
+                    click: get_click_event(map)?,
+                })
+            }
             "text_input" => Ok(Self::TextInput {
                 id,
                 value: get_string_field(map, "value")?,
@@ -863,6 +881,8 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "kind" => &keys.kind,
         "id" => &keys.id,
         "content" => &keys.content,
+        "runs" => &keys.runs,
+        "text" => &keys.text,
         "value" => &keys.value,
         "placeholder" => &keys.placeholder,
         "children" => &keys.children,
@@ -1069,6 +1089,35 @@ fn get_string_field(map: &HashMap<Term, Term>, key: &str) -> Result<String, Stri
     match get_field(map, key) {
         Some(term) => term_to_string(term),
         None => Err(format!("missing required field: {key}")),
+    }
+}
+
+fn get_text_runs_field(
+    map: &HashMap<Term, Term>,
+    content: &str,
+) -> Result<Vec<TextRunSegment>, String> {
+    let Some(runs_term) = get_field(map, "runs") else {
+        return Ok(Vec::new());
+    };
+
+    let runs = get_list(runs_term)?
+        .iter()
+        .map(|term| {
+            let run = expect_map(term)?;
+            Ok(TextRunSegment {
+                text: get_string_field(run, "text")?,
+                style: get_style_list_field(run, "style")?,
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+
+    let joined = runs.iter().map(|run| run.text.as_str()).collect::<String>();
+    if joined == content {
+        Ok(runs)
+    } else {
+        Err(format!(
+            "text runs content mismatch: expected {content:?}, got {joined:?}"
+        ))
     }
 }
 

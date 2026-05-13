@@ -17,6 +17,10 @@ defmodule Guppy.ComponentTest do
             children: [Guppy.IR.div([Guppy.IR.text("Generic two detail")])]
           }
         ],
+        rich_runs: [
+          %{text: "Rich ", style: [:font_bold]},
+          %{text: "intro", style: [{:text_color, :yellow}]}
+        ],
         value: "Jason",
         notes: "Line one\nLine two",
         priority: "high",
@@ -39,6 +43,7 @@ defmodule Guppy.ComponentTest do
 
     [
       title_wrapper,
+      rich_intro,
       button,
       checkbox,
       radio,
@@ -59,6 +64,15 @@ defmodule Guppy.ComponentTest do
     assert title_wrapper.children == [%{kind: :text, content: "Template demo", id: "title"}]
     assert :text_3xl in title_wrapper.style
     assert :font_black in title_wrapper.style
+
+    assert rich_intro.kind == :text
+    assert rich_intro.id == "rich_intro"
+    assert rich_intro.content == "Rich intro"
+
+    assert rich_intro.runs == [
+             %{text: "Rich ", style: [:font_bold]},
+             %{text: "intro", style: [{:text_color, :yellow}]}
+           ]
 
     assert button.kind == :button
     assert button.id == "save_button"

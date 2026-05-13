@@ -885,6 +885,16 @@ defmodule Guppy.SuperDemo do
           events: %{click: "text_increment"}
         ),
         Guppy.IR.text("text_clicks = #{state.text_clicks}"),
+        Guppy.IR.rich_text(
+          [
+            %{text: "Rich text runs: ", style: [:font_semibold]},
+            %{text: "yellow", style: [{:text_color, :yellow}, :underline]},
+            %{text: " + bold", style: [:font_bold]}
+          ],
+          id: "rich_text_demo",
+          style: [:text_base],
+          events: %{click: "text_increment"}
+        ),
         Guppy.IR.text_input(
           state.text_input_value,
           id: "demo_text_input",

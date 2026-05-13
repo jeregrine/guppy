@@ -95,6 +95,7 @@ defmodule Guppy.TemplateExample do
     ~G"""
     <div id="root" tooltip="Template root" class="flex flex-col gap-4 p-4 bg-[#0f172a] text-[#f8fafc]">
       <text id="title" class="text-3xl font-black">{@title}</text>
+      <rich_text id="rich_intro" runs={@rich_runs} class="text-base" />
       <button id="save_button" click="save" class="p-2 rounded-lg border-1 border-blue bg-blue text-[#ffffff]" focus_visible_class="border-yellow shadow-lg">
         Save
       </button>

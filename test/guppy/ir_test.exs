@@ -13,6 +13,28 @@ defmodule Guppy.IRTest do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))
 
+    rich_text_ir =
+      Guppy.IR.rich_text(
+        [
+          %{text: "Rich ", style: [:font_bold]},
+          %{text: "runs", style: [{:text_color, :yellow}, :underline]},
+          "!"
+        ],
+        id: "rich_greeting",
+        style: [:text_lg],
+        events: %{click: "rich_hello"}
+      )
+
+    assert :ok = Guppy.IR.validate(rich_text_ir)
+    assert rich_text_ir.kind == :text
+    assert rich_text_ir.content == "Rich runs!"
+
+    assert rich_text_ir.runs == [
+             %{text: "Rich ", style: [:font_bold]},
+             %{text: "runs", style: [{:text_color, :yellow}, :underline]},
+             %{text: "!"}
+           ]
+
     assert {:error, {:invalid_style_op, :not_a_style}} =
              Guppy.IR.validate(Guppy.IR.text("hello", style: [:not_a_style]))
 
@@ -634,6 +656,12 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, :bogus}} =
              Guppy.IR.validate(Guppy.IR.div([], disabled_style: [:bogus]))
+
+    assert {:error, {:invalid_text_run, %{text: 123}}} =
+             Guppy.IR.validate(%{kind: :text, content: "123", runs: [%{text: 123}]})
+
+    assert {:error, {:text_runs_content_mismatch, "hello", "hell"}} =
+             Guppy.IR.validate(%{kind: :text, content: "hello", runs: [%{text: "hell"}]})
 
     assert {:error, {:invalid_scroll_axis, :diagonal}} =
              Guppy.IR.validate(Guppy.IR.scroll([], axis: :diagonal))
