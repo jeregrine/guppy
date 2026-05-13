@@ -111,6 +111,7 @@ Native node kinds:
 - `div`
 - `scroll`
 - `uniform_list`
+- `list`
 - `popover`
 - `select`
 - `button`
@@ -131,6 +132,7 @@ Template tags:
 - `<radio>`
 - `<scroll>`
 - `<uniform_list />`
+- `<list />`
 - `<popover>`
 - `<select />`
 - `<image />`
@@ -171,6 +173,7 @@ IR helpers:
 - `Guppy.IR.div/2`
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
+- `Guppy.IR.list/2`
 - `Guppy.IR.popover/4`
 - `Guppy.IR.select/2`
 - `Guppy.IR.button/2`

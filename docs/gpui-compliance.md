@@ -15,7 +15,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 
 - **Select/dropdown**: initial Elixir-owned select/dropdown support exists with anchored option lists, close events, keyboard toggling, arrow-key value changes, and change roundtrips; richer native option-list positioning and full menu semantics remain partial.
 - **Rich editor / rich text**: rich runs, highlights, advanced layout, syntax/editor semantics, and full editor parity are not exposed.
-- **Generic list / variable-height list**: current `uniform_list` is a focused text-row primitive; arbitrary row IR renderers and `ListState` parity are missing.
+- **Generic list / variable-height list**: `list` adds GPUI `ListState`-backed variable-height rows with row IR children for static/layout content; stateful controls inside virtual rows and custom scrollbar parity remain partial.
 - **Data table / tree**: simple nested `div`/`text` and text-row `uniform_list` cover only basic scenarios; table/tree-specific virtualization and interaction are missing.
 - **Full popover / anchored overlay controls**: popovers now expose anchor corner, optional anchor position/offset, fit mode, close-on-outside-click, and deferred-layer priority; deeper nested-overlay edge cases and richer lifecycle semantics remain partial.
 - **Animation primitives**: timing/lifecycle APIs need a design that fits Elixir-owned full-tree rendering.
@@ -56,7 +56,7 @@ Intentionally narrow parity areas:
 | `examples/image_gallery.rs` | image node examples | partial | gallery layout primitives and loading states | manual only |
 | `examples/image_loading.rs` | image node | partial | async loading/error state parity | manual only |
 | `examples/layer_shell.rs` | none | out of scope | platform shell/layer APIs | none |
-| `examples/list_example.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | variable-height `list`/`ListState` behavior and custom scrollbar parity | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
+| `examples/list_example.rs` | `Guppy.IR.list/2`, `<list />`, `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | variable-height GPUI `ListState` rows with static/layout row IR are supported; stateful controls inside virtual rows and custom scrollbar parity remain incomplete | ExUnit IR/template/native hidden-window coverage; Rust list-state/render helper tests; manual super_demo smoke |
 | `examples/mouse_pressure.rs` | mouse event callbacks | partial | pressure payload is not exposed; basic mouse down/up/move payloads are routed | server routing tests cover pointer events; pressure explicitly deferred |
 | `examples/move_entity_between_windows.rs` | none | out of scope | direct GPUI entity migration conflicts with Elixir-owned IR/window ownership model | explicitly out of scope for current architecture |
 | `examples/on_window_close_quit.rs` | `Guppy.close_window/2`; native `window_close_requested` and `window_closed` events | partial | close-request is intentionally informational today; no synchronous Elixir veto protocol | README documents semantics; server route tests cover close-request and closed lifecycle events |
@@ -72,8 +72,8 @@ Intentionally narrow parity areas:
 | `examples/text.rs` | `text` node with style-token support; practical multiline input via `textarea` | partial | rich text runs/layout controls and full editor parity incomplete | IR/template tests; text style validation/decode/render coverage; textarea example/manual smoke |
 | `examples/text_layout.rs` | text style tokens | partial | advanced text layout/rich runs | IR/style validation and native text style decode/render coverage |
 | `examples/text_wrapper.rs` | text style tokens | partial | wrapping measurement parity | IR/style validation and native text style decode/render coverage |
-| `examples/tree.rs` | nested `div`/`text` IR; simple repeated text rows via `uniform_list` | partial | tree-specific interaction/virtualization and arbitrary row renderers | template/IR tests |
-| `examples/uniform_list.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `examples/super_demo.exs` | partial | only text-row items are supported; arbitrary per-row IR renderers not exposed | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
+| `examples/tree.rs` | nested `div`/`text` IR; simple repeated text rows via `uniform_list`; variable-height static/layout rows via `list` | partial | tree-specific interaction/virtualization and stateful controls inside virtual rows | template/IR tests |
+| `examples/uniform_list.rs` | `Guppy.IR.uniform_list/2`, `<uniform_list />`, `Guppy.IR.list/2`, `<list />`, `examples/super_demo.exs` | partial | `uniform_list` remains text-row focused; `list` covers variable-height static/layout row IR but not stateful controls inside virtual rows | ExUnit IR/template/native hidden-window coverage; Rust list-state/render helper tests; manual super_demo smoke |
 | `examples/window.rs` | window options | partial | full GPUI window API parity | option validation tests |
 | `examples/window_shadow.rs` | window decorations/background options | partial | full shadow/window-frame parity | option validation tests |
 | `tests/action_macros.rs` | `actions` / `shortcuts` IR fields and native shortcut matching tests | partial | Rust macro parity is out of scope; shortcut behavior still narrow | Rust shortcut unit tests |

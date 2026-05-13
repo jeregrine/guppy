@@ -540,6 +540,26 @@ defmodule Guppy.ServerNativeTest do
         assert :ok =
                  Guppy.render(
                    view_id,
+                   Guppy.IR.list(
+                     [
+                       %{
+                         id: "native_generic_1",
+                         children: [
+                           Guppy.IR.text("Native generic row"),
+                           Guppy.IR.div([Guppy.IR.text("Variable height detail")])
+                         ]
+                       }
+                     ],
+                     id: "native_generic_items",
+                     style: [{:h_px, 140}],
+                     item_style: [:p_2, :border_b_1],
+                     events: %{click: "native_generic_item_clicked"}
+                   )
+                 )
+
+        assert :ok =
+                 Guppy.render(
+                   view_id,
                    Guppy.IR.select(
                      [
                        %{value: "todo", label: "Todo"},

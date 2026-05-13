@@ -1,16 +1,19 @@
 use super::{
     BridgeRetainedState, BridgeView, events, render_checkbox, render_div, render_icon,
-    render_image, render_popover, render_radio, render_scroll, render_select, render_spacer,
-    render_text, render_text_input, render_uniform_list,
+    render_image, render_list, render_popover, render_radio, render_scroll, render_select,
+    render_spacer, render_text, render_text_input, render_uniform_list,
 };
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
-use gpui::{AnyElement, Context, Entity, FocusHandle, ScrollHandle, Window};
+use gpui::{
+    AnyElement, Context, Entity, FocusHandle, ListAlignment, ListState, ScrollHandle, Window, px,
+};
 use std::collections::HashSet;
 
 #[derive(Default)]
 pub(crate) struct RenderPassState {
     pub live_scroll_ids: HashSet<String>,
+    pub live_list_ids: HashSet<String>,
     pub live_focus_ids: HashSet<String>,
     pub live_text_input_ids: HashSet<String>,
     pub registered_focus_callbacks: HashSet<String>,
@@ -175,6 +178,21 @@ impl<'a> RenderPass<'a> {
                 item_style,
                 click.as_deref(),
             ),
+            IrNode::List {
+                id,
+                items,
+                style,
+                item_style,
+                click,
+            } => render_list::render(
+                self,
+                path,
+                id.as_deref(),
+                items,
+                style,
+                item_style,
+                click.as_deref(),
+            ),
             IrNode::Select(node) => render_select::render(self, path, node, window, cx),
             IrNode::Image {
                 id,
@@ -233,6 +251,21 @@ impl<'a> RenderPass<'a> {
             .entry(node_id.to_owned())
             .or_default()
             .clone()
+    }
+
+    pub fn retain_list_state(&mut self, node_id: &str, item_count: usize) -> ListState {
+        self.state.live_list_ids.insert(node_id.to_owned());
+        let state = self
+            .retained
+            .list_states
+            .entry(node_id.to_owned())
+            .or_insert_with(|| ListState::new(item_count, ListAlignment::Top, px(500.0)));
+
+        if state.item_count() != item_count {
+            state.reset(item_count);
+        }
+
+        state.clone()
     }
 
     pub fn ensure_focus_handle(

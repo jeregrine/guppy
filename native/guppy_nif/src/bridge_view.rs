@@ -4,6 +4,7 @@ mod render_checkbox;
 mod render_div;
 mod render_icon;
 mod render_image;
+mod render_list;
 mod render_pass;
 mod render_popover;
 mod render_radio;
@@ -18,13 +19,15 @@ mod style;
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
 use gpui::{
-    Context, Entity, FocusHandle, Render, ScrollHandle, Subscription, Window, div, prelude::*,
+    Context, Entity, FocusHandle, ListState, Render, ScrollHandle, Subscription, Window, div,
+    prelude::*,
 };
 use std::collections::HashMap;
 
 #[derive(Default)]
 pub(crate) struct BridgeRetainedState {
     pub scroll_handles: HashMap<String, ScrollHandle>,
+    pub list_states: HashMap<String, ListState>,
     pub focus_handles: HashMap<String, FocusHandle>,
     pub focus_subscriptions: Vec<Subscription>,
     pub text_inputs: HashMap<String, Entity<BridgeTextInput>>,
@@ -58,6 +61,9 @@ impl BridgeView {
             .scroll_handles
             .retain(|node_id, _| state.live_scroll_ids.contains(node_id));
         self.retained
+            .list_states
+            .retain(|node_id, _| state.live_list_ids.contains(node_id));
+        self.retained
             .focus_handles
             .retain(|node_id, _| state.live_focus_ids.contains(node_id));
         self.retained
@@ -70,7 +76,7 @@ impl BridgeView {
 mod tests {
     use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
     use crate::ir::{DivNode, IrNode, ScrollAxis, StyleOp};
-    use gpui::{Modifiers, Render, ScrollHandle, point, px};
+    use gpui::{ListAlignment, ListState, Modifiers, Render, ScrollHandle, point, px};
 
     #[test]
     fn prune_retained_state_drops_dead_scroll_handles() {
@@ -96,6 +102,34 @@ mod tests {
 
         assert!(view.retained.scroll_handles.contains_key("keep"));
         assert!(!view.retained.scroll_handles.contains_key("drop"));
+    }
+
+    #[test]
+    fn prune_retained_state_drops_dead_list_states() {
+        let mut view = BridgeView {
+            view_id: 7,
+            ir: IrNode::text("hello"),
+            retained: BridgeRetainedState::default(),
+        };
+
+        view.retained.list_states.insert(
+            "keep".into(),
+            ListState::new(1, ListAlignment::Top, px(100.0)),
+        );
+        view.retained.list_states.insert(
+            "drop".into(),
+            ListState::new(1, ListAlignment::Top, px(100.0)),
+        );
+
+        let state = RenderPassState {
+            live_list_ids: ["keep".to_string()].into_iter().collect(),
+            ..Default::default()
+        };
+
+        view.prune_retained_state(state);
+
+        assert!(view.retained.list_states.contains_key("keep"));
+        assert!(!view.retained.list_states.contains_key("drop"));
     }
 
     #[gpui::test]

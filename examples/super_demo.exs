@@ -393,6 +393,11 @@ defmodule Guppy.SuperDemo do
         |> Map.put(:last_event, "uniform list click via #{node_id}")
         |> rerender!()
 
+      "generic_item_clicked" ->
+        state
+        |> Map.put(:last_event, "generic list click via #{node_id}")
+        |> rerender!()
+
       "open_popover" ->
         state
         |> Map.put(:popover_open, true)
@@ -936,6 +941,24 @@ defmodule Guppy.SuperDemo do
           style: [{:h_px, 160}, :border_1, {:border_color, :white}],
           item_style: [:p_2, :border_b_1],
           events: %{click: "uniform_item_clicked"}
+        ),
+        Guppy.IR.list(
+          Enum.map(1..40, fn index ->
+            %{
+              id: "generic_demo_item_#{index}",
+              children: [
+                Guppy.IR.text("Generic list item #{index}"),
+                Guppy.IR.div(
+                  [Guppy.IR.text("Variable-height detail line #{rem(index, 4) + 1}")],
+                  style: [:text_sm, {:text_color, :yellow}]
+                )
+              ]
+            }
+          end),
+          id: "interaction_generic_list",
+          style: [{:h_px, 180}, :border_1, {:border_color, :yellow}],
+          item_style: [:p_2, :border_b_1],
+          events: %{click: "generic_item_clicked"}
         ),
         Guppy.IR.div(
           [

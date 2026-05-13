@@ -400,6 +400,12 @@ pub struct UniformListItem {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ListItem {
+    pub id: String,
+    pub children: Vec<IrNode>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct SelectOption {
     pub value: String,
     pub label: String,
@@ -514,6 +520,13 @@ pub enum IrNode {
         item_style: DivStyle,
         click: Option<String>,
     },
+    List {
+        id: Option<String>,
+        items: Vec<ListItem>,
+        style: DivStyle,
+        item_style: DivStyle,
+        click: Option<String>,
+    },
     Select(Box<SelectNode>),
     Popover {
         id: Option<String>,
@@ -605,6 +618,13 @@ impl IrNode {
             "uniform_list" => Ok(Self::UniformList {
                 id,
                 items: get_uniform_list_items_field(map)?,
+                style: get_div_style(map)?,
+                item_style: get_style_list_field(map, "item_style")?,
+                click: get_click_event(map)?,
+            }),
+            "list" => Ok(Self::List {
+                id,
+                items: get_list_items_field(map)?,
                 style: get_div_style(map)?,
                 item_style: get_style_list_field(map, "item_style")?,
                 click: get_click_event(map)?,
@@ -1045,6 +1065,31 @@ fn get_uniform_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<Uniform
             Ok(UniformListItem {
                 id: get_string_field(item, "id")?,
                 label: get_string_field(item, "label")?,
+            })
+        })
+        .collect()
+}
+
+fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<ListItem>, String> {
+    let Some(items_term) = get_field(map, "items") else {
+        return Err("missing required field: items".into());
+    };
+
+    get_list(items_term)?
+        .iter()
+        .map(|term| {
+            let item = expect_map(term)?;
+            let children = match get_field(item, "children") {
+                Some(term) => get_list(term)?
+                    .iter()
+                    .map(IrNode::from_term)
+                    .collect::<Result<Vec<_>, _>>()?,
+                None => Vec::new(),
+            };
+
+            Ok(ListItem {
+                id: get_string_field(item, "id")?,
+                children,
             })
         })
         .collect()
