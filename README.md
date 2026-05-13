@@ -98,10 +98,10 @@ GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render/1`, `~G`, and local function components.
 
 ```bash
-GUPPY_NATIVE_RELEASE=1 mix run examples/stress_test.exs
+MIX_ENV=prod mix run examples/stress_test.exs
 ```
 
-Stress test for full-tree IR replacement, native decode, retained scrolling, and virtual-list churn. Tune it with `GUPPY_STRESS_*` environment variables; run `mix run examples/stress_test.exs -- --help` for knobs.
+Stress test for full-tree IR replacement, native decode, retained scrolling, and virtual-list churn. `MIX_ENV=prod` selects an optimized native build; `GUPPY_NATIVE_RELEASE=1 mix run examples/stress_test.exs` does the same while keeping Mix in dev. Tune it with `GUPPY_STRESS_*` environment variables; run `mix run examples/stress_test.exs -- --help` for knobs.
 
 ```bash
 mix run examples/hello_world.exs

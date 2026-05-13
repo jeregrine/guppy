@@ -30,7 +30,8 @@ pub(crate) fn render(
             .cloned()
             .map(|item| render_item(view_id, &item_list_key, item, &item_style, click.as_deref()))
             .unwrap_or_else(|| div().into_any_element())
-    });
+    })
+    .size_full();
 
     apply_div_style(
         div()

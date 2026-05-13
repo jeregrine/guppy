@@ -39,7 +39,8 @@ pub(crate) fn render(
             .filter_map(|index| items.get(index).cloned())
             .map(|item| render_item(view_id, &item_list_key, item, &item_style, click.as_deref()))
             .collect::<Vec<_>>()
-    });
+    })
+    .size_full();
 
     apply_div_style(
         div()

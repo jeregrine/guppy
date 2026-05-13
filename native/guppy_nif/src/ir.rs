@@ -1256,27 +1256,69 @@ fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
             ensure_allowed_fields(map, &["kind", "id", "style"], "list row spacer")?;
             IrNode::from_term(term)
         }
-        "div" => {
-            ensure_allowed_fields(
-                map,
-                &["kind", "children", "id", "style", "disabled", "events"],
-                "list row div",
-            )?;
-            ensure_allowed_event_fields(map, &["click"], "list row div events")?;
-
-            let Some(children_term) = get_field(map, "children") else {
-                return Err("missing required field: list row div children".into());
-            };
-            for child in get_list(children_term)? {
-                decode_list_row_child_term(child)?;
-            }
-
-            let node = IrNode::from_term(term)?;
-            validate_list_row_child(&node)?;
-            Ok(node)
-        }
+        "div" => decode_static_list_row_div(map),
         _ => Err(format!("unsupported list row child kind: {kind}")),
     }
+}
+
+fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+    ensure_allowed_fields(
+        map,
+        &["kind", "children", "id", "style", "disabled", "events"],
+        "list row div",
+    )?;
+    ensure_allowed_event_fields(map, &["click"], "list row div events")?;
+
+    let Some(children_term) = get_field(map, "children") else {
+        return Err("missing required field: list row div children".into());
+    };
+
+    let children = get_list(children_term)?
+        .iter()
+        .map(decode_list_row_child_term)
+        .collect::<Result<Vec<_>, _>>()?;
+    let empty_style = empty_style();
+
+    Ok(IrNode::Div(Box::new(DivNode {
+        id: get_optional_string_field(map, "id")?,
+        style: get_div_style(map)?,
+        hover_style: empty_style.clone(),
+        focus_style: empty_style.clone(),
+        focus_visible_style: empty_style.clone(),
+        in_focus_style: empty_style.clone(),
+        active_style: empty_style.clone(),
+        disabled_style: empty_style,
+        animation: None,
+        disabled: get_boolean_field(map, "disabled")?,
+        stack_priority: None,
+        occlude: false,
+        focusable: false,
+        tab_stop: None,
+        tab_index: None,
+        track_scroll: false,
+        anchor_scroll: false,
+        tooltip: None,
+        shortcuts: Vec::new(),
+        children,
+        click: get_click_event(map)?,
+        hover: None,
+        focus: None,
+        blur: None,
+        key_down: None,
+        key_up: None,
+        context_menu: None,
+        drag_start: None,
+        drag_move: None,
+        drop: None,
+        mouse_down: None,
+        mouse_up: None,
+        mouse_move: None,
+        scroll_wheel: None,
+    })))
+}
+
+fn empty_style() -> DivStyle {
+    Vec::new().into()
 }
 
 fn ensure_allowed_fields(
@@ -1310,6 +1352,7 @@ fn ensure_allowed_event_fields(
     ensure_allowed_fields(expect_map(events_term)?, allowed, context)
 }
 
+#[cfg(test)]
 fn validate_list_row_children(children: &[IrNode]) -> Result<(), String> {
     for child in children {
         validate_list_row_child(child)?;
@@ -1318,6 +1361,7 @@ fn validate_list_row_children(children: &[IrNode]) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(test)]
 fn validate_list_row_child(node: &IrNode) -> Result<(), String> {
     match node {
         IrNode::Text { .. } | IrNode::Spacer { .. } => Ok(()),
@@ -1329,6 +1373,7 @@ fn validate_list_row_child(node: &IrNode) -> Result<(), String> {
     }
 }
 
+#[cfg(test)]
 fn validate_static_list_row_div(node: &DivNode) -> Result<(), String> {
     if !node.hover_style.is_empty()
         || !node.focus_style.is_empty()
@@ -1366,6 +1411,7 @@ fn validate_static_list_row_div(node: &DivNode) -> Result<(), String> {
     validate_list_row_children(&node.children)
 }
 
+#[cfg(test)]
 fn ir_node_kind(node: &IrNode) -> &'static str {
     match node {
         IrNode::Text { .. } => "text",
