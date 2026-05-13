@@ -1,5 +1,8 @@
 defmodule Mix.Tasks.Guppy.Native.Build do
   @shortdoc "Builds and installs the Guppy native NIF library"
+  @moduledoc """
+  Builds the Rust NIF and installs it into `priv/native`.
+  """
 
   use Mix.Task
 

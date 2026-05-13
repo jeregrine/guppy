@@ -21,6 +21,7 @@ defmodule Guppy.MixProject do
   defp deps do
     [
       {:benchee, "~> 1.3", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:rustler, "~> 0.37.3"},
       {:telemetry, "~> 1.3"}
     ]
