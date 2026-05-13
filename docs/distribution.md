@@ -40,6 +40,7 @@ Important assumptions:
 2. fetch Mix dependencies
 3. build the native NIF with `mix guppy.native.build`
 4. run `scripts/check`
+5. run `scripts/clean_install_load_test` to verify a fresh Mix project can depend on Guppy and load the built NIF
 
 This validates the fallback source-build path before any precompiled artifact support is introduced.
 
@@ -51,7 +52,7 @@ Until precompiled artifacts exist, a release is source-only:
 2. Run `mix guppy.native.build --release` on macOS and smoke at least `examples/hello_world.exs`.
 3. Confirm `docs/gpui-compliance.md` still records the current `../zed/crates/gpui` reference.
 4. Update version/changelog metadata when publishing begins.
-5. Do not attach native artifacts unless they were built by CI and load-tested.
+5. Do not attach native artifacts unless they were built by CI and load-tested. Use `scripts/clean_install_load_test` as the minimum local clean-install/load smoke before expanding to artifact-specific CI jobs.
 
 Future native artifact release flow:
 

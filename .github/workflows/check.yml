@@ -53,3 +53,6 @@ jobs:
 
       - name: Run checks
         run: scripts/check
+
+      - name: Clean install/load smoke test
+        run: scripts/clean_install_load_test
