@@ -1,6 +1,6 @@
 # Guppy
 
-Guppy is an Elixir UI framework for native desktop windows. Your Elixir process owns state, renders it to a small IR tree, and a Rustler NIF renders that tree through GPUI.
+Guppy is an Elixir UI framework for native desktop windows built on [GPUI](https://www.gpui.rs/). Your Elixir process owns state, renders it to a small IR tree, and a Rustler NIF renders that tree through GPUI.
 
 ```elixir
 defmodule CounterWindow do

@@ -58,6 +58,20 @@ For performance-sensitive changes, run benchmarks or probes from `docs/performan
 5. Add new primitives only when explicitly prioritized and implemented end-to-end.
 6. Publish precompiled artifacts only after artifact CI, load tests, and checksums exist.
 
+## GPUI compliance feature priorities
+
+When feature work is explicitly prioritized, improve GPUI compliance in this order:
+
+1. **Anchored overlays / popover parity**: explicit anchor placement, close lifecycle, nested/deferred overlay behavior, and stronger popover semantics.
+2. **Select/dropdown primitive**: native-quality option list positioning, close behavior, keyboard navigation, and event roundtrips.
+3. **Generic and variable-height lists**: arbitrary row IR renderers, closer `ListState` parity, retained scroll/item state, and better virtualization behavior.
+4. **Focus traversal and focus-visible behavior**: tab ordering, focus-visible styling semantics, and stronger form-control keyboard behavior.
+5. **Rich text runs before full editor parity**: styled runs, highlights, and layout controls without committing immediately to full editor semantics.
+6. **Grid layout primitives**: enough grid support to port GPUI grid examples and data/table-like layouts more directly.
+7. **Animation lifecycle primitives**: timing/lifecycle APIs designed around Elixir-owned full-tree rendering.
+
+Canvas/custom painting can wait until after these GPUI-compliance gaps are addressed.
+
 ## Source-build release verification
 
 Before cutting or claiming a source-build release, rerun and audit:
@@ -112,19 +126,12 @@ Every future primitive needs:
 - `README.md` supported-surface update
 - `docs/gpui-compliance.md` matrix update
 
-## Deferred work
+## Other deferred work
 
-These are not active work unless explicitly reprioritized:
+These are not active work unless explicitly reprioritized separately from the GPUI compliance feature priorities above:
 
-- select/dropdown primitives with real anchored overlay behavior
 - menu APIs
-- nested/full popover parity
-- animation lifecycle primitives
 - gradient style primitives
-- grid layout primitives
-- arbitrary per-item `uniform_list` renderers
-- variable-height list / `ListState` parity
-- full data-table/tree virtualization parity
+- full data-table/tree virtualization beyond the grid/list work above
 - keyed subtree diffing without benchmark evidence
-- full editor/rich-text parity
-- custom painting/canvas and pattern painting
+- custom painting/canvas and pattern painting until after the GPUI compliance feature priorities above
