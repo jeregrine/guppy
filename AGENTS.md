@@ -303,6 +303,15 @@ Run the full local check suite:
 scripts/check
 ```
 
+Before public release/distribution claims, also run:
+
+```bash
+scripts/clean_install_load_test
+scripts/package_smoke
+mix hex.build --unpack --output /tmp/guppy-hex-unpack
+GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs
+```
+
 Run the main examples:
 
 ```bash
@@ -350,7 +359,7 @@ Especially if you change:
 
 ## What to prioritize next
 
-Follow `PLAN.md`. The project is in stabilization/maintenance mode unless the user explicitly scopes new feature work. Prefer bug fixes, evidence-backed hardening, documentation/examples, and compliance-matrix maintenance over speculative new surface area.
+`PLAN.md` tracks only the forward feature plan. Operationally, keep the project in stabilization/maintenance mode unless the user explicitly scopes new feature work. Prefer bug fixes, evidence-backed hardening, documentation/examples, and compliance-matrix maintenance over speculative new surface area.
 
 Current priority order:
 
