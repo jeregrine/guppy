@@ -11,9 +11,9 @@ Guppy has a useful baseline for:
 - the current documented primitive set
 - runtime lifecycle telemetry and native request containment
 - GPUI compliance tracking
-- source-build distribution planning
+- source-build package/distribution readiness
 
-The production-hardening pass tracked here has landed. The next work should be stabilization, real-user bug fixes, documentation/examples, compliance-matrix maintenance, release/distribution preparation when explicitly prioritized, and explicitly scoped features. Do not expand the primitive or runtime surface speculatively.
+The production-hardening and source-build alpha-readiness passes tracked here have landed. The next work should be stabilization, real-user bug fixes, documentation/examples, compliance-matrix maintenance, release/distribution execution when explicitly prioritized, and explicitly scoped features. Do not expand the primitive or runtime surface speculatively.
 
 ## Required checks
 
@@ -44,57 +44,33 @@ Before public release/distribution claims, also run:
 
 ```sh
 scripts/clean_install_load_test
+scripts/package_smoke
 ```
 
 For performance-sensitive changes, run benchmarks or probes from `docs/performance.md` before optimizing.
 
 ## Current priorities
 
-1. Complete the source-build alpha release readiness gate below before adding surface area.
-2. Keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, and the macOS source-build CI path green.
-3. Fix correctness bugs found by review, real example usage, or tests before adding surface area.
-4. Keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes.
-5. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.
-6. Add new primitives only when explicitly prioritized and implemented end-to-end.
-7. Publish precompiled artifacts only after artifact CI, load tests, and checksums exist.
+1. Keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, `scripts/package_smoke`, and the macOS source-build CI path green.
+2. Fix correctness bugs found by review, real example usage, or tests before adding surface area.
+3. Keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes.
+4. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.
+5. Add new primitives only when explicitly prioritized and implemented end-to-end.
+6. Publish precompiled artifacts only after artifact CI, load tests, and checksums exist.
 
-## Alpha release readiness gate
+## Source-build release verification
 
-Do not call Guppy alpha-ready until the source-build package is shippable and the preferred public APIs feel idiomatic. Precompiled artifacts may remain post-alpha, but the source-build path must work from the package users will actually install.
+Before cutting or claiming a source-build release, rerun and audit:
 
-Required before a source-build alpha:
+```sh
+scripts/check
+scripts/clean_install_load_test
+scripts/package_smoke
+mix hex.build --unpack
+GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs
+```
 
-1. **Package/release metadata**
-   - `mix hex.build` succeeds with description, licenses, links, and intentional package metadata.
-   - Add a `LICENSE` file and a minimal changelog or release-notes policy.
-   - Define explicit package files: include `lib`, `mix.exs`, docs needed by users, and the native Rust sources required for fallback builds (`native/guppy_nif/src`, `Cargo.toml`, `Cargo.lock`, and any required build metadata).
-   - Exclude generated native artifacts such as `priv/native/guppy_nif.so` and `native/guppy_nif/target` from packages.
-   - Add a package smoke that verifies the built package/tarball can compile and load Guppy, not only a path dependency checkout.
-
-2. **RustlerPrecompiled/source-build semantics**
-   - Keep source-build fallback as the default until release artifacts and `checksum-*.exs` exist.
-   - Treat `GUPPY_NATIVE_PRECOMPILED=1` as an explicit artifact-path probe; it is expected to fail until artifacts are published and must not be documented as supported earlier.
-   - Before flipping the default to downloads, CI must build every advertised target, load-test each artifact, and generate/package the required checksum file.
-   - Resolve or document the `GUPPY_NATIVE_RELEASE=1` compile-env switch: users must know to keep the env var for subsequent Mix commands or clean/recompile when switching back to debug builds. Prefer a less footgun-prone release-build workflow if possible.
-
-3. **Public API and OTP ergonomics**
-   - `use Guppy.Window` should generate an idiomatic `child_spec/1` so window modules can be supervised directly.
-   - Revisit public `Guppy.open_window/*` arities before alpha. The common case should support `Guppy.open_window(ir, opts)`; owner-specific calls should be lower-level/internal unless there is a clear public need.
-   - Optional `Guppy.Window` callbacks must either have safe default implementations or the docs must stop implying event callbacks are optional when templates emit events.
-   - Decide whether preferred `Guppy.Window` users can observe `window_close_requested`; if not, document that the preferred abstraction only treats `window_closed` as lifecycle-driving today.
-
-4. **Product-surface hygiene**
-   - Include examples and benchmarks in formatting, then format them.
-   - Remove obvious dead/sloppy code such as no-op compiler branches.
-   - Split the monolithic ExUnit file into focused IR, compiler, server/native, and window lifecycle tests before it becomes harder to review.
-   - Keep tests non-flaky; avoid assertions that depend on zero-timeout native request races.
-
-5. **Alpha verification commands**
-   - `scripts/check`
-   - `scripts/clean_install_load_test`
-   - package/tarball smoke from the generated Hex package contents
-   - `mix hex.build --unpack` or equivalent package-content audit
-   - one optimized native smoke on macOS, for example `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs`
+Also confirm `docs/gpui-compliance.md` still records the current GPUI reference, update `CHANGELOG.md` and the package version for the release, and do not attach native artifacts unless CI built and load-tested every advertised artifact and generated the required checksums.
 
 ## Production readiness baseline
 
@@ -112,7 +88,7 @@ Use OTP semantics as the default recovery model:
 
 Future production/release work, when explicitly prioritized, should focus on:
 
-- release packaging/versioning/changelog policy
+- release versioning/changelog maintenance and publication execution
 - precompiled artifact CI, checksum generation, and load tests per advertised target
 - broader platform validation beyond the current macOS-first source-build path
 - more manual and automated example smoke coverage, especially around window lifecycle and interactive controls
