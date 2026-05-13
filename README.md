@@ -10,7 +10,7 @@ The basic idea is simple:
 - GPUI handles layout, paint, focus, scrolling, and windows
 - native events come back to the owning Elixir process
 
-Guppy is still early, but it is already useful as a real architecture prototype, not just a toy. It can load a native NIF, boot GPUI on macOS, open real windows, render full trees, preserve retained native state where needed, and route native events back into BEAM processes.
+Guppy is still unreleased, but it has a useful baseline: it can load a native NIF, boot GPUI on macOS, open real windows, render full trees, preserve retained native state where needed, and route native events back into BEAM processes. The project is currently in stabilization/maintenance mode unless new feature work is explicitly scoped.
 
 ## What Guppy feels like today
 
@@ -59,11 +59,11 @@ Current native event coverage includes:
 - uniform list item click
 - popover trigger/close click callbacks
 - text input / textarea change
-- window closed
+- window close requested / window closed
 
 That is still intentionally selective. Guppy is not pretending to be a complete widget toolkit yet.
 
-Guppy is **not** all of GPUI from Elixir. It is an Elixir-owned state/render loop targeting a documented GPUI subset. The tracked compatibility matrix lives in [`docs/gpui-compliance.md`](docs/gpui-compliance.md), and new primitives should only be considered supported when they have:
+Guppy is **not** all of GPUI from Elixir. It is an Elixir-owned state/render loop targeting a documented GPUI subset. The tracked compatibility matrix lives in [`docs/gpui-compliance.md`](docs/gpui-compliance.md). New primitives are not planned speculatively; they should only be added when explicitly prioritized and considered supported when they have:
 
 - Elixir IR validation
 - Rust decode support
@@ -195,6 +195,7 @@ Top-level API:
 - `Guppy.native_build_info/0`
 - `Guppy.native_runtime_status/0`
 - `Guppy.native_gui_status/0`
+- `Guppy.native_performance_counters/0`
 
 Preferred window abstraction:
 
@@ -416,7 +417,7 @@ Debug native builds are much slower and can make scrolling feel worse than the a
 
 ## Distribution status
 
-Guppy is source-build first today. Use `mix guppy.native.build` to build and copy the NIF into `priv/native/`; precompiled artifacts are planned only after CI can build and load-test each advertised target.
+Guppy is source-build first today. Use `mix guppy.native.build` to build and copy the NIF into `priv/native/`. The macOS source-build path is covered by CI. Precompiled artifacts are deferred until release/publishing work is explicitly prioritized and CI can build and load-test each advertised target.
 
 See `docs/distribution.md` for the current target assumptions and precompiled artifact plan.
 
@@ -431,8 +432,7 @@ Key files:
 - `lib/guppy/component/compiler.ex` — template compiler
 - `lib/guppy/native/nif.ex` — direct Elixir wrapper around the NIF module
 - `lib/guppy/ir.ex` — Elixir IR validation/helpers
-- `native/guppy_nif/src/lib.rs` — Rustler NIF entrypoints and BEAM interop
-- `native/guppy_nif/src/lib.rs` — Rust NIF entrypoints and request path
+- `native/guppy_nif/src/lib.rs` — Rustler NIF entrypoints, BEAM interop, event encoding, and request path
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI main-thread runtime and window registry
 - `native/guppy_nif/src/bridge_view.rs` — root native renderer
 - `native/guppy_nif/src/bridge_view/` — per-node renderers, style mapping, events, identity
@@ -442,18 +442,24 @@ Key files:
 
 ## Known limits
 
-Still missing or intentionally narrow:
+Still missing, intentionally narrow, or deferred unless explicitly scoped:
 
-- full editor/rich-text parity
-- select primitive
-- fully generic list item renderers
-- full popover parity (nested/deferred layer edge cases)
-- richer text runs/highlights
-- letter spacing
+- full editor/rich-text parity and richer text runs/highlights
+- select/dropdown primitive with native-quality anchored overlay behavior
+- fully generic list item renderers and variable-height list parity
+- full popover parity, including nested/deferred layer edge cases
+- animation, gradient, grid, canvas/custom painting, pattern painting, and menu APIs
+- precompiled native artifacts
 
 ## Contributing / hacking on it
 
-If you touch native code, usually run:
+For meaningful changes, run the local check suite:
+
+```bash
+scripts/check
+```
+
+If you touch native code, also run:
 
 ```bash
 mix guppy.native.build

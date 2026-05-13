@@ -9,6 +9,31 @@ Statuses:
 - `unsupported`: Guppy does not yet expose the needed primitive.
 - `out of scope`: Not planned for the current Elixir-owned IR subset.
 
+## Missing or deferred primitive areas
+
+These are the main primitive gaps visible from the current GPUI matrix. They are not active work unless explicitly prioritized.
+
+- **Select/dropdown**: needs native-quality anchored overlay behavior, option-list positioning, close lifecycle, and keyboard navigation.
+- **Rich editor / rich text**: rich runs, highlights, advanced layout, syntax/editor semantics, and full editor parity are not exposed.
+- **Generic list / variable-height list**: current `uniform_list` is a focused text-row primitive; arbitrary row IR renderers and `ListState` parity are missing.
+- **Data table / tree**: simple nested `div`/`text` and text-row `uniform_list` cover only basic scenarios; table/tree-specific virtualization and interaction are missing.
+- **Full popover / anchored overlay controls**: current popover support is minimal and Elixir-owned; nested popovers, explicit anchor placement, and advanced deferred-layer behavior are missing.
+- **Animation primitives**: timing/lifecycle APIs need a design that fits Elixir-owned full-tree rendering.
+- **Gradient style primitives**: not exposed in the style surface today.
+- **Grid layout**: flex/div remains the current layout surface.
+- **Custom painting / canvas / pattern painting**: would require a new retained drawing primitive.
+- **Menu APIs**: not exposed as core IR/window primitives today.
+- **Mouse pressure payloads**: basic mouse events are routed, but pressure-specific data is not exposed.
+
+Intentionally narrow parity areas:
+
+- async image loading/error-state APIs
+- complete SVG/image asset pipeline controls
+- full GPUI window API parity
+- full focus-visible and tab traversal parity
+- full native drag/drop payload and drop-target parity
+- GPUI test API parity
+
 | GPUI source | Guppy port/coverage | Status | Missing primitives / gaps | Verification |
 | --- | --- | --- | --- | --- |
 | `examples/hello_world.rs` | `examples/hello_world.exs`, `test/guppy_test.exs` template checks | supported | none known for static text/window open | automated IR/template tests; manual example smoke |

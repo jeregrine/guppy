@@ -1,19 +1,19 @@
 # Guppy Forward Plan
 
-This is the active forward-looking plan. Completed baseline architecture, Rustler migration, benchmark/performance hardening, GPUI compliance matrix setup, initial GPUI example hardening, and README surface-contract work are historical context only and are no longer planned work.
+This file tracks future work only. Implementation history belongs in commit history, docs, examples, and the GPUI compliance matrix.
 
-## Current standard
+## Current mode
 
-Guppy should be treated as a serious Elixir/GPUI bridge, not a demo. Keep the bar at:
+Guppy has a useful baseline for:
 
-- TDD-driven development
-- small, reviewable changes
-- one clear Rustler NIF boundary
-- no bespoke C shim
-- native tests green
-- measurable performance decisions
-- explicit GPUI compatibility tracking
-- examples that double as regression coverage
+- Elixir-owned window state and full-tree rendering
+- the Rustler/GPUI native bridge
+- the current documented primitive set
+- runtime lifecycle telemetry and native request containment
+- GPUI compliance tracking
+- source-build distribution planning
+
+The next work should be stabilization, real-user bug fixes, production-readiness hardening, documentation/examples, and explicitly scoped features. Do not expand the primitive or runtime surface speculatively.
 
 ## Required checks
 
@@ -42,13 +42,63 @@ mix run examples/hello_world.exs
 
 For performance-sensitive changes, run benchmarks or probes from `docs/performance.md` before optimizing.
 
-## Completed primitive expansion baseline
+## Current priorities
 
-High-value primitives visible in the GPUI compliance matrix now have a useful baseline. Do not add more widgets casually: each future primitive must be explicitly prioritized, implemented end-to-end, and backed by tests, docs, examples, and matrix updates.
+1. Keep `scripts/check`, `mix guppy.native.build`, and the macOS source-build CI path green.
+2. Harden native request failure behavior so `Guppy.Server` cannot be wedged by a stalled main-thread/native reply.
+3. Implement OTP-style runtime recovery: let supervised Guppy processes crash/restart, keep Guppy-owned state minimal and reconstructable, and treat native windows as disposable projections of owner state.
+4. Fix correctness bugs found by review, real example usage, or tests before adding surface area.
+5. Keep `README.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, and `examples/super_demo.exs` current when behavior changes.
+6. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.
+7. Add new primitives only when explicitly prioritized and implemented end-to-end.
+8. Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
 
-### Primitive definition of done
+## Production readiness hardening
 
-Every new primitive needs:
+### Runtime failure model
+
+Use OTP semantics as the default recovery model:
+
+- Guppy-owned server state should be small, ephemeral, and reconstructable.
+- Elixir owner processes remain the source of truth for UI state.
+- Native windows, native view registries, focus handles, scroll handles, and text-input entities are disposable projections/caches.
+- Rustler/native code may monitor BEAM pids for cleanup notifications, but native code should not become the owner of OTP lifecycle.
+- Prefer crashing/restarting supervised Elixir processes over complex in-place repair when state can be rebuilt.
+- Do not attempt to reconcile arbitrary native windows after `Guppy.Server` restart unless there is a tested reason to keep them. Prefer Rustler monitor-driven event-target cleanup, best-effort native window cleanup, and owner-driven reopen/rerender.
+- A BEAM-killing NIF crash or unrecoverable GPUI process failure is outside in-VM OTP recovery; document that such failures require external application restart.
+
+Required work:
+
+1. Add bounded native request deadlines.
+   - Thread caller timeout/deadline through `Guppy.Server`, `Guppy.Native.Nif`, and Rust request helpers.
+   - Replace unbounded native reply waits with timeout-aware waits.
+   - Return structured errors such as `{:error, :native_timeout}` or `{:error, :runtime_unavailable}` instead of leaving the server blocked.
+   - Add failure-injection tests for a native bridge that never replies.
+2. Make restart behavior explicit and tested.
+   - On `Guppy.Server` init/restart, re-register the native event target.
+   - Add a Rustler resource-backed monitor for the registered event-target pid using `Env::monitor` / `Resource::down`.
+   - Store the native event target with a monitor generation/token so stale `down` callbacks cannot clear a newer restarted target.
+   - When the monitored event-target pid exits, clear `EVENT_TARGET` and enqueue best-effort native cleanup such as `close_all`/`reset_views` if that is the chosen policy.
+   - Add a native `close_all`/`reset_views` request if needed so restarted server state cannot be inconsistent with orphaned native windows.
+   - Ensure `Guppy.Window` can observe Guppy runtime/server loss and reopen from current assigns/rendered state after restart.
+   - Document behavior for lower-level `Guppy.open_window/1..4` owners that do not use `Guppy.Window`; they may need to reopen explicitly after runtime restart.
+   - Add tests that crash/restart `Guppy.Server`, verify monitor-driven event-target clearing, verify event-target re-registration, verify native view cleanup or explicit invalidation, and verify a `Guppy.Window` can recover by reopening.
+3. Fix reviewed interaction correctness bugs.
+   - Disabled checkbox and radio nodes must not emit click/key change callbacks.
+   - Window close-request semantics must be either explicitly informational or changed to a real veto/decision protocol.
+   - IR validation should reject unknown keys so typos do not silently cross the bridge.
+4. Tighten native boundary errors.
+   - Preserve decode/runtime error reasons where useful instead of collapsing everything to `BadArg` or generic unavailability.
+   - Remove panics/unwraps/expectations from request/event paths where a recoverable error can be returned.
+   - Keep unsafe blocks documented at the boundary where Rust cannot prove safety.
+5. Release/distribution gates before any public production claim.
+   - Move GPUI `test-support` usage out of normal native builds if possible.
+   - Keep source-build CI green.
+   - Add clean-install/load tests before advertising any precompiled artifact.
+
+## New primitive definition of done
+
+Every future primitive needs:
 
 - Elixir IR helper and validation in `lib/guppy/ir.ex`
 - template/compiler support in `Guppy.Component` / `~G` when author-facing
@@ -62,182 +112,23 @@ Every new primitive needs:
 - `README.md` supported-surface update
 - `docs/gpui-compliance.md` matrix update
 
-### Completed in primitive expansion: textarea
+## Deferred work
 
-Guppy now has a practical multiline `textarea` primitive without claiming full Zed editor parity.
+These are not active work unless explicitly reprioritized:
 
-Delivered scope:
-
-- `Guppy.IR.textarea/2`
-- `textarea` template tag
-- value, placeholder, disabled, style, tab index, and change events
-- retained native state keyed by stable node identity through the shared text input implementation
-- example coverage in `examples/super_demo.exs`
-- `README.md` supported-surface update
-- `docs/gpui-compliance.md` matrix update for input/text-related gaps
-
-Still out of scope:
-
-- rich text runs
-- syntax highlighting
-- collaborative/editor entity semantics
-- full Zed editor parity
-
-### Completed in primitive expansion: radio
-
-Guppy now has a minimal radio option primitive for Elixir-owned form state.
-
-Delivered scope:
-
-- `Guppy.IR.radio/4`
-- `radio` template tag
-- label, value, checked, disabled, style, tab index, and change/focus/blur events
-- keyboard activation through Enter/Space
-- example coverage in `examples/super_demo.exs`
-- `README.md` supported-surface update
-- `docs/gpui-compliance.md` matrix update for form-control gaps
-
-Still out of scope:
-
-- a retained native radio-group owner; Elixir remains the group state owner
-- select/dropdown controls
-
-### Deferred in primitive expansion: select/dropdown
-
-GPUI 0.2.2 does not expose a simple select/dropdown primitive in the examples or public element surface comparable to text input or checkbox. A native-quality select needs anchored overlay/popover behavior first; implementing a fake always-expanded select would add API surface without matching the intended interaction model.
-
-Deferred scope:
-
-- select/dropdown primitive
-- option list overlay positioning
-- outside-click close lifecycle
-- keyboard navigation within the opened option list
-
-Revisit after tooltip/popover/anchored-overlay support exists.
-
-### Completed in primitive expansion: uniform text list
-
-Guppy now has a focused `uniform_list` primitive for large lists of text rows with stable item ids. It wraps GPUI's `uniform_list` for lazy visible-range rendering while keeping Elixir as the owner of item data and selection state.
-
-Delivered scope:
-
-- `Guppy.IR.uniform_list/2`
-- `uniform_list` template tag
-- stable item ids and labels
-- list-level style and item-row style
-- item click routing back to the owning Elixir process using stable item identity
-- GPUI `uniform_list` native render path
-- example coverage in `examples/super_demo.exs`
-- `README.md` supported-surface update
-- `docs/gpui-compliance.md` matrix update for list/uniform-list gaps
-
-Still out of scope:
-
-- arbitrary per-item child IR renderers
-- variable-height `list`/`ListState` parity
-- data-table/grid parity
-- row selection ownership beyond normal Elixir event handling
-
-### Completed in primitive expansion: tooltip
-
-Guppy now supports simple tooltip text on `div` nodes via GPUI's native tooltip mechanism.
-
-Delivered scope:
-
-- `tooltip` option on `Guppy.IR.div/2`
-- `tooltip` template attribute on `<div>`
-- native GPUI tooltip rendering for non-disabled divs
-- example coverage in `examples/super_demo.exs`
-- `README.md` supported-surface update
-- `docs/gpui-compliance.md` matrix update for tooltip/popover gaps
-
-Still out of scope:
-
-- arbitrary tooltip child IR
-- hoverable tooltip content
-- anchored popovers / overlay close lifecycle
-
-### Completed in primitive expansion: popover
-
-Guppy now has a minimal Elixir-owned popover primitive backed by GPUI deferred anchored layers.
-
-Delivered scope:
-
-- `Guppy.IR.popover/4`
-- `popover` template tag
-- trigger label, open flag, children, trigger click callback, and outside-click close callback
-- GPUI `deferred(anchored(...))` native render path
-- example coverage in `examples/super_demo.exs`
-- `README.md` supported-surface update
-- `docs/gpui-compliance.md` matrix update for popover/anchor gaps
-
-Still out of scope:
-
-- nested popover parity
-- retained/native overlay owner state; Elixir owns open/closed state
-- full select/dropdown built on top of popover
-
-### Completed in primitive expansion: compliance sweep
-
-The compliance matrix now has rows for every GPUI example/test source at `../zed/crates/gpui` reference `78c889c21d`, and the remaining unsupported/partial rows are either backed by focused smoke coverage, explicitly deferred, or marked out of scope for the current Elixir-owned IR architecture.
-
-Deferred primitive areas:
-
+- select/dropdown primitives with real anchored overlay behavior
+- full editor/rich-text parity
+- arbitrary per-item `uniform_list` renderers
+- variable-height list / `ListState` parity
+- nested/full popover parity
 - animation lifecycle primitives
 - gradient style primitives
 - grid layout primitives
 - custom painting/canvas and pattern painting
 - menu APIs
-- richer text/rich editor parity
 - full data-table/tree virtualization parity
-- full select/dropdown parity on top of richer popover behavior
-
-### Completed in runtime hardening: native request containment and lifecycle telemetry
-
-Runtime hardening is complete enough to unblock distribution planning.
-
-Delivered scope:
-
-- owner process cleanup routes native close-window requests through the same server-mediated native request path as explicit close calls, preserving `[:guppy, :native, :request]` telemetry
-- owner cleanup has automated coverage
-- known and unknown native close events have event-route telemetry coverage
-- native window close attempts emit `window_close_requested` before `window_closed`, so owners can observe close intent before server cleanup
-- server-mediated native requests contain native wrapper crashes/exits and report `{:error, :runtime_unavailable}` instead of crashing `Guppy.Server`
-
-Current runtime decisions:
-
-- a full native runtime restart/reinitialization strategy is deferred; hard NIF/runtime failures are not safely restartable inside the same BEAM process today
-- keyed subtree diffing remains deferred until benchmarks show full-tree replacement is the bottleneck
-- cross-platform behavior beyond macOS remains a distribution/support strategy item, not a blocker for the current local source build
-
-## Ongoing maintenance
-
-Keep these current as part of feature work:
-
-- `docs/gpui-compliance.md`: source reference, status, gaps, and verification notes
-- `README.md`: supported public API and node surface
-- `examples/super_demo.exs`: broad manual smoke coverage
-- `docs/performance.md`: only when new measurements affect decisions
-
-Performance guidance remains: do not add default scroll debounce, high-frequency event coalescing, or `Guppy.Window` rerender batching without measurements proving the need.
-
-## Completed distribution hardening baseline
-
-Distribution hardening has a baseline plan and source-build gate. Precompiled artifacts are intentionally deferred until publishing is actually being prepared.
-
-Delivered scope:
-
-- source-build targets and current macOS-first assumptions are documented in `docs/distribution.md`
-- precompiled artifact gates and the initial target matrix are documented in `docs/distribution.md`
-- release-process expectations for native artifacts are documented in `docs/distribution.md`
-- `.github/workflows/check.yml` validates the macOS source-build fallback by running `mix guppy.native.build` and `scripts/check`
-- local source builds remain the supported fallback path
-
-Deferred until publish/release work:
-
-- adding `rustler_precompiled`
-- precompiled artifact build/load validation for every advertised target
-- claiming any target as precompiled-supported
+- keyed subtree diffing without benchmark evidence
+- cross-platform/precompiled artifact support beyond the documented source-build baseline
 
 ## Non-goals for now
 
@@ -245,4 +136,4 @@ Deferred until publish/release work:
 - claiming full GPUI compatibility without matrix evidence
 - optimizing based on anecdotes instead of benchmarks
 - semantic theme tokens in core IR
-- packaging/precompiled artifacts before primitive behavior settles
+- packaging/precompiled artifacts before release/publishing work is explicitly prioritized

@@ -318,18 +318,17 @@ Especially if you change:
 
 ## What to prioritize next
 
-Follow `PLAN.md`. Primitive expansion, runtime hardening, compliance tracking, and distribution planning now have useful baselines. Prefer bug fixes, evidence-backed hardening, or explicitly requested features over speculative new surface area.
+Follow `PLAN.md`. The project is in stabilization/maintenance mode unless the user explicitly scopes new feature work. Prefer bug fixes, evidence-backed hardening, documentation/examples, and compliance-matrix maintenance over speculative new surface area.
 
 Current priority order:
 
-1. keep `scripts/check` and the macOS source-build CI path green
-2. add `rustler_precompiled` only when publishing/precompiled artifacts are explicitly prioritized
-3. more generic list/uniform-list rendering only if the text-row primitive proves too narrow
-4. full editor/rich-text parity only if explicitly scoped
+1. keep `scripts/check`, `mix guppy.native.build`, and the macOS source-build CI path green
+2. fix bugs found by real example usage or tests
+3. keep `README.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, and `examples/super_demo.exs` current when behavior changes
+4. improve existing primitives only when a real gap is identified
+5. add new primitives or `rustler_precompiled` only when explicitly prioritized
 
 Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
-
-Continue keeping `docs/gpui-compliance.md`, `README.md`, and examples current as compatibility work continues.
 
 Do **not** push semantic theme-token ideas into core IR unless the user explicitly changes direction. Keep higher-level theming in Elixir.
 
