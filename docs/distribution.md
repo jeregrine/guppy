@@ -2,7 +2,7 @@
 
 Guppy is currently source-build first, with `rustler_precompiled` wired in for the future artifact path. The native runtime is a single Rustler NIF built from `native/guppy_nif`; Rustler builds and copies it into `priv/native/` during normal Mix compilation.
 
-The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, and clean-install NIF loading. Distribution defaults to source builds until CI publishes checksummed precompiled artifacts.
+The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, clean-install NIF loading, and generated package smoke loading. Distribution defaults to source builds until CI publishes checksummed precompiled artifacts.
 
 ## Current supported path
 
@@ -18,6 +18,15 @@ For interactive demos, prefer an optimized native build:
 ```sh
 GUPPY_NATIVE_RELEASE=1 mix run examples/super_demo.exs
 ```
+
+`GUPPY_NATIVE_RELEASE=1` selects Rustler's release-mode native build at compile time. Keep the environment variable set for subsequent Mix commands that should use that optimized build. To switch back to a debug native build, unset the variable and clean/recompile, for example:
+
+```sh
+mix clean
+mix compile --force
+```
+
+`GUPPY_NATIVE_PRECOMPILED=1` is an explicit probe of the future artifact-download path. It is expected to fail until release artifacts and `checksum-*.exs` files are published; do not document it as a supported install mode before then.
 
 ## Current platform assumptions
 
@@ -40,6 +49,7 @@ Important assumptions:
 2. fetch Mix dependencies
 3. run `scripts/check`
 4. run `scripts/clean_install_load_test` to verify a fresh Mix project can depend on Guppy and load the built NIF
+5. run `scripts/package_smoke` to verify the generated Hex package contents can compile and load Guppy
 
 This validates the fallback source-build path while precompiled artifacts are not yet published.
 
@@ -48,10 +58,13 @@ This validates the fallback source-build path while precompiled artifacts are no
 Until precompiled artifacts exist, a release is source-only:
 
 1. Run `scripts/check`.
-2. Run `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs` on macOS.
-3. Confirm `docs/gpui-compliance.md` still records the current `../zed/crates/gpui` reference.
-4. Update version/changelog metadata when publishing begins.
-5. Do not attach native artifacts unless they were built by CI and load-tested. Use `scripts/clean_install_load_test` as the minimum local clean-install/load smoke before expanding to artifact-specific CI jobs.
+2. Run `scripts/clean_install_load_test`.
+3. Run `scripts/package_smoke`.
+4. Audit package contents with `mix hex.build --unpack`.
+5. Run `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs` on macOS.
+6. Confirm `docs/gpui-compliance.md` still records the current `../zed/crates/gpui` reference.
+7. Update `CHANGELOG.md` and the package version for the release.
+8. Do not attach native artifacts unless they were built by CI and load-tested. Use `scripts/package_smoke` as the minimum local package load smoke before expanding to artifact-specific CI jobs.
 
 Future native artifact release flow:
 
@@ -72,7 +85,7 @@ Future native artifact release flow:
 5. Document how release artifacts are produced, signed when needed, and attached.
 6. Flip the default from source-build to precompiled-download only after the advertised artifact set is built and load-tested.
 7. Keep Rustler source compilation as the fallback path.
-8. Keep `scripts/check`, `mix compile`, and `scripts/clean_install_load_test` green for source builds.
+8. Keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, and `scripts/package_smoke` green for source builds.
 
 ## Initial target matrix
 

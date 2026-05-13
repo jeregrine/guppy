@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+package_dir="$tmpdir/guppy-package"
+smoke_dir="$tmpdir/guppy_package_smoke"
+
+unset GUPPY_NATIVE_PRECOMPILED
+
+cd "$repo_root"
+mix hex.build --unpack --output "$package_dir" >/dev/null
+
+if find "$package_dir" -path '*/native/guppy_nif/target*' -print -quit | grep -q .; then
+  echo "package unexpectedly contains native/guppy_nif/target" >&2
+  exit 1
+fi
+
+if find "$package_dir" -path '*/priv/native/*' -type f -print -quit | grep -q .; then
+  echo "package unexpectedly contains generated priv/native artifacts" >&2
+  exit 1
+fi
+
+cd "$tmpdir"
+mix new guppy_package_smoke >/dev/null
+cd "$smoke_dir"
+
+python3 - <<PY
+from pathlib import Path
+path = Path('mix.exs')
+text = path.read_text()
+text = text.replace('      # {:dep_from_hexpm, "~> 0.3.0"},\n      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}\n', '      {:guppy, path: "${package_dir}"}\n')
+path.write_text(text)
+PY
+
+mix deps.get >/dev/null
+mix run -e 'Application.ensure_all_started(:guppy); {:ok, :pong} = Guppy.ping(); {:ok, "guppy_nif_rust_core"} = Guppy.native_build_info(); IO.puts("guppy package smoke ok")'

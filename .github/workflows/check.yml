@@ -53,3 +53,6 @@ jobs:
 
       - name: Clean install/load smoke test
         run: scripts/clean_install_load_test
+
+      - name: Package contents smoke test
+        run: scripts/package_smoke

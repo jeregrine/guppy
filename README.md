@@ -77,6 +77,12 @@ Full local check suite:
 scripts/check
 ```
 
+Generated package smoke:
+
+```bash
+scripts/package_smoke
+```
+
 ## Examples
 
 ```bash
@@ -277,7 +283,7 @@ Text nodes and div-like nodes support the current style-token surface where appl
 
 ## Distribution
 
-Guppy is source-build first. Rustler builds and copies the NIF into `priv/native/` during normal Mix compilation. The macOS source-build path and clean-install/load smoke are covered by CI.
+Guppy is source-build first. Rustler builds and copies the NIF into `priv/native/` during normal Mix compilation. The macOS source-build path, clean-install/load smoke, and generated package smoke are covered by CI.
 
 Current source-build support:
 
@@ -289,7 +295,7 @@ Current source-build support:
 | `x86_64-unknown-linux-gnu` | planned, needs GPUI runtime validation |
 | `x86_64-pc-windows-msvc` | planned, needs GPUI/runtime validation |
 
-`rustler_precompiled` is wired in for those GPUI-aligned targets, but source builds remain the default until release artifacts and checksums are published. See [`docs/distribution.md`](docs/distribution.md).
+`rustler_precompiled` is wired in for those GPUI-aligned targets, but source builds remain the default until release artifacts and checksums are published. `GUPPY_NATIVE_PRECOMPILED=1` is only an explicit artifact-path probe until then. See [`docs/distribution.md`](docs/distribution.md).
 
 ## Known limits
 
