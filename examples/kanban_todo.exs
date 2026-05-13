@@ -12,6 +12,10 @@ defmodule Examples.KanbanTodoWindow do
     done: %{title: "Done", accent: "#22c55e"}
   }
 
+  prop(:metric_badge, :metric, :map, required: true)
+  prop(:kanban_lane, :lane, :map, required: true)
+  prop(:kanban_card, :task, :map, required: true)
+
   @impl Guppy.Window
   def mount(:ok, window) do
     {:ok,
@@ -44,6 +48,33 @@ defmodule Examples.KanbanTodoWindow do
 
   def handle_event("archive:" <> id_text, _event_data, window) do
     archive_task(window, String.to_integer(id_text))
+  end
+
+  def handle_event("drag_started", %{source_id: source_id}, window) do
+    case task_id_from_source(source_id) do
+      {:ok, id} ->
+        case Enum.find(window.assigns.tasks, &(&1.id == id)) do
+          nil ->
+            {:noreply, window, :skip_render}
+
+          task ->
+            drag_generation = window.assigns.drag_generation + 1
+            Process.send_after(self(), {:clear_dragging, drag_generation}, 4_000)
+
+            {:noreply,
+             assign(window,
+               dragging_task_id: id,
+               drag_generation: drag_generation,
+               drop_flash_status: nil,
+               last_moved_task_id: nil,
+               notice: "Dragging \"#{task.title}\". Drop it on any lane to move it.",
+               notice_tone: :ready
+             )}
+        end
+
+      :error ->
+        {:noreply, window, :skip_render}
+    end
   end
 
   def handle_event("drag_started", _event_data, window) do
@@ -79,10 +110,39 @@ defmodule Examples.KanbanTodoWindow do
   end
 
   @impl Guppy.Window
+  def handle_info({:clear_drop_flash, generation}, window) do
+    if generation == window.assigns.flash_generation do
+      {:noreply, assign(window, drop_flash_status: nil, last_moved_task_id: nil)}
+    else
+      {:noreply, window, :skip_render}
+    end
+  end
+
+  def handle_info({:clear_dragging, generation}, window) do
+    if generation == window.assigns.drag_generation and
+         not is_nil(window.assigns.dragging_task_id) do
+      {:noreply, assign(window, dragging_task_id: nil)}
+    else
+      {:noreply, window, :skip_render}
+    end
+  end
+
+  @impl Guppy.Window
   def render(window) do
     tasks = window.assigns.tasks
     counts = count_by_status(tasks)
-    columns = Enum.map(@column_order, &column_view(&1, tasks, counts))
+
+    columns =
+      Enum.map(@column_order, fn status ->
+        column_view(
+          status,
+          tasks,
+          counts,
+          window.assigns.dragging_task_id,
+          window.assigns.drop_flash_status,
+          window.assigns.last_moved_task_id
+        )
+      end)
 
     board_width_px = length(columns) * 264 + max(length(columns) - 1, 0) * 8 + 8
     open_count = length(tasks) - Map.get(counts, :done, 0)
@@ -179,6 +239,11 @@ defmodule Examples.KanbanTodoWindow do
       draft_title: "",
       notice: "Add a clear title to create a new backlog card.",
       notice_tone: :neutral,
+      dragging_task_id: nil,
+      drag_generation: 0,
+      drop_flash_status: nil,
+      flash_generation: 0,
+      last_moved_task_id: nil,
       tasks: seed_tasks()
     )
   end
@@ -362,15 +427,18 @@ defmodule Examples.KanbanTodoWindow do
     end)
   end
 
-  defp column_view(status, tasks, counts) do
+  defp column_view(status, tasks, counts, dragging_task_id, drop_flash_status, last_moved_task_id) do
     meta = Map.fetch!(@column_meta, status)
     column_tasks = tasks |> Enum.filter(&(&1.status == status)) |> Enum.sort_by(&task_sort_key/1)
+    dragging? = not is_nil(dragging_task_id)
+    flash? = drop_flash_status == status
 
     %{
       id: "#{status}_column",
       title: meta.title,
       count: Map.get(counts, status, 0),
       drop_event: "drop_on_#{status}",
+      animation: lane_animation(status, flash?),
       header_id: "#{status}_header",
       title_id: "#{status}_title",
       accent_id: "#{status}_accent",
@@ -381,18 +449,20 @@ defmodule Examples.KanbanTodoWindow do
       empty_id: "#{status}_empty",
       empty_text_id: "#{status}_empty_text",
       empty: column_tasks == [],
-      class:
-        "flex flex-col flex-none w-[264px] h-full gap-2 p-2 rounded-xl border-1 bg-[#0b1220] border-[#{meta.accent}] shadow-sm",
+      class: lane_class(meta.accent, dragging?, flash?),
       accent_class: "w-[8px] h-[8px] rounded-full bg-[#{meta.accent}]",
       count_badge_class:
         "px-2 py-2 rounded-full border-1 bg-[#111827] border-[#{meta.accent}] text-[#e2e8f0]",
       empty_class:
         "p-2 rounded-lg border-1 border-dashed border-[#{meta.accent}] bg-[#09111f] opacity-[0.9]",
-      tasks: Enum.map(column_tasks, &task_view/1)
+      tasks: Enum.map(column_tasks, &task_view(&1, dragging_task_id, last_moved_task_id))
     }
   end
 
-  defp task_view(task) do
+  defp task_view(task, dragging_task_id, last_moved_task_id) do
+    dragging? = task.id == dragging_task_id
+    moved? = task.id == last_moved_task_id
+
     %{
       card_id: "task_card_#{task.id}",
       top_id: "task_top_#{task.id}",
@@ -418,8 +488,8 @@ defmodule Examples.KanbanTodoWindow do
       updated_at: task.updated_at,
       priority_label: String.upcase(to_string(task.priority)),
       done: task.status == :done,
-      card_class:
-        "flex flex-col gap-2 p-2 rounded-lg border-1 border-[#1e293b] bg-[#111827] shadow-sm cursor-pointer",
+      card_class: task_card_class(dragging?, moved?),
+      animation: task_animation(task.id, dragging?, moved?),
       team_badge_class: team_badge_class(task.team),
       priority_badge_class: priority_badge_class(task.priority)
     }
@@ -436,7 +506,7 @@ defmodule Examples.KanbanTodoWindow do
 
   defp kanban_lane(assigns) do
     ~G"""
-    <div id={@lane.id} drop={@lane.drop_event} class={@lane.class}>
+    <div id={@lane.id} drop={@lane.drop_event} class={@lane.class} animation={@lane.animation}>
       <div id={@lane.header_id} class="flex flex-row items-center justify-between gap-2 p-1">
         <div id={@lane.title_id <> "_wrap"} class="flex flex-row items-center gap-2 flex-1">
           <div id={@lane.accent_id} class={@lane.accent_class}></div>
@@ -471,10 +541,11 @@ defmodule Examples.KanbanTodoWindow do
       drag_move="drag_moved"
       class={@task.card_class}
       hover_class="bg-[#162033]"
+      animation={@task.animation}
     >
       <div id={@task.top_id} class="flex flex-row items-center justify-between gap-2">
         <div id={@task.team_badge_id} class={@task.team_badge_class}>
-          <text id={@task.team_text_id} class="text-xs font-semibold">{@task.team}</text>
+          <text id={@task.team_text_id}>{@task.team}</text>
         </div>
 
         <text id={@task.updated_id} class="text-xs text-[#64748b]">{@task.updated_at}</text>
@@ -488,13 +559,13 @@ defmodule Examples.KanbanTodoWindow do
       </div>
 
       <div id={@task.footer_id} class="flex flex-row items-center justify-between gap-2">
-        <div id={@task.assignee_wrap_id} class="flex flex-col gap-1 flex-1">
-          <text id={@task.assignee_label_id} class="text-xs text-[#64748b]">OWNER</text>
-          <text id={@task.assignee_id} class="text-xs font-medium text-[#cbd5e1]">{@task.assignee}</text>
+        <div id={@task.assignee_wrap_id} class="flex flex-col gap-1 flex-1 text-xs text-[#cbd5e1]">
+          <text id={@task.assignee_label_id}>OWNER</text>
+          <text id={@task.assignee_id}>{@task.assignee}</text>
         </div>
 
         <div id={@task.priority_badge_id} class={@task.priority_badge_class}>
-          <text id={@task.priority_text_id} class="text-xs font-semibold">{@task.priority_label}</text>
+          <text id={@task.priority_text_id}>{@task.priority_label}</text>
         </div>
       </div>
 
@@ -527,8 +598,15 @@ defmodule Examples.KanbanTodoWindow do
       nil ->
         {:noreply, window, :skip_render}
 
-      %{status: ^status} ->
-        {:noreply, window, :skip_render}
+      %{status: ^status} = task ->
+        {:noreply,
+         assign_drop_result(window,
+           dragging_task_id: nil,
+           drop_flash_status: status,
+           last_moved_task_id: nil,
+           notice: "\"#{task.title}\" is already in #{Map.fetch!(@column_meta, status).title}.",
+           notice_tone: :neutral
+         )}
 
       task ->
         updated_tasks =
@@ -538,7 +616,10 @@ defmodule Examples.KanbanTodoWindow do
           end)
 
         {:noreply,
-         assign(window,
+         assign_drop_result(window,
+           dragging_task_id: nil,
+           drop_flash_status: status,
+           last_moved_task_id: id,
            tasks: updated_tasks,
            notice: "Moved \"#{task.title}\" to #{Map.fetch!(@column_meta, status).title}.",
            notice_tone: :success
@@ -555,38 +636,109 @@ defmodule Examples.KanbanTodoWindow do
 
   defp task_id_from_source(_source_id), do: :error
 
+  defp assign_drop_result(window, attrs) do
+    flash_generation = window.assigns.flash_generation + 1
+    Process.send_after(self(), {:clear_drop_flash, flash_generation}, 900)
+
+    window
+    |> assign(:flash_generation, flash_generation)
+    |> assign(attrs)
+  end
+
+  defp lane_class(accent, dragging?, flash?) do
+    classes([
+      "flex flex-col flex-none w-[264px] h-full gap-2 p-2 rounded-xl border-1",
+      "border-[#{accent}]",
+      if(dragging?, do: "bg-[#0f1a2b]", else: "bg-[#0b1220]"),
+      if(flash?, do: "shadow-lg", else: "shadow-sm")
+    ])
+  end
+
+  defp lane_animation(status, true) do
+    %{id: "lane_drop_#{status}", duration_ms: 650, repeat: false, from: 0.68, to: 1.0}
+  end
+
+  defp lane_animation(_status, false), do: nil
+
+  defp task_card_class(true, _moved?) do
+    classes([
+      base_task_card_class(),
+      "border-[#60a5fa] bg-[#172554] opacity-[0.82] shadow-lg"
+    ])
+  end
+
+  defp task_card_class(false, true) do
+    classes([
+      base_task_card_class(),
+      "border-[#22c55e] bg-[#052e16] shadow-lg"
+    ])
+  end
+
+  defp task_card_class(false, false) do
+    classes([base_task_card_class(), "border-[#1e293b] bg-[#111827] shadow-sm"])
+  end
+
+  defp task_animation(id, true, _moved?) do
+    %{id: "task_drag_#{id}", duration_ms: 700, repeat: true, from: 0.72, to: 1.0}
+  end
+
+  defp task_animation(id, false, true) do
+    %{id: "task_move_#{id}", duration_ms: 550, repeat: false, from: 0.6, to: 1.0}
+  end
+
+  defp task_animation(_id, false, false), do: nil
+
+  defp base_task_card_class, do: "flex flex-col gap-2 p-2 rounded-lg border-1 cursor-pointer"
+
+  defp classes(parts) do
+    parts
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+  end
+
   defp priority_badge_class(:high),
-    do: "px-2 py-2 rounded-full border-1 border-[#7f1d1d] bg-[#450a0a] text-[#fecaca]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#7f1d1d] bg-[#450a0a] text-[#fecaca] text-xs font-semibold"
 
   defp priority_badge_class(:medium),
-    do: "px-2 py-2 rounded-full border-1 border-[#92400e] bg-[#451a03] text-[#fde68a]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#92400e] bg-[#451a03] text-[#fde68a] text-xs font-semibold"
 
   defp priority_badge_class(:low),
-    do: "px-2 py-2 rounded-full border-1 border-[#334155] bg-[#0f172a] text-[#cbd5e1]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#334155] bg-[#0f172a] text-[#cbd5e1] text-xs font-semibold"
 
   defp team_badge_class("UX"),
-    do: "px-2 py-2 rounded-full border-1 border-[#1d4ed8] bg-[#172554] text-[#bfdbfe]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#1d4ed8] bg-[#172554] text-[#bfdbfe] text-xs font-semibold"
 
   defp team_badge_class("UI"),
-    do: "px-2 py-2 rounded-full border-1 border-[#7c3aed] bg-[#2e1065] text-[#ddd6fe]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#7c3aed] bg-[#2e1065] text-[#ddd6fe] text-xs font-semibold"
 
   defp team_badge_class("CORE"),
-    do: "px-2 py-2 rounded-full border-1 border-[#991b1b] bg-[#450a0a] text-[#fecaca]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#991b1b] bg-[#450a0a] text-[#fecaca] text-xs font-semibold"
 
   defp team_badge_class("DOCS"),
-    do: "px-2 py-2 rounded-full border-1 border-[#0f766e] bg-[#042f2e] text-[#99f6e4]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#0f766e] bg-[#042f2e] text-[#99f6e4] text-xs font-semibold"
 
   defp team_badge_class("ELIXIR"),
-    do: "px-2 py-2 rounded-full border-1 border-[#6d28d9] bg-[#2e1065] text-[#e9d5ff]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#6d28d9] bg-[#2e1065] text-[#e9d5ff] text-xs font-semibold"
 
   defp team_badge_class("OPS"),
-    do: "px-2 py-2 rounded-full border-1 border-[#b45309] bg-[#451a03] text-[#fde68a]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#b45309] bg-[#451a03] text-[#fde68a] text-xs font-semibold"
 
   defp team_badge_class("PM"),
-    do: "px-2 py-2 rounded-full border-1 border-[#2563eb] bg-[#172554] text-[#dbeafe]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#2563eb] bg-[#172554] text-[#dbeafe] text-xs font-semibold"
 
   defp team_badge_class(_team),
-    do: "px-2 py-2 rounded-full border-1 border-[#334155] bg-[#0f172a] text-[#cbd5e1]"
+    do:
+      "px-2 py-2 rounded-full border-1 border-[#334155] bg-[#0f172a] text-[#cbd5e1] text-xs font-semibold"
 
   defp notice_class(:neutral),
     do: "p-2 rounded-lg border-1 border-[#334155] bg-[#111827] text-[#cbd5e1]"

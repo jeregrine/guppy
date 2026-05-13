@@ -2,9 +2,25 @@ defmodule Guppy.SuperDemo do
   use Guppy.Component
 
   @palette [:gray, :red, :green, :blue, :yellow]
+  @surface_base "#09111f"
+  @surface_panel "#0f172a"
+  @surface_panel_alt "#111827"
+  @surface_muted "#1e293b"
+  @border_subtle "#334155"
+  @text_primary "#f8fafc"
+  @text_secondary "#cbd5e1"
+  @text_muted "#94a3b8"
+  @focus_ring "#facc15"
   @timer_ticks 5
   @timer_interval_ms 1_000
-  @demo_ids [:runtime, :interactions, :windows, :styles, :layout, :scroll, :help]
+  @demo_ids [:runtime, :components, :interactions, :windows, :styles, :layout, :scroll, :help]
+
+  prop(:feature_card, :id, :string, required: true)
+  prop(:feature_card, :title, :string, required: true)
+  prop(:feature_card, :badge, :string, required: true)
+  prop(:feature_card, :body, :string, required: true)
+  prop(:feature_card, :class, :string, required: true)
+  prop(:feature_card, :animation, :any, default: nil)
 
   def run do
     {:ok, _} = Application.ensure_all_started(:guppy)
@@ -23,6 +39,8 @@ defmodule Guppy.SuperDemo do
         text_input_changes: 0,
         textarea_value: "Line one\nLine two",
         textarea_changes: 0,
+        notifications_enabled: true,
+        checkbox_changes: 0,
         selected_priority: "medium",
         radio_changes: 0,
         selected_status: "todo",
@@ -227,7 +245,9 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_change(state, view_id, %{id: node_id, callback: callback_id, value: value}) do
+  defp handle_change(state, view_id, %{id: node_id, callback: callback_id} = event) do
+    value = Map.get(event, :value, "")
+
     cond do
       view_id == state.main_view_id and
           node_id in ["priority_low", "priority_medium", "priority_high"] ->
@@ -235,6 +255,15 @@ defmodule Guppy.SuperDemo do
         |> Map.put(:selected_priority, value)
         |> Map.update!(:radio_changes, &(&1 + 1))
         |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      view_id == state.main_view_id and node_id == "notifications_checkbox" ->
+        checked = Map.get(event, :checked, false)
+
+        state
+        |> Map.put(:notifications_enabled, checked)
+        |> Map.update!(:checkbox_changes, &(&1 + 1))
+        |> Map.put(:last_event, "checkbox #{node_id}/#{callback_id} = #{checked}")
         |> rerender!()
 
       view_id == state.main_view_id and node_id == "demo_textarea" ->
@@ -252,11 +281,19 @@ defmodule Guppy.SuperDemo do
         |> Map.put(:last_event, "select change #{node_id}/#{callback_id}")
         |> rerender!()
 
-      view_id == state.main_view_id ->
+      view_id == state.main_view_id and Map.has_key?(event, :value) ->
         state
         |> Map.put(:text_input_value, value)
         |> Map.update!(:text_input_changes, &(&1 + 1))
         |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+        |> rerender!()
+
+      view_id == state.main_view_id ->
+        state
+        |> Map.put(
+          :last_event,
+          "change #{node_id}/#{callback_id}: #{inspect(Map.drop(event, [:type, :id, :callback]))}"
+        )
         |> rerender!()
 
       view_id == state.aux_view_id ->
@@ -742,12 +779,20 @@ defmodule Guppy.SuperDemo do
         )
       ],
       id: "super_demo_root",
-      style: [:size_full, :flex, :flex_col, :gap_2, :p_4]
+      style: [
+        :size_full,
+        :flex,
+        :flex_col,
+        :gap_2,
+        :p_4,
+        {:bg_hex, @surface_base},
+        {:text_color_hex, @text_primary}
+      ]
     )
   end
 
   defp header_panel(state) do
-    accent = palette_color(state)
+    theme = palette_theme(palette_color(state))
 
     panel(
       "header_panel",
@@ -765,19 +810,19 @@ defmodule Guppy.SuperDemo do
         )
       ],
       style: [
-        {:bg, accent},
-        {:border_color, contrast_border_color(accent)},
-        {:text_color, contrast_text_color(accent)}
+        {:bg_hex, theme.accent},
+        {:border_color_hex, theme.border},
+        {:text_color_hex, theme.text}
       ]
     )
   end
 
   defp nav_panel(state) do
-    accent = palette_color(state)
+    theme = palette_theme(palette_color(state))
 
     items =
       Enum.map(@demo_ids, fn demo_id ->
-        nav_button(demo_id, state.selected_demo == demo_id, accent)
+        nav_button(demo_id, state.selected_demo == demo_id, theme)
       end)
 
     panel(
@@ -789,7 +834,16 @@ defmodule Guppy.SuperDemo do
         ),
         Guppy.IR.div(items, id: "nav_items", style: [:flex, :flex_col, :w_full, :gap_2])
       ],
-      style: [:w_64, :min_h_0, :max_h_full, :flex_col, :items_start, :p_4, {:bg, :gray}]
+      style: [
+        :w_64,
+        :min_h_0,
+        :max_h_full,
+        :flex_col,
+        :items_start,
+        :p_4,
+        {:bg_hex, @surface_panel_alt},
+        {:border_color_hex, @border_subtle}
+      ]
     )
   end
 
@@ -820,6 +874,7 @@ defmodule Guppy.SuperDemo do
   end
 
   defp detail_content(%{selected_demo: :runtime} = state), do: runtime_demo(state)
+  defp detail_content(%{selected_demo: :components} = state), do: components_demo(state)
   defp detail_content(%{selected_demo: :interactions} = state), do: interactions_demo(state)
   defp detail_content(%{selected_demo: :windows} = state), do: windows_demo(state)
   defp detail_content(%{selected_demo: :styles} = state), do: styles_demo(state)
@@ -839,8 +894,113 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("ping = #{inspect(state.statuses.ping)}"),
         action_button("Refresh runtime status", "refresh_status_button", "refresh_status", :white)
       ],
-      style: [{:bg, :gray}]
+      style: [{:bg_hex, @surface_panel}]
     )
+  end
+
+  defp components_demo(state) do
+    assigns = %{
+      cards: component_feature_cards(state),
+      component_items: [
+        %{id: "component_item_1", label: "Function components validate declared props"},
+        %{id: "component_item_2", label: "Template controls emit native change callbacks"},
+        %{id: "component_item_3", label: "Stable animation ids survive full-tree rerenders"}
+      ],
+      intro_runs: [
+        %{text: "New authoring path: ", style: [:font_semibold]},
+        %{text: "~G templates", style: [{:text_color_hex, "#93c5fd"}, :font_bold]},
+        %{text: " + local components + native controls."}
+      ],
+      notifications_enabled: state.notifications_enabled,
+      checkbox_changes: state.checkbox_changes,
+      popover_open: state.popover_open,
+      status_options: [
+        %{value: "todo", label: "Todo"},
+        %{value: "doing", label: "Doing"},
+        %{value: "done", label: "Done"}
+      ],
+      selected_status: state.selected_status,
+      status_select_open: state.status_select_open
+    }
+
+    ~G"""
+    <div id="components_demo" class="flex flex-col gap-4 p-4 rounded-xl border-1 border-[#334155] bg-[#0f172a] text-[#e2e8f0]">
+      <text id="components_title" class="text-xl font-black">Components and new primitives</text>
+      <rich_text id="components_intro" runs={@intro_runs} class="text-base leading-relaxed" />
+
+      <div id="component_card_grid" class="grid grid-cols-[3] gap-2 w-full">
+        <feature_card
+          :for={card <- @cards}
+          id={card.id}
+          title={card.title}
+          badge={card.badge}
+          body={card.body}
+          class={card.class}
+          animation={card.animation}
+        >
+          <text id={card.detail_id} class="text-xs text-[#94a3b8] leading-snug">{card.detail}</text>
+        </feature_card>
+      </div>
+
+      <div id="component_controls" class="flex flex-row flex-wrap gap-2 items-center p-2 rounded-lg border-1 border-[#334155] bg-[#111827]">
+        <checkbox
+          id="notifications_checkbox"
+          checked={@notifications_enabled}
+          change="notifications_changed"
+          class="gap-2 p-2 rounded-lg border-1 border-[#334155] bg-[#0b1220]"
+          focus_visible_class="border-yellow shadow-lg"
+        >
+          Enable checkbox state
+        </checkbox>
+
+        <text id="notifications_state" class="text-sm text-[#cbd5e1]">notifications_enabled = {@notifications_enabled}</text>
+        <text id="checkbox_changes" class="text-sm text-[#94a3b8]">checkbox_changes = {@checkbox_changes}</text>
+      </div>
+
+      <div id="component_select_row" class="flex flex-row flex-wrap gap-2 items-center">
+        <select
+          id="status_select_component"
+          value={@selected_status}
+          open={@status_select_open}
+          options={@status_options}
+          placeholder="Template select"
+          click="toggle_status_select"
+          change="status_select_changed"
+          close="close_status_select"
+          class="w-[240px]"
+          list_class="p-1 shadow-lg"
+          option_class="p-2"
+        />
+
+        <popover
+          id="component_popover"
+          label="Template popover"
+          open={@popover_open}
+          click="open_popover"
+          close="close_popover"
+          class="p-2 rounded-lg border-1 border-[#60a5fa] bg-[#111827]"
+          popover_class="p-4 gap-2 bg-[#f8fafc] text-[#0f172a] shadow-lg"
+          anchor="bottom_right"
+          anchor_position_mode="local"
+          anchor_fit="snap_to_window_with_margin"
+          anchor_offset={{0, 10}}
+          snap_margin="10"
+          close_on_click_outside="true"
+          stack_priority="3"
+        >
+          <text>Popover content is authored in the template compiler.</text>
+          <text>It uses local positioning, snap margin, and close callbacks.</text>
+        </popover>
+
+        <button id="component_palette_button" click="toggle_palette" class="p-2 rounded-lg border-1 border-[#2563eb] bg-[#172554] text-[#dbeafe]" hover_class="bg-[#1d4ed8]">
+          Rotate palette
+        </button>
+      </div>
+
+      <spacer id="component_spacer" class="h-[12px]" />
+      <uniform_list id="component_uniform_list" items={@component_items} class="h-[120px] rounded-lg border-1 border-[#334155] bg-[#0b1220]" item_class="p-2 border-b-1" />
+    </div>
+    """
   end
 
   defp interactions_demo(state) do
@@ -1225,7 +1385,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("timer_running = #{state.timer_running}"),
         Guppy.IR.text("timer_remaining = #{state.timer_remaining}")
       ],
-      style: [{:bg, :gray}]
+      style: [{:bg_hex, @surface_panel}]
     )
   end
 
@@ -1253,16 +1413,18 @@ defmodule Guppy.SuperDemo do
           :red
         )
       ],
-      style: [{:bg, :gray}]
+      style: [{:bg_hex, @surface_panel}]
     )
   end
 
   defp styles_demo(state) do
+    theme = palette_theme(palette_color(state))
+
     panel(
       "styles_demo",
       [
         Guppy.IR.text("Style tokens and palette changes"),
-        Guppy.IR.text("palette = #{palette_color(state)}"),
+        Guppy.IR.text("palette = #{theme.label} (#{theme.accent})"),
         Guppy.IR.text(
           "Toggle palette now recolors the header, the selected nav button, the preview card, and the swatches below."
         ),
@@ -1286,9 +1448,9 @@ defmodule Guppy.SuperDemo do
                 :p_6,
                 :rounded_md,
                 :border_1,
-                {:border_color, contrast_border_color(palette_color(state))},
-                {:bg, palette_color(state)},
-                {:text_color, contrast_text_color(palette_color(state))}
+                {:border_color_hex, theme.border},
+                {:bg_hex, theme.accent},
+                {:text_color_hex, theme.text}
               ]
             ),
             Guppy.IR.div(
@@ -1298,7 +1460,7 @@ defmodule Guppy.SuperDemo do
                   "Header chrome and the selected nav item also follow the current palette now.",
                   id: "palette_impact_body"
                 ),
-                Guppy.IR.text("current accent = #{palette_color(state)}",
+                Guppy.IR.text("current accent = #{theme.label} / #{theme.accent}",
                   id: "palette_impact_value"
                 )
               ],
@@ -1308,9 +1470,9 @@ defmodule Guppy.SuperDemo do
                 :p_6,
                 :rounded_md,
                 :border_1,
-                {:border_color, contrast_border_color(palette_color(state))},
-                {:bg, palette_color(state)},
-                {:text_color, contrast_text_color(palette_color(state))}
+                {:border_color_hex, theme.border},
+                {:bg_hex, theme.accent},
+                {:text_color_hex, theme.text}
               ]
             )
           ],
@@ -1627,7 +1789,7 @@ defmodule Guppy.SuperDemo do
         ),
         action_button("Quit demo", "quit_demo_button", "quit_demo", :black)
       ],
-      style: [{:bg, :gray}]
+      style: [{:bg_hex, @surface_panel}]
     )
   end
 
@@ -1996,7 +2158,7 @@ defmodule Guppy.SuperDemo do
           style: [:flex, :flex_col, :gap_2, :w_full, :border_1, {:border_color, :white}, :p_2]
         )
       ],
-      style: [{:bg, :gray}]
+      style: [{:bg_hex, @surface_panel}]
     )
   end
 
@@ -2185,7 +2347,7 @@ defmodule Guppy.SuperDemo do
           style: [:flex, :flex_row, :gap_4, :items_start, :w_full]
         )
       ],
-      style: [{:bg, :gray}]
+      style: [{:bg_hex, @surface_panel}]
     )
   end
 
@@ -2196,20 +2358,23 @@ defmodule Guppy.SuperDemo do
         Guppy.Markdown.render(%{
           id: "help_markdown",
           source:
-            "## What to try\n\nUse the demos to exercise **native GPUI** features rendered from Elixir IR. Inline `code` and lists come from the Markdown component.\n\n- Runtime: refresh status without leaving the window.\n- Interactions: click text, controls, pointer, and keyboard pads."
+            "## What to try\n\nUse the demos to exercise **native GPUI** features rendered from Elixir IR. Inline `code` and lists come from the Markdown component.\n\n- Runtime: refresh status without leaving the window.\n- Components: inspect `~G`, local function components, checkbox/select/popover controls, and animation.\n- Interactions: click text, controls, pointer, and keyboard pads."
         }),
         Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
         Guppy.IR.text(
-          "2. Interactions: click the div button, the text line, the pointer pad, and the keyboard pad, then start timer rerenders."
-        ),
-        Guppy.IR.text("3. Windows: open/close the aux window and kill the child owner process."),
-        Guppy.IR.text("4. Styles: rotate palette colors and inspect contrast/readability."),
-        Guppy.IR.text("5. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),
-        Guppy.IR.text(
-          "6. Scroll: select the Scroll demo and verify tracked scroll state, scroll anchoring, and nested scrollbar widths."
+          "2. Components: toggle the checkbox, open the popover, rotate the palette, and watch the animated component card."
         ),
         Guppy.IR.text(
-          "7. Close the traffic-light button on any window to test window_closed handling."
+          "3. Interactions: click the div button, the text line, the pointer pad, and the keyboard pad, then start timer rerenders."
+        ),
+        Guppy.IR.text("4. Windows: open/close the aux window and kill the child owner process."),
+        Guppy.IR.text("5. Styles: rotate palette colors and inspect contrast/readability."),
+        Guppy.IR.text("6. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),
+        Guppy.IR.text(
+          "7. Scroll: select the Scroll demo and verify tracked scroll state, scroll anchoring, and nested scrollbar widths."
+        ),
+        Guppy.IR.text(
+          "8. Close the traffic-light button on any window to test window_closed handling."
         ),
         Guppy.IR.div(
           [
@@ -2248,35 +2413,124 @@ defmodule Guppy.SuperDemo do
           style: [:flex, :flex_col, :gap_2, :w_full]
         )
       ],
-      style: [{:bg, :gray}]
+      style: [{:bg_hex, @surface_panel}]
+    )
+  end
+
+  defp component_feature_cards(state) do
+    theme = palette_theme(palette_color(state))
+
+    [
+      %{
+        id: "component_card_templates",
+        title: "Template components",
+        badge: "~G",
+        body:
+          "Local function components keep example markup small while prop declarations catch bad calls early.",
+        detail: "This card is rendered by <feature_card> with typed props and nested children.",
+        detail_id: "component_card_templates_detail",
+        class: feature_card_class("#172554", "#60a5fa", "#dbeafe"),
+        animation: nil
+      },
+      %{
+        id: "component_card_controls",
+        title: "Native controls",
+        badge: "forms",
+        body:
+          "Checkbox, select, text input, textarea, radio, and popover nodes all roundtrip to Elixir state.",
+        detail:
+          "Toggle the checkbox below and watch the owning Elixir process rerender the full tree.",
+        detail_id: "component_card_controls_detail",
+        class: feature_card_class("#052e16", "#22c55e", "#dcfce7"),
+        animation: nil
+      },
+      %{
+        id: "component_card_animation",
+        title: "Opacity animation",
+        badge: "stable id",
+        body:
+          "Animations are keyed by stable ids so native state can survive full-tree replacements.",
+        detail:
+          "This card pulses gently while the palette, checkbox, and select state continue to rerender.",
+        detail_id: "component_card_animation_detail",
+        class: feature_card_class(theme.soft, theme.border, @text_primary),
+        animation: %{
+          id: "super_demo_component_card_pulse",
+          duration_ms: 1_400,
+          repeat: true,
+          from: 0.78,
+          to: 1.0
+        }
+      }
+    ]
+  end
+
+  defp feature_card(assigns) do
+    ~G"""
+    <div id={@id} class={@class} animation={@animation}>
+      <div id={@id <> "_header"} class="flex flex-row items-center justify-between gap-2">
+        <text id={@id <> "_title"} class="text-base font-bold">{@title}</text>
+        <text id={@id <> "_badge"} class="text-xs font-semibold px-2 py-2 rounded-full border-1 border-[#334155] bg-[#0b1220] text-[#cbd5e1]">{@badge}</text>
+      </div>
+
+      <text id={@id <> "_body"} class="text-sm leading-snug">{@body}</text>
+      {@children}
+    </div>
+    """
+  end
+
+  defp feature_card_class(bg, border, text) do
+    Enum.join(
+      [
+        "flex flex-col gap-2 p-4 rounded-xl border-1 shadow-sm",
+        "bg-[#{bg}]",
+        "border-[#{border}]",
+        "text-[#{text}]"
+      ],
+      " "
     )
   end
 
   defp panel(id, children, opts) do
-    base_style = [:flex, :flex_col, :gap_2, :p_4, :border_1, {:border_color, :white}, :rounded_md]
+    base_style = [
+      :flex,
+      :flex_col,
+      :gap_2,
+      :p_4,
+      :border_1,
+      {:border_color_hex, @border_subtle},
+      :rounded_lg,
+      {:bg_hex, @surface_panel},
+      {:text_color_hex, @text_primary}
+    ]
+
     merged_style = base_style ++ Keyword.get(opts, :style, [])
     Guppy.IR.div(children, id: id, style: merged_style)
   end
 
-  defp nav_button(demo_id, selected?, accent) do
+  defp nav_button(demo_id, selected?, theme) do
     label = demo_label(demo_id)
 
     style =
       if selected? do
         [
-          {:bg, accent},
-          {:border_color, contrast_border_color(accent)},
-          {:text_color, contrast_text_color(accent)}
+          {:bg_hex, theme.accent},
+          {:border_color_hex, theme.border},
+          {:text_color_hex, theme.text}
         ]
       else
-        [{:bg, :gray}, {:text_color, :white}]
+        [
+          {:bg_hex, @surface_muted},
+          {:border_color_hex, @border_subtle},
+          {:text_color_hex, @text_secondary}
+        ]
       end
 
     Guppy.IR.button(
       label,
       id: "nav_#{demo_id}",
       style: style,
-      focus_style: [{:border_color, :yellow}],
+      focus_style: [{:border_color_hex, @focus_ring}],
       active_style: [{:opacity, 0.82}],
       events: %{click: "select_demo:#{demo_id}"}
     )
@@ -2327,21 +2581,25 @@ defmodule Guppy.SuperDemo do
   end
 
   defp action_button(label, id, callback, color) do
+    theme = button_theme(color)
+
     Guppy.IR.button(
       label,
       id: id,
       style: [
-        {:border_color, contrast_border_color(color)},
-        {:bg, color},
-        {:text_color, contrast_text_color(color)}
+        {:border_color_hex, theme.border},
+        {:bg_hex, theme.bg},
+        {:text_color_hex, theme.text}
       ],
-      focus_style: [{:border_color, :yellow}],
+      focus_style: [{:border_color_hex, @focus_ring}],
       active_style: [{:opacity, 0.8}],
       events: %{click: callback}
     )
   end
 
   defp palette_swatch(color, selected?) do
+    theme = palette_theme(color)
+
     style =
       [
         :flex,
@@ -2350,12 +2608,12 @@ defmodule Guppy.SuperDemo do
         :w_32,
         :p_2,
         :rounded_md,
-        {:bg, color},
-        {:text_color, contrast_text_color(color)},
-        {:border_color, if(selected?, do: :yellow, else: contrast_border_color(color))}
+        {:bg_hex, theme.accent},
+        {:text_color_hex, theme.text},
+        {:border_color_hex, if(selected?, do: @focus_ring, else: theme.border)}
       ] ++ if(selected?, do: [:border_2, :shadow_md], else: [:border_1])
 
-    label = if selected?, do: "#{color} ✓", else: Atom.to_string(color)
+    label = if selected?, do: "#{theme.label} ✓", else: theme.label
 
     Guppy.IR.div(
       [Guppy.IR.text(label, id: "palette_swatch_#{color}_label")],
@@ -2369,17 +2627,23 @@ defmodule Guppy.SuperDemo do
       label,
       id: id,
       disabled: true,
-      disabled_style: [{:opacity, 0.45}, {:bg, :gray}, {:border_color, :white}],
+      disabled_style: [
+        {:opacity, 0.45},
+        {:bg_hex, @surface_muted},
+        {:border_color_hex, @border_subtle},
+        {:text_color_hex, @text_muted}
+      ],
       style: [
-        {:border_color, :yellow},
-        {:bg, :yellow},
-        {:text_color, :black}
+        {:border_color_hex, @focus_ring},
+        {:bg_hex, "#facc15"},
+        {:text_color_hex, "#111827"}
       ],
       events: %{click: "disabled_increment"}
     )
   end
 
   defp demo_label(:runtime), do: "Runtime"
+  defp demo_label(:components), do: "Components"
   defp demo_label(:interactions), do: "Interactions"
   defp demo_label(:windows), do: "Windows"
   defp demo_label(:styles), do: "Styles"
@@ -2389,11 +2653,63 @@ defmodule Guppy.SuperDemo do
 
   defp palette_color(state), do: Enum.at(@palette, state.palette_index)
 
-  defp contrast_text_color(color) when color in [:yellow, :white, :green], do: :black
-  defp contrast_text_color(_color), do: :white
+  defp palette_theme(:gray) do
+    %{
+      label: "Slate",
+      accent: "#334155",
+      soft: "#1e293b",
+      border: "#64748b",
+      text: "#f8fafc"
+    }
+  end
 
-  defp contrast_border_color(color) when color in [:white, :yellow], do: :black
-  defp contrast_border_color(_color), do: :white
+  defp palette_theme(:red) do
+    %{
+      label: "Rose",
+      accent: "#be123c",
+      soft: "#3f0a1f",
+      border: "#fb7185",
+      text: "#fff1f2"
+    }
+  end
+
+  defp palette_theme(:green) do
+    %{
+      label: "Emerald",
+      accent: "#047857",
+      soft: "#052e2b",
+      border: "#34d399",
+      text: "#ecfdf5"
+    }
+  end
+
+  defp palette_theme(:blue) do
+    %{
+      label: "Sky",
+      accent: "#2563eb",
+      soft: "#172554",
+      border: "#60a5fa",
+      text: "#eff6ff"
+    }
+  end
+
+  defp palette_theme(:yellow) do
+    %{
+      label: "Amber",
+      accent: "#f59e0b",
+      soft: "#451a03",
+      border: "#fbbf24",
+      text: "#111827"
+    }
+  end
+
+  defp button_theme(color) when color in [:gray, :red, :green, :blue, :yellow] do
+    theme = palette_theme(color)
+    %{bg: theme.accent, border: theme.border, text: theme.text}
+  end
+
+  defp button_theme(:white), do: %{bg: "#f8fafc", border: "#cbd5e1", text: "#0f172a"}
+  defp button_theme(:black), do: %{bg: "#020617", border: "#475569", text: "#f8fafc"}
 
   defp aux_window_ir do
     ~G"""
