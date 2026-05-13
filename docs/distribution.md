@@ -26,7 +26,7 @@ mix clean
 mix compile --force
 ```
 
-`GUPPY_NATIVE_PRECOMPILED=1` is an explicit probe of the future artifact-download path. It is expected to fail until release artifacts and `checksum-*.exs` files are published; do not document it as a supported install mode before then.
+`GUPPY_NATIVE_PRECOMPILED=1` is an explicit probe of the future artifact-download path for currently supported precompiled targets. It is expected to fail until release artifacts and `checksum-*.exs` files are published; do not document it as a supported install mode before then.
 
 ## Current platform assumptions
 
@@ -51,7 +51,7 @@ Important assumptions:
 4. run `scripts/clean_install_load_test` to verify a fresh Mix project can depend on Guppy and load the built NIF
 5. run `scripts/package_smoke` to verify the generated Hex package contents can compile and load Guppy
 
-This validates the fallback source-build path while precompiled artifacts are not yet published.
+This validates the fallback source-build path while precompiled artifacts are not yet published. `.github/workflows/precompiled-nif.yml` follows RustlerPrecompiled's GitHub Actions guidance for artifact builds, but its matrix is intentionally limited to currently supported precompiled targets.
 
 ## Release process draft
 
@@ -78,10 +78,10 @@ Future native artifact release flow:
 
 `rustler_precompiled` is now part of the NIF module, but Guppy still forces source builds by default because no release artifacts or checksum file are published yet. The remaining work is the artifact/release process:
 
-1. Keep the advertised target list constrained to GPUI-supported desktop targets.
-2. Add CI jobs that build the NIF for every advertised target.
-3. Add CI jobs that install/load the produced artifact and run at least `mix test`.
-4. Generate and package the required `checksum-*.exs` file with `mix rustler_precompiled.download Guppy.Native.Nif --all --print` after release artifacts exist.
+1. Keep the RustlerPrecompiled target list constrained to currently supported and CI-built targets.
+2. Build the NIF artifact with `.github/workflows/precompiled-nif.yml` for every target in `Guppy.Native.Nif`'s `@precompiled_targets` list.
+3. Add CI jobs that install/load the produced artifact and run at least `mix test` before claiming precompiled support.
+4. Generate and package the required `checksum-*.exs` file with `mix rustler_precompiled.download Guppy.Native.Nif --all --print` after release artifacts exist; `mix.exs` includes any generated `checksum-*.exs` file when present while keeping source-only package smoke builds green before artifacts exist.
 5. Document how release artifacts are produced, signed when needed, and attached.
 6. Flip the default from source-build to precompiled-download only after the advertised artifact set is built and load-tested.
 7. Keep Rustler source compilation as the fallback path.
@@ -91,10 +91,10 @@ Future native artifact release flow:
 
 | Target | Status | Notes |
 | --- | --- | --- |
-| `aarch64-apple-darwin` | source-build supported; precompiled planned | primary local development target |
-| `x86_64-apple-darwin` | precompiled planned | needs CI/build-host confirmation |
-| `aarch64-unknown-linux-gnu` | precompiled planned | GPUI runtime behavior needs validation |
-| `x86_64-unknown-linux-gnu` | precompiled planned | GPUI runtime behavior needs validation |
-| `x86_64-pc-windows-msvc` | precompiled planned | GPUI/runtime bootstrap needs validation |
+| `aarch64-apple-darwin` | source-build supported; precompiled artifact workflow configured | primary local development target; only current RustlerPrecompiled target |
+| `x86_64-apple-darwin` | source-build/precompiled planned | needs CI/build-host confirmation |
+| `aarch64-unknown-linux-gnu` | source-build/precompiled planned | GPUI runtime behavior needs validation |
+| `x86_64-unknown-linux-gnu` | source-build/precompiled planned | GPUI runtime behavior needs validation |
+| `x86_64-pc-windows-msvc` | source-build/precompiled planned | GPUI/runtime bootstrap needs validation |
 
-Do not claim a target as precompiled-supported until CI builds and load-tests the artifact. Avoid publishing broader RustlerPrecompiled defaults such as musl, Windows GNU, ARMv7, or RISC-V unless GPUI support and CI load tests prove them viable.
+Do not claim a target as precompiled-supported until CI builds and load-tests the artifact. Do not add planned targets to `Guppy.Native.Nif`'s `@precompiled_targets` or the precompiled artifact workflow until they are supported. Avoid publishing broader RustlerPrecompiled defaults such as musl, Windows GNU, ARMv7, or RISC-V unless GPUI support and CI load tests prove them viable.

@@ -77,15 +77,24 @@ Important current invariants:
 - ETF IR field lookup keys are cached in Rust
 - native style lists use `Arc<[StyleOp]>`
 - native compilation/loading is wired through `RustlerPrecompiled`; source builds are forced by default until release artifacts/checksums exist
+- the RustlerPrecompiled target list is intentionally limited to currently supported precompiled targets (`aarch64-apple-darwin` today); do not add planned platforms until CI build/load validation exists
 - native event emission is implemented in Rust through Rustler `OwnedEnv`/`LocalPid` support
 - the registered event target is monitored with a Rustler resource; monitor generations prevent stale `down` callbacks from clearing newer registrations
 - event-target loss clears native event delivery state and enqueues best-effort native window cleanup
 - native performance counters track Rust boundary IR/options encode-decode timing and native event send timing/failures
 - native tests include GPUI simulated-click coverage for event bridge delivery
+- virtual `uniform_list`/`list` renderers size their GPUI list element to the styled wrapper viewport; list-like nodes need a concrete viewport size in IR/style
+- generic list-row `div` decode uses a restricted static-row path and avoids duplicate native decode/validation of nested row IR
 
 ### Performance guidance
 
-For interactive demos, especially scroll-heavy examples like the kanban board:
+For interactive demos and manual performance work, use an optimized native build. Either run under prod:
+
+```bash
+MIX_ENV=prod mix run examples/stress_test.exs
+```
+
+or keep Mix in dev while forcing native release mode:
 
 ```bash
 GUPPY_NATIVE_RELEASE=1 mix compile --force
@@ -93,7 +102,9 @@ GUPPY_NATIVE_RELEASE=1 mix compile --force
 
 Debug native builds can feel much worse than release builds.
 
-Do **not** add default scroll debounce, high-frequency event coalescing, or `Guppy.Window` rerender batching as a blind fix. Existing measurements did not justify defaults; first prove native-to-Elixir event traffic or repeated rerenders are actually the cause using benchmarks, `Guppy.native_performance_counters/0`, or the telemetry events above.
+`examples/stress_test.exs` is the current IR-bridge stress probe. It prints fps, render-call timings, native encode/decode counters, BEAM memory, mailbox depth, event deltas, and a stop summary. Keep current baselines, interpretation, and performance-specific next steps in `docs/performance.md`.
+
+Do **not** add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching as a blind fix. First prove the cause with `examples/stress_test.exs`, benchmarks, `Guppy.native_performance_counters/0`, or telemetry.
 
 ## Current public API surface
 
@@ -244,6 +255,7 @@ Files you will most often need:
 - `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
 - `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
 - `examples/` — runnable demos
+- `examples/stress_test.exs` — IR bridge stress probe with CLI performance output and isolation knobs
 - `test/guppy_test.exs` — current coverage
 
 Reference-only paths:
@@ -273,6 +285,12 @@ Release build:
 GUPPY_NATIVE_RELEASE=1 mix compile --force
 ```
 
+Equivalent prod-mode compile/run path:
+
+```bash
+MIX_ENV=prod mix compile --force
+```
+
 Run tests:
 
 ```bash
@@ -291,6 +309,7 @@ Run the main examples:
 mix run examples/super_demo.exs
 mix run examples/kanban_todo.exs
 mix run examples/hello_world.exs
+MIX_ENV=prod mix run examples/stress_test.exs
 ```
 
 If you touch native code, usually run at least:
@@ -309,6 +328,7 @@ GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 For performance-sensitive changes, run:
 
 ```bash
+MIX_ENV=prod mix run examples/stress_test.exs
 mix run bench/guppy_bench.exs
 mix run bench/guppy_bench.exs --native
 ```
@@ -340,7 +360,7 @@ Current priority order:
 4. improve existing primitives only when a real gap is identified
 5. add new primitives or publish precompiled artifacts only when explicitly prioritized
 
-Performance hardening has a sufficient baseline now; keep using measurements before optimizing. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without benchmark/counter/telemetry evidence.
+Performance hardening has a useful baseline now; keep using measurements before optimizing and keep detailed baselines/next steps in `docs/performance.md`. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without stress-test, benchmark, counter, or telemetry evidence.
 
 Do **not** push semantic theme-token ideas into core IR unless the user explicitly changes direction. Keep higher-level theming in Elixir.
 

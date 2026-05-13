@@ -319,7 +319,7 @@ Current source-build support:
 | `x86_64-unknown-linux-gnu` | planned, needs GPUI runtime validation |
 | `x86_64-pc-windows-msvc` | planned, needs GPUI/runtime validation |
 
-`rustler_precompiled` is wired in for those GPUI-aligned targets, but source builds remain the default until release artifacts and checksums are published. `GUPPY_NATIVE_PRECOMPILED=1` is only an explicit artifact-path probe until then. See [`docs/distribution.md`](docs/distribution.md).
+`rustler_precompiled` is wired only for the currently supported `aarch64-apple-darwin` target today; broader targets stay out of the precompiled matrix until they are validated. Source builds remain the default until release artifacts and checksums are published. `GUPPY_NATIVE_PRECOMPILED=1` is only an explicit artifact-path probe until then. See [`docs/distribution.md`](docs/distribution.md).
 
 ## Known limits
 

@@ -1,6 +1,6 @@
 # Guppy Forward Plan
 
-This file tracks future work only. Implementation history belongs in commit history, docs, examples, and the GPUI compliance matrix.
+This file tracks current planning context and future work. Implementation history belongs in commit history, docs, examples, and the GPUI compliance matrix.
 
 ## Current mode
 
@@ -12,8 +12,9 @@ Guppy has a useful baseline for:
 - runtime lifecycle telemetry and native request containment
 - GPUI compliance tracking
 - source-build package/distribution readiness
+- IR-bridge stress-test instrumentation and initial hot-path triage
 
-The production-hardening and source-build alpha-readiness passes tracked here have landed. The next work should be stabilization, real-user bug fixes, documentation/examples, compliance-matrix maintenance, release/distribution execution when explicitly prioritized, and explicitly scoped features. Do not expand the primitive or runtime surface speculatively.
+The production-hardening and source-build alpha-readiness passes tracked here have landed. The next work should be stabilization, real-user bug fixes, documentation/examples, compliance-matrix maintenance, release/distribution execution when explicitly prioritized, explicitly scoped features, and evidence-backed performance hardening of existing primitives. Do not expand the primitive or runtime surface speculatively.
 
 ## Required checks
 
@@ -47,16 +48,24 @@ scripts/clean_install_load_test
 scripts/package_smoke
 ```
 
-For performance-sensitive changes, run benchmarks or probes from `docs/performance.md` before optimizing.
+For performance-sensitive changes, run `examples/stress_test.exs` in prod/release mode and/or the benchmarks/probes from `docs/performance.md` before optimizing. Record changed baselines when the results alter guidance.
 
 ## Current priorities
 
 1. Keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, `scripts/package_smoke`, and the macOS source-build CI path green.
 2. Fix correctness bugs found by review, real example usage, or tests before adding surface area.
 3. Keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes.
-4. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.
+4. Improve existing primitives only when a gap is clearly identified in the compliance matrix, stress-test data, benchmarks, or real usage.
 5. Add new primitives only when explicitly prioritized and implemented end-to-end.
 6. Publish precompiled artifacts only after artifact CI, load tests, and checksums exist.
+
+## Best next steps
+
+1. Keep the check/release verification paths green before taking on new surface area.
+2. Fix correctness bugs found by real usage, examples, or tests.
+3. Keep user-facing docs, compliance docs, performance docs, and examples aligned when behavior changes.
+4. For performance-specific work, use and update `docs/performance.md`; do not let stress-test ideas outrank stabilization unless the user explicitly scopes performance hardening.
+5. Keep generic `list` row controls intentionally static/layout-only until retained row-control identity and lifecycle semantics are explicitly designed.
 
 ## GPUI compliance feature priorities
 

@@ -27,20 +27,21 @@ defmodule Guppy.MixProject do
         "GitHub" => "https://github.com/jeregrine/guppy",
         "Documentation" => "https://github.com/jeregrine/guppy#readme"
       },
-      files: [
-        "lib",
-        "mix.exs",
-        "README.md",
-        "LICENSE",
-        "CHANGELOG.md",
-        "docs/distribution.md",
-        "docs/gpui-compliance.md",
-        "docs/performance.md",
-        "native/guppy_nif/src",
-        "native/guppy_nif/Cargo.toml",
-        "native/guppy_nif/Cargo.lock",
-        "native/guppy_nif/build.rs"
-      ]
+      files:
+        [
+          "lib",
+          "mix.exs",
+          "README.md",
+          "LICENSE",
+          "CHANGELOG.md",
+          "docs/distribution.md",
+          "docs/gpui-compliance.md",
+          "docs/performance.md",
+          "native/guppy_nif/src",
+          "native/guppy_nif/Cargo.toml",
+          "native/guppy_nif/Cargo.lock",
+          "native/guppy_nif/build.rs"
+        ] ++ Path.wildcard("checksum-*.exs")
     ]
   end
 

@@ -17,18 +17,17 @@ defmodule Guppy.Native.Nif do
 
   @force_build System.get_env("GUPPY_NATIVE_PRECOMPILED") not in ["1", "true", "TRUE", "yes"]
 
+  @precompiled_targets [
+    "aarch64-apple-darwin"
+  ]
+
   use RustlerPrecompiled,
     otp_app: :guppy,
     crate: "guppy_nif",
     base_url: "https://github.com/jeregrine/guppy/releases/download/v#{@version}",
     version: @version,
-    targets: [
-      "aarch64-apple-darwin",
-      "x86_64-apple-darwin",
-      "aarch64-unknown-linux-gnu",
-      "x86_64-unknown-linux-gnu",
-      "x86_64-pc-windows-msvc"
-    ],
+    targets: @precompiled_targets,
+    nif_versions: ["2.15"],
     mode: @native_mode,
     force_build: @force_build
 
