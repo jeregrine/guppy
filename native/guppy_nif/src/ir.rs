@@ -30,6 +30,11 @@ struct IrFieldKeys {
     in_focus_style: Term,
     active_style: Term,
     disabled_style: Term,
+    animation: Term,
+    duration_ms: Term,
+    repeat: Term,
+    from: Term,
+    to: Term,
     disabled: Term,
     tab_index: Term,
     actions: Term,
@@ -98,6 +103,11 @@ impl IrFieldKeys {
             in_focus_style: atom_term("in_focus_style"),
             active_style: atom_term("active_style"),
             disabled_style: atom_term("disabled_style"),
+            animation: atom_term("animation"),
+            duration_ms: atom_term("duration_ms"),
+            repeat: atom_term("repeat"),
+            from: atom_term("from"),
+            to: atom_term("to"),
             disabled: atom_term("disabled"),
             tab_index: atom_term("tab_index"),
             actions: atom_term("actions"),
@@ -453,6 +463,15 @@ pub struct SelectNode {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct AnimationSpec {
+    pub id: String,
+    pub duration_ms: u64,
+    pub repeat: bool,
+    pub from: f32,
+    pub to: f32,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct DivNode {
     pub id: Option<String>,
     pub style: DivStyle,
@@ -462,6 +481,7 @@ pub struct DivNode {
     pub in_focus_style: DivStyle,
     pub active_style: DivStyle,
     pub disabled_style: DivStyle,
+    pub animation: Option<AnimationSpec>,
     pub disabled: bool,
     pub stack_priority: Option<usize>,
     pub occlude: bool,
@@ -791,6 +811,7 @@ impl IrNode {
                     in_focus_style,
                     active_style,
                     disabled_style,
+                    animation: get_animation_field(map)?,
                     disabled: get_boolean_field(map, "disabled")?,
                     stack_priority: None,
                     occlude: false,
@@ -838,6 +859,7 @@ impl IrNode {
                     in_focus_style: get_div_in_focus_style(map)?,
                     active_style: get_div_active_style(map)?,
                     disabled_style: get_div_disabled_style(map)?,
+                    animation: get_animation_field(map)?,
                     disabled: get_boolean_field(map, "disabled")?,
                     stack_priority: get_optional_usize_field(map, "stack_priority")?,
                     occlude: get_boolean_field(map, "occlude")?,
@@ -906,6 +928,11 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "in_focus_style" => &keys.in_focus_style,
         "active_style" => &keys.active_style,
         "disabled_style" => &keys.disabled_style,
+        "animation" => &keys.animation,
+        "duration_ms" => &keys.duration_ms,
+        "repeat" => &keys.repeat,
+        "from" => &keys.from,
+        "to" => &keys.to,
         "disabled" => &keys.disabled,
         "tab_index" => &keys.tab_index,
         "actions" => &keys.actions,
@@ -1099,6 +1126,26 @@ fn get_string_field(map: &HashMap<Term, Term>, key: &str) -> Result<String, Stri
     }
 }
 
+fn get_animation_field(map: &HashMap<Term, Term>) -> Result<Option<AnimationSpec>, String> {
+    let Some(term) = get_field(map, "animation") else {
+        return Ok(None);
+    };
+
+    let animation = expect_map(term)?;
+    let duration_ms = get_optional_u64_field(animation, "duration_ms")?.unwrap_or(1_000);
+    if duration_ms == 0 {
+        return Err("expected positive animation duration_ms".into());
+    }
+
+    Ok(Some(AnimationSpec {
+        id: get_string_field(animation, "id")?,
+        duration_ms,
+        repeat: get_boolean_field(animation, "repeat")?,
+        from: get_unit_f32_field(animation, "from", 0.0)?,
+        to: get_unit_f32_field(animation, "to", 1.0)?,
+    }))
+}
+
 fn get_text_runs_field(
     map: &HashMap<Term, Term>,
     content: &str,
@@ -1246,6 +1293,35 @@ fn get_optional_integer_field(
         Some(other) => Err(format!(
             "expected optional integer field {key}, got {other}"
         )),
+        None => Ok(None),
+    }
+}
+
+fn get_unit_f32_field(map: &HashMap<Term, Term>, key: &str, default: f32) -> Result<f32, String> {
+    let Some(term) = get_field(map, key) else {
+        return Ok(default);
+    };
+
+    let value = parse_f32(term)?;
+    if (0.0..=1.0).contains(&value) {
+        Ok(value)
+    } else {
+        Err(format!("expected unit numeric field {key}, got {term}"))
+    }
+}
+
+fn get_optional_u64_field(map: &HashMap<Term, Term>, key: &str) -> Result<Option<u64>, String> {
+    match get_field(map, key) {
+        Some(Term::FixInteger(value)) => u64::try_from(value.value)
+            .map(Some)
+            .map_err(|_| format!("expected non-negative integer field {key}, got {value:?}")),
+        Some(Term::BigInteger(value)) => value
+            .value
+            .clone()
+            .try_into()
+            .map(Some)
+            .map_err(|_| format!("expected non-negative integer field {key}, got {value:?}")),
+        Some(other) => Err(format!("expected integer field {key}, got {other}")),
         None => Ok(None),
     }
 }

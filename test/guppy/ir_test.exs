@@ -50,6 +50,13 @@ defmodule Guppy.IRTest do
 
     grid_ir =
       Guppy.IR.div([],
+        animation: %{
+          id: "grid_fade",
+          duration_ms: 250,
+          repeat: true,
+          from: 0.4,
+          to: 1.0
+        },
         style: [
           :grid,
           {:grid_cols, 5},
@@ -62,6 +69,7 @@ defmodule Guppy.IRTest do
       )
 
     assert :ok = Guppy.IR.validate(grid_ir)
+    assert grid_ir.animation.id == "grid_fade"
     assert scroll_ir.axis == :both
 
     image_ir =
@@ -659,6 +667,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:bg_hex, "#12"}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:bg_hex, "#12"}]))
+
+    assert {:error, {:invalid_animation, %{id: "fade", duration_ms: 0}}} =
+             Guppy.IR.validate(Guppy.IR.div([], animation: %{id: "fade", duration_ms: 0}))
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))

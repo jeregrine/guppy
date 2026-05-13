@@ -292,6 +292,8 @@ Stateful style lists are explicit:
 
 Text nodes and div-like nodes support the current style-token surface where applicable. Grid style ops include `:grid`, `{:grid_cols, n}`, `{:grid_rows, n}`, `{:col_span, n}`, `:col_span_full`, `{:row_span, n}`, and `:row_span_full`.
 
+Div-like nodes can also opt into a native opacity animation with `animation: %{id: "stable_id", duration_ms: 500, repeat: true, from: 0.4, to: 1.0}`.
+
 ## Distribution
 
 Guppy is source-build first. Rustler builds and copies the NIF into `priv/native/` during normal Mix compilation. The macOS source-build path, clean-install/load smoke, and generated package smoke are covered by CI.
@@ -317,7 +319,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 - stateful controls inside generic virtualized list rows and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
-- animation, gradient, canvas/custom painting, pattern painting, and menu APIs
+- advanced animation effects beyond current opacity animation, gradient, canvas/custom painting, pattern painting, and menu APIs
 - published precompiled native artifacts
 
 ## Hacking on Guppy

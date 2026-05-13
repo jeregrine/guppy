@@ -1661,6 +1661,13 @@ defmodule Guppy.SuperDemo do
             ])
           ],
           id: "grid_examples",
+          animation: %{
+            id: "grid_examples_fade",
+            duration_ms: 1_200,
+            repeat: true,
+            from: 0.85,
+            to: 1.0
+          },
           style: [:grid, {:grid_cols, 5}, {:grid_rows, 4}, :gap_1, :w_full, {:h_px, 220}, :p_2]
         ),
         Guppy.IR.div(

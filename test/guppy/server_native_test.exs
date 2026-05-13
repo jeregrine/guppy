@@ -536,6 +536,13 @@ defmodule Guppy.ServerNativeTest do
                        )
                      ],
                      id: "native_grid",
+                     animation: %{
+                       id: "native_grid_fade",
+                       duration_ms: 250,
+                       repeat: true,
+                       from: 0.4,
+                       to: 1.0
+                     },
                      style: [:grid, {:grid_cols, 5}, {:grid_rows, 3}, :gap_1]
                    )
                  )

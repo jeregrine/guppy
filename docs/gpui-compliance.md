@@ -18,7 +18,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 - **Generic list / variable-height list**: `list` adds GPUI `ListState`-backed variable-height rows with row IR children for static/layout content; stateful controls inside virtual rows and custom scrollbar parity remain partial.
 - **Data table / tree**: grid style ops, nested `div`/`text`, and text-row `uniform_list` cover basic scenarios; table/tree-specific virtualization and interaction are missing.
 - **Full popover / anchored overlay controls**: popovers now expose anchor corner, optional anchor position/offset, fit mode, close-on-outside-click, and deferred-layer priority; deeper nested-overlay edge cases and richer lifecycle semantics remain partial.
-- **Animation primitives**: timing/lifecycle APIs need a design that fits Elixir-owned full-tree rendering.
+- **Animation primitives**: div-like opacity animation supports stable native animation ids, duration, repeat, and from/to opacity; broader transform/keyframe animation remains partial.
 - **Gradient style primitives**: not exposed in the style surface today.
 - **Grid layout**: current grid style ops cover GPUI's basic grid, row/column counts, and row/column spans; advanced table semantics are not exposed.
 - **Custom painting / canvas / pattern painting**: would require a new retained drawing primitive.
@@ -47,7 +47,7 @@ Intentionally narrow parity areas:
 | `examples/window_positioning.rs` | window options validation in `Guppy.Server` tests; hidden native window smoke | partial | complete multi-display/window positioning behavior not covered in CI | automated option validation; hidden-window native smoke with bounds/min-size/kind/decorations/background |
 | `examples/active_state_bug.rs` | style states on button/checkbox/div | partial | exact active state regression not ported | IR validation only |
 | `examples/anchor.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | corner anchors, optional position/offset, local/window position mode, and snap-fit controls are exposed; center/edge anchors and hover-driven anchor demo parity remain missing | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
-| `examples/animation.rs` | none | unsupported | animation primitives deferred; requires timing/lifecycle design outside current Elixir-owned static IR | explicitly deferred in PLAN; no implementation |
+| `examples/animation.rs` | div-like opacity `animation` option; `examples/super_demo.exs` | partial | transform/SVG rotation, chained keyframes, easing choices, and completion callbacks are not exposed | IR/template/native hidden-window coverage; Rust opacity interpolation test; manual super_demo smoke |
 | `examples/data_table.rs` | grid style ops plus `uniform_list`/`list` cover simple repeated rows and basic columns | partial | full data-table columns, cells, sorting, and virtualization semantics beyond simple rows | IR/template/native smoke for grid/list/uniform_list; no full data-table port |
 | `examples/focus_visible.rs` | `focus_visible_style` on div-like controls; Tab/Shift-Tab focus-visible state tracking | partial | exact GPUI input-modality edge cases remain narrow | IR/template/native hidden-window coverage; Rust simulated Tab/mouse focus-visible state coverage |
 | `examples/gif_viewer.rs` | image node | partial | animated GIF controls/loading states | manual only |

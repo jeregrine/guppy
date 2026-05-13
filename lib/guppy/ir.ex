@@ -187,6 +187,14 @@ defmodule Guppy.IR do
   @type text_events :: %{optional(:click) => String.t()}
   @type text_run :: %{required(:text) => String.t(), optional(:style) => style()}
 
+  @type animation :: %{
+          required(:id) => String.t(),
+          optional(:duration_ms) => pos_integer(),
+          optional(:repeat) => boolean(),
+          optional(:from) => number(),
+          optional(:to) => number()
+        }
+
   @type div_events :: %{
           optional(:click) => String.t(),
           optional(:hover) => String.t(),
@@ -229,6 +237,7 @@ defmodule Guppy.IR do
           optional(:in_focus_style) => style(),
           optional(:active_style) => style(),
           optional(:disabled_style) => style(),
+          optional(:animation) => animation(),
           optional(:disabled) => boolean(),
           optional(:stack_priority) => non_neg_integer(),
           optional(:occlude) => boolean(),
@@ -288,6 +297,7 @@ defmodule Guppy.IR do
           optional(:in_focus_style) => style(),
           optional(:active_style) => style(),
           optional(:disabled_style) => style(),
+          optional(:animation) => animation(),
           optional(:disabled) => boolean(),
           optional(:tab_index) => integer(),
           optional(:actions) => action_bindings(),
@@ -652,6 +662,7 @@ defmodule Guppy.IR do
     in_focus_style = Keyword.get(opts, :in_focus_style)
     active_style = Keyword.get(opts, :active_style)
     disabled_style = Keyword.get(opts, :disabled_style)
+    animation = Keyword.get(opts, :animation)
     disabled = Keyword.get(opts, :disabled)
     stack_priority = Keyword.get(opts, :stack_priority)
     occlude = Keyword.get(opts, :occlude)
@@ -673,6 +684,7 @@ defmodule Guppy.IR do
     |> maybe_put(:in_focus_style, in_focus_style)
     |> maybe_put(:active_style, active_style)
     |> maybe_put(:disabled_style, disabled_style)
+    |> maybe_put(:animation, animation)
     |> maybe_put(:disabled, disabled)
     |> maybe_put(:stack_priority, stack_priority)
     |> maybe_put(:occlude, occlude)
@@ -872,6 +884,7 @@ defmodule Guppy.IR do
     in_focus_style = Keyword.get(opts, :in_focus_style)
     active_style = Keyword.get(opts, :active_style)
     disabled_style = Keyword.get(opts, :disabled_style)
+    animation = Keyword.get(opts, :animation)
     disabled = Keyword.get(opts, :disabled)
     tab_index = Keyword.get(opts, :tab_index)
     actions = Keyword.get(opts, :actions)
@@ -886,6 +899,7 @@ defmodule Guppy.IR do
     |> maybe_put(:in_focus_style, in_focus_style)
     |> maybe_put(:active_style, active_style)
     |> maybe_put(:disabled_style, disabled_style)
+    |> maybe_put(:animation, animation)
     |> maybe_put(:disabled, disabled)
     |> maybe_put(:tab_index, tab_index)
     |> maybe_put(:actions, actions)
@@ -963,6 +977,7 @@ defmodule Guppy.IR do
       :in_focus_style,
       :active_style,
       :disabled_style,
+      :animation,
       :disabled,
       :stack_priority,
       :occlude,
@@ -1059,6 +1074,7 @@ defmodule Guppy.IR do
       :in_focus_style,
       :active_style,
       :disabled_style,
+      :animation,
       :disabled,
       :tab_index,
       :actions,
@@ -1089,6 +1105,7 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :in_focus_style)),
          :ok <- validate_style(Map.get(node, :active_style)),
          :ok <- validate_style(Map.get(node, :disabled_style)),
+         :ok <- validate_animation(Map.get(node, :animation)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_optional_non_neg_integer(Map.get(node, :stack_priority), :stack_priority),
          :ok <- validate_optional_boolean(Map.get(node, :occlude), :occlude),
@@ -1244,6 +1261,7 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :in_focus_style)),
          :ok <- validate_style(Map.get(node, :active_style)),
          :ok <- validate_style(Map.get(node, :disabled_style)),
+         :ok <- validate_animation(Map.get(node, :animation)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
          :ok <- validate_actions(Map.get(node, :actions)),
@@ -1279,6 +1297,38 @@ defmodule Guppy.IR do
   end
 
   defp validate_node(other), do: {:error, {:invalid_ir, other}}
+
+  defp validate_animation(nil), do: :ok
+
+  defp validate_animation(%{id: id} = animation) when is_binary(id) do
+    allowed_keys = [:id, :duration_ms, :repeat, :from, :to]
+    duration_ms = Map.get(animation, :duration_ms, 1_000)
+    repeat = Map.get(animation, :repeat, false)
+    from = Map.get(animation, :from, 0.0)
+    to = Map.get(animation, :to, 1.0)
+
+    cond do
+      Map.keys(animation) -- allowed_keys != [] ->
+        {:error, {:invalid_animation, animation}}
+
+      not (is_integer(duration_ms) and duration_ms >= 1) ->
+        {:error, {:invalid_animation, animation}}
+
+      not is_boolean(repeat) ->
+        {:error, {:invalid_animation, animation}}
+
+      not (is_number(from) and from >= 0.0 and from <= 1.0) ->
+        {:error, {:invalid_animation, animation}}
+
+      not (is_number(to) and to >= 0.0 and to <= 1.0) ->
+        {:error, {:invalid_animation, animation}}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_animation(animation), do: {:error, {:invalid_animation, animation}}
 
   defp validate_text_runs(_content, nil), do: :ok
 

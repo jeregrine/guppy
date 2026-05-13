@@ -5,13 +5,14 @@ use super::{
     style::{apply_div_style, apply_refinement_style},
 };
 use crate::bridge_view::BridgeView;
-use crate::ir::{DivNode, ShortcutBinding};
+use crate::ir::{AnimationSpec, DivNode, ShortcutBinding};
 use gpui::{
-    AnyElement, AppContext, Context, Div, Empty, FocusHandle, InteractiveElement, IntoElement,
-    KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
-    ParentElement, Render, ScrollAnchor, ScrollHandle, Stateful, StatefulInteractiveElement,
-    Styled, Window, deferred, div, px, rgb,
+    Animation, AnimationExt, AnyElement, AppContext, Context, Div, Empty, FocusHandle,
+    InteractiveElement, IntoElement, KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent,
+    MouseMoveEvent, MouseUpEvent, ParentElement, Render, ScrollAnchor, ScrollHandle, SharedString,
+    Stateful, StatefulInteractiveElement, Styled, Window, deferred, div, px, rgb,
 };
+use std::time::Duration;
 
 struct DisabledEventFilter {
     disabled: bool,
@@ -585,10 +586,44 @@ fn apply_stateful_style_refinements(
 }
 
 fn finalize_div_layering(styled_div: Stateful<Div>, node: &DivNode) -> AnyElement {
-    let element = styled_div.into_any_element();
+    let element = match node.animation.as_ref() {
+        Some(animation) => animate_div(styled_div, animation).into_any_element(),
+        None => styled_div.into_any_element(),
+    };
 
     match node.stack_priority {
         Some(priority) => deferred(element).with_priority(priority).into_any_element(),
         None => element,
+    }
+}
+
+fn animate_div(styled_div: Stateful<Div>, spec: &AnimationSpec) -> impl IntoElement {
+    let mut animation = Animation::new(Duration::from_millis(spec.duration_ms));
+    if spec.repeat {
+        animation = animation.repeat();
+    }
+
+    let from = spec.from;
+    let to = spec.to;
+    styled_div.with_animation(
+        SharedString::from(spec.id.clone()),
+        animation,
+        move |element, delta| element.opacity(animated_opacity_value(from, to, delta)),
+    )
+}
+
+fn animated_opacity_value(from: f32, to: f32, delta: f32) -> f32 {
+    from + ((to - from) * delta)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::animated_opacity_value;
+
+    #[test]
+    fn animated_opacity_interpolates_between_bounds() {
+        assert_eq!(animated_opacity_value(0.25, 1.0, 0.0), 0.25);
+        assert_eq!(animated_opacity_value(0.25, 1.0, 1.0), 1.0);
+        assert_eq!(animated_opacity_value(0.25, 1.0, 0.5), 0.625);
     }
 }

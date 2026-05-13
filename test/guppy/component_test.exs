@@ -5,6 +5,7 @@ defmodule Guppy.ComponentTest do
     ir =
       Guppy.TemplateExample.render(%{
         title: "Template demo",
+        root_animation: %{id: "root_fade", duration_ms: 500, repeat: true, from: 0.85, to: 1.0},
         items: [%{id: 1, label: "One"}, %{id: 2, label: "Two"}],
         uniform_items: [
           %{id: "uniform_1", label: "Uniform one"},
@@ -38,6 +39,7 @@ defmodule Guppy.ComponentTest do
     assert ir.kind == :div
     assert ir.id == "root"
     assert ir.tooltip == "Template root"
+    assert ir.animation.id == "root_fade"
     assert :flex in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 

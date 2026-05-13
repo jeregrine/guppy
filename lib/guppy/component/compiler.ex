@@ -81,6 +81,7 @@ defmodule Guppy.Component.Compiler do
     {"id", :string},
     {"disabled", :boolean},
     {"tab_index", :integer},
+    {"animation", :expr_only},
     {"actions", :expr_only},
     {"shortcuts", :expr_only}
   ]

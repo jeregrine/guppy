@@ -189,6 +189,7 @@ mod tests {
                 in_focus_style: Vec::new().into(),
                 active_style: Vec::new().into(),
                 disabled_style: Vec::new().into(),
+                animation: None,
                 disabled: false,
                 stack_priority: None,
                 occlude: false,
