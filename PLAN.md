@@ -67,34 +67,37 @@ Use OTP semantics as the default recovery model:
 - Do not attempt to reconcile arbitrary native windows after `Guppy.Server` restart unless there is a tested reason to keep them. Prefer Rustler monitor-driven event-target cleanup, best-effort native window cleanup, and owner-driven reopen/rerender.
 - A BEAM-killing NIF crash or unrecoverable GPUI process failure is outside in-VM OTP recovery; document that such failures require external application restart.
 
-Required work:
+Required remaining work:
 
-1. Add bounded native request deadlines.
-   - Thread caller timeout/deadline through `Guppy.Server`, `Guppy.Native.Nif`, and Rust request helpers.
-   - Replace unbounded native reply waits with timeout-aware waits.
-   - Return structured errors such as `{:error, :native_timeout}` or `{:error, :runtime_unavailable}` instead of leaving the server blocked.
-   - Add failure-injection tests for a native bridge that never replies.
-2. Make restart behavior explicit and tested.
-   - On `Guppy.Server` init/restart, re-register the native event target.
-   - Add a Rustler resource-backed monitor for the registered event-target pid using `Env::monitor` / `Resource::down`.
-   - Store the native event target with a monitor generation/token so stale `down` callbacks cannot clear a newer restarted target.
-   - When the monitored event-target pid exits, clear `EVENT_TARGET` and enqueue best-effort native cleanup such as `close_all`/`reset_views` if that is the chosen policy.
-   - Add a native `close_all`/`reset_views` request if needed so restarted server state cannot be inconsistent with orphaned native windows.
-   - Ensure `Guppy.Window` can observe Guppy runtime/server loss and reopen from current assigns/rendered state after restart.
-   - Document behavior for lower-level `Guppy.open_window/1..4` owners that do not use `Guppy.Window`; they may need to reopen explicitly after runtime restart.
-   - Add tests that crash/restart `Guppy.Server`, verify monitor-driven event-target clearing, verify event-target re-registration, verify native view cleanup or explicit invalidation, and verify a `Guppy.Window` can recover by reopening.
-3. Fix reviewed interaction correctness bugs.
-   - Disabled checkbox and radio nodes must not emit click/key change callbacks.
-   - Window close-request semantics must be either explicitly informational or changed to a real veto/decision protocol.
-   - IR validation should reject unknown keys so typos do not silently cross the bridge.
-4. Tighten native boundary errors.
-   - Preserve decode/runtime error reasons where useful instead of collapsing everything to `BadArg` or generic unavailability.
-   - Remove panics/unwraps/expectations from request/event paths where a recoverable error can be returned.
-   - Keep unsafe blocks documented at the boundary where Rust cannot prove safety.
-5. Release/distribution gates before any public production claim.
-   - Move GPUI `test-support` usage out of normal native builds if possible.
-   - Keep source-build CI green.
-   - Add clean-install/load tests before advertising any precompiled artifact.
+1. Close the native-timeout late-side-effect gap.
+   - Bounded waits exist, but `native/guppy_nif/src/lib.rs` still enqueues a main-thread request and then waits with `recv_timeout`; if the wait times out, the queued request may still run later.
+   - Thread absolute deadlines, cancellation, or request generations through `MainThreadRequest` so stale queued requests cannot mutate native state after their caller has timed out.
+   - Specifically fix `open_window` ambiguity: a timed-out open must not leave an untracked native window or allow a later reused `view_id` to point at stale native state.
+   - Add failure-injection tests for requests that time out and then drain later, including `open_window`, `render`, `close_window`, `close_all`, and `view_count` where applicable.
+2. Fix remaining native/Elixir error normalization holes.
+   - `lib/guppy/native/nif.ex`: `dispatch({:view_count, []}, timeout)` currently wraps native results as `{:ok, native_view_count(timeout)}`; native `{:error, reason}` values must be normalized instead of returned as successful payloads.
+   - Add coverage for `view_count` timeout/unavailable errors returning `{:error, reason}` at the public API boundary.
+3. Complete restart/reopen recovery edge cases.
+   - `lib/guppy/window.ex`: after a failed reopen sets `view_id: nil`, normal messages/events must not call `Guppy.render(nil, ...)` and crash/stop on `:unknown_view_id`.
+   - Add a `rerender/1` path for `view_id == nil` that reopens, skips, or defers rendering until a native view exists.
+   - Add a test for a message arriving between a failed reopen and the scheduled retry, plus restart tests that verify `Guppy.Window` reopens from current assigns.
+4. Tighten event-target monitor semantics.
+   - `native/guppy_nif/src/lib.rs`: if `Env::monitor` returns `None`, `native_set_event_target/1` should return a structured error instead of registering an unmonitored event target.
+   - Keep the event-target generation/token stale-`down` guard covered by tests.
+5. Resolve the strict-IR validation mismatch.
+   - `lib/guppy/ir.ex`: `:text` currently allows `:style`, but text style is not validated, decoded, or rendered natively.
+   - Either remove `:style` from text allowed keys or implement text style validation, native ETF decode, and native rendering.
+   - Add regression coverage so unsupported/unknown text keys do not silently cross the bridge.
+6. Remove remaining avoidable native event-path unwraps/panics.
+   - `native/guppy_nif/src/lib.rs`: add `button` to `rustler::atoms!` and replace mouse-event `Atom::from_str(...).unwrap()` calls.
+   - Continue auditing request/event paths for `unwrap`/`expect`/`panic` that can occur from external input or runtime state; keep only impossible static construction or test-only uses, and document why.
+   - Keep unsafe blocks documented at FFI/string-pointer boundaries where Rust cannot prove safety.
+7. Make close-request semantics consistent across docs and tracking.
+   - The current API documents `window_close_requested` as informational and not vetoable; keep `README.md`, `docs/gpui-compliance.md`, and this plan aligned with that decision.
+   - If a veto/decision protocol becomes required, design it as a new explicit synchronous protocol instead of overloading the current informational event.
+8. Keep production-claim gates explicit.
+   - Keep `scripts/check`, `mix guppy.native.build`, source-build CI, and `scripts/clean_install_load_test` green before any public production-readiness claim.
+   - Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
 
 ## New primitive definition of done
 
