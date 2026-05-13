@@ -167,6 +167,7 @@ Top-level API:
 Preferred window abstraction:
 
 - `use Guppy.Window`
+- `Guppy.Markdown.render/1` for a small Elixir-side Markdown viewer component
 
 IR helpers:
 
@@ -229,6 +230,8 @@ Remote tags call `render/1` on the referenced module:
 Nested content is passed as `@children`.
 
 Components can declare props with `prop/3` and `prop/4` for required props, defaults, unknown prop rejection, and simple type validation.
+
+`Guppy.Markdown` is a remote component for a small Markdown subset (headings, paragraphs, unordered lists, bold/italic/code runs). It intentionally renders to Guppy IR in Elixir instead of depending on Zed's markdown crates, which are not part of Guppy's active `gpui = 0.2.2` dependency surface.
 
 ## Window options
 

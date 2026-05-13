@@ -2193,7 +2193,11 @@ defmodule Guppy.SuperDemo do
     panel(
       "help_demo",
       [
-        Guppy.IR.text("What to try"),
+        Guppy.Markdown.render(%{
+          id: "help_markdown",
+          source:
+            "## What to try\n\nUse the demos to exercise **native GPUI** features rendered from Elixir IR. Inline `code` and lists come from the Markdown component.\n\n- Runtime: refresh status without leaving the window.\n- Interactions: click text, controls, pointer, and keyboard pads."
+        }),
         Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
         Guppy.IR.text(
           "2. Interactions: click the div button, the text line, the pointer pad, and the keyboard pad, then start timer rerenders."
