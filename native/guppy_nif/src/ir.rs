@@ -1184,6 +1184,7 @@ fn get_uniform_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<Uniform
         .iter()
         .map(|term| {
             let item = expect_map(term)?;
+            ensure_allowed_fields(item, &["id", "label"], "uniform_list item")?;
             Ok(UniformListItem {
                 id: get_string_field(item, "id")?,
                 label: get_string_field(item, "label")?,
@@ -1201,13 +1202,14 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<ListItem>, Stri
         .iter()
         .map(|term| {
             let item = expect_map(term)?;
-            let children = match get_field(item, "children") {
-                Some(term) => get_list(term)?
-                    .iter()
-                    .map(IrNode::from_term)
-                    .collect::<Result<Vec<_>, _>>()?,
-                None => Vec::new(),
+            ensure_allowed_fields(item, &["id", "children"], "list item")?;
+            let Some(children_term) = get_field(item, "children") else {
+                return Err("missing required field: list item children".into());
             };
+            let children = get_list(children_term)?
+                .iter()
+                .map(decode_list_row_child_term)
+                .collect::<Result<Vec<_>, _>>()?;
 
             Ok(ListItem {
                 id: get_string_field(item, "id")?,
@@ -1226,6 +1228,7 @@ fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Vec<SelectOptio
         .iter()
         .map(|term| {
             let option = expect_map(term)?;
+            ensure_allowed_fields(option, &["value", "label", "disabled"], "select option")?;
             Ok(SelectOption {
                 value: get_string_field(option, "value")?,
                 label: get_string_field(option, "label")?,
@@ -1233,6 +1236,153 @@ fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Vec<SelectOptio
             })
         })
         .collect()
+}
+
+fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
+    let map = expect_map(term)?;
+    let kind = get_atom_field(map, "kind")?;
+
+    match kind.as_str() {
+        "text" => {
+            ensure_allowed_fields(
+                map,
+                &["kind", "content", "id", "style", "runs", "events"],
+                "list row text",
+            )?;
+            ensure_allowed_event_fields(map, &["click"], "list row text events")?;
+            IrNode::from_term(term)
+        }
+        "spacer" => {
+            ensure_allowed_fields(map, &["kind", "id", "style"], "list row spacer")?;
+            IrNode::from_term(term)
+        }
+        "div" => {
+            ensure_allowed_fields(
+                map,
+                &["kind", "children", "id", "style", "disabled", "events"],
+                "list row div",
+            )?;
+            ensure_allowed_event_fields(map, &["click"], "list row div events")?;
+
+            let Some(children_term) = get_field(map, "children") else {
+                return Err("missing required field: list row div children".into());
+            };
+            for child in get_list(children_term)? {
+                decode_list_row_child_term(child)?;
+            }
+
+            let node = IrNode::from_term(term)?;
+            validate_list_row_child(&node)?;
+            Ok(node)
+        }
+        _ => Err(format!("unsupported list row child kind: {kind}")),
+    }
+}
+
+fn ensure_allowed_fields(
+    map: &HashMap<Term, Term>,
+    allowed: &[&str],
+    context: &str,
+) -> Result<(), String> {
+    for key in map.keys() {
+        let known = allowed
+            .iter()
+            .filter_map(|allowed_key| field_key(allowed_key))
+            .any(|allowed_key| key == allowed_key);
+
+        if !known {
+            return Err(format!("unsupported {context} field: {key}"));
+        }
+    }
+
+    Ok(())
+}
+
+fn ensure_allowed_event_fields(
+    map: &HashMap<Term, Term>,
+    allowed: &[&str],
+    context: &str,
+) -> Result<(), String> {
+    let Some(events_term) = get_field(map, "events") else {
+        return Ok(());
+    };
+
+    ensure_allowed_fields(expect_map(events_term)?, allowed, context)
+}
+
+fn validate_list_row_children(children: &[IrNode]) -> Result<(), String> {
+    for child in children {
+        validate_list_row_child(child)?;
+    }
+
+    Ok(())
+}
+
+fn validate_list_row_child(node: &IrNode) -> Result<(), String> {
+    match node {
+        IrNode::Text { .. } | IrNode::Spacer { .. } => Ok(()),
+        IrNode::Div(node) => validate_static_list_row_div(node),
+        other => Err(format!(
+            "unsupported list row child kind: {}",
+            ir_node_kind(other)
+        )),
+    }
+}
+
+fn validate_static_list_row_div(node: &DivNode) -> Result<(), String> {
+    if !node.hover_style.is_empty()
+        || !node.focus_style.is_empty()
+        || !node.focus_visible_style.is_empty()
+        || !node.in_focus_style.is_empty()
+        || !node.active_style.is_empty()
+        || !node.disabled_style.is_empty()
+        || node.animation.is_some()
+        || node.stack_priority.is_some()
+        || node.occlude
+        || node.focusable
+        || node.tab_stop.is_some()
+        || node.tab_index.is_some()
+        || node.track_scroll
+        || node.anchor_scroll
+        || node.tooltip.is_some()
+        || !node.shortcuts.is_empty()
+        || node.hover.is_some()
+        || node.focus.is_some()
+        || node.blur.is_some()
+        || node.key_down.is_some()
+        || node.key_up.is_some()
+        || node.context_menu.is_some()
+        || node.drag_start.is_some()
+        || node.drag_move.is_some()
+        || node.drop.is_some()
+        || node.mouse_down.is_some()
+        || node.mouse_up.is_some()
+        || node.mouse_move.is_some()
+        || node.scroll_wheel.is_some()
+    {
+        return Err("unsupported list row div field".into());
+    }
+
+    validate_list_row_children(&node.children)
+}
+
+fn ir_node_kind(node: &IrNode) -> &'static str {
+    match node {
+        IrNode::Text { .. } => "text",
+        IrNode::TextInput { .. } => "text_input",
+        IrNode::Textarea { .. } => "textarea",
+        IrNode::Scroll { .. } => "scroll",
+        IrNode::Image { .. } => "image",
+        IrNode::Icon { .. } => "icon",
+        IrNode::Checkbox(_) => "checkbox",
+        IrNode::Radio(_) => "radio",
+        IrNode::UniformList { .. } => "uniform_list",
+        IrNode::List { .. } => "list",
+        IrNode::Select(_) => "select",
+        IrNode::Popover { .. } => "popover",
+        IrNode::Spacer { .. } => "spacer",
+        IrNode::Div(_) => "div",
+    }
 }
 
 fn get_optional_string_field(
@@ -1795,5 +1945,28 @@ fn term_to_string(term: &Term) -> Result<String, String> {
             String::from_utf8(bytes.clone()).map_err(|error| error.to_string())
         }
         other => Err(format!("expected utf8 binary/string, got {other}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{IrNode, validate_list_row_child};
+
+    #[test]
+    fn list_row_validation_rejects_stateful_controls() {
+        let err = validate_list_row_child(&IrNode::TextInput {
+            id: Some("row_input".into()),
+            value: "nope".into(),
+            placeholder: String::new(),
+            style: Vec::new().into(),
+            disabled: false,
+            tab_index: None,
+            change: None,
+            focus: None,
+            blur: None,
+        })
+        .unwrap_err();
+
+        assert!(err.contains("text_input"));
     }
 }

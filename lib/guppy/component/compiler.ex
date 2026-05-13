@@ -1095,14 +1095,39 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp preprocess_dynamic_attributes(template) do
-    do_preprocess_dynamic_attributes(template, %{}, [], 0)
+    do_preprocess_dynamic_attributes(template, %{}, [], 0, :text)
   end
 
-  defp do_preprocess_dynamic_attributes(<<>>, placeholders, acc, _index) do
+  defp do_preprocess_dynamic_attributes(<<>>, placeholders, acc, _index, _state) do
     {IO.iodata_to_binary(Enum.reverse(acc)), placeholders}
   end
 
-  defp do_preprocess_dynamic_attributes(<<"=", rest::binary>>, placeholders, acc, index) do
+  defp do_preprocess_dynamic_attributes(<<"<", rest::binary>>, placeholders, acc, index, :text) do
+    do_preprocess_dynamic_attributes(rest, placeholders, ["<" | acc], index, :tag)
+  end
+
+  defp do_preprocess_dynamic_attributes(
+         <<quote_char::utf8, rest::binary>>,
+         placeholders,
+         acc,
+         index,
+         :tag
+       )
+       when quote_char in [?", ?'] do
+    do_preprocess_dynamic_attributes(
+      rest,
+      placeholders,
+      [<<quote_char::utf8>> | acc],
+      index,
+      {:quoted_attribute, quote_char}
+    )
+  end
+
+  defp do_preprocess_dynamic_attributes(<<">", rest::binary>>, placeholders, acc, index, :tag) do
+    do_preprocess_dynamic_attributes(rest, placeholders, [">" | acc], index, :text)
+  end
+
+  defp do_preprocess_dynamic_attributes(<<"=", rest::binary>>, placeholders, acc, index, :tag) do
     {spaces, rest} = take_leading_spaces(rest)
 
     case rest do
@@ -1114,16 +1139,34 @@ defmodule Guppy.Component.Compiler do
           rest_after,
           Map.put(placeholders, placeholder, "{" <> expression <> "}"),
           ["\"", placeholder, "\"", spaces, "=" | acc],
-          index + 1
+          index + 1,
+          :tag
         )
 
       _ ->
-        do_preprocess_dynamic_attributes(rest, placeholders, [spaces, "=" | acc], index)
+        do_preprocess_dynamic_attributes(rest, placeholders, [spaces, "=" | acc], index, :tag)
     end
   end
 
-  defp do_preprocess_dynamic_attributes(<<char::utf8, rest::binary>>, placeholders, acc, index) do
-    do_preprocess_dynamic_attributes(rest, placeholders, [<<char::utf8>> | acc], index)
+  defp do_preprocess_dynamic_attributes(
+         <<char::utf8, rest::binary>>,
+         placeholders,
+         acc,
+         index,
+         {:quoted_attribute, quote_char}
+       )
+       when char == quote_char do
+    do_preprocess_dynamic_attributes(rest, placeholders, [<<char::utf8>> | acc], index, :tag)
+  end
+
+  defp do_preprocess_dynamic_attributes(
+         <<char::utf8, rest::binary>>,
+         placeholders,
+         acc,
+         index,
+         state
+       ) do
+    do_preprocess_dynamic_attributes(rest, placeholders, [<<char::utf8>> | acc], index, state)
   end
 
   defp take_leading_spaces(binary), do: take_leading_spaces(binary, "")

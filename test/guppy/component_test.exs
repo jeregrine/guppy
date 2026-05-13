@@ -193,6 +193,16 @@ defmodule Guppy.ComponentTest do
     assert footer == %{kind: :text, content: "Footer ready", id: "footer"}
   end
 
+  test "Guppy.Component keeps equals signs in text expressions out of attribute preprocessing" do
+    ir = Guppy.TemplateTextExpressionExample.render(%{count: 7, x: 3})
+
+    assert :ok = Guppy.IR.validate(ir)
+
+    assert [equals_spaced, equals_tight] = ir.children
+    assert equals_spaced.content == "count = 7"
+    assert equals_tight.content == "x=3"
+  end
+
   test "Guppy.Component supports local and remote function components with props and children" do
     ir =
       Guppy.FunctionComponentExample.render(%{

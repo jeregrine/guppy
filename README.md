@@ -98,6 +98,12 @@ GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render/1`, `~G`, and local function components.
 
 ```bash
+GUPPY_NATIVE_RELEASE=1 mix run examples/stress_test.exs
+```
+
+Stress test for full-tree IR replacement, native decode, retained scrolling, and virtual-list churn. Tune it with `GUPPY_STRESS_*` environment variables; run `mix run examples/stress_test.exs -- --help` for knobs.
+
+```bash
 mix run examples/hello_world.exs
 ```
 
@@ -145,6 +151,8 @@ Template tags:
 Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, popover callbacks, text input/textarea changes and focus/blur, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops.
 
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
+
+`list` rows are intentionally static/layout-only today: row children may use `text`, `spacer`, and nested static `div` nodes with click callbacks. Put stateful controls outside virtual list rows until retained row-control support is explicitly designed.
 
 `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 

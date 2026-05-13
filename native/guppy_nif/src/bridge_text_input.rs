@@ -113,7 +113,7 @@ impl BridgeTextInput {
             disabled,
             tab_index,
             multiline,
-            focus_handle: focus_handle_for(cx, tab_index),
+            focus_handle: focus_handle_for(cx, tab_index, disabled),
             selected_range: 0..0,
             selection_reversed: false,
             marked_range: None,
@@ -145,10 +145,7 @@ impl BridgeTextInput {
         self.disabled = disabled;
         self.tab_index = tab_index;
         self.multiline = multiline;
-        self.focus_handle = match tab_index {
-            Some(index) => self.focus_handle.clone().tab_stop(true).tab_index(index),
-            None => self.focus_handle.clone().tab_stop(true),
-        };
+        self.focus_handle = configure_focus_handle(self.focus_handle.clone(), tab_index, disabled);
     }
 
     pub fn focus_handle(&self) -> FocusHandle {
@@ -889,12 +886,27 @@ impl Focusable for BridgeTextInput {
     }
 }
 
-fn focus_handle_for(cx: &mut Context<BridgeTextInput>, tab_index: Option<isize>) -> FocusHandle {
+fn focus_handle_for(
+    cx: &mut Context<BridgeTextInput>,
+    tab_index: Option<isize>,
+    disabled: bool,
+) -> FocusHandle {
+    configure_focus_handle(cx.focus_handle(), tab_index, disabled)
+}
+
+fn configure_focus_handle(
+    focus_handle: FocusHandle,
+    tab_index: Option<isize>,
+    disabled: bool,
+) -> FocusHandle {
+    let focus_handle = focus_handle.tab_stop(!disabled);
+
     match tab_index {
-        Some(index) => cx.focus_handle().tab_stop(true).tab_index(index),
-        None => cx.focus_handle().tab_stop(true),
+        Some(index) => focus_handle.tab_index(index),
+        None => focus_handle,
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::line_ranges;

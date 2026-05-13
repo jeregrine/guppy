@@ -707,8 +707,26 @@ defmodule Guppy.IRTest do
     assert {:error, {:invalid_uniform_list_item, %{id: "item", label: 123}}} =
              Guppy.IR.validate(Guppy.IR.uniform_list([%{id: "item", label: 123}]))
 
+    assert {:error, {:unknown_ir_keys, :uniform_list_item, [:typo]}} =
+             Guppy.IR.validate(Guppy.IR.uniform_list([%{id: "item", label: "Item", typo: true}]))
+
     assert {:error, {:invalid_list_item, %{id: "row", children: "nope"}}} =
              Guppy.IR.validate(Guppy.IR.list([%{id: "row", children: "nope"}]))
+
+    assert {:error, {:unknown_ir_keys, :list_item, [:typo]}} =
+             Guppy.IR.validate(Guppy.IR.list([%{id: "row", children: [], typo: true}]))
+
+    assert {:error, {:unsupported_list_item_child, %{kind: :text_input, value: "nope"}}} =
+             Guppy.IR.validate(
+               Guppy.IR.list([%{id: "row", children: [Guppy.IR.text_input("nope")]}])
+             )
+
+    assert {:error, {:unknown_ir_keys, :list_row_div, [:hover_style]}} =
+             Guppy.IR.validate(
+               Guppy.IR.list([
+                 %{id: "row", children: [Guppy.IR.div([], hover_style: [:bg_blue])]}
+               ])
+             )
 
     assert {:error, {:duplicate_id, "row_1_label"}} =
              Guppy.IR.validate(
@@ -753,6 +771,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_select_option, %{label: "Todo", value: 1}}} =
              Guppy.IR.validate(Guppy.IR.select([%{value: 1, label: "Todo"}]))
+
+    assert {:error, {:unknown_ir_keys, :select_option, [:typo]}} =
+             Guppy.IR.validate(Guppy.IR.select([%{value: "todo", label: "Todo", typo: true}]))
 
     assert {:error, {:duplicate_select_value, "todo"}} =
              Guppy.IR.validate(

@@ -212,9 +212,10 @@ fn render_option(
         && let Some(callback_id) = change
     {
         let callback_id = callback_id.to_owned();
+        let event_node_id = node_key.to_owned();
         let value = option.value.clone();
         row = row.on_click(move |_, _, _| {
-            events::emit_change(view_id, &option_key, &callback_id, &value);
+            events::emit_change(view_id, &event_node_id, &callback_id, &value);
         });
     }
 

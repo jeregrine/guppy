@@ -156,6 +156,7 @@ mod tests {
                 assert_eq!(input.placeholder.as_ref(), "Full name");
                 assert_eq!(input.change.as_deref(), Some("person_changed"));
                 assert!(input.disabled);
+                assert!(!input.focus_handle().tab_stop);
                 assert_eq!(input.tab_index, Some(3));
                 assert!(input.multiline);
             });

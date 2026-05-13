@@ -386,7 +386,19 @@ defmodule Guppy.IR do
           optional(:events) => text_events()
         }
 
-  @type list_item :: %{required(:id) => node_id(), required(:children) => [ir_node()]}
+  @type list_row_div_events :: %{optional(:click) => String.t()}
+
+  @type list_row_div_node :: %{
+          required(:kind) => :div,
+          required(:children) => [list_row_node()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:events) => list_row_div_events()
+        }
+
+  @type list_row_node :: text_node() | spacer_node() | list_row_div_node()
+  @type list_item :: %{required(:id) => node_id(), required(:children) => [list_row_node()]}
 
   @type list_node :: %{
           required(:kind) => :list,
@@ -614,6 +626,10 @@ defmodule Guppy.IR do
   @scrollbar_value_tokens [:scrollbar_width_px, :scrollbar_width_rem]
   @grid_value_tokens [:grid_cols, :grid_rows, :col_span, :row_span]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
+  @uniform_list_item_keys [:id, :label]
+  @list_item_keys [:id, :children]
+  @select_option_keys [:value, :label, :disabled]
+  @list_row_div_keys [:kind, :children, :id, :style, :disabled, :events]
 
   @spec text(String.t(), keyword()) :: text_node()
   def text(content, opts \\ []) when is_binary(content) and is_list(opts) do
@@ -1374,11 +1390,13 @@ defmodule Guppy.IR do
   defp validate_text_run(run), do: {:error, {:invalid_text_run, run}}
 
   defp validate_node_keys(%{kind: kind} = node) do
-    allowed = Map.fetch!(@allowed_node_keys, kind)
+    validate_known_keys(node, Map.fetch!(@allowed_node_keys, kind), kind)
+  end
 
-    case Map.keys(node) -- allowed do
+  defp validate_known_keys(map, allowed, context) do
+    case Map.keys(map) -- allowed do
       [] -> :ok
-      unknown -> {:error, {:unknown_ir_keys, kind, Enum.sort(unknown)}}
+      unknown -> {:error, {:unknown_ir_keys, context, Enum.sort(unknown)}}
     end
   end
 
@@ -1401,8 +1419,11 @@ defmodule Guppy.IR do
 
   defp validate_uniform_list_items(items) do
     Enum.reduce_while(items, :ok, fn
-      %{id: id, label: label}, :ok when is_binary(id) and is_binary(label) ->
-        {:cont, :ok}
+      %{id: id, label: label} = item, :ok when is_binary(id) and is_binary(label) ->
+        case validate_known_keys(item, @uniform_list_item_keys, :uniform_list_item) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
 
       item, :ok ->
         {:halt, {:error, {:invalid_uniform_list_item, item}}}
@@ -1411,9 +1432,11 @@ defmodule Guppy.IR do
 
   defp validate_list_items(items) do
     Enum.reduce_while(items, :ok, fn
-      %{id: id, children: children}, :ok when is_binary(id) and is_list(children) ->
-        case validate_children(children) do
-          :ok -> {:cont, :ok}
+      %{id: id, children: children} = item, :ok when is_binary(id) and is_list(children) ->
+        with :ok <- validate_known_keys(item, @list_item_keys, :list_item),
+             :ok <- validate_list_item_children(children) do
+          {:cont, :ok}
+        else
           error -> {:halt, error}
         end
 
@@ -1422,19 +1445,51 @@ defmodule Guppy.IR do
     end)
   end
 
+  defp validate_list_item_children(children) do
+    Enum.reduce_while(children, :ok, fn child, :ok ->
+      case validate_list_row_node(child) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_list_row_node(%{kind: kind} = node) when kind in [:text, :spacer] do
+    validate_node(node)
+  end
+
+  defp validate_list_row_node(%{kind: :div, children: children} = node) when is_list(children) do
+    with :ok <- validate_known_keys(node, @list_row_div_keys, :list_row_div),
+         :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_events(Map.get(node, :events), [:click]),
+         :ok <- validate_list_item_children(children) do
+      :ok
+    end
+  end
+
+  defp validate_list_row_node(other), do: {:error, {:unsupported_list_item_child, other}}
+
   defp validate_select_options(options) do
     Enum.reduce_while(options, {:ok, MapSet.new()}, fn
       %{value: value, label: label} = option, {:ok, seen}
       when is_binary(value) and is_binary(label) ->
-        cond do
-          MapSet.member?(seen, value) ->
-            {:halt, {:error, {:duplicate_select_value, value}}}
+        case validate_known_keys(option, @select_option_keys, :select_option) do
+          :ok ->
+            cond do
+              MapSet.member?(seen, value) ->
+                {:halt, {:error, {:duplicate_select_value, value}}}
 
-          not valid_select_option_disabled?(option) ->
-            {:halt, {:error, {:invalid_select_option, option}}}
+              not valid_select_option_disabled?(option) ->
+                {:halt, {:error, {:invalid_select_option, option}}}
 
-          true ->
-            {:cont, {:ok, MapSet.put(seen, value)}}
+              true ->
+                {:cont, {:ok, MapSet.put(seen, value)}}
+            end
+
+          error ->
+            {:halt, error}
         end
 
       option, {:ok, _seen} ->

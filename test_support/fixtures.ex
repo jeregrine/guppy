@@ -126,6 +126,19 @@ defmodule Guppy.TemplateExample do
   end
 end
 
+defmodule Guppy.TemplateTextExpressionExample do
+  use Guppy.Component
+
+  def render(assigns) do
+    ~G"""
+    <div id="text_expression_root">
+      <text id="equals_spaced">count = {@count}</text>
+      <text id="equals_tight">x={@x}</text>
+    </div>
+    """
+  end
+end
+
 defmodule Guppy.RemoteBadgeComponent do
   use Guppy.Component
 
