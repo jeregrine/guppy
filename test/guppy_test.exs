@@ -922,6 +922,18 @@ defmodule GuppyTest do
     end
   end
 
+  test "native NIF view_count timeout is normalized as an error" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        assert {:error, :native_timeout} =
+                 Guppy.Native.Nif.request(Guppy.Native.Nif, {:view_count, []}, 0)
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} =
+                 Guppy.Native.Nif.request(Guppy.Native.Nif, {:view_count, []}, 0)
+    end
+  end
+
   test "native request timeouts are bounded and leave the server responsive" do
     server = :"guppy_blocking_native_#{System.unique_integer([:positive])}"
     handler_id = {__MODULE__, self(), :blocking_native_request_telemetry}

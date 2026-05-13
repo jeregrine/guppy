@@ -210,7 +210,9 @@ defmodule Guppy.Native.Nif do
   end
 
   defp dispatch({:view_count, []}, timeout) do
-    with_loaded(fn -> native_call(:view_count, fn -> {:ok, native_view_count(timeout)} end) end)
+    with_loaded(fn ->
+      native_call(:view_count, fn -> normalize_status(native_view_count(timeout)) end)
+    end)
   end
 
   defp dispatch(_command, _timeout) do
