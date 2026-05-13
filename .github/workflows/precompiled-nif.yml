@@ -21,7 +21,7 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-15
             nif: "2.15"
-            use-cross: false
+            use-cross: ""
 
     steps:
       - name: Checkout source code
