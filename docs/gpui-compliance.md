@@ -31,7 +31,7 @@ Intentionally narrow parity areas:
 - async image loading/error-state APIs
 - complete SVG/image asset pipeline controls
 - full GPUI window API parity
-- full focus-visible and tab traversal parity
+- full focus-visible styling parity
 - full native drag/drop payload and drop-target parity
 - GPUI test API parity
 
@@ -41,7 +41,7 @@ Intentionally narrow parity areas:
 | `examples/scrollable.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; native scroll tests | partial | GPUI parity for every scroll option not mapped; no default high-frequency coalescing planned from current measurements | Rust scroll-axis unit test; GPUI render smoke retains explicit scroll handles; manual kanban smoke |
 | `examples/input.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs`; text input, textarea, radio, and select form-control tests | partial | rich editor behavior, richer select menu semantics, and full focus semantics | Rust retained-state/radio/select unit tests; ExUnit IR/template/native hidden-window coverage; manual example smoke |
 | `examples/drag_drop.rs` | `examples/kanban_todo.exs`, `examples/super_demo.exs` drag/drop callbacks | partial | native drag payload parity and drop target model are narrower than GPUI; no default event coalescing planned from current measurements | Elixir server routing tests cover drag_start/drag_move/drop payloads; manual kanban smoke |
-| `examples/tab_stop.rs` | text input/button/checkbox/div `tab_index` and `tab_stop` IR fields | partial | full GPUI tab traversal ordering parity not covered | IR validation; GPUI render smoke retains focus handle for tab-stop div |
+| `examples/tab_stop.rs` | text input/button/checkbox/div `tab_index` and `tab_stop` IR fields; root Tab/Shift-Tab focus traversal bindings | partial | GPUI tab grouping and edge-case parity remain narrow | IR validation; Rust GPUI render smoke retains focus handles and simulates Tab ordering |
 | `examples/image/image.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs`, `test/guppy_test.exs` image template checks | partial | complete async image loading states and asset pipeline parity | automated IR/template tests; Rust image source/object-fit mapping tests; manual gallery smoke |
 | `examples/svg/svg.rs` | `examples/style_gallery.exs`, `examples/super_demo.exs` via `icon`/embedded image sources | partial | full SVG rendering controls and sizing parity | automated IR/template checks for icon/image; Rust embedded image-source mapping test; manual smoke |
 | `examples/window_positioning.rs` | window options validation in `Guppy.Server` tests; hidden native window smoke | partial | complete multi-display/window positioning behavior not covered in CI | automated option validation; hidden-window native smoke with bounds/min-size/kind/decorations/background |
@@ -84,7 +84,7 @@ Intentionally narrow parity areas:
 2. `scrollable`: automated native smoke covers explicit scroll handle retention; broader GPUI scroll-option parity remains tracked as partial.
 3. `input`: retained text-input/textarea behavior, radio IR/template/render coverage, server-routed change/focus coverage, and disabled checkbox/radio callback suppression are automated; rich editor and select/dropdown parity remain out of scope.
 4. `drag_drop`: server-routed drag/drop payload regression coverage is automated; native GPUI drag simulation remains manual.
-5. `tab_stop`: native render smoke covers tab-stop focus-handle retention; full traversal ordering remains partial.
+5. `tab_stop`: native render smoke covers tab-stop focus-handle retention and simulated Tab ordering; full grouping/edge-case parity remains partial.
 6. `image` / `svg`: source/object-fit mapping and template coverage are automated; async loading success/failure remains manual/partial.
 7. `window_positioning`: hidden-window native option smoke covers the supported option path; multi-display behavior remains manual/partial.
 

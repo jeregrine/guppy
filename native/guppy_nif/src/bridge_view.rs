@@ -19,13 +19,23 @@ mod style;
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
 use gpui::{
-    Context, Entity, FocusHandle, ListState, Render, ScrollHandle, Subscription, Window, div,
-    prelude::*,
+    App, Context, Entity, FocusHandle, KeyBinding, ListState, Render, ScrollHandle, Subscription,
+    Window, actions, div, prelude::*,
 };
 use std::collections::HashMap;
 
+actions!(guppy, [FocusNext, FocusPrev]);
+
+pub(crate) fn bind_focus_keys(cx: &mut App) {
+    cx.bind_keys([
+        KeyBinding::new("tab", FocusNext, None),
+        KeyBinding::new("shift-tab", FocusPrev, None),
+    ]);
+}
+
 #[derive(Default)]
 pub(crate) struct BridgeRetainedState {
+    pub root_focus_handle: Option<FocusHandle>,
     pub scroll_handles: HashMap<String, ScrollHandle>,
     pub list_states: HashMap<String, ListState>,
     pub focus_handles: HashMap<String, FocusHandle>,
@@ -51,11 +61,34 @@ impl Render for BridgeView {
             root
         };
 
-        div().size_full().child(root)
+        let root_focus_handle = self
+            .retained
+            .root_focus_handle
+            .get_or_insert_with(|| cx.focus_handle())
+            .clone();
+
+        if window.focused(cx).is_none() {
+            window.focus(&root_focus_handle);
+        }
+
+        div()
+            .size_full()
+            .track_focus(&root_focus_handle)
+            .on_action(cx.listener(Self::focus_next))
+            .on_action(cx.listener(Self::focus_prev))
+            .child(root)
     }
 }
 
 impl BridgeView {
+    fn focus_next(&mut self, _: &FocusNext, window: &mut Window, _: &mut Context<Self>) {
+        window.focus_next();
+    }
+
+    fn focus_prev(&mut self, _: &FocusPrev, window: &mut Window, _: &mut Context<Self>) {
+        window.focus_prev();
+    }
+
     fn prune_retained_state(&mut self, state: render_pass::RenderPassState) {
         self.retained
             .scroll_handles
@@ -150,6 +183,68 @@ mod tests {
     }
 
     #[gpui::test]
+    fn tab_key_moves_focus_across_guppy_tab_stops(cx: &mut gpui::TestAppContext) {
+        cx.update(super::bind_focus_keys);
+
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 12,
+            ir: IrNode::Div(Box::new(DivNode {
+                id: Some("root".into()),
+                style: Vec::new().into(),
+                hover_style: Vec::new().into(),
+                focus_style: Vec::new().into(),
+                in_focus_style: Vec::new().into(),
+                active_style: Vec::new().into(),
+                disabled_style: Vec::new().into(),
+                disabled: false,
+                stack_priority: None,
+                occlude: false,
+                focusable: false,
+                tab_stop: None,
+                tab_index: None,
+                track_scroll: false,
+                anchor_scroll: false,
+                tooltip: None,
+                shortcuts: Vec::new(),
+                children: vec![
+                    tab_stop_div_with("second", 2),
+                    tab_stop_div_with("first", 1),
+                ],
+                click: None,
+                hover: None,
+                focus: None,
+                blur: None,
+                key_down: None,
+                key_up: None,
+                context_menu: None,
+                drag_start: None,
+                drag_move: None,
+                drop: None,
+                mouse_down: None,
+                mouse_up: None,
+                mouse_move: None,
+                scroll_wheel: None,
+            })),
+            retained: BridgeRetainedState::default(),
+        });
+
+        cx.update(|window, cx| window.draw(cx).clear());
+        cx.simulate_keystrokes("tab");
+
+        view.update_in(cx, |view, window, _view_cx| {
+            assert!(view.retained.focus_handles["first"].is_focused(window));
+            assert!(!view.retained.focus_handles["second"].is_focused(window));
+        });
+
+        cx.simulate_keystrokes("tab");
+
+        view.update_in(cx, |view, window, _view_cx| {
+            assert!(!view.retained.focus_handles["first"].is_focused(window));
+            assert!(view.retained.focus_handles["second"].is_focused(window));
+        });
+    }
+
+    #[gpui::test]
     fn render_retains_scroll_and_focus_state_for_compliance_smoke(cx: &mut gpui::TestAppContext) {
         let (view, cx) = cx.add_window_view(|_, _| BridgeView {
             view_id: 10,
@@ -201,8 +296,12 @@ mod tests {
     }
 
     fn tab_stop_div() -> IrNode {
+        tab_stop_div_with("tab_target", 1)
+    }
+
+    fn tab_stop_div_with(id: &str, tab_index: isize) -> IrNode {
         IrNode::Div(Box::new(DivNode {
-            id: Some("tab_target".into()),
+            id: Some(id.into()),
             style: vec![StyleOp::W96, StyleOp::H32].into(),
             hover_style: Vec::new().into(),
             focus_style: Vec::new().into(),
@@ -214,7 +313,7 @@ mod tests {
             occlude: false,
             focusable: true,
             tab_stop: Some(true),
-            tab_index: Some(1),
+            tab_index: Some(tab_index),
             track_scroll: false,
             anchor_scroll: false,
             tooltip: None,

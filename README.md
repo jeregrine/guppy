@@ -141,7 +141,7 @@ Template tags:
 - `<text_input />`
 - `<textarea />`
 
-Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, popover callbacks, text input/textarea changes, and window close lifecycle events.
+Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, popover callbacks, text input/textarea changes, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops.
 
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
 
@@ -310,8 +310,9 @@ Current source-build support:
 Still missing or intentionally narrow unless explicitly scoped:
 
 - full editor/rich-text parity beyond current text style-token support
-- select/dropdown primitive with native-quality anchored overlay behavior
-- fully generic list item renderers and variable-height list parity
+- richer select/dropdown menu semantics beyond the current Elixir-owned select
+- stateful controls inside generic virtualized list rows and custom scrollbar parity
+- focus-visible styling semantics and exact traversal edge-case parity
 - full popover parity, including nested/deferred layer edge cases
 - animation, gradient, grid, canvas/custom painting, pattern painting, and menu APIs
 - published precompiled native artifacts

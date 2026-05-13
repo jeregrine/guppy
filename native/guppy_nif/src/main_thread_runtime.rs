@@ -79,6 +79,7 @@ pub fn run_app() {
         });
 
         bridge_text_input::bind_keys(cx);
+        crate::bridge_view::bind_focus_keys(cx);
         register_main_thread_dispatcher(cx);
 
         crate::notify_gui_started(1);
