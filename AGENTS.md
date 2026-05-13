@@ -326,7 +326,7 @@ Follow `PLAN.md`. The project is in stabilization/maintenance mode unless the us
 
 Current priority order:
 
-1. keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, and the macOS source-build CI path green
+1. keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, `scripts/package_smoke`, and the macOS source-build CI path green
 2. fix bugs found by real example usage or tests
 3. keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes
 4. improve existing primitives only when a real gap is identified
