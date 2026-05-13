@@ -13,7 +13,7 @@ Guppy has a useful baseline for:
 - GPUI compliance tracking
 - source-build distribution planning
 
-The next work should be stabilization, real-user bug fixes, production-readiness hardening, documentation/examples, and explicitly scoped features. Do not expand the primitive or runtime surface speculatively.
+The production-hardening pass tracked here has landed. The next work should be stabilization, real-user bug fixes, documentation/examples, compliance-matrix maintenance, release/distribution preparation when explicitly prioritized, and explicitly scoped features. Do not expand the primitive or runtime surface speculatively.
 
 ## Required checks
 
@@ -40,20 +40,24 @@ mix guppy.native.build
 mix run examples/hello_world.exs
 ```
 
+Before public release/distribution claims, also run:
+
+```sh
+scripts/clean_install_load_test
+```
+
 For performance-sensitive changes, run benchmarks or probes from `docs/performance.md` before optimizing.
 
 ## Current priorities
 
-1. Keep `scripts/check`, `mix guppy.native.build`, and the macOS source-build CI path green.
-2. Harden native request failure behavior so `Guppy.Server` cannot be wedged by a stalled main-thread/native reply.
-3. Implement OTP-style runtime recovery: let supervised Guppy processes crash/restart, keep Guppy-owned state minimal and reconstructable, and treat native windows as disposable projections of owner state.
-4. Fix correctness bugs found by review, real example usage, or tests before adding surface area.
-5. Keep `README.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, and `examples/super_demo.exs` current when behavior changes.
-6. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.
-7. Add new primitives only when explicitly prioritized and implemented end-to-end.
-8. Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
+1. Keep `scripts/check`, `mix guppy.native.build`, `scripts/clean_install_load_test`, and the macOS source-build CI path green.
+2. Fix correctness bugs found by review, real example usage, or tests before adding surface area.
+3. Keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes.
+4. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.
+5. Add new primitives only when explicitly prioritized and implemented end-to-end.
+6. Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
 
-## Production readiness hardening
+## Production readiness baseline
 
 ### Runtime failure model
 
@@ -67,21 +71,15 @@ Use OTP semantics as the default recovery model:
 - Do not attempt to reconcile arbitrary native windows after `Guppy.Server` restart unless there is a tested reason to keep them. Prefer Rustler monitor-driven event-target cleanup, best-effort native window cleanup, and owner-driven reopen/rerender.
 - A BEAM-killing NIF crash or unrecoverable GPUI process failure is outside in-VM OTP recovery; document that such failures require external application restart.
 
-No required remaining production-hardening work is currently tracked in this plan.
+Future production/release work, when explicitly prioritized, should focus on:
 
-The current hardening baseline includes:
+- release packaging/versioning/changelog policy
+- precompiled artifact CI and load tests per advertised target
+- broader platform validation beyond the current macOS-first source-build path
+- more manual and automated example smoke coverage, especially around window lifecycle and interactive controls
+- clearer user-facing guidance for external restart requirements after BEAM-killing NIF crashes or unrecoverable GPUI process failures
 
-- timeout-aware native requests with stale main-thread request expiry before mutation
-- normalized native timeout/unavailable errors at the Elixir public boundary
-- event-target re-registration, Rustler monitor cleanup, generation-guarded stale `down` handling, and best-effort native view cleanup on server restart
-- `Guppy.Window` reopen recovery that tolerates `view_id: nil` between failed reopen attempts and scheduled retries
-- strict IR unknown-key checks, including validated/decoded/rendered text style support
-- disabled checkbox/radio callback suppression
-- informational `window_close_requested` semantics documented consistently; a veto/decision protocol should be a new explicit design if needed later
-- native request/event path panic reduction for recoverable runtime conditions
-- source-build, clean-install/load, format, lint, Elixir test, and native test gates
-
-Keep `scripts/check`, `mix guppy.native.build`, source-build CI, and `scripts/clean_install_load_test` green before any public production-readiness claim. Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
+Add `rustler_precompiled` only when release/publishing work is explicitly prioritized.
 
 ## New primitive definition of done
 
@@ -104,23 +102,14 @@ Every future primitive needs:
 These are not active work unless explicitly reprioritized:
 
 - select/dropdown primitives with real anchored overlay behavior
-- full editor/rich-text parity
-- arbitrary per-item `uniform_list` renderers
-- variable-height list / `ListState` parity
+- menu APIs
 - nested/full popover parity
 - animation lifecycle primitives
 - gradient style primitives
 - grid layout primitives
-- custom painting/canvas and pattern painting
-- menu APIs
+- arbitrary per-item `uniform_list` renderers
+- variable-height list / `ListState` parity
 - full data-table/tree virtualization parity
 - keyed subtree diffing without benchmark evidence
-- cross-platform/precompiled artifact support beyond the documented source-build baseline
-
-## Non-goals for now
-
-- reintroducing a C shim
-- claiming full GPUI compatibility without matrix evidence
-- optimizing based on anecdotes instead of benchmarks
-- semantic theme tokens in core IR
-- packaging/precompiled artifacts before release/publishing work is explicitly prioritized
+- full editor/rich-text parity
+- custom painting/canvas and pattern painting

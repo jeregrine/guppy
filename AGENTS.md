@@ -48,7 +48,10 @@ Important current invariants:
 - retained native state must be keyed by stable identity and pruned aggressively
 - explicit node ids win over generated path ids
 - style-op lists are ordered and order must be preserved
+- IR validation should reject unknown node keys; if a key is allowed it should be validated, decoded, and rendered or deliberately documented
 - prevalidated IR wrappers may skip Elixir-side validation, but must unwrap before native decode
+- native/main-thread requests carry deadlines; stale queued requests must not mutate native state after caller timeout
+- `window_close_requested` is informational today, not a synchronous veto protocol
 
 ## Important current implementation details
 
@@ -60,17 +63,19 @@ Important current invariants:
 - `Guppy.Window` is the preferred assign-based per-window process abstraction
 - `Guppy.Component` / `~G` is the preferred template authoring path
 - `Guppy.IR.validated/1` and `Guppy.IR.validated!/1` wrap trusted/static IR after one validation pass; server APIs unwrap before native dispatch
+- `Guppy.Window` monitors the Guppy runtime server and reopens from current assigns after supervised server restart; while reopen retry has `view_id: nil`, rerenders are skipped/deferred instead of rendering to an unknown view
 - runtime telemetry events exist for native NIF calls (`[:guppy, :native, :nif]`), server-mediated native requests (`[:guppy, :native, :request]`), native event routing (`[:guppy, :event, :route]`), and `Guppy.Window` rerenders (`[:guppy, :window, :rerender]`)
 
 ### Native side
 
-- the old C shim was removed; Rustler now owns NIF entrypoints and BEAM interop
-- the extra Rust runtime thread was removed
 - NIF entrypoints enqueue requests directly into the main-thread runtime queue
+- NIF request wrappers use timeout-aware waits and pass deadlines into queued main-thread requests; expired queued requests are dropped before mutation
 - main-thread request drain scheduling is coalesced with an atomic scheduled flag
 - ETF IR field lookup keys are cached in Rust
 - native style lists use `Arc<[StyleOp]>`
 - native event emission is implemented in Rust through Rustler `OwnedEnv`/`LocalPid` support
+- the registered event target is monitored with a Rustler resource; monitor generations prevent stale `down` callbacks from clearing newer registrations
+- event-target loss clears native event delivery state and enqueues best-effort native window cleanup
 - native performance counters track Rust boundary IR/options encode-decode timing and native event send timing/failures
 - native tests include GPUI simulated-click coverage for event bridge delivery
 
@@ -143,7 +148,7 @@ Supported native nodes today:
 
 Still missing higher-value nodes/primitives:
 
-- full editor/rich-text parity
+- full editor/rich-text parity and rich text runs/highlights
 - select primitive
 - fully generic list item renderers
 - full popover parity / nested overlay edge cases
@@ -322,9 +327,9 @@ Follow `PLAN.md`. The project is in stabilization/maintenance mode unless the us
 
 Current priority order:
 
-1. keep `scripts/check`, `mix guppy.native.build`, and the macOS source-build CI path green
+1. keep `scripts/check`, `mix guppy.native.build`, `scripts/clean_install_load_test`, and the macOS source-build CI path green
 2. fix bugs found by real example usage or tests
-3. keep `README.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, and `examples/super_demo.exs` current when behavior changes
+3. keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes
 4. improve existing primitives only when a real gap is identified
 5. add new primitives or `rustler_precompiled` only when explicitly prioritized
 
@@ -347,16 +352,3 @@ jj log
 If the user asks to push, use `jj` for that too.
 
 If the user asked to review before commit, stop and report back first.
-
-## Short orientation checklist
-
-If you need to get oriented quickly:
-
-1. read `README.md`
-2. read `lib/guppy.ex`, `lib/guppy/server.ex`, `lib/guppy/window.ex`, and `lib/guppy/native/nif.ex`
-3. read `lib/guppy/component.ex`, `lib/guppy/component/compiler.ex`, and `lib/guppy/ir.ex`
-4. read `native/guppy_nif/src/lib.rs` and `native/guppy_nif/src/main_thread_runtime.rs`
-5. read `native/guppy_nif/src/bridge_view.rs` and the relevant files under `native/guppy_nif/src/bridge_view/`
-6. run `mix guppy.native.build`
-7. run `mix test`
-8. run `mix run examples/kanban_todo.exs` or `mix run examples/super_demo.exs` for an interactive smoke test
