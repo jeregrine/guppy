@@ -122,7 +122,8 @@ fn load(env: Env, _term: Term) -> bool {
 
     main_thread_runtime::init_request_queue();
     RUNTIME_RUNNING.store(true, Ordering::SeqCst);
-    maybe_start_main_thread_runtime()
+    let _ = maybe_start_main_thread_runtime();
+    true
 }
 
 #[rustler::nif]

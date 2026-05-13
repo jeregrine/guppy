@@ -13,11 +13,6 @@ defmodule Guppy do
     Application.get_env(:guppy, :native, Guppy.Native.Nif)
   end
 
-  @doc "Returns the configured NIF library path."
-  def nif_path do
-    Application.get_env(:guppy, :nif_path)
-  end
-
   @doc "Returns true when the Guppy server process is running."
   def started? do
     not is_nil(server())

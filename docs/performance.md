@@ -44,7 +44,7 @@ Selected results from `mix run bench/guppy_bench.exs`:
 
 ## Release native snapshot
 
-After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.exs --native` results:
+With an optimized native build, selected `GUPPY_NATIVE_RELEASE=1 mix run bench/guppy_bench.exs --native` results:
 
 | Scenario | Average | 99th percentile |
 | --- | ---: | ---: |
@@ -67,6 +67,5 @@ After `mix guppy.native.build --release`, selected `mix run bench/guppy_bench.ex
 - Use release native builds for interactive/manual performance checks:
 
 ```sh
-mix guppy.native.build --release
-mix run examples/kanban_todo.exs
+GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 ```

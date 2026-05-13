@@ -1,8 +1,16 @@
 import Config
 
-default_nif_path =
-  Path.expand("../priv/native/guppy_nif", __DIR__)
+native_mode =
+  if config_env() == :prod or
+       System.get_env("GUPPY_NATIVE_RELEASE") in ["1", "true", "TRUE", "yes"] do
+    :release
+  else
+    :debug
+  end
 
 config :guppy,
-  native: Guppy.Native.Nif,
-  nif_path: System.get_env("GUPPY_NIF_PATH", default_nif_path)
+  native: Guppy.Native.Nif
+
+config :guppy, Guppy.Native.Nif,
+  crate: :guppy_nif,
+  mode: native_mode

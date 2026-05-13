@@ -48,9 +48,6 @@ jobs:
       - name: Fetch dependencies
         run: mix deps.get
 
-      - name: Build native NIF
-        run: mix guppy.native.build
-
       - name: Run checks
         run: scripts/check
 

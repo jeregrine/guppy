@@ -36,7 +36,7 @@ cd native/guppy_nif && cargo fmt --check
 For native/runtime changes, also run:
 
 ```sh
-mix guppy.native.build
+mix compile --force
 mix run examples/hello_world.exs
 ```
 
@@ -50,7 +50,7 @@ For performance-sensitive changes, run benchmarks or probes from `docs/performan
 
 ## Current priorities
 
-1. Keep `scripts/check`, `mix guppy.native.build`, `scripts/clean_install_load_test`, and the macOS source-build CI path green.
+1. Keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, and the macOS source-build CI path green.
 2. Fix correctness bugs found by review, real example usage, or tests before adding surface area.
 3. Keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes.
 4. Improve existing primitives only when the gap is clearly identified in the compliance matrix or by real usage.

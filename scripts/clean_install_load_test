@@ -5,9 +5,6 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
-cd "$repo_root"
-mix guppy.native.build
-
 cd "$tmpdir"
 mix new guppy_load_smoke >/dev/null
 cd guppy_load_smoke
@@ -19,14 +16,6 @@ text = path.read_text()
 text = text.replace('      # {:dep_from_hexpm, "~> 0.3.0"},\n      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}\n', '      {:guppy, path: "${repo_root}"}\n')
 path.write_text(text)
 PY
-
-mkdir -p config
-cat > config/config.exs <<CONFIG
-import Config
-config :guppy,
-  native: Guppy.Native.Nif,
-  nif_path: "$repo_root/priv/native/guppy_nif"
-CONFIG
 
 mix deps.get >/dev/null
 mix run -e 'Application.ensure_all_started(:guppy); {:ok, :pong} = Guppy.ping(); {:ok, "guppy_nif_rust_core"} = Guppy.native_build_info(); IO.puts("guppy clean install/load smoke ok")'

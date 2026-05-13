@@ -11,7 +11,6 @@ defmodule Guppy.Server do
   defstruct native: nil,
             native_server: nil,
             native_request_timeout: 5_000,
-            nif_path: nil,
             next_view_id: 1,
             views: %{},
             owners: %{},
@@ -28,7 +27,6 @@ defmodule Guppy.Server do
           native: module(),
           native_server: GenServer.server(),
           native_request_timeout: timeout(),
-          nif_path: String.t() | nil,
           next_view_id: pos_integer(),
           views: %{optional(view_id()) => pid()},
           owners: %{optional(pid()) => owner_entry()},
@@ -72,8 +70,7 @@ defmodule Guppy.Server do
     state = %__MODULE__{
       native: native,
       native_server: Keyword.get(opts, :native_server, native),
-      native_request_timeout: Keyword.get(opts, :native_request_timeout, 5_000),
-      nif_path: Keyword.get(opts, :nif_path, Application.get_env(:guppy, :nif_path))
+      native_request_timeout: Keyword.get(opts, :native_request_timeout, 5_000)
     }
 
     {:ok, state |> maybe_register_event_target() |> maybe_reset_native_views()}

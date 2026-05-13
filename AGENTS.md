@@ -84,7 +84,7 @@ Important current invariants:
 For interactive demos, especially scroll-heavy examples like the kanban board:
 
 ```bash
-mix guppy.native.build --release
+GUPPY_NATIVE_RELEASE=1 mix compile --force
 ```
 
 Debug native builds can feel much worse than release builds.
@@ -251,16 +251,16 @@ Reference-only paths:
 
 From inside `./guppy`:
 
-Build/install native code:
+Build Elixir and native code:
 
 ```bash
-mix guppy.native.build
+mix compile --force
 ```
 
 Release build:
 
 ```bash
-mix guppy.native.build --release
+GUPPY_NATIVE_RELEASE=1 mix compile --force
 ```
 
 Run tests:
@@ -286,15 +286,14 @@ mix run examples/hello_world.exs
 If you touch native code, usually run at least:
 
 ```bash
-mix guppy.native.build
+mix compile --force
 mix test
 ```
 
 If interactive feel matters, also test with:
 
 ```bash
-mix guppy.native.build --release
-mix run examples/kanban_todo.exs
+GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 ```
 
 For performance-sensitive changes, run:
@@ -309,8 +308,6 @@ For manual GPUI-generated event timing, run:
 ```bash
 mix run bench/native_event_probe.exs --events=20
 ```
-
-On macOS, `mix guppy.native.build` codesigns the copied NIF artifact in `priv/native/` to avoid stale ad-hoc signature kills after rebuilds.
 
 Especially if you change:
 
@@ -327,7 +324,7 @@ Follow `PLAN.md`. The project is in stabilization/maintenance mode unless the us
 
 Current priority order:
 
-1. keep `scripts/check`, `mix guppy.native.build`, `scripts/clean_install_load_test`, and the macOS source-build CI path green
+1. keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, and the macOS source-build CI path green
 2. fix bugs found by real example usage or tests
 3. keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes
 4. improve existing primitives only when a real gap is identified

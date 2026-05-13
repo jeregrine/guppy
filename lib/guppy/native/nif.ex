@@ -7,9 +7,8 @@ defmodule Guppy.Native.Nif do
   """
 
   @behaviour Guppy.Native
-  @on_load :load_nif
 
-  @load_status_key {__MODULE__, :load_status}
+  use Rustler, otp_app: :guppy, crate: :guppy_nif
 
   @type load_status :: :ok | {:error, term()}
 
@@ -31,38 +30,23 @@ defmodule Guppy.Native.Nif do
 
   def info(_server \\ __MODULE__) do
     %{
-      nif_path: Application.get_env(:guppy, :nif_path),
       status: status_from_load_status(load_status()),
       load_status: load_status()
     }
   end
 
   def load_status do
-    :persistent_term.get(@load_status_key, {:error, :not_loaded})
+    case apply(__MODULE__, :native_ping, []) do
+      :pong -> :ok
+      {:error, reason} -> {:error, reason}
+      other -> {:error, other}
+    end
+  rescue
+    UndefinedFunctionError -> {:error, :nif_not_loaded}
   end
 
   def loaded? do
     load_status() == :ok
-  end
-
-  def load_nif do
-    nif_path = Application.get_env(:guppy, :nif_path)
-
-    status =
-      case nif_path do
-        nil ->
-          {:error, :nif_path_not_configured}
-
-        path ->
-          case :erlang.load_nif(String.to_charlist(path), 0) do
-            :ok -> :ok
-            {:error, {:reload, _}} -> :ok
-            {:error, reason} -> {:error, reason}
-          end
-      end
-
-    :persistent_term.put(@load_status_key, status)
-    :ok
   end
 
   def native_ping do

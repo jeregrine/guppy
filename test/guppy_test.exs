@@ -214,7 +214,6 @@ defmodule GuppyTest do
     assert state.native == Guppy.Native.Nif
     assert state.native_server == Guppy.Native.Nif
     assert state.next_view_id >= 1
-    assert is_binary(Guppy.nif_path())
   end
 
   test "ir validation rejects unknown node keys" do

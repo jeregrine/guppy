@@ -1,6 +1,6 @@
 # Distribution and native artifacts
 
-Guppy is currently source-build first. The native runtime is a single Rustler NIF built from `native/guppy_nif` and copied into `priv/native/` by `mix guppy.native.build`.
+Guppy is currently source-build first. The native runtime is a single Rustler NIF built from `native/guppy_nif`; Rustler builds and copies it into `priv/native/` during normal Mix compilation.
 
 The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, and clean-install NIF loading. Distribution is still source-build-first until release/publishing work explicitly prioritizes precompiled artifacts.
 
@@ -9,18 +9,15 @@ The current runtime baseline has production-hardening coverage for bounded nativ
 Local source builds are the supported path today:
 
 ```sh
-mix guppy.native.build
+mix compile
 mix test
 ```
 
-For interactive demos, prefer a release native build:
+For interactive demos, prefer an optimized native build:
 
 ```sh
-mix guppy.native.build --release
-mix run examples/super_demo.exs
+GUPPY_NATIVE_RELEASE=1 mix run examples/super_demo.exs
 ```
-
-On macOS, the build task codesigns the copied NIF artifact in `priv/native/` to avoid stale ad-hoc signature kills after rebuilds.
 
 ## Current platform assumptions
 
@@ -40,9 +37,8 @@ Important assumptions:
 
 1. install Erlang/Elixir and Rust
 2. fetch Mix dependencies
-3. build the native NIF with `mix guppy.native.build`
-4. run `scripts/check`
-5. run `scripts/clean_install_load_test` to verify a fresh Mix project can depend on Guppy and load the built NIF
+3. run `scripts/check`
+4. run `scripts/clean_install_load_test` to verify a fresh Mix project can depend on Guppy and load the built NIF
 
 This validates the fallback source-build path before any precompiled artifact support is introduced.
 
@@ -51,7 +47,7 @@ This validates the fallback source-build path before any precompiled artifact su
 Until precompiled artifacts exist, a release is source-only:
 
 1. Run `scripts/check`.
-2. Run `mix guppy.native.build --release` on macOS and smoke at least `examples/hello_world.exs`.
+2. Run `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs` on macOS.
 3. Confirm `docs/gpui-compliance.md` still records the current `../zed/crates/gpui` reference.
 4. Update version/changelog metadata when publishing begins.
 5. Do not attach native artifacts unless they were built by CI and load-tested. Use `scripts/clean_install_load_test` as the minimum local clean-install/load smoke before expanding to artifact-specific CI jobs.
@@ -70,12 +66,12 @@ Do not add `rustler_precompiled` until release/publishing work is explicitly pri
 
 When adding precompiled artifacts, preserve these gates:
 
-1. Keep `mix guppy.native.build` as the fallback path.
+1. Keep Rustler source compilation as the fallback path.
 2. Define target triples and artifact names before publishing.
 3. Add CI jobs that build the NIF for every advertised target.
 4. Add CI jobs that install/load the produced artifact and run at least `mix test`.
 5. Document how release artifacts are produced, signed when needed, and attached.
-6. Keep `scripts/check`, `mix guppy.native.build`, and `scripts/clean_install_load_test` green for source builds.
+6. Keep `scripts/check`, `mix compile`, and `scripts/clean_install_load_test` green for source builds.
 
 ## Initial target matrix
 

@@ -53,23 +53,16 @@ Guppy is not trying to expose all of GPUI. It currently targets a documented sub
 
 ## Quick start
 
-Build and install the native library:
-
-```bash
-mix guppy.native.build
-```
-
-Run a small example:
+Run a small example. The Rust NIF builds automatically during normal Mix compilation:
 
 ```bash
 mix run examples/hello_world.exs
 ```
 
-For interactive demos, especially scroll-heavy examples, use a release native build:
+For interactive demos, especially scroll-heavy examples, use an optimized native build:
 
 ```bash
-mix guppy.native.build --release
-mix run examples/super_demo.exs
+GUPPY_NATIVE_RELEASE=1 mix run examples/super_demo.exs
 ```
 
 Run tests:
@@ -87,21 +80,18 @@ scripts/check
 ## Examples
 
 ```bash
-mix guppy.native.build --release
-mix run examples/super_demo.exs
+GUPPY_NATIVE_RELEASE=1 mix run examples/super_demo.exs
 ```
 
 Broad tour of the bridge: multiple node kinds, multiple windows, scrolling, focus, pointer/keyboard events, actions, shortcuts, drag/drop, and owner cleanup.
 
 ```bash
-mix guppy.native.build --release
-mix run examples/kanban_todo.exs
+GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 ```
 
 Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render/1`, `~G`, and local function components.
 
 ```bash
-mix guppy.native.build
 mix run examples/hello_world.exs
 ```
 
@@ -284,7 +274,7 @@ Text nodes and div-like nodes support the current style-token surface where appl
 
 ## Distribution
 
-Guppy is source-build first. Use `mix guppy.native.build` to build and copy the NIF into `priv/native/`. The macOS source-build path and clean-install/load smoke are covered by CI.
+Guppy is source-build first. Rustler builds and copies the NIF into `priv/native/` during normal Mix compilation. The macOS source-build path and clean-install/load smoke are covered by CI.
 
 Precompiled artifacts are deferred until release/publishing work is explicitly prioritized and CI can build and load-test each advertised target. See [`docs/distribution.md`](docs/distribution.md).
 
@@ -310,15 +300,14 @@ scripts/check
 If you touch native code:
 
 ```bash
-mix guppy.native.build
+mix compile --force
 mix test
 ```
 
 If you care about interactive feel:
 
 ```bash
-mix guppy.native.build --release
-mix run examples/kanban_todo.exs
+GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 ```
 
 The active GPUI dependency is currently `gpui = "0.2.2"` from crates.io.
