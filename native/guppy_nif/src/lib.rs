@@ -622,7 +622,11 @@ fn mouse_button_atom(code: i32) -> Atom {
 
 fn map_from_pairs<'a>(env: Env<'a>, pairs: Vec<(Term<'a>, Term<'a>)>) -> Term<'a> {
     let (keys, values): (Vec<_>, Vec<_>) = pairs.into_iter().unzip();
-    Term::map_from_term_arrays(env, &keys, &values).expect("event payload map construction failed")
+
+    match Term::map_from_term_arrays(env, &keys, &values) {
+        Ok(term) => term,
+        Err(_) => rustler::types::atom::undefined().encode(env),
+    }
 }
 
 fn counter_pair<'a>(env: Env<'a>, key: &'static str, counter: &AtomicU64) -> (Term<'a>, Term<'a>) {
