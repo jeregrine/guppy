@@ -75,6 +75,29 @@ defmodule Guppy.IRTest do
     assert length(uniform_list_ir.items) == 2
     assert uniform_list_ir.events == %{click: "item_clicked"}
 
+    list_ir =
+      Guppy.IR.list(
+        [
+          %{
+            id: "row_1",
+            children: [
+              Guppy.IR.text("Row one", id: "row_1_label"),
+              Guppy.IR.div([Guppy.IR.text("variable height")], id: "row_1_detail")
+            ]
+          },
+          %{id: "row_2", children: [Guppy.IR.text("Row two")]}
+        ],
+        id: "generic_items",
+        style: [{:h_px, 180}, :overflow_y_scroll],
+        item_style: [:p_2, :border_b_1],
+        events: %{click: "generic_item_clicked"}
+      )
+
+    assert :ok = Guppy.IR.validate(list_ir)
+    assert list_ir.kind == :list
+    assert Enum.map(list_ir.items, & &1.id) == ["row_1", "row_2"]
+    assert list_ir.events == %{click: "generic_item_clicked"}
+
     popover_ir =
       Guppy.IR.popover(
         "Help",
@@ -606,6 +629,17 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_uniform_list_item, %{id: "item", label: 123}}} =
              Guppy.IR.validate(Guppy.IR.uniform_list([%{id: "item", label: 123}]))
+
+    assert {:error, {:invalid_list_item, %{id: "row", children: "nope"}}} =
+             Guppy.IR.validate(Guppy.IR.list([%{id: "row", children: "nope"}]))
+
+    assert {:error, {:duplicate_id, "row_1_label"}} =
+             Guppy.IR.validate(
+               Guppy.IR.list([
+                 %{id: "row_1", children: [Guppy.IR.text("first", id: "row_1_label")]},
+                 %{id: "row_2", children: [Guppy.IR.text("second", id: "row_1_label")]}
+               ])
+             )
 
     assert {:error, {:invalid_ir, %{kind: :popover, label: "Help", open: "yes", children: []}}} =
              Guppy.IR.validate(%{kind: :popover, label: "Help", open: "yes", children: []})

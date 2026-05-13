@@ -363,6 +363,17 @@ defmodule Guppy.IR do
           optional(:events) => text_events()
         }
 
+  @type list_item :: %{required(:id) => node_id(), required(:children) => [ir_node()]}
+
+  @type list_node :: %{
+          required(:kind) => :list,
+          required(:items) => [list_item()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:item_style) => style(),
+          optional(:events) => text_events()
+        }
+
   @type popover_events :: %{optional(:click) => String.t(), optional(:close) => String.t()}
   @type popover_anchor :: :top_left | :top_right | :bottom_left | :bottom_right
   @type popover_anchor_position_mode :: :window | :local
@@ -430,6 +441,7 @@ defmodule Guppy.IR do
           | radio_node()
           | select_node()
           | uniform_list_node()
+          | list_node()
           | popover_node()
           | spacer_node()
           | text_input_node()
@@ -687,6 +699,20 @@ defmodule Guppy.IR do
     |> maybe_put(:events, events)
   end
 
+  @spec list([list_item()], keyword()) :: list_node()
+  def list(items, opts \\ []) when is_list(items) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    item_style = Keyword.get(opts, :item_style)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :list, items: items}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+    |> maybe_put(:item_style, item_style)
+    |> maybe_put(:events, events)
+  end
+
   @spec select([select_option()], keyword()) :: select_node()
   def select(options, opts \\ []) when is_list(options) and is_list(opts) do
     id = Keyword.get(opts, :id)
@@ -919,6 +945,7 @@ defmodule Guppy.IR do
       :events
     ],
     uniform_list: [:kind, :items, :id, :style, :item_style, :events],
+    list: [:kind, :items, :id, :style, :item_style, :events],
     select: [
       :kind,
       :options,
@@ -1084,6 +1111,17 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_node(%{kind: :list, items: items} = node) when is_list(items) do
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :item_style)),
+         :ok <- validate_events(Map.get(node, :events), [:click]),
+         :ok <- validate_list_items(items) do
+      :ok
+    end
+  end
+
   defp validate_node(%{kind: :select, options: options} = node) when is_list(options) do
     with :ok <- validate_node_keys(node),
          :ok <- validate_id(Map.get(node, :id)),
@@ -1219,6 +1257,19 @@ defmodule Guppy.IR do
     end)
   end
 
+  defp validate_list_items(items) do
+    Enum.reduce_while(items, :ok, fn
+      %{id: id, children: children}, :ok when is_binary(id) and is_list(children) ->
+        case validate_children(children) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+
+      item, :ok ->
+        {:halt, {:error, {:invalid_list_item, item}}}
+    end)
+  end
+
   defp validate_select_options(options) do
     Enum.reduce_while(options, {:ok, MapSet.new()}, fn
       %{value: value, label: label} = option, {:ok, seen}
@@ -1292,7 +1343,29 @@ defmodule Guppy.IR do
     end)
   end
 
+  defp collect_child_ids(%{kind: :list, items: items}, ids) when is_list(items) do
+    Enum.reduce_while(items, {:ok, ids}, fn %{id: id, children: children}, {:ok, acc_ids} ->
+      if MapSet.member?(acc_ids, id) do
+        {:halt, {:error, {:duplicate_id, id}}}
+      else
+        case collect_list_item_child_ids(children, MapSet.put(acc_ids, id)) do
+          {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+      end
+    end)
+  end
+
   defp collect_child_ids(_node, ids), do: {:ok, ids}
+
+  defp collect_list_item_child_ids(children, ids) do
+    Enum.reduce_while(children, {:ok, ids}, fn child, {:ok, acc_ids} ->
+      case collect_ids(child, acc_ids) do
+        {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
 
   defp validate_id(nil), do: :ok
   defp validate_id(id) when is_binary(id), do: :ok

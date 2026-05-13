@@ -10,6 +10,13 @@ defmodule Guppy.ComponentTest do
           %{id: "uniform_1", label: "Uniform one"},
           %{id: "uniform_2", label: "Uniform two"}
         ],
+        generic_items: [
+          %{id: "generic_1", children: [Guppy.IR.text("Generic one")]},
+          %{
+            id: "generic_2",
+            children: [Guppy.IR.div([Guppy.IR.text("Generic two detail")])]
+          }
+        ],
         value: "Jason",
         notes: "Line one\nLine two",
         priority: "high",
@@ -39,6 +46,7 @@ defmodule Guppy.ComponentTest do
       image,
       scroll,
       uniform_list,
+      list,
       popover,
       select,
       text_input,
@@ -97,6 +105,13 @@ defmodule Guppy.ComponentTest do
     assert {:h_px, 120} in uniform_list.style
     assert :p_2 in uniform_list.item_style
     assert uniform_list.events == %{click: "uniform_item_clicked"}
+
+    assert list.kind == :list
+    assert list.id == "generic_items"
+    assert Enum.map(list.items, & &1.id) == ["generic_1", "generic_2"]
+    assert {:h_px, 140} in list.style
+    assert :p_2 in list.item_style
+    assert list.events == %{click: "generic_item_clicked"}
 
     assert popover.kind == :popover
     assert popover.id == "help_popover"
