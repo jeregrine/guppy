@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 thread_local! {
     static APP: RefCell<Option<AsyncApp>> = const { RefCell::new(None) };
@@ -22,27 +23,49 @@ static MAIN_THREAD_DISPATCHER: OnceLock<Mutex<Option<Arc<dyn PlatformDispatcher>
     OnceLock::new();
 static REQUEST_DRAIN_SCHEDULED: AtomicBool = AtomicBool::new(false);
 
+#[derive(Clone, Copy)]
+pub(crate) struct RequestDeadline {
+    expires_at: Instant,
+}
+
+impl RequestDeadline {
+    pub(crate) fn after(timeout: Duration) -> Self {
+        Self {
+            expires_at: Instant::now() + timeout,
+        }
+    }
+
+    fn expired(self) -> bool {
+        Instant::now() >= self.expires_at
+    }
+}
+
 pub(crate) enum MainThreadRequest {
     OpenWindow {
+        deadline: RequestDeadline,
         view_id: u64,
         ir: IrNode,
         options: WindowOptionsConfig,
         reply: Sender<i32>,
     },
     SetIr {
+        deadline: RequestDeadline,
         view_id: u64,
         ir: IrNode,
         reply: Sender<i32>,
     },
     CloseWindow {
+        deadline: RequestDeadline,
         view_id: u64,
         reply: Sender<i32>,
     },
     CloseAll {
+        deadline: RequestDeadline,
         reply: Sender<i32>,
     },
     CloseAllNoReply,
     ViewCount {
+        deadline: RequestDeadline,
         reply: Sender<u64>,
     },
 }
@@ -259,27 +282,76 @@ fn try_next_request() -> Option<MainThreadRequest> {
 fn handle_request(request: MainThreadRequest) {
     match request {
         MainThreadRequest::OpenWindow {
+            deadline,
             view_id,
             ir,
             options,
             reply,
         } => {
-            let _ = reply.send(open_window(view_id, ir, options));
+            if !deadline.expired() {
+                let _ = reply.send(open_window(view_id, ir, options));
+            }
         }
-        MainThreadRequest::SetIr { view_id, ir, reply } => {
-            let _ = reply.send(update_ir(view_id, ir));
+        MainThreadRequest::SetIr {
+            deadline,
+            view_id,
+            ir,
+            reply,
+        } => {
+            if !deadline.expired() {
+                let _ = reply.send(update_ir(view_id, ir));
+            }
         }
-        MainThreadRequest::CloseWindow { view_id, reply } => {
-            let _ = reply.send(close_window(view_id));
+        MainThreadRequest::CloseWindow {
+            deadline,
+            view_id,
+            reply,
+        } => {
+            if !deadline.expired() {
+                let _ = reply.send(close_window(view_id));
+            }
         }
-        MainThreadRequest::CloseAll { reply } => {
-            let _ = reply.send(close_all_windows());
+        MainThreadRequest::CloseAll { deadline, reply } => {
+            if !deadline.expired() {
+                let _ = reply.send(close_all_windows());
+            }
         }
         MainThreadRequest::CloseAllNoReply => {
             let _ = close_all_windows();
         }
-        MainThreadRequest::ViewCount { reply } => {
-            let _ = reply.send(view_count());
+        MainThreadRequest::ViewCount { deadline, reply } => {
+            if !deadline.expired() {
+                let _ = reply.send(view_count());
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MainThreadRequest, RequestDeadline, handle_request, view_count};
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    #[test]
+    fn expired_requests_do_not_reply_or_mutate_state() {
+        let (reply, rx) = mpsc::channel();
+        handle_request(MainThreadRequest::ViewCount {
+            deadline: RequestDeadline::after(Duration::from_millis(0)),
+            reply,
+        });
+
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn live_requests_still_reply() {
+        let (reply, rx) = mpsc::channel();
+        handle_request(MainThreadRequest::ViewCount {
+            deadline: RequestDeadline::after(Duration::from_secs(60)),
+            reply,
+        });
+
+        assert_eq!(rx.try_recv().unwrap(), view_count());
     }
 }

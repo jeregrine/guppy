@@ -238,8 +238,9 @@ fn native_open_window<'a>(
         ir_decode_started_at.elapsed(),
     );
 
-    let result = request_i32(timeout_ms, |reply| {
+    let result = request_i32(timeout_ms, |reply, deadline| {
         main_thread_runtime::MainThreadRequest::OpenWindow {
+            deadline,
             view_id,
             ir,
             options,
@@ -305,8 +306,13 @@ fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>, timeout_ms: u64) 
         ir_decode_started_at.elapsed(),
     );
 
-    let result = request_i32(timeout_ms, |reply| {
-        main_thread_runtime::MainThreadRequest::SetIr { view_id, ir, reply }
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::SetIr {
+            deadline,
+            view_id,
+            ir,
+            reply,
+        }
     });
 
     status_result(env, result, unknown_view_id())
@@ -314,8 +320,12 @@ fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>, timeout_ms: u64) 
 
 #[rustler::nif(schedule = "DirtyIo")]
 fn native_close_window<'a>(env: Env<'a>, view_id: u64, timeout_ms: u64) -> Term<'a> {
-    let result = request_i32(timeout_ms, |reply| {
-        main_thread_runtime::MainThreadRequest::CloseWindow { view_id, reply }
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::CloseWindow {
+            deadline,
+            view_id,
+            reply,
+        }
     });
 
     status_result(env, result, unknown_view_id())
@@ -323,8 +333,8 @@ fn native_close_window<'a>(env: Env<'a>, view_id: u64, timeout_ms: u64) -> Term<
 
 #[rustler::nif(schedule = "DirtyIo")]
 fn native_close_all<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
-    let result = request_i32(timeout_ms, |reply| {
-        main_thread_runtime::MainThreadRequest::CloseAll { reply }
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::CloseAll { deadline, reply }
     });
 
     status_result(env, result, runtime_unavailable())
@@ -332,8 +342,8 @@ fn native_close_all<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
 
 #[rustler::nif(schedule = "DirtyIo")]
 fn native_view_count<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
-    match request_u64(timeout_ms, |reply| {
-        main_thread_runtime::MainThreadRequest::ViewCount { reply }
+    match request_u64(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::ViewCount { deadline, reply }
     }) {
         NativeRequestResult::Reply(count) => count.encode(env),
         NativeRequestResult::Timeout => error_tuple(env, native_timeout()),
@@ -400,29 +410,40 @@ enum NativeRequestResult<T> {
 
 fn request_i32(
     timeout_ms: u64,
-    build: impl FnOnce(Sender<i32>) -> main_thread_runtime::MainThreadRequest,
+    build: impl FnOnce(
+        Sender<i32>,
+        main_thread_runtime::RequestDeadline,
+    ) -> main_thread_runtime::MainThreadRequest,
 ) -> NativeRequestResult<i32> {
     request_with_timeout(timeout_ms, build)
 }
 
 fn request_u64(
     timeout_ms: u64,
-    build: impl FnOnce(Sender<u64>) -> main_thread_runtime::MainThreadRequest,
+    build: impl FnOnce(
+        Sender<u64>,
+        main_thread_runtime::RequestDeadline,
+    ) -> main_thread_runtime::MainThreadRequest,
 ) -> NativeRequestResult<u64> {
     request_with_timeout(timeout_ms, build)
 }
 
 fn request_with_timeout<T>(
     timeout_ms: u64,
-    build: impl FnOnce(Sender<T>) -> main_thread_runtime::MainThreadRequest,
+    build: impl FnOnce(
+        Sender<T>,
+        main_thread_runtime::RequestDeadline,
+    ) -> main_thread_runtime::MainThreadRequest,
 ) -> NativeRequestResult<T> {
     let (reply_tx, reply_rx) = mpsc::channel();
+    let timeout = Duration::from_millis(timeout_ms);
+    let deadline = main_thread_runtime::RequestDeadline::after(timeout);
 
-    if main_thread_runtime::enqueue_request(build(reply_tx)).is_err() {
+    if main_thread_runtime::enqueue_request(build(reply_tx, deadline)).is_err() {
         return NativeRequestResult::Unavailable;
     }
 
-    match reply_rx.recv_timeout(Duration::from_millis(timeout_ms)) {
+    match reply_rx.recv_timeout(timeout) {
         Ok(value) => NativeRequestResult::Reply(value),
         Err(mpsc::RecvTimeoutError::Timeout) => NativeRequestResult::Timeout,
         Err(mpsc::RecvTimeoutError::Disconnected) => NativeRequestResult::Unavailable,
