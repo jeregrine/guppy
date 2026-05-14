@@ -97,19 +97,34 @@ defmodule Guppy.Component.Compiler do
   ]
 
   def compile!(template, caller) when is_binary(template) do
+    assigns_var = Macro.unique_var(:guppy_template_assigns, __MODULE__)
     {safe_template, placeholders} = preprocess_dynamic_attributes(template)
     Process.put({__MODULE__, :placeholders}, placeholders)
+    Process.put({__MODULE__, :assigns_var}, assigns_var)
+    Process.put({__MODULE__, :uses_assigns}, false)
 
     root = parse_template!(safe_template, caller)
     children = compile_children(xmlElement(root, :content), caller)
 
-    case non_empty_root_children(children) do
-      [child] -> child
-      [] -> raise_compile_error!(caller, "~GUI requires a root element")
-      _ -> raise_compile_error!(caller, "~GUI requires exactly one root element")
+    compiled =
+      case non_empty_root_children(children) do
+        [child] -> child
+        [] -> raise_compile_error!(caller, "~GUI requires a root element")
+        _ -> raise_compile_error!(caller, "~GUI requires exactly one root element")
+      end
+
+    if Process.get({__MODULE__, :uses_assigns}) do
+      quote do
+        unquote(assigns_var) = Guppy.Component.template_assigns!(binding())
+        unquote(compiled)
+      end
+    else
+      compiled
     end
   after
     Process.delete({__MODULE__, :placeholders})
+    Process.delete({__MODULE__, :assigns_var})
+    Process.delete({__MODULE__, :uses_assigns})
   end
 
   defp parse_template!(template, caller) do
@@ -977,10 +992,14 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp rewrite_assigns(ast) do
+    assigns_var = Process.get({__MODULE__, :assigns_var})
+
     Macro.prewalk(ast, fn
       {:@, _meta, [{name, _, _context}]} when is_atom(name) ->
+        Process.put({__MODULE__, :uses_assigns}, true)
+
         quote do
-          Guppy.Component.fetch_assign!(var!(assigns), unquote(name))
+          Guppy.Component.fetch_assign!(unquote(assigns_var), unquote(name))
         end
 
       node ->

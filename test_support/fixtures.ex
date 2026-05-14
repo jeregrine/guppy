@@ -31,6 +31,22 @@ defmodule Guppy.TestCounterWindow do
   end
 end
 
+defmodule Guppy.WindowAssignsTemplateExample do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(_arg, window), do: {:ok, assign(window, :title, "Mounted title")}
+
+  @impl Guppy.Window
+  def render(window) do
+    ~GUI"""
+    <div id="window_assigns_template">
+      <text id="window_assigns_title">{@title}</text>
+    </div>
+    """
+  end
+end
+
 defmodule Guppy.CrashingNative do
   def request(_server, _request, _timeout), do: exit(:native_down)
 end

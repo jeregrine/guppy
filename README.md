@@ -17,11 +17,9 @@ defmodule CounterWindow do
   end
 
   def render(window) do
-    count = window.assigns.count
-
     ~GUI"""
     <div class="flex flex-col gap-2 p-4 bg-[#0f172a] text-[#f8fafc]">
-      <text id="count_label" class="text-2xl font-bold">count = {count}</text>
+      <text id="count_label" class="text-2xl font-bold">count = {@count}</text>
       <button id="increment_button" click="increment" class="p-2 rounded-md border-1">
         Increment
       </button>
@@ -220,7 +218,7 @@ Preferred `Guppy.Window` modules treat `window_closed` as lifecycle-driving toda
 
 ## Templates and components
 
-`Guppy.Component` provides `~GUI` templates and first-pass function components.
+`Guppy.Component` provides `~GUI` templates and first-pass function components. Inside a `render(assigns)` or `render(window)` function, `@name` reads from the assigns map or window assigns.
 
 Local lower-case tags call a function in the same module:
 

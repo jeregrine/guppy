@@ -31,8 +31,8 @@ defmodule Guppy.Component do
   - nested component content is passed as `@children`
   - `prop/4` can declare required props, defaults, and simple validations
 
-  Expressions use `{...}` syntax. Assign lookups use `@name`, which expects an
-  `assigns` variable to be available in scope, similar to HEEx.
+  Expressions use `{...}` syntax. Assign lookups use `@name`, resolving from an
+  `assigns` map in scope or from a `Guppy.Window` value named `window`.
   """
 
   defmacro __using__(_opts) do
@@ -87,6 +87,23 @@ defmodule Guppy.Component do
     end
   end
 
+  def template_assigns!(binding) when is_list(binding) do
+    case fetch_template_assigns(binding) do
+      {:ok, assigns} ->
+        assigns
+
+      :error ->
+        case fetch_window_assigns(binding) do
+          {:ok, assigns} ->
+            assigns
+
+          :error ->
+            raise ArgumentError,
+                  "~GUI @assigns require an assigns map or a Guppy.Window value named window in scope"
+        end
+    end
+  end
+
   def fetch_assign!(assigns, key) when is_map(assigns) and is_atom(key) do
     Map.fetch!(assigns, key)
   end
@@ -117,6 +134,20 @@ defmodule Guppy.Component do
 
   def maybe_entry(_key, nil), do: nil
   def maybe_entry(key, value), do: {key, value}
+
+  defp fetch_template_assigns(binding) do
+    case Keyword.fetch(binding, :assigns) do
+      {:ok, assigns} when is_map(assigns) -> {:ok, assigns}
+      _ -> :error
+    end
+  end
+
+  defp fetch_window_assigns(binding) do
+    case Keyword.fetch(binding, :window) do
+      {:ok, %{__struct__: Guppy.Window, assigns: assigns}} when is_map(assigns) -> {:ok, assigns}
+      _ -> :error
+    end
+  end
 
   defp component_schema(module, component_name) do
     if function_exported?(module, :__guppy_component_props__, 1) do

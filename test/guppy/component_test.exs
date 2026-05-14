@@ -200,6 +200,14 @@ defmodule Guppy.ComponentTest do
     assert footer == %{kind: :text, content: "Footer ready", id: "footer"}
   end
 
+  test "Guppy.Component resolves @assigns from a Guppy.Window render context" do
+    ir =
+      Guppy.WindowAssignsTemplateExample.render(%Guppy.Window{assigns: %{title: "Window title"}})
+
+    assert :ok = Guppy.IR.validate(ir)
+    assert [%{kind: :text, content: "Window title", id: "window_assigns_title"}] = ir.children
+  end
+
   test "Guppy.Component keeps equals signs in text expressions out of attribute preprocessing" do
     ir = Guppy.TemplateTextExpressionExample.render(%{count: 7, x: 3})
 
