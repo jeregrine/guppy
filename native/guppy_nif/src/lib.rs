@@ -639,6 +639,18 @@ fn binary_str(ptr: *const u8, len: usize) -> Option<String> {
     std::str::from_utf8(bytes).map(str::to_owned).ok()
 }
 
+fn id_callback_strings(
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+) -> Option<(String, String)> {
+    Some((
+        binary_str(node_id_ptr, node_id_len)?,
+        binary_str(callback_id_ptr, callback_id_len)?,
+    ))
+}
+
 fn base_payload<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Vec<(Term<'a>, Term<'a>)> {
     vec![
         (id().encode(env), node_id.encode(env)),
@@ -914,10 +926,9 @@ pub extern "C" fn guppy_c_send_click_event(
     callback_id_ptr: *const u8,
     callback_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
 
@@ -1034,10 +1045,9 @@ pub extern "C" fn guppy_c_send_data_table_event(
     column_id_ptr: *const u8,
     column_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(table_id_value) = binary_str(table_id_ptr, table_id_len) else {
@@ -1113,10 +1123,9 @@ pub extern "C" fn guppy_c_send_tree_event(
     item_id_ptr: *const u8,
     item_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(tree_id_value) = binary_str(tree_id_ptr, tree_id_len) else {
@@ -1201,10 +1210,9 @@ pub extern "C" fn guppy_c_send_close_event(
     callback_id_ptr: *const u8,
     callback_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_id_callback_event(view_id, close(), &node_id, &callback_id)
@@ -1219,10 +1227,9 @@ pub extern "C" fn guppy_c_send_hover_event(
     callback_id_len: usize,
     hovered_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_event(view_id, hover(), move |env| {
@@ -1240,10 +1247,9 @@ pub extern "C" fn guppy_c_send_focus_event(
     callback_id_ptr: *const u8,
     callback_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_id_callback_event(view_id, focus(), &node_id, &callback_id)
@@ -1257,10 +1263,9 @@ pub extern "C" fn guppy_c_send_blur_event(
     callback_id_ptr: *const u8,
     callback_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_id_callback_event(view_id, blur(), &node_id, &callback_id)
@@ -1276,10 +1281,9 @@ pub extern "C" fn guppy_c_send_change_event(
     value_ptr: *const u8,
     value_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(value_string) = binary_str(value_ptr, value_len) else {
@@ -1301,10 +1305,9 @@ pub extern "C" fn guppy_c_send_checkbox_change_event(
     callback_id_len: usize,
     checked_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_event(view_id, change(), move |env| {
@@ -1465,10 +1468,9 @@ pub extern "C" fn guppy_c_send_key_down_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(key_string) = binary_str(key_ptr, key_len) else {
@@ -1520,10 +1522,9 @@ pub extern "C" fn guppy_c_send_key_up_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(key_string) = binary_str(key_ptr, key_len) else {
@@ -1578,10 +1579,9 @@ pub extern "C" fn guppy_c_send_action_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(action_string) = binary_str(action_ptr, action_len) else {
@@ -1637,10 +1637,9 @@ pub extern "C" fn guppy_c_send_context_menu_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_event(view_id, context_menu(), move |env| {
@@ -1688,10 +1687,9 @@ pub extern "C" fn guppy_c_send_drag_start_event(
     source_id_ptr: *const u8,
     source_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(source) = binary_str(source_id_ptr, source_id_len) else {
@@ -1710,10 +1708,9 @@ pub extern "C" fn guppy_c_send_drop_event(
     source_id_ptr: *const u8,
     source_id_len: usize,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(source) = binary_str(source_id_ptr, source_id_len) else {
@@ -1740,10 +1737,9 @@ pub extern "C" fn guppy_c_send_drag_move_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     let Some(source) = binary_str(source_id_ptr, source_id_len) else {
@@ -1793,10 +1789,9 @@ pub extern "C" fn guppy_c_send_mouse_down_event(
     function_value: i32,
     first_mouse_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_event(view_id, mouse_down(), move |env| {
@@ -1846,10 +1841,9 @@ pub extern "C" fn guppy_c_send_mouse_up_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_event(view_id, mouse_up(), move |env| {
@@ -1894,10 +1888,9 @@ pub extern "C" fn guppy_c_send_mouse_move_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_event(view_id, mouse_move(), move |env| {
@@ -1943,10 +1936,9 @@ pub extern "C" fn guppy_c_send_scroll_wheel_event(
     platform_value: i32,
     function_value: i32,
 ) -> i32 {
-    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
-        return 0;
-    };
-    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+    let Some((node_id, callback_id)) =
+        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
+    else {
         return 0;
     };
     send_event(view_id, scroll_wheel(), move |env| {
