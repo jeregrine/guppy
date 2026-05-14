@@ -732,6 +732,27 @@ fn modifiers_payload<'a>(
     )
 }
 
+fn modifiers_pair<'a>(
+    env: Env<'a>,
+    control_value: i32,
+    alt_value: i32,
+    shift_value: i32,
+    platform_value: i32,
+    function_value: i32,
+) -> (Term<'a>, Term<'a>) {
+    (
+        modifiers().encode(env),
+        modifiers_payload(
+            env,
+            control_value,
+            alt_value,
+            shift_value,
+            platform_value,
+            function_value,
+        ),
+    )
+}
+
 fn mouse_button_atom(code: i32) -> Atom {
     match code {
         1 => left(),
@@ -1370,16 +1391,13 @@ pub extern "C" fn guppy_c_send_key_down_event(
             (key().encode(env), key_string.encode(env)),
             (key_char().encode(env), key_char_term),
             (is_held().encode(env), (is_held_value != 0).encode(env)),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1423,16 +1441,13 @@ pub extern "C" fn guppy_c_send_key_up_event(
         pairs.extend([
             (key().encode(env), key_string.encode(env)),
             (key_char().encode(env), key_char_term),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1488,16 +1503,13 @@ pub extern "C" fn guppy_c_send_action_event(
             (shortcut().encode(env), shortcut_string.encode(env)),
             (key().encode(env), key_string.encode(env)),
             (key_char().encode(env), key_char_term),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1529,16 +1541,13 @@ pub extern "C" fn guppy_c_send_context_menu_event(
         pairs.extend([
             (x().encode(env), event_x.encode(env)),
             (y().encode(env), event_y.encode(env)),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1637,16 +1646,13 @@ pub extern "C" fn guppy_c_send_drag_move_event(
             ),
             (x().encode(env), event_x.encode(env)),
             (y().encode(env), event_y.encode(env)),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1690,16 +1696,13 @@ pub extern "C" fn guppy_c_send_mouse_down_event(
                 first_mouse().encode(env),
                 (first_mouse_value != 0).encode(env),
             ),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1738,16 +1741,13 @@ pub extern "C" fn guppy_c_send_mouse_up_event(
             (x().encode(env), event_x.encode(env)),
             (y().encode(env), event_y.encode(env)),
             (click_count().encode(env), click_count_value.encode(env)),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1784,16 +1784,13 @@ pub extern "C" fn guppy_c_send_mouse_move_event(
             ),
             (x().encode(env), event_x.encode(env)),
             (y().encode(env), event_y.encode(env)),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
@@ -1839,16 +1836,13 @@ pub extern "C" fn guppy_c_send_scroll_wheel_event(
             ),
             (delta_x().encode(env), delta_x_value.encode(env)),
             (delta_y().encode(env), delta_y_value.encode(env)),
-            (
-                modifiers().encode(env),
-                modifiers_payload(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
+            modifiers_pair(
+                env,
+                control_value,
+                alt_value,
+                shift_value,
+                platform_value,
+                function_value,
             ),
         ]);
         map_from_pairs(env, pairs)
