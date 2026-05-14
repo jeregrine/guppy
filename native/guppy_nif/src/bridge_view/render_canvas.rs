@@ -27,7 +27,7 @@ pub(crate) fn render(
     let canvas_element = canvas(
         |_, _, _| (),
         move |canvas_bounds, (), window, _cx| {
-            for command in &commands {
+            for command in commands.iter() {
                 paint_command(canvas_bounds, command, window);
             }
         },

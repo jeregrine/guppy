@@ -395,7 +395,8 @@ mod tests {
                     height: 10.0,
                     fill: StyleColor::Hex("#0f172a".into()),
                     radius: 0.0,
-                }],
+                }]
+                .into(),
                 style: Vec::new().into(),
                 click: None,
             })),

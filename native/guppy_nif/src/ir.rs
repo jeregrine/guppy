@@ -617,7 +617,7 @@ pub enum CanvasCommand {
 #[derive(Clone, Debug, PartialEq)]
 pub struct CanvasNode {
     pub id: Option<String>,
-    pub commands: Vec<CanvasCommand>,
+    pub commands: Arc<[CanvasCommand]>,
     pub style: DivStyle,
     pub click: Option<String>,
 }
@@ -1782,7 +1782,7 @@ fn ensure_id_known(id: &str, known: &HashSet<String>, context: &str) -> Result<(
     }
 }
 
-fn get_canvas_commands_field(map: &HashMap<Term, Term>) -> Result<Vec<CanvasCommand>, String> {
+fn get_canvas_commands_field(map: &HashMap<Term, Term>) -> Result<Arc<[CanvasCommand]>, String> {
     let Some(commands_term) = get_field(map, "commands") else {
         return Err("missing required field: commands".into());
     };
@@ -1790,7 +1790,8 @@ fn get_canvas_commands_field(map: &HashMap<Term, Term>) -> Result<Vec<CanvasComm
     get_list(commands_term)?
         .iter()
         .map(decode_canvas_command)
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {

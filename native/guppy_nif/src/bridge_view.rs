@@ -575,7 +575,8 @@ mod tests {
                     interval: 0.12,
                     radius: 8.0,
                 },
-            ],
+            ]
+            .into(),
             style: vec![StyleOp::WPx(120.0), StyleOp::HPx(80.0)].into(),
             click: Some("canvas_clicked".into()),
         }))
