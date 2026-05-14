@@ -817,7 +817,7 @@ impl IrNode {
         let kind = get_atom_field(map, "kind")?;
         let id = get_optional_string_field(map, "id")?;
 
-        match kind.as_str() {
+        match kind {
             "text" => {
                 let content = get_string_field(map, "content")?;
                 let runs = get_text_runs_field(map, &content)?;
@@ -1255,9 +1255,9 @@ fn field_key(key: &str) -> Option<&'static Term> {
     })
 }
 
-fn get_atom_field(map: &HashMap<Term, Term>, key: &str) -> Result<String, String> {
+fn get_atom_field<'a>(map: &'a HashMap<Term, Term>, key: &str) -> Result<&'a str, String> {
     match get_field(map, key) {
-        Some(Term::Atom(atom)) => Ok(atom.name.clone()),
+        Some(Term::Atom(atom)) => Ok(atom.name.as_str()),
         Some(other) => Err(format!("expected atom field {key}, got {other}")),
         None => Err(format!("missing required field: {key}")),
     }
@@ -1672,7 +1672,7 @@ fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
     let map = expect_map(term)?;
     let kind = get_atom_field(map, "kind")?;
 
-    match kind.as_str() {
+    match kind {
         "text" => {
             ensure_allowed_fields(
                 map,
@@ -1803,7 +1803,7 @@ fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
     let width = get_positive_f32_field(command, "width")?;
     let height = get_positive_f32_field(command, "height")?;
 
-    match op.as_str() {
+    match op {
         "rect" => {
             ensure_allowed_fields(
                 command,
@@ -1899,7 +1899,7 @@ fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
     let map = expect_map(term)?;
     let kind = get_atom_field(map, "kind")?;
 
-    match kind.as_str() {
+    match kind {
         "text" => {
             ensure_allowed_fields(
                 map,
