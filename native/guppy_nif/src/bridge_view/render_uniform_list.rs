@@ -20,7 +20,7 @@ pub(crate) fn render(
     pass: &mut RenderPass<'_>,
     path: &str,
     id: Option<&str>,
-    items: &[UniformListItem],
+    items: &Arc<[UniformListItem]>,
     style: &DivStyle,
     item_style: &DivStyle,
     click: Option<&str>,
@@ -29,7 +29,7 @@ pub(crate) fn render(
     let node_id = NodeIdentity::new(view_id, path, id);
     let list_key = node_id.to_string();
     let element_id = node_id.to_shared_string();
-    let items: Arc<[UniformListItem]> = items.to_vec().into();
+    let items = items.clone();
     let item_style = item_style.clone();
     let click = click.map(str::to_owned);
     let item_list_key = list_key.clone();

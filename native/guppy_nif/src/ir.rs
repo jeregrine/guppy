@@ -749,14 +749,14 @@ pub enum IrNode {
     Radio(Box<RadioNode>),
     UniformList {
         id: Option<String>,
-        items: Vec<UniformListItem>,
+        items: Arc<[UniformListItem]>,
         style: DivStyle,
         item_style: DivStyle,
         click: Option<String>,
     },
     List {
         id: Option<String>,
-        items: Vec<ListItem>,
+        items: Arc<[ListItem]>,
         style: DivStyle,
         item_style: DivStyle,
         click: Option<String>,
@@ -1488,7 +1488,9 @@ fn get_text_runs_field(
     }
 }
 
-fn get_uniform_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<UniformListItem>, String> {
+fn get_uniform_list_items_field(
+    map: &HashMap<Term, Term>,
+) -> Result<Arc<[UniformListItem]>, String> {
     let Some(items_term) = get_field(map, "items") else {
         return Err("missing required field: items".into());
     };
@@ -1503,10 +1505,11 @@ fn get_uniform_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<Uniform
                 label: get_string_field(item, "label")?,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
-fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<ListItem>, String> {
+fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, String> {
     let Some(items_term) = get_field(map, "items") else {
         return Err("missing required field: items".into());
     };
@@ -1530,7 +1533,8 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<ListItem>, Stri
                 children,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn get_data_table_columns_field(map: &HashMap<Term, Term>) -> Result<Vec<DataTableColumn>, String> {

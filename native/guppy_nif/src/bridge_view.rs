@@ -625,7 +625,8 @@ mod tests {
                     mouse_move: None,
                     scroll_wheel: None,
                 }))],
-            }],
+            }]
+            .into(),
             style: vec![StyleOp::W96, StyleOp::H32].into(),
             item_style: Vec::new().into(),
             click: None,
