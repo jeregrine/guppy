@@ -122,3 +122,49 @@ Validation should require:
 - Add native ETF decode and style mapping to GPUI `linear_gradient`.
 - Add ExUnit style validation/template coverage and Rust style mapping tests.
 - Update examples only when a real example uses the primitive.
+
+## Data-table and tree virtualization
+
+Status: scoped separately from current `grid`, `uniform_list`, and generic `list` support.
+
+Current primitives are intentionally narrower:
+
+- grid style ops express static GPUI grid layout;
+- `uniform_list` handles simple fixed text rows;
+- generic `list` handles variable-height static/layout rows.
+
+Full data-table and tree virtualization should not be squeezed into those primitives. They need dedicated semantics so identity, selection, focus, and scrolling remain predictable.
+
+### Data-table scope
+
+A future table primitive needs explicit concepts for:
+
+- table id, row ids, column ids, and cell identity;
+- column sizing, optional pinned headers/columns, and horizontal plus vertical viewport state;
+- selected row/cell state owned by Elixir;
+- sort/filter requests as events, not native-owned data transforms;
+- keyboard navigation and focus-visible behavior across cells;
+- row and cell renderers that can start static and only later admit stateful controls.
+
+### Tree scope
+
+A future tree primitive needs explicit concepts for:
+
+- node ids and parent/child relationships;
+- expanded/collapsed state owned by Elixir;
+- indentation/disclosure rendering;
+- selected/focused node state and keyboard navigation;
+- virtualization over the flattened visible node sequence.
+
+### Deferred
+
+- Reusing generic `list` row controls as a hidden table/tree implementation without a public semantic model.
+- Native sorting/filtering/tree expansion ownership.
+- Spreadsheet editing, column drag-resize/reorder, and accessibility semantics until a concrete app needs them.
+
+### Implementation gates
+
+- Capture a real table/tree use case before adding IR.
+- Measure with `examples/stress_test.exs` or a dedicated benchmark before promising large-data performance.
+- Add independent IR/template/native tests; do not rely on current grid/list tests as coverage for table/tree semantics.
+- Update the compliance matrix and examples only when the dedicated primitive exists end-to-end.
