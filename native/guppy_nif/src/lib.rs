@@ -652,10 +652,19 @@ fn id_callback_strings(
 }
 
 fn base_payload<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Vec<(Term<'a>, Term<'a>)> {
-    vec![
-        (id().encode(env), node_id.encode(env)),
-        (callback().encode(env), callback_id.encode(env)),
-    ]
+    base_payload_with_capacity(env, node_id, callback_id, 0)
+}
+
+fn base_payload_with_capacity<'a>(
+    env: Env<'a>,
+    node_id: &str,
+    callback_id: &str,
+    additional_pairs: usize,
+) -> Vec<(Term<'a>, Term<'a>)> {
+    let mut pairs = Vec::with_capacity(2 + additional_pairs);
+    pairs.push((id().encode(env), node_id.encode(env)));
+    pairs.push((callback().encode(env), callback_id.encode(env)));
+    pairs
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -667,7 +676,7 @@ fn row_control_payload<'a>(
     row_id_value: &str,
     control_id_value: &str,
 ) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = base_payload(env, node_id, callback_id);
+    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 3);
     pairs.extend([
         (list_id().encode(env), list_id_value.encode(env)),
         (row_id().encode(env), row_id_value.encode(env)),
@@ -685,7 +694,7 @@ fn data_table_payload<'a>(
     row_id_value: Option<&str>,
     column_id_value: Option<&str>,
 ) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = base_payload(env, node_id, callback_id);
+    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 3);
     pairs.push((table_id().encode(env), table_id_value.encode(env)));
     if let Some(row_id_value) = row_id_value {
         pairs.push((row_id().encode(env), row_id_value.encode(env)));
@@ -704,7 +713,7 @@ fn tree_payload<'a>(
     tree_id_value: &str,
     item_id_value: &str,
 ) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = base_payload(env, node_id, callback_id);
+    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 2);
     pairs.extend([
         (tree_id().encode(env), tree_id_value.encode(env)),
         (item_id().encode(env), item_id_value.encode(env)),
@@ -1132,7 +1141,7 @@ pub extern "C" fn guppy_c_send_hover_event(
         return 0;
     };
     send_event(view_id, hover(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
         pairs.push((hovered().encode(env), (hovered_value != 0).encode(env)));
         map_from_pairs(env, pairs)
     })
@@ -1189,7 +1198,7 @@ pub extern "C" fn guppy_c_send_change_event(
         return 0;
     };
     send_event(view_id, change(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
         pairs.push((value().encode(env), value_string.encode(env)));
         map_from_pairs(env, pairs)
     })
@@ -1210,7 +1219,7 @@ pub extern "C" fn guppy_c_send_checkbox_change_event(
         return 0;
     };
     send_event(view_id, change(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
         pairs.push((checked().encode(env), (checked_value != 0).encode(env)));
         map_from_pairs(env, pairs)
     })
@@ -1379,7 +1388,7 @@ pub extern "C" fn guppy_c_send_key_down_event(
         .then(|| binary_str(key_char_ptr, key_char_len))
         .flatten();
     send_event(view_id, key_down(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 4);
         let key_char_term = key_char_string
             .as_ref()
             .map_or_else(|| nil().encode(env), |value| value.encode(env));
@@ -1430,7 +1439,7 @@ pub extern "C" fn guppy_c_send_key_up_event(
         .then(|| binary_str(key_char_ptr, key_char_len))
         .flatten();
     send_event(view_id, key_up(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 3);
         let key_char_term = key_char_string
             .as_ref()
             .map_or_else(|| nil().encode(env), |value| value.encode(env));
@@ -1490,7 +1499,7 @@ pub extern "C" fn guppy_c_send_action_event(
         .then(|| binary_str(key_char_ptr, key_char_len))
         .flatten();
     send_event(view_id, action(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 5);
         let key_char_term = key_char_string
             .as_ref()
             .map_or_else(|| nil().encode(env), |value| value.encode(env));
@@ -1533,7 +1542,7 @@ pub extern "C" fn guppy_c_send_context_menu_event(
         return 0;
     };
     send_event(view_id, context_menu(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 3);
         pairs.extend([
             (x().encode(env), event_x.encode(env)),
             (y().encode(env), event_y.encode(env)),
@@ -1558,7 +1567,7 @@ fn source_event(
     source: String,
 ) -> i32 {
     send_event(view_id, event, move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
         pairs.push((source_id().encode(env), source.encode(env)));
         map_from_pairs(env, pairs)
     })
@@ -1633,7 +1642,7 @@ pub extern "C" fn guppy_c_send_drag_move_event(
         return 0;
     };
     send_event(view_id, drag_move(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 5);
         pairs.extend([
             (source_id().encode(env), source.encode(env)),
             (
@@ -1679,7 +1688,7 @@ pub extern "C" fn guppy_c_send_mouse_down_event(
         return 0;
     };
     send_event(view_id, mouse_down(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 6);
         pairs.extend([
             (
                 button().encode(env),
@@ -1728,7 +1737,7 @@ pub extern "C" fn guppy_c_send_mouse_up_event(
         return 0;
     };
     send_event(view_id, mouse_up(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 5);
         pairs.extend([
             (
                 button().encode(env),
@@ -1772,7 +1781,7 @@ pub extern "C" fn guppy_c_send_mouse_move_event(
         return 0;
     };
     send_event(view_id, mouse_move(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 4);
         pairs.extend([
             (
                 pressed_button().encode(env),
@@ -1817,7 +1826,7 @@ pub extern "C" fn guppy_c_send_scroll_wheel_event(
         return 0;
     };
     send_event(view_id, scroll_wheel(), move |env| {
-        let mut pairs = base_payload(env, &node_id, &callback_id);
+        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 6);
         pairs.extend([
             (x().encode(env), event_x.encode(env)),
             (y().encode(env), event_y.encode(env)),
