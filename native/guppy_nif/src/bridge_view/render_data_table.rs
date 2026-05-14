@@ -185,28 +185,15 @@ fn render_cell(
     cell_click: Option<&str>,
 ) -> AnyElement {
     let cell_id = format!("{table_id}.cell.{row_id}.{}", column.id);
-    let children = cell
-        .map(|cell| {
-            cell.children
-                .iter()
-                .enumerate()
-                .map(|(index, child)| {
-                    render_static_node(view_id, &format!("{cell_id}.{index}"), child)
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+    let mut cell_div = div().id(SharedString::from(cell_id.clone())).p_2();
+    if let Some(cell) = cell {
+        let children = cell.children.iter().enumerate().map(|(index, child)| {
+            render_static_node(view_id, &format!("{cell_id}.{index}"), child)
+        });
+        cell_div = cell_div.children(children);
+    }
 
-    let mut element = apply_column_width(
-        apply_div_style(
-            div()
-                .id(SharedString::from(cell_id.clone()))
-                .p_2()
-                .children(children),
-            cell_style,
-        ),
-        &column.width,
-    );
+    let mut element = apply_column_width(apply_div_style(cell_div, cell_style), &column.width);
 
     if let Some(cell) = cell {
         element = apply_div_style(element, &cell.style);
