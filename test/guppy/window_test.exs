@@ -31,6 +31,11 @@ defmodule Guppy.WindowTest do
            } = Guppy.DefaultCallbackWindow.child_spec(:ok)
   end
 
+  test "Guppy.Window treats handle_info as an implicit message convention" do
+    refute {:handle_info, 2} in Guppy.Window.behaviour_info(:callbacks)
+    refute {:handle_info, 2} in Guppy.Window.behaviour_info(:optional_callbacks)
+  end
+
   test "Guppy.Window default optional callbacks ignore unmatched events and messages" do
     state = %Guppy.Window.State{
       module: Guppy.DefaultCallbackWindow,

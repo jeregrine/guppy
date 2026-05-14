@@ -65,13 +65,11 @@ defmodule Examples.HelloWorldWindow do
     """
   end
 
-  @impl Guppy.Window
   def handle_info(:update_text, window) do
     IO.puts("updated window via IR")
     {:noreply, assign(window, :phase, :updated)}
   end
 
-  @impl Guppy.Window
   def handle_info(:shutdown, window) do
     IO.puts("stopping window process")
     {:stop, :normal, window}

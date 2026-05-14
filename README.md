@@ -201,9 +201,10 @@ IR helpers:
 - `mount(arg, window)`
 - `render(window)`
 - optional `handle_event(event_name, event_data, window)`
-- optional `handle_info(message, window)`
 
-Missing optional callbacks and unmatched callback clauses are treated as no-op handlers that skip rerendering.
+Define `handle_info(message, window)` without `@impl Guppy.Window` when the process should handle ordinary messages or timers.
+
+Missing optional handlers and unmatched handler clauses are treated as no-op handlers that skip rerendering.
 
 Helpers imported by `use Guppy.Window` include:
 

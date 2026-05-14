@@ -25,7 +25,6 @@ defmodule Guppy.TestCounterWindow do
     {:noreply, assign(window, :count, window.assigns.count + 1)}
   end
 
-  @impl Guppy.Window
   def handle_info({:set_count, count}, window) do
     {:noreply, assign(window, :count, count)}
   end

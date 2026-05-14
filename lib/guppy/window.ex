@@ -16,9 +16,11 @@ defmodule Guppy.Window do
   Optional callbacks:
 
   - `c:handle_event/3`
-  - `c:handle_info/2`
 
-  Missing optional callbacks and unmatched callback clauses are treated as no-op
+  Modules may also define `handle_info(message, window)` without marking it as a
+  `Guppy.Window` callback; Guppy routes ordinary process messages there by convention.
+
+  Missing optional handlers and unmatched handler clauses are treated as no-op
   handlers that skip rerendering. `use Guppy.Window` also defines `child_spec/1`,
   so window modules can be supervised directly.
   """
@@ -39,9 +41,8 @@ defmodule Guppy.Window do
   @callback mount(term(), t()) :: {:ok, t()} | {:stop, term()}
   @callback render(t()) :: term()
   @callback handle_event(String.t(), map(), t()) :: callback_result()
-  @callback handle_info(term(), t()) :: callback_result()
 
-  @optional_callbacks handle_event: 3, handle_info: 2
+  @optional_callbacks handle_event: 3
 
   defmodule State do
     @moduledoc false

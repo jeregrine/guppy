@@ -54,7 +54,6 @@ defmodule Examples.TimerCounterWindow do
     """
   end
 
-  @impl Guppy.Window
   def handle_info(:tick, window) when window.assigns.count < 5 do
     next_window = assign(window, :count, window.assigns.count + 1)
     IO.puts("updated count to #{next_window.assigns.count}")
@@ -62,7 +61,6 @@ defmodule Examples.TimerCounterWindow do
     {:noreply, next_window}
   end
 
-  @impl Guppy.Window
   def handle_info(:tick, window) do
     IO.puts("stopping window process after 5 updates")
     {:stop, :normal, window}

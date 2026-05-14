@@ -109,7 +109,6 @@ defmodule Examples.KanbanTodoWindow do
     handle_drop(window, source_id, :done)
   end
 
-  @impl Guppy.Window
   def handle_info({:clear_drop_flash, generation}, window) do
     if generation == window.assigns.flash_generation do
       {:noreply, assign(window, drop_flash_status: nil, last_moved_task_id: nil)}
