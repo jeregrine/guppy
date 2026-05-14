@@ -245,16 +245,14 @@ fn native_open_window<'a>(
         options_decode_started_at.elapsed(),
     );
 
-    let ir_decode_started_at = Instant::now();
-    let ir = match IrNode::decode_etf(ir_binary.as_slice()) {
+    let ir = match decode_ir_binary(
+        ir_binary.as_slice(),
+        &OPEN_IR_DECODE_COUNT,
+        &OPEN_IR_DECODE_NANOS,
+    ) {
         Ok(ir) => ir,
         Err(reason) => return error_reason_tuple(env, decode_error(), reason),
     };
-    record_counter(
-        &OPEN_IR_DECODE_COUNT,
-        &OPEN_IR_DECODE_NANOS,
-        ir_decode_started_at.elapsed(),
-    );
 
     let result = request_i32(timeout_ms, |reply, deadline| {
         main_thread_runtime::MainThreadRequest::OpenWindow {
@@ -332,16 +330,14 @@ fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>, timeout_ms: u64) 
         to_binary_started_at.elapsed(),
     );
 
-    let ir_decode_started_at = Instant::now();
-    let ir = match IrNode::decode_etf(ir_binary.as_slice()) {
+    let ir = match decode_ir_binary(
+        ir_binary.as_slice(),
+        &RENDER_IR_DECODE_COUNT,
+        &RENDER_IR_DECODE_NANOS,
+    ) {
         Ok(ir) => ir,
         Err(reason) => return error_reason_tuple(env, decode_error(), reason),
     };
-    record_counter(
-        &RENDER_IR_DECODE_COUNT,
-        &RENDER_IR_DECODE_NANOS,
-        ir_decode_started_at.elapsed(),
-    );
 
     let result = request_i32(timeout_ms, |reply, deadline| {
         main_thread_runtime::MainThreadRequest::SetIr {
@@ -386,6 +382,13 @@ fn native_view_count<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
         NativeRequestResult::Timeout => error_tuple(env, native_timeout()),
         NativeRequestResult::Unavailable => error_tuple(env, runtime_unavailable()),
     }
+}
+
+fn decode_ir_binary(bytes: &[u8], count: &AtomicU64, nanos: &AtomicU64) -> Result<IrNode, String> {
+    let started_at = Instant::now();
+    let decoded = IrNode::decode_etf(bytes);
+    record_counter(count, nanos, started_at.elapsed());
+    decoded
 }
 
 fn status_result<'a>(
