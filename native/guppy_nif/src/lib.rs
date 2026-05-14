@@ -2,9 +2,11 @@ mod bridge_text_input;
 mod bridge_view;
 mod ir;
 mod main_thread_runtime;
+mod menu;
 mod window_options;
 
 use crate::ir::IrNode;
+use crate::menu::MenuSpec;
 use crate::window_options::WindowOptionsConfig;
 use rustler::{Atom, Encoder, Env, LocalPid, Monitor, Resource, ResourceArc, Term};
 use std::ffi::{CString, c_char, c_void};
@@ -63,6 +65,8 @@ rustler::atoms! {
     left,
     lines,
     list_id,
+    menu_action,
+    menus_decode_error,
     middle,
     modifiers,
     native_timeout,
@@ -276,6 +280,25 @@ fn native_set_event_target<'a>(env: Env<'a>, pid: LocalPid) -> Term<'a> {
     });
 
     rustler::types::atom::ok().encode(env)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+fn native_set_menus<'a>(env: Env<'a>, menus: Term<'a>, timeout_ms: u64) -> Term<'a> {
+    let menus_binary = menus.to_binary();
+    let menus = match MenuSpec::decode_etf(menus_binary.as_slice()) {
+        Ok(menus) => menus,
+        Err(reason) => return error_reason_tuple(env, menus_decode_error(), reason),
+    };
+
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::SetMenus {
+            deadline,
+            menus,
+            reply,
+        }
+    });
+
+    status_result(env, result, runtime_unavailable())
 }
 
 #[rustler::nif]
@@ -534,6 +557,23 @@ pub(crate) fn send_window_closed_event(view_id: u64) -> i32 {
     })
 }
 
+pub(crate) fn send_menu_action_event(action_id: &str, callback_id: &str) -> i32 {
+    let action_id = action_id.to_owned();
+    let callback_id = callback_id.to_owned();
+
+    #[cfg(test)]
+    {
+        record_menu_event_snapshot_for_test(action_id, callback_id);
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(0, menu_action(), move |env| {
+        map_from_pairs(env, base_payload(env, &action_id, &callback_id))
+    })
+}
+
 fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -> Term<'a>) -> i32 {
     let started_at = Instant::now();
 
@@ -692,7 +732,17 @@ pub(crate) struct RowControlEventSnapshot {
 }
 
 #[cfg(test)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct MenuEventSnapshot {
+    pub action_id: String,
+    pub callback_id: String,
+}
+
+#[cfg(test)]
 static ROW_CONTROL_EVENT_SNAPSHOT: Mutex<Option<RowControlEventSnapshot>> = Mutex::new(None);
+
+#[cfg(test)]
+static MENU_EVENT_SNAPSHOT: Mutex<Option<MenuEventSnapshot>> = Mutex::new(None);
 
 #[cfg(test)]
 pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
@@ -705,6 +755,21 @@ pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
 #[cfg(test)]
 pub(crate) fn take_row_control_event_snapshot_for_test() -> Option<RowControlEventSnapshot> {
     ROW_CONTROL_EVENT_SNAPSHOT.lock().ok()?.take()
+}
+
+#[cfg(test)]
+pub(crate) fn take_menu_event_snapshot_for_test() -> Option<MenuEventSnapshot> {
+    MENU_EVENT_SNAPSHOT.lock().ok()?.take()
+}
+
+#[cfg(test)]
+fn record_menu_event_snapshot_for_test(action_id: String, callback_id: String) {
+    if let Ok(mut snapshot) = MENU_EVENT_SNAPSHOT.lock() {
+        *snapshot = Some(MenuEventSnapshot {
+            action_id,
+            callback_id,
+        });
+    }
 }
 
 #[cfg(test)]

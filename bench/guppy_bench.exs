@@ -95,6 +95,7 @@ defmodule Guppy.Bench do
 
     gradient_ir = gradient_tree(100)
     row_control_ir = row_control_list_tree(100)
+    menu_spec = menu_spec(25)
 
     gradient_scenarios = [
       {"gradient class parse",
@@ -114,6 +115,17 @@ defmodule Guppy.Bench do
       {"list row controls validation 100 rows",
        fn ->
          :ok = Guppy.IR.validate(row_control_ir)
+       end}
+    ]
+
+    menu_scenarios = [
+      {"menu spec build 25 actions",
+       fn ->
+         menu_spec(25)
+       end},
+      {"menu spec encode/decode proxy 25 actions",
+       fn ->
+         menu_spec |> :erlang.term_to_binary() |> :erlang.binary_to_term()
        end}
     ]
 
@@ -158,7 +170,7 @@ defmodule Guppy.Bench do
        end}
     ]
 
-    Map.new(node_scenarios ++ gradient_scenarios ++ kanban_scenarios)
+    Map.new(node_scenarios ++ gradient_scenarios ++ menu_scenarios ++ kanban_scenarios)
   end
 
   defp benchee_opts do
@@ -198,6 +210,34 @@ defmodule Guppy.Bench do
       end
 
     Guppy.IR.div(children, id: "gradient_bench_root", style: [:flex, :flex_col, :gap_1])
+  end
+
+  defp menu_spec(action_count) do
+    custom_items =
+      for index <- 1..action_count do
+        %{
+          id: "menu_action_#{index}",
+          label: "Action #{index}",
+          callback: "menu_action_#{index}",
+          shortcut: if(index <= 9, do: "cmd-#{index}", else: nil)
+        }
+        |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+        |> Map.new()
+      end
+
+    [
+      %{label: "File", items: custom_items},
+      %{
+        label: "Edit",
+        items: [
+          %{id: "cut", label: "Cut", os_action: :cut},
+          %{id: "copy", label: "Copy", os_action: :copy},
+          %{id: "paste", label: "Paste", os_action: :paste},
+          :separator,
+          %{id: "select_all", label: "Select All", os_action: :select_all}
+        ]
+      }
+    ]
   end
 
   defp row_control_list_tree(count) do

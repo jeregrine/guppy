@@ -102,6 +102,10 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_set_menus(_menus, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_event_target_status do
     {:error, :nif_not_loaded}
   end
@@ -187,6 +191,12 @@ defmodule Guppy.Native.Nif do
   defp dispatch({:set_event_target, [pid]}, _timeout) when is_pid(pid) do
     with_loaded(fn ->
       native_call(:set_event_target, fn -> normalize_status(native_set_event_target(pid)) end)
+    end)
+  end
+
+  defp dispatch({:set_menus, [menus]}, timeout) do
+    with_loaded(fn ->
+      native_call(:set_menus, fn -> normalize_status(native_set_menus(menus, timeout)) end)
     end)
   end
 

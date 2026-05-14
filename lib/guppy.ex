@@ -50,6 +50,11 @@ defmodule Guppy do
     Server.close_window(Server, view_id, timeout)
   end
 
+  @doc "Replaces the application menu bar for the calling process."
+  def set_menus(menus, timeout \\ 5_000) do
+    Server.set_menus(Server, self(), menus, timeout)
+  end
+
   @doc "Returns the native-side open view count."
   def native_view_count(timeout \\ 5_000) do
     Server.view_count(Server, timeout)

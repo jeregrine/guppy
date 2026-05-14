@@ -108,6 +108,12 @@ mix run examples/list_row_controls.exs
 Focused generic `list` example with row-local button, checkbox, and radio controls plus structured `list_id` / `row_id` / `control_id` events.
 
 ```bash
+mix run examples/menu_demo.exs
+```
+
+App-level menu example with callback actions routed to the installing window process and Edit menu items wired to focused text input actions.
+
+```bash
 mix run examples/hello_world.exs
 ```
 
@@ -152,11 +158,13 @@ Template tags:
 - `<text_input />`
 - `<textarea />`
 
-Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, popover callbacks, text input/textarea changes and focus/blur, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops.
+Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, popover callbacks, text input/textarea changes and focus/blur, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops.
 
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
 
 `list` rows support static/layout children (`text`, `spacer`, and nested static `div`) plus row-local `button`, `checkbox`, and `radio` controls with explicit control ids. Row-control events include `list_id`, `row_id`, and `control_id`; Elixir remains the source of truth for checked/selected values.
+
+`Guppy.set_menus/1` installs app/runtime menus for the calling process. Custom menu actions use `%{id:, label:, callback:}` and arrive as `{:guppy_menu_event, %{type: :menu_action, id: id, callback: callback}}`; Edit menu items can use `%{id:, label:, os_action: :cut | :copy | :paste | :select_all}` to target focused native text inputs. Call `Guppy.set_menus([])` to clear menus; menus are also cleared when the installing process exits.
 
 `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 
@@ -169,6 +177,7 @@ Top-level API:
 - `Guppy.open_window/3` (`Guppy.open_window(ir, opts, timeout)`)
 - `Guppy.render/2`
 - `Guppy.close_window/1`
+- `Guppy.set_menus/1` / `Guppy.set_menus/2`
 - `Guppy.ping/0`
 - `Guppy.native_view_count/0`
 - `Guppy.native_build_info/0`
@@ -345,7 +354,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 - text/overlay controls inside generic virtualized list rows and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
-- advanced animation effects beyond current opacity animation, multi-stop/radial gradients, canvas/custom painting, pattern painting, and menu APIs
+- advanced animation effects beyond current opacity animation, multi-stop/radial gradients, canvas/custom painting, pattern painting, dock menus, and element-local/context menu primitives
 - published precompiled native artifacts
 
 ## Hacking on Guppy

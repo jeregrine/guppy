@@ -97,6 +97,126 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  test "set_menus validates menu specs and routes through native" do
+    server = :"guppy_menu_recording_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    menus = [
+      %{
+        label: "File",
+        items: [
+          %{id: "new_file", label: "New File", callback: "new_file", shortcut: "cmd-n"},
+          :separator,
+          %{
+            label: "Edit",
+            items: [
+              %{id: "copy", label: "Copy", os_action: :copy},
+              %{id: "disabled", label: "Disabled", callback: "disabled", enabled: false}
+            ]
+          }
+        ]
+      }
+    ]
+
+    assert :ok = Guppy.Server.set_menus(server, self(), menus, 37)
+    assert_receive {:guppy_test_native_request, {:set_menus, [^menus]}, 37}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      0,
+      :menu_action,
+      %{id: "new_file", callback: "new_file"}
+    })
+
+    assert_receive {:guppy_menu_event,
+                    %{type: :menu_action, id: "new_file", callback: "new_file"}}
+  end
+
+  test "set_menus clears menus when registering owner exits" do
+    server = :"guppy_menu_owner_native_#{System.unique_integer([:positive])}"
+    test_pid = self()
+    menus = [%{label: "File", items: [%{id: "new_file", label: "New", callback: "new"}]}]
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    owner =
+      spawn(fn ->
+        receive do
+          :register ->
+            send(test_pid, {:set_menus_result, Guppy.Server.set_menus(server, self(), menus, 25)})
+
+            receive do
+              :stop -> :ok
+            end
+        end
+      end)
+
+    send(owner, :register)
+    assert_receive {:set_menus_result, :ok}
+    assert_receive {:guppy_test_native_request, {:set_menus, [^menus]}, 25}
+
+    send(owner, :stop)
+    assert_receive {:guppy_test_native_request, {:set_menus, [[]]}, 25}
+  end
+
+  test "set_menus rejects invalid specs without native dispatch" do
+    server = :"guppy_invalid_menu_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    assert {:error, {:invalid_menu_item, %{label: "Missing callback"}}} =
+             Guppy.Server.set_menus(server, self(), [
+               %{label: "File", items: [%{label: "Missing callback"}]}
+             ])
+
+    assert {:error,
+            {:invalid_menu_item, %{id: "copy", label: "Copy", callback: "copy", os_action: :copy}}} =
+             Guppy.Server.set_menus(server, self(), [
+               %{
+                 label: "Edit",
+                 items: [%{id: "copy", label: "Copy", callback: "copy", os_action: :copy}]
+               }
+             ])
+
+    assert {:error, {:duplicate_menu_id, "dup"}} =
+             Guppy.Server.set_menus(server, self(), [
+               %{
+                 label: "File",
+                 items: [
+                   %{id: "dup", label: "One", callback: "one"},
+                   %{id: "dup", label: "Two", callback: "two"}
+                 ]
+               }
+             ])
+
+    refute_receive {:guppy_test_native_request, {:set_menus, _}, _}
+  end
+
   test "native request timeout is passed through the server to the native bridge" do
     server = :"guppy_timeout_recording_native_#{System.unique_integer([:positive])}"
 

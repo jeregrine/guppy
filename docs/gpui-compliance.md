@@ -22,7 +22,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 - **Gradient style primitives**: two-stop background linear gradients are exposed as ordered style ops and template classes; multi-stop, radial, conic, border, text-gradient, pattern, and animation variants remain deferred.
 - **Grid layout**: current grid style ops cover GPUI's basic grid, row/column counts, and row/column spans; advanced table semantics are not exposed.
 - **Custom painting / canvas / pattern painting**: would require a new retained drawing primitive. Scope and deferral are recorded in [`docs/future-primitives.md`](future-primitives.md#custom-painting-canvas-and-pattern-painting).
-- **Menu APIs**: not exposed as core IR/window primitives today. App-level menu scope is recorded in [`docs/future-primitives.md`](future-primitives.md#menu-apis).
+- **Menu APIs**: app-level `Guppy.set_menus/1` is supported as runtime state, not IR. Callback actions route to the installing process, and cut/copy/paste/select-all OS edit menu items target focused native text inputs. Dock menus, element-local/context menus, and synchronous Elixir validation callbacks remain deferred in [`docs/future-primitives.md`](future-primitives.md#menu-apis).
 - **Mouse pressure payloads**: basic mouse events are routed, but pressure-specific data is not exposed.
 
 Intentionally narrow parity areas:
@@ -66,7 +66,7 @@ Intentionally narrow parity areas:
 | `examples/paths_bench.rs` | none | out of scope | GPUI internal path benchmark | none |
 | `examples/pattern.rs` | none | unsupported | pattern painting is scoped with custom painting/canvas work in `docs/future-primitives.md` | no implementation; future style/canvas tests required before support claims |
 | `examples/popover.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | close-on-outside-click and deferred priority are exposed; deeper nested popover parity and advanced deferred-layer lifecycle controls remain incomplete | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
-| `examples/set_menus.rs` | none | unsupported | menu APIs are scoped as app/runtime state in `docs/future-primitives.md`, not core IR primitives | no implementation; future native tests required before support claims |
+| `examples/set_menus.rs` | `Guppy.set_menus/1`, `examples/menu_demo.exs` | partial | app-level menu bar replacement is supported; dock menus, system services submenu, element-local/context menus, per-window validation callbacks, and undo/redo edit actions remain deferred | ExUnit server validation/routing/owner-clear tests; Rust menu decode/action identity/GPUI mapping/shortcut/callback tests; manual menu_demo smoke |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |
 | `examples/text.rs` | `text` node with style-token support; `Guppy.IR.rich_text/2` / `<rich_text />` runs; practical multiline input via `textarea` | partial | advanced text layout controls and full editor parity incomplete | IR/template/native hidden-window coverage; Rust rich text highlight range tests; textarea example/manual smoke |

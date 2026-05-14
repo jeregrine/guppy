@@ -14,7 +14,9 @@ defmodule Guppy.Server do
             next_view_id: 1,
             views: %{},
             owners: %{},
-            monitors: %{}
+            monitors: %{},
+            menu_owner: nil,
+            menu_monitor: nil
 
   @type view_id :: pos_integer()
 
@@ -30,7 +32,9 @@ defmodule Guppy.Server do
           next_view_id: pos_integer(),
           views: %{optional(view_id()) => pid()},
           owners: %{optional(pid()) => owner_entry()},
-          monitors: %{optional(reference()) => pid()}
+          monitors: %{optional(reference()) => pid()},
+          menu_owner: pid() | nil,
+          menu_monitor: reference() | nil
         }
 
   def start_link(opts \\ []) do
@@ -55,6 +59,10 @@ defmodule Guppy.Server do
 
   def close_window(server \\ __MODULE__, view_id, timeout \\ 5_000) do
     GenServer.call(server, {:close_window, view_id, timeout}, gen_call_timeout(timeout))
+  end
+
+  def set_menus(server \\ __MODULE__, owner, menus, timeout \\ 5_000) do
+    GenServer.call(server, {:set_menus, owner, menus, timeout}, gen_call_timeout(timeout))
   end
 
   def view_count(server \\ __MODULE__, timeout \\ 5_000) do
@@ -153,7 +161,43 @@ defmodule Guppy.Server do
     end
   end
 
+  def handle_call({:set_menus, owner, menus, timeout}, {caller, _tag}, state)
+      when is_pid(owner) do
+    if owner != caller do
+      {:reply, {:error, :owner_mismatch}, state}
+    else
+      case validate_menus(menus) do
+        {:ok, menus} ->
+          case native_request(state, :set_menus, {:set_menus, [menus]}, timeout) do
+            :ok -> {:reply, :ok, put_menu_owner(state, owner, menus)}
+            {:ok, _payload} -> {:reply, :ok, put_menu_owner(state, owner, menus)}
+            {:error, reason} -> {:reply, {:error, reason}, state}
+          end
+
+        error ->
+          {:reply, error, state}
+      end
+    end
+  end
+
   @impl true
+  def handle_info(
+        {:guppy_native_event, 0, :menu_action, %{id: id, callback: callback_id} = payload},
+        state
+      )
+      when is_binary(id) and is_binary(callback_id) do
+    case state.menu_owner do
+      owner when is_pid(owner) ->
+        send(owner, {:guppy_menu_event, Map.put(payload, :type, :menu_action)})
+        emit_event_route_telemetry(0, :menu_action, :ok)
+        {:noreply, state}
+
+      nil ->
+        emit_event_route_telemetry(0, :menu_action, :unknown_menu_owner)
+        {:noreply, state}
+    end
+  end
+
   def handle_info(
         {:guppy_native_event, view_id, type, %{id: node_id, callback: callback_id} = payload},
         state
@@ -220,6 +264,8 @@ defmodule Guppy.Server do
   end
 
   def handle_info({:DOWN, monitor_ref, :process, owner, _reason}, state) do
+    state = maybe_clear_dead_menu_owner(state, owner, monitor_ref)
+
     case Map.fetch(state.monitors, monitor_ref) do
       {:ok, ^owner} ->
         state = close_owned_views(state, owner)
@@ -345,6 +391,40 @@ defmodule Guppy.Server do
     end
   end
 
+  defp put_menu_owner(state, _owner, []) do
+    clear_menu_owner_monitor(state)
+  end
+
+  defp put_menu_owner(%{menu_owner: owner} = state, owner, _menus)
+       when is_pid(owner) do
+    state
+  end
+
+  defp put_menu_owner(state, owner, _menus) do
+    state = clear_menu_owner_monitor(state)
+    %{state | menu_owner: owner, menu_monitor: Process.monitor(owner)}
+  end
+
+  defp maybe_clear_dead_menu_owner(
+         %{menu_owner: owner, menu_monitor: monitor_ref} = state,
+         owner,
+         monitor_ref
+       )
+       when is_pid(owner) do
+    _ = native_request(state, :set_menus, {:set_menus, [[]]}, state.native_request_timeout)
+    %{state | menu_owner: nil, menu_monitor: nil}
+  end
+
+  defp maybe_clear_dead_menu_owner(state, _owner, _monitor_ref), do: state
+
+  defp clear_menu_owner_monitor(%{menu_monitor: monitor_ref} = state)
+       when is_reference(monitor_ref) do
+    Process.demonitor(monitor_ref, [:flush])
+    %{state | menu_owner: nil, menu_monitor: nil}
+  end
+
+  defp clear_menu_owner_monitor(state), do: state
+
   defp delete_view(state, view_id) do
     case Map.pop(state.views, view_id) do
       {nil, _views} ->
@@ -387,6 +467,129 @@ defmodule Guppy.Server do
 
       :error ->
         state
+    end
+  end
+
+  @menu_action_os_actions [:cut, :copy, :paste, :select_all, :undo, :redo]
+
+  defp validate_menus(menus) when is_list(menus) do
+    with {:ok, _ids} <- validate_menu_list(menus, MapSet.new()) do
+      {:ok, menus}
+    end
+  end
+
+  defp validate_menus(_menus), do: {:error, :invalid_menus}
+
+  defp validate_menu_list(menus, seen_ids) do
+    Enum.reduce_while(menus, {:ok, seen_ids}, fn menu, {:ok, ids} ->
+      case validate_menu(menu, ids) do
+        {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_menu(%{label: label, items: items} = menu, seen_ids)
+       when is_binary(label) and is_list(items) do
+    with :ok <- validate_menu_keys(menu, [:label, :items], {:invalid_menu, menu}) do
+      validate_menu_items(items, seen_ids)
+    end
+  end
+
+  defp validate_menu(menu, _seen_ids), do: {:error, {:invalid_menu, menu}}
+
+  defp validate_menu_items(items, seen_ids) do
+    Enum.reduce_while(items, {:ok, seen_ids}, fn item, {:ok, ids} ->
+      case validate_menu_item(item, ids) do
+        {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_menu_item(:separator, seen_ids), do: {:ok, seen_ids}
+
+  defp validate_menu_item(%{separator: true} = item, seen_ids) do
+    with :ok <- validate_menu_keys(item, [:separator], {:invalid_menu_item, item}) do
+      {:ok, seen_ids}
+    end
+  end
+
+  defp validate_menu_item(%{label: label, items: items} = item, seen_ids)
+       when is_binary(label) and is_list(items) do
+    with :ok <- validate_menu_keys(item, [:label, :items], {:invalid_menu_item, item}) do
+      validate_menu_items(items, seen_ids)
+    end
+  end
+
+  defp validate_menu_item(%{id: id, label: label} = item, seen_ids)
+       when is_binary(id) and is_binary(label) do
+    with :ok <-
+           validate_menu_keys(
+             item,
+             [:id, :label, :callback, :shortcut, :enabled, :os_action],
+             {:invalid_menu_item, item}
+           ),
+         :ok <- validate_menu_action_target(item),
+         :ok <- validate_menu_shortcut(Map.get(item, :shortcut), item),
+         :ok <- validate_menu_enabled(Map.get(item, :enabled), item),
+         :ok <- validate_menu_os_action(Map.get(item, :os_action), item),
+         {:ok, seen_ids} <- track_menu_action_id(id, seen_ids) do
+      {:ok, seen_ids}
+    end
+  end
+
+  defp validate_menu_item(item, _seen_ids), do: {:error, {:invalid_menu_item, item}}
+
+  defp validate_menu_keys(map, allowed_keys, error) do
+    case Map.keys(map) -- allowed_keys do
+      [] -> :ok
+      _ -> {:error, error}
+    end
+  end
+
+  defp validate_menu_action_target(%{callback: callback} = item) when is_binary(callback) do
+    if Map.has_key?(item, :os_action) do
+      {:error, {:invalid_menu_item, item}}
+    else
+      validate_non_empty_menu_callback(callback, item)
+    end
+  end
+
+  defp validate_menu_action_target(%{os_action: action} = item)
+       when action in @menu_action_os_actions do
+    if Map.has_key?(item, :callback) do
+      {:error, {:invalid_menu_item, item}}
+    else
+      :ok
+    end
+  end
+
+  defp validate_menu_action_target(item), do: {:error, {:invalid_menu_item, item}}
+
+  defp validate_non_empty_menu_callback("", item), do: {:error, {:invalid_menu_item, item}}
+  defp validate_non_empty_menu_callback(_callback, _item), do: :ok
+
+  defp validate_menu_shortcut(nil, _item), do: :ok
+
+  defp validate_menu_shortcut(shortcut, _item) when is_binary(shortcut) and shortcut != "",
+    do: :ok
+
+  defp validate_menu_shortcut(_shortcut, item), do: {:error, {:invalid_menu_item, item}}
+
+  defp validate_menu_enabled(nil, _item), do: :ok
+  defp validate_menu_enabled(enabled, _item) when is_boolean(enabled), do: :ok
+  defp validate_menu_enabled(_enabled, item), do: {:error, {:invalid_menu_item, item}}
+
+  defp validate_menu_os_action(nil, _item), do: :ok
+  defp validate_menu_os_action(action, _item) when action in @menu_action_os_actions, do: :ok
+  defp validate_menu_os_action(_action, item), do: {:error, {:invalid_menu_item, item}}
+
+  defp track_menu_action_id(id, seen_ids) do
+    if MapSet.member?(seen_ids, id) do
+      {:error, {:duplicate_menu_id, id}}
+    else
+      {:ok, MapSet.put(seen_ids, id)}
     end
   end
 

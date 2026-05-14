@@ -1,6 +1,7 @@
 use crate::bridge_text_input;
 use crate::bridge_view::BridgeView;
 use crate::ir::IrNode;
+use crate::menu::{self, MenuSpec};
 use crate::window_options::WindowOptionsConfig;
 use async_task::spawn;
 use gpui::{App, AppContext, Application, AsyncApp, PlatformDispatcher};
@@ -63,6 +64,11 @@ pub(crate) enum MainThreadRequest {
         deadline: RequestDeadline,
         reply: Sender<i32>,
     },
+    SetMenus {
+        deadline: RequestDeadline,
+        menus: Vec<MenuSpec>,
+        reply: Sender<i32>,
+    },
     CloseAllNoReply,
     ViewCount {
         deadline: RequestDeadline,
@@ -80,6 +86,7 @@ pub fn run_app() {
 
         bridge_text_input::bind_keys(cx);
         crate::bridge_view::bind_focus_keys(cx);
+        menu::bind_menu_action(cx);
         register_main_thread_dispatcher(cx);
 
         crate::notify_gui_started(1);
@@ -207,6 +214,23 @@ pub fn view_count() -> u64 {
     WINDOWS.with(|windows| windows.borrow().len() as u64)
 }
 
+pub fn set_menus(menus: Vec<MenuSpec>) -> i32 {
+    APP.with(|app| {
+        let app = app.borrow().as_ref().cloned();
+
+        let Some(app) = app else {
+            return -1;
+        };
+
+        let result = app.update(move |cx| menu::install_menus(cx, menus));
+
+        match result {
+            Ok(_) => 1,
+            Err(_) => -1,
+        }
+    })
+}
+
 pub(crate) fn init_request_queue() {
     if REQUEST_TX.get().is_none() {
         let (tx, rx) = mpsc::channel();
@@ -317,7 +341,17 @@ fn handle_request(request: MainThreadRequest) {
                 let _ = reply.send(close_all_windows());
             }
         }
+        MainThreadRequest::SetMenus {
+            deadline,
+            menus,
+            reply,
+        } => {
+            if !deadline.expired() {
+                let _ = reply.send(set_menus(menus));
+            }
+        }
         MainThreadRequest::CloseAllNoReply => {
+            let _ = set_menus(Vec::new());
             let _ = close_all_windows();
         }
         MainThreadRequest::ViewCount { deadline, reply } => {

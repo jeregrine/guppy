@@ -52,7 +52,7 @@ view_id / list_identity / row_id / control_id
 
 ## Menu APIs
 
-Status: scoped; no public menu API yet.
+Status: first app-menu pass implemented. `Guppy.set_menus/1` installs app/runtime menus for the calling process; dock menus and element-local/context menus remain deferred.
 
 ### GPUI 0.2.2 surface
 
@@ -62,25 +62,30 @@ The active GPUI dependency exposes application-level menus through `App::set_men
 
 Menus should be app/runtime state, not IR nodes. They are not part of a window render tree and should not be rebuilt by every window render unless the owner explicitly changes menus.
 
-A first Guppy API should be deliberately narrow:
+The first Guppy API is deliberately narrow:
 
-- `Guppy.set_menus/1` for app menus and `Guppy.set_dock_menu/1` only if a real macOS app needs it.
-- Menu specs are Elixir data with `:label`, `:id`, `:callback`, `:shortcut`, `:enabled`, nested `:items`, and `:separator` entries.
-- Event delivery routes selected menu actions to the Guppy runtime server, then to the process that registered or owns the menu spec.
-- Built-in OS edit actions may be represented explicitly (`:cut`, `:copy`, `:paste`, `:select_all`, `:undo`, `:redo`) but should only be wired when focused native controls can answer them correctly.
+- `Guppy.set_menus/1` and `Guppy.set_menus/2` replace the app menu bar; `Guppy.set_menus([])` clears it. Dock menus remain deferred until a real macOS app needs them.
+- Menu specs are Elixir data with top-level `%{label:, items: [...]}` menus, action items, `:separator` entries, and nested `%{label:, items: [...]}` submenus.
+- Callback action items use `%{id:, label:, callback:}` plus optional `:shortcut` and `:enabled`.
+- Focused-control OS edit items use `%{id:, label:, os_action: :cut | :copy | :paste | :select_all}`. Undo/redo are decoded for GPUI role completeness but stay disabled until retained text controls implement them.
+- Event delivery routes selected callback actions to the Guppy runtime server, then to the process that registered the current menu spec.
+
+### Implemented first pass
+
+- `examples/menu_demo.exs` captures the initial real use case: a scratch-note window with File/Help callbacks and Edit actions for a focused textarea.
+- `Guppy.Server` validates menu specs, tracks the installing process, forwards `:menu_action` payloads as `{:guppy_menu_event, event}`, and clears native menus when the owner exits.
+- Native decode maps validated specs to GPUI 0.2.2 `Menu` / `MenuItem` values, preserves custom action identity, installs menu shortcuts, and uses GPUI text-input actions for cut/copy/paste/select-all OS edit items.
+- ExUnit coverage checks server validation, owner routing, native dispatch, and owner-exit clearing. Rust coverage checks ETF decode, invalid specs, action identity, GPUI item mapping, current-spec shortcut replacement, and callback emission payloads.
+- `bench/guppy_bench.exs` includes menu-spec build and encode/decode proxy scenarios.
+- macOS smoke launched `examples/menu_demo.exs` and confirmed direct `Guppy.set_menus/1` / clear calls return `:ok`.
 
 ### Deferred until proven by app needs
 
+- Dock menus (`App::set_dock_menu`).
 - Context menus or element-local popup menus. Existing div `context_menu` events are only notifications today.
-- Per-window dynamic menu ownership and validation callbacks.
+- Per-window dynamic menu validation callbacks or synchronous menu enablement sourced from Elixir.
 - Arbitrary Rust action types from Elixir.
 - Cross-platform promises beyond the validated `gpui = 0.2.2` behavior on supported targets.
-
-### Implementation gates
-
-- A concrete example needs a real menu before adding public API.
-- Native tests must cover spec decoding, action identity, callback emission, and clearing/replacing menus.
-- Manual macOS smoke must verify top-level menu installation and basic OS edit items before docs claim menu support.
 
 ## Gradient style primitives
 

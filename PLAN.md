@@ -22,15 +22,15 @@ Scope: [`docs/future-primitives.md`](docs/future-primitives.md#retained-controls
 
 ### 2. App-level menu APIs
 
-Scope: [`docs/future-primitives.md`](docs/future-primitives.md#menu-apis). Status: scoped, not active.
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#menu-apis). Status: first app-menu pass complete.
 
-- [ ] Capture a real app menu use case before adding public API.
-- [ ] Design the Elixir menu spec for labels, ids, callbacks, shortcuts, enabled state, separators, and nested items.
-- [ ] Add narrow public APIs such as `Guppy.set_menus/1` and, only if needed, `Guppy.set_dock_menu/1`.
-- [ ] Decode specs to GPUI 0.2.2 app menus and OS edit actions where focused controls can support them.
-- [ ] Route menu action callbacks through `Guppy.Server` to the registering/owning process.
-- [ ] Add native tests for spec decoding, action identity, callback emission, clearing, and replacement.
-- [ ] Manually verify macOS menu installation before documenting menu support.
+- [x] Capture a real app menu use case before adding public API (`examples/menu_demo.exs` scratch-note File/Edit/Help menus).
+- [x] Design the Elixir menu spec for labels, ids, callbacks, shortcuts, enabled state, separators, and nested items.
+- [x] Add narrow public APIs such as `Guppy.set_menus/1` and, only if needed, `Guppy.set_dock_menu/1` (`set_dock_menu` remains deferred).
+- [x] Decode specs to GPUI 0.2.2 app menus and OS edit actions where focused controls can support them.
+- [x] Route menu action callbacks through `Guppy.Server` to the registering/owning process.
+- [x] Add native tests for spec decoding, action identity, callback emission, clearing, and replacement.
+- [x] Manually verify macOS menu installation before documenting menu support (`examples/menu_demo.exs` launch smoke plus direct `Guppy.set_menus/1` / clear smoke returned `:ok` on macOS).
 
 ### 3. Gradient style primitives
 
