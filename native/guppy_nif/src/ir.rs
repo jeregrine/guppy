@@ -1003,7 +1003,7 @@ impl IrNode {
                     anchor_scroll: get_boolean_field(map, "anchor_scroll")?,
                     tooltip: get_optional_string_field(map, "tooltip")?,
                     shortcuts: get_div_shortcuts(map, &actions)?,
-                    children: children.into(),
+                    children,
                     click: get_click_event(map)?,
                     hover: get_hover_event(map)?,
                     focus: get_focus_event(map)?,
