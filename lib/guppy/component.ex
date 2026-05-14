@@ -2,7 +2,7 @@ defmodule Guppy.Component do
   @moduledoc """
   Compile-time Guppy template support.
 
-  `use Guppy.Component` imports the `~GUI` sigil and common window assign helpers,
+  `use Guppy.Component` imports the `~GUI` sigil and common window assign/update helpers,
   compiling a restricted HEEx-style template syntax directly to Guppy IR.
 
   The current template vocabulary intentionally matches Guppy's real IR surface:
@@ -47,6 +47,7 @@ defmodule Guppy.Component do
           prop: 4,
           assign: 2,
           assign: 3,
+          update: 3,
           put_private: 3,
           put_window_opts: 2
         ]
@@ -129,6 +130,7 @@ defmodule Guppy.Component do
 
   def assign(window, key, value), do: Guppy.Window.assign(window, key, value)
   def assign(window, attrs), do: Guppy.Window.assign(window, attrs)
+  def update(window, key, fun), do: Guppy.Window.update(window, key, fun)
   def put_private(window, key, value), do: Guppy.Window.put_private(window, key, value)
   def put_window_opts(window, opts), do: Guppy.Window.put_window_opts(window, opts)
 

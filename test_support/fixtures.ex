@@ -22,7 +22,7 @@ defmodule Guppy.TestCounterWindow do
 
   @impl Guppy.Window
   def handle_event("increment", _event_data, window) do
-    {:noreply, assign(window, :count, window.assigns.count + 1)}
+    {:noreply, update(window, :count, &(&1 + 1))}
   end
 
   def handle_info({:set_count, count}, window) do

@@ -13,12 +13,16 @@ defmodule Guppy.WindowTest do
 
   import Guppy.TestSupport
 
-  test "Guppy.Window exposes assign helpers without the old update helper" do
+  test "Guppy.Window exposes HEEx-style assign and update helpers" do
     functions = Guppy.Window.__info__(:functions)
 
     assert {:assign, 2} in functions
     assert {:assign, 3} in functions
-    refute {:update, 3} in functions
+    assert {:update, 3} in functions
+
+    window = %Guppy.Window{assigns: %{count: 1}}
+
+    assert %{assigns: %{count: 2}} = Guppy.Window.update(window, :count, &(&1 + 1))
   end
 
   test "Guppy.Window modules expose a supervisor child spec" do

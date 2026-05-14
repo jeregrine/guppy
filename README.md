@@ -42,7 +42,7 @@ Guppy is unreleased and macOS-first today. It can open native GPUI windows, rend
 The preferred authoring model is:
 
 - `use Guppy.Window`
-- assign helpers
+- assign helpers (`update/3` remains available for HEEx-style compatibility)
 - `~GUI` templates
 - local function components
 - full-tree rerendering from Elixir-owned state
@@ -210,6 +210,7 @@ Helpers imported by `use Guppy.Window` include:
 
 - `assign/2`
 - `assign/3`
+- `update/3` (available for HEEx-style compatibility; prefer explicit `assign` when clearer)
 - `put_private/3`
 - `put_window_opts/2`
 
