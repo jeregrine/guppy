@@ -2517,9 +2517,11 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
-                "bg_hex" => Ok(StyleOp::BgHex(term_to_string(&elements[1])?)),
-                "text_color_hex" => Ok(StyleOp::TextColorHex(term_to_string(&elements[1])?)),
-                "border_color_hex" => Ok(StyleOp::BorderColorHex(term_to_string(&elements[1])?)),
+                "bg_hex" => Ok(StyleOp::BgHex(parse_hex_style_color(&elements[1])?)),
+                "text_color_hex" => Ok(StyleOp::TextColorHex(parse_hex_style_color(&elements[1])?)),
+                "border_color_hex" => Ok(StyleOp::BorderColorHex(parse_hex_style_color(
+                    &elements[1],
+                )?)),
                 "bg_linear_gradient" => {
                     let (angle, from, to) = parse_linear_gradient_options(&elements[1])?;
                     Ok(StyleOp::BgLinearGradient { angle, from, to })
@@ -2786,18 +2788,22 @@ fn parse_gradient_percentage(term: &Term) -> Result<f32, String> {
 fn parse_style_color(term: &Term) -> Result<StyleColor, String> {
     match term {
         Term::Atom(atom) => parse_color_token(&atom.name).map(StyleColor::Token),
-        Term::Binary(_) | Term::ByteList(_) => {
-            let value = term_to_string(term)?;
-
-            if is_strict_hex_color(&value) {
-                Ok(StyleColor::Hex(value))
-            } else {
-                Err(format!("invalid gradient color: {value}"))
-            }
-        }
+        Term::Binary(_) | Term::ByteList(_) => parse_hex_style_color(term)
+            .map(StyleColor::Hex)
+            .map_err(|error| format!("invalid gradient color: {error}")),
         other => Err(format!(
             "expected gradient color atom or #RRGGBB string, got {other}"
         )),
+    }
+}
+
+fn parse_hex_style_color(term: &Term) -> Result<String, String> {
+    let value = term_to_string(term)?;
+
+    if is_strict_hex_color(&value) {
+        Ok(value)
+    } else {
+        Err(format!("invalid style hex color: {value}"))
     }
 }
 
@@ -3468,6 +3474,14 @@ mod tests {
 
         let err = parse_style_op(&term).unwrap_err();
         assert!(err.contains("gradient"));
+    }
+
+    #[test]
+    fn rejects_invalid_hex_style_color_ops() {
+        let term = tuple(vec![atom("bg_hex"), binary("0f172a")]);
+
+        let err = parse_style_op(&term).unwrap_err();
+        assert!(err.contains("invalid style hex color"));
     }
 
     #[test]
