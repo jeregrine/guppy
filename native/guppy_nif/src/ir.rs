@@ -7,6 +7,10 @@ use std::sync::{Arc, OnceLock};
 pub type DivStyle = Arc<[StyleOp]>;
 
 static IR_FIELD_KEYS: OnceLock<IrFieldKeys> = OnceLock::new();
+static DEFAULT_BUTTON_STYLE: OnceLock<DivStyle> = OnceLock::new();
+static DEFAULT_BUTTON_FOCUS_STYLE: OnceLock<DivStyle> = OnceLock::new();
+static DEFAULT_BUTTON_ACTIVE_STYLE: OnceLock<DivStyle> = OnceLock::new();
+static DEFAULT_BUTTON_DISABLED_STYLE: OnceLock<DivStyle> = OnceLock::new();
 
 struct IrFieldKeys {
     kind: Term,
@@ -2359,32 +2363,42 @@ fn get_optional_usize_field(map: &HashMap<Term, Term>, key: &str) -> Result<Opti
 }
 
 fn default_button_style() -> DivStyle {
-    vec![
-        StyleOp::Flex,
-        StyleOp::JustifyCenter,
-        StyleOp::ItemsCenter,
-        StyleOp::TextCenter,
-        StyleOp::P2,
-        StyleOp::RoundedMd,
-        StyleOp::Border1,
-        StyleOp::BorderColor(ColorToken::White),
-        StyleOp::Bg(ColorToken::Gray),
-        StyleOp::TextColor(ColorToken::White),
-        StyleOp::CursorPointer,
-    ]
-    .into()
+    DEFAULT_BUTTON_STYLE
+        .get_or_init(|| {
+            vec![
+                StyleOp::Flex,
+                StyleOp::JustifyCenter,
+                StyleOp::ItemsCenter,
+                StyleOp::TextCenter,
+                StyleOp::P2,
+                StyleOp::RoundedMd,
+                StyleOp::Border1,
+                StyleOp::BorderColor(ColorToken::White),
+                StyleOp::Bg(ColorToken::Gray),
+                StyleOp::TextColor(ColorToken::White),
+                StyleOp::CursorPointer,
+            ]
+            .into()
+        })
+        .clone()
 }
 
 fn default_button_focus_style() -> DivStyle {
-    vec![StyleOp::BorderColor(ColorToken::Yellow)].into()
+    DEFAULT_BUTTON_FOCUS_STYLE
+        .get_or_init(|| vec![StyleOp::BorderColor(ColorToken::Yellow)].into())
+        .clone()
 }
 
 fn default_button_active_style() -> DivStyle {
-    vec![StyleOp::Opacity(0.85)].into()
+    DEFAULT_BUTTON_ACTIVE_STYLE
+        .get_or_init(|| vec![StyleOp::Opacity(0.85)].into())
+        .clone()
 }
 
 fn default_button_disabled_style() -> DivStyle {
-    vec![StyleOp::Opacity(0.45)].into()
+    DEFAULT_BUTTON_DISABLED_STYLE
+        .get_or_init(|| vec![StyleOp::Opacity(0.45)].into())
+        .clone()
 }
 
 fn prepend_style(defaults: DivStyle, style: DivStyle) -> DivStyle {
