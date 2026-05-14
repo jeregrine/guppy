@@ -635,7 +635,7 @@ pub struct SelectNode {
     pub value: Option<String>,
     pub open: bool,
     pub placeholder: String,
-    pub options: Vec<SelectOption>,
+    pub options: Arc<[SelectOption]>,
     pub style: DivStyle,
     pub list_style: DivStyle,
     pub option_style: DivStyle,
@@ -1878,7 +1878,7 @@ fn get_canvas_color_field(map: &HashMap<Term, Term>, key: &str) -> Result<StyleC
     }
 }
 
-fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Vec<SelectOption>, String> {
+fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Arc<[SelectOption]>, String> {
     let Some(options_term) = get_field(map, "options") else {
         return Err("missing required field: options".into());
     };
@@ -1894,7 +1894,8 @@ fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Vec<SelectOptio
                 disabled: get_boolean_field(option, "disabled")?,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
