@@ -44,20 +44,20 @@ Selected results from `mix run bench/guppy_bench.exs`:
 
 ## 2026-05-14 native cleanup spot-check
 
-After the native IR/style cleanup pass that tightened native style validation, moved retained native payloads toward `Arc<[T]>`, shared child decode helpers, and reduced list render clones, `mix run bench/guppy_bench.exs` on the same local M1 Pro/macOS class machine reported these selected non-native scenarios. These numbers are a spot-check for regressions, not a release baseline.
+After the native IR/style cleanup pass that tightened native style validation, moved retained native payloads toward `Arc<[T]>`, decoded native hex colors to parsed values, shared child decode helpers, and reduced list render clones, `mix run bench/guppy_bench.exs` on the same local M1 Pro/macOS class machine reported these selected non-native scenarios. These numbers are a spot-check for regressions, not a release baseline.
 
 | Scenario | Average | 99th percentile |
 | --- | ---: | ---: |
-| ETF encode/decode proxy 100 nodes | 77.74 μs | 89.21 μs |
-| ETF encode/decode proxy 1,000 nodes | 786.21 μs | 908.42 μs |
-| IR validation 100 nodes | 70.07 μs | 76.08 μs |
-| IR validation 1,000 nodes | 703.31 μs | 895.76 μs |
-| Canvas command encode/decode proxy 100 commands | 49.94 μs | 56.85 μs |
-| Canvas command validation 100 commands | 67.34 μs | 83.13 μs |
-| Data-table/tree build 100 rows | 27.40 μs | 30.75 μs |
-| Data-table/tree validation 100 rows | 132.02 μs | 144.09 μs |
-| List row controls tree build 100 rows | 92.00 μs | 130.77 μs |
-| List row controls validation 100 rows | 138.71 μs | 151.13 μs |
+| ETF encode/decode proxy 100 nodes | 77.55 μs | 99.32 μs |
+| ETF encode/decode proxy 1,000 nodes | 777.02 μs | 897.25 μs |
+| IR validation 100 nodes | 70.19 μs | 78.62 μs |
+| IR validation 1,000 nodes | 716.15 μs | 989.07 μs |
+| Canvas command encode/decode proxy 100 commands | 50.05 μs | 56.42 μs |
+| Canvas command validation 100 commands | 68.97 μs | 83.38 μs |
+| Data-table/tree build 100 rows | 26.08 μs | 29.67 μs |
+| Data-table/tree validation 100 rows | 128.57 μs | 145.22 μs |
+| List row controls tree build 100 rows | 93.30 μs | 144.15 μs |
+| List row controls validation 100 rows | 136.25 μs | 151.95 μs |
 
 ## Release native snapshot
 
