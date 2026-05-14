@@ -48,16 +48,16 @@ After the native IR/style cleanup pass that tightened native style validation an
 
 | Scenario | Average | 99th percentile |
 | --- | ---: | ---: |
-| ETF encode/decode proxy 100 nodes | 77.19 μs | 92.85 μs |
-| ETF encode/decode proxy 1,000 nodes | 774.87 μs | 894.59 μs |
-| IR validation 100 nodes | 70.22 μs | 84.61 μs |
-| IR validation 1,000 nodes | 709.91 μs | 982.95 μs |
-| Canvas command encode/decode proxy 100 commands | 50.19 μs | 58.54 μs |
-| Canvas command validation 100 commands | 68.69 μs | 85.55 μs |
-| Data-table/tree build 100 rows | 26.27 μs | 31.47 μs |
-| Data-table/tree validation 100 rows | 128.12 μs | 160.42 μs |
-| List row controls tree build 100 rows | 93.00 μs | 143.66 μs |
-| List row controls validation 100 rows | 136.54 μs | 170.20 μs |
+| ETF encode/decode proxy 100 nodes | 80.02 μs | 102.51 μs |
+| ETF encode/decode proxy 1,000 nodes | 791.54 μs | 913.10 μs |
+| IR validation 100 nodes | 70.33 μs | 85.67 μs |
+| IR validation 1,000 nodes | 715.22 μs | 1029.66 μs |
+| Canvas command encode/decode proxy 100 commands | 50.85 μs | 62.21 μs |
+| Canvas command validation 100 commands | 69.51 μs | 95.54 μs |
+| Data-table/tree build 100 rows | 26.52 μs | 32.21 μs |
+| Data-table/tree validation 100 rows | 128.74 μs | 160.12 μs |
+| List row controls tree build 100 rows | 91.77 μs | 141.40 μs |
+| List row controls validation 100 rows | 137.94 μs | 165.14 μs |
 
 ## Release native snapshot
 
