@@ -40,11 +40,15 @@ rustler::atoms! {
     click,
     close,
     click_count,
+    column_id,
     context_menu,
     control,
     delta_kind,
     delta_x,
     delta_y,
+    data_table_cell_click,
+    data_table_row_click,
+    data_table_sort,
     decode_error,
     drag_move,
     drag_start,
@@ -58,6 +62,7 @@ rustler::atoms! {
     hovered,
     id,
     is_held,
+    item_id,
     key,
     key_char,
     key_down,
@@ -91,6 +96,10 @@ rustler::atoms! {
     shortcut,
     source_id,
     some,
+    table_id,
+    tree_id,
+    tree_select,
+    tree_toggle,
     unknown_view_id,
     value,
     control_id,
@@ -652,6 +661,42 @@ fn row_control_payload<'a>(
     pairs
 }
 
+#[cfg_attr(test, allow(dead_code))]
+fn data_table_payload<'a>(
+    env: Env<'a>,
+    node_id: &str,
+    callback_id: &str,
+    table_id_value: &str,
+    row_id_value: Option<&str>,
+    column_id_value: Option<&str>,
+) -> Vec<(Term<'a>, Term<'a>)> {
+    let mut pairs = base_payload(env, node_id, callback_id);
+    pairs.push((table_id().encode(env), table_id_value.encode(env)));
+    if let Some(row_id_value) = row_id_value {
+        pairs.push((row_id().encode(env), row_id_value.encode(env)));
+    }
+    if let Some(column_id_value) = column_id_value {
+        pairs.push((column_id().encode(env), column_id_value.encode(env)));
+    }
+    pairs
+}
+
+#[cfg_attr(test, allow(dead_code))]
+fn tree_payload<'a>(
+    env: Env<'a>,
+    node_id: &str,
+    callback_id: &str,
+    tree_id_value: &str,
+    item_id_value: &str,
+) -> Vec<(Term<'a>, Term<'a>)> {
+    let mut pairs = base_payload(env, node_id, callback_id);
+    pairs.extend([
+        (tree_id().encode(env), tree_id_value.encode(env)),
+        (item_id().encode(env), item_id_value.encode(env)),
+    ]);
+    pairs
+}
+
 fn modifiers_payload<'a>(
     env: Env<'a>,
     control_value: i32,
@@ -739,10 +784,27 @@ pub(crate) struct MenuEventSnapshot {
 }
 
 #[cfg(test)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct SemanticEventSnapshot {
+    pub event: &'static str,
+    pub view_id: u64,
+    pub node_id: String,
+    pub callback_id: String,
+    pub table_id: Option<String>,
+    pub row_id: Option<String>,
+    pub column_id: Option<String>,
+    pub tree_id: Option<String>,
+    pub item_id: Option<String>,
+}
+
+#[cfg(test)]
 static ROW_CONTROL_EVENT_SNAPSHOT: Mutex<Option<RowControlEventSnapshot>> = Mutex::new(None);
 
 #[cfg(test)]
 static MENU_EVENT_SNAPSHOT: Mutex<Option<MenuEventSnapshot>> = Mutex::new(None);
+
+#[cfg(test)]
+static SEMANTIC_EVENT_SNAPSHOT: Mutex<Option<SemanticEventSnapshot>> = Mutex::new(None);
 
 #[cfg(test)]
 pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
@@ -763,11 +825,44 @@ pub(crate) fn take_menu_event_snapshot_for_test() -> Option<MenuEventSnapshot> {
 }
 
 #[cfg(test)]
+pub(crate) fn take_semantic_event_snapshot_for_test() -> Option<SemanticEventSnapshot> {
+    SEMANTIC_EVENT_SNAPSHOT.lock().ok()?.take()
+}
+
+#[cfg(test)]
 fn record_menu_event_snapshot_for_test(action_id: String, callback_id: String) {
     if let Ok(mut snapshot) = MENU_EVENT_SNAPSHOT.lock() {
         *snapshot = Some(MenuEventSnapshot {
             action_id,
             callback_id,
+        });
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn record_semantic_event_snapshot_for_test(
+    event: &'static str,
+    view_id: u64,
+    node_id: String,
+    callback_id: String,
+    table_id: Option<String>,
+    row_id: Option<String>,
+    column_id: Option<String>,
+    tree_id: Option<String>,
+    item_id: Option<String>,
+) {
+    if let Ok(mut snapshot) = SEMANTIC_EVENT_SNAPSHOT.lock() {
+        *snapshot = Some(SemanticEventSnapshot {
+            event,
+            view_id,
+            node_id,
+            callback_id,
+            table_id,
+            row_id,
+            column_id,
+            tree_id,
+            item_id,
         });
     }
 }
@@ -918,6 +1013,181 @@ pub extern "C" fn guppy_c_send_row_control_click_event(
             ),
         )
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+#[unsafe(no_mangle)]
+pub extern "C" fn guppy_c_send_data_table_event(
+    view_id: u64,
+    event_code: i32,
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+    table_id_ptr: *const u8,
+    table_id_len: usize,
+    row_id_ptr: *const u8,
+    row_id_len: usize,
+    column_id_ptr: *const u8,
+    column_id_len: usize,
+) -> i32 {
+    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
+        return 0;
+    };
+    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+        return 0;
+    };
+    let Some(table_id_value) = binary_str(table_id_ptr, table_id_len) else {
+        return 0;
+    };
+    let Some(row_id_value) = binary_str(row_id_ptr, row_id_len) else {
+        return 0;
+    };
+    let Some(column_id_value) = binary_str(column_id_ptr, column_id_len) else {
+        return 0;
+    };
+    let Some(event_name) = data_table_event_name(event_code) else {
+        return 0;
+    };
+    #[cfg(not(test))]
+    let _ = event_name;
+
+    let row_id_option = if row_id_value.is_empty() {
+        None
+    } else {
+        Some(row_id_value.as_str())
+    };
+    let column_id_option = if column_id_value.is_empty() {
+        None
+    } else {
+        Some(column_id_value.as_str())
+    };
+
+    #[cfg(test)]
+    {
+        record_semantic_event_snapshot_for_test(
+            event_name,
+            view_id,
+            node_id,
+            callback_id,
+            Some(table_id_value),
+            row_id_option.map(str::to_owned),
+            column_id_option.map(str::to_owned),
+            None,
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, data_table_event_atom(event_code), move |env| {
+        map_from_pairs(
+            env,
+            data_table_payload(
+                env,
+                &node_id,
+                &callback_id,
+                &table_id_value,
+                row_id_option,
+                column_id_option,
+            ),
+        )
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+#[unsafe(no_mangle)]
+pub extern "C" fn guppy_c_send_tree_event(
+    view_id: u64,
+    event_code: i32,
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+    tree_id_ptr: *const u8,
+    tree_id_len: usize,
+    item_id_ptr: *const u8,
+    item_id_len: usize,
+) -> i32 {
+    let Some(node_id) = binary_str(node_id_ptr, node_id_len) else {
+        return 0;
+    };
+    let Some(callback_id) = binary_str(callback_id_ptr, callback_id_len) else {
+        return 0;
+    };
+    let Some(tree_id_value) = binary_str(tree_id_ptr, tree_id_len) else {
+        return 0;
+    };
+    let Some(item_id_value) = binary_str(item_id_ptr, item_id_len) else {
+        return 0;
+    };
+    let Some(event_name) = tree_event_name(event_code) else {
+        return 0;
+    };
+    #[cfg(not(test))]
+    let _ = event_name;
+
+    #[cfg(test)]
+    {
+        record_semantic_event_snapshot_for_test(
+            event_name,
+            view_id,
+            node_id,
+            callback_id,
+            None,
+            None,
+            None,
+            Some(tree_id_value),
+            Some(item_id_value),
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, tree_event_atom(event_code), move |env| {
+        map_from_pairs(
+            env,
+            tree_payload(env, &node_id, &callback_id, &tree_id_value, &item_id_value),
+        )
+    })
+}
+
+fn data_table_event_name(code: i32) -> Option<&'static str> {
+    match code {
+        1 => Some("data_table_row_click"),
+        2 => Some("data_table_cell_click"),
+        3 => Some("data_table_sort"),
+        _ => None,
+    }
+}
+
+#[cfg(not(test))]
+fn data_table_event_atom(code: i32) -> Atom {
+    match code {
+        1 => data_table_row_click(),
+        2 => data_table_cell_click(),
+        3 => data_table_sort(),
+        _ => nil(),
+    }
+}
+
+fn tree_event_name(code: i32) -> Option<&'static str> {
+    match code {
+        1 => Some("tree_select"),
+        2 => Some("tree_toggle"),
+        _ => None,
+    }
+}
+
+#[cfg(not(test))]
+fn tree_event_atom(code: i32) -> Atom {
+    match code {
+        1 => tree_select(),
+        2 => tree_toggle(),
+        _ => nil(),
+    }
 }
 
 #[unsafe(no_mangle)]

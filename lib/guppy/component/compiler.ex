@@ -172,6 +172,8 @@ defmodule Guppy.Component.Compiler do
         "scroll" -> compile_scroll(attrs, xmlElement(element, :content), caller)
         "uniform_list" -> compile_uniform_list(attrs, xmlElement(element, :content), caller)
         "list" -> compile_generic_list(attrs, xmlElement(element, :content), caller)
+        "data_table" -> compile_data_table(attrs, xmlElement(element, :content), caller)
+        "tree" -> compile_tree(attrs, xmlElement(element, :content), caller)
         "popover" -> compile_popover(attrs, xmlElement(element, :content), caller)
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
@@ -243,6 +245,49 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.list(unquote(items), unquote(opts))
+    end
+  end
+
+  defp compile_data_table(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, data_table_allowed_attrs(), "data_table", caller)
+    assert_empty_element!(content, "data_table", caller)
+    columns = fetch_required_attr!(attrs, "columns", :expr_only, caller)
+    rows = fetch_required_attr!(attrs, "rows", :expr_only, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "header_class", "header_style", :header_style),
+        style_entry(attrs, "row_class", "row_style", :row_style),
+        style_entry(attrs, "cell_class", "cell_style", :cell_style),
+        maybe_attr_entry(attrs, "selected_row_id", :string_or_expr, caller),
+        maybe_attr_entry(attrs, "selected_cell", :expr_only, caller),
+        renamed_attr_entry(attrs, "sort_state", :sort, :expr_only, caller),
+        events_entry(attrs, ["row_click", "cell_click", "sort"], caller)
+      ])
+
+    quote do
+      Guppy.IR.data_table(unquote(columns), unquote(rows), unquote(opts))
+    end
+  end
+
+  defp compile_tree(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, tree_allowed_attrs(), "tree", caller)
+    assert_empty_element!(content, "tree", caller)
+    nodes = fetch_required_attr!(attrs, "nodes", :expr_only, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "row_class", "row_style", :row_style),
+        maybe_attr_entry(attrs, "selected_id", :string_or_expr, caller),
+        events_entry(attrs, ["select", "toggle"], caller)
+      ])
+
+    quote do
+      Guppy.IR.tree(unquote(nodes), unquote(opts))
     end
   end
 
@@ -878,6 +923,20 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
+  defp renamed_attr_entry(attrs, name, key, type, caller) do
+    case Map.get(attrs, name) do
+      nil ->
+        nil
+
+      value ->
+        parsed = parse_attribute_value(value, type, caller)
+
+        quote do
+          Guppy.Component.maybe_entry(unquote(key), unquote(parsed))
+        end
+    end
+  end
+
   defp fetch_required_attr!(attrs, name, type, caller) do
     case Map.fetch(attrs, name) do
       {:ok, value} -> parse_attribute_value(value, type, caller)
@@ -1397,6 +1456,43 @@ defmodule Guppy.Component.Compiler do
 
   defp list_allowed_attrs do
     [":if", ":for", "id", "items", "class", "style", "item_class", "item_style"] ++ @text_events
+  end
+
+  defp data_table_allowed_attrs do
+    [
+      ":if",
+      ":for",
+      "id",
+      "columns",
+      "rows",
+      "class",
+      "style",
+      "header_class",
+      "header_style",
+      "row_class",
+      "row_style",
+      "cell_class",
+      "cell_style",
+      "selected_row_id",
+      "selected_cell",
+      "sort_state"
+    ] ++ ["row_click", "cell_click", "sort"]
+  end
+
+  defp tree_allowed_attrs do
+    [
+      ":if",
+      ":for",
+      "id",
+      "nodes",
+      "class",
+      "style",
+      "row_class",
+      "row_style",
+      "selected_id",
+      "select",
+      "toggle"
+    ]
   end
 
   defp popover_allowed_attrs do

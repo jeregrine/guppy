@@ -1755,19 +1755,17 @@ defmodule Guppy.IR do
   defp validate_data_table_columns(columns) do
     Enum.reduce_while(columns, {:ok, MapSet.new()}, fn
       %{id: id, label: label} = column, {:ok, seen} when is_binary(id) and is_binary(label) ->
-        cond do
-          MapSet.member?(seen, id) ->
-            {:halt, {:error, {:duplicate_data_table_column_id, id}}}
-
-          true ->
-            with :ok <- validate_known_keys(column, @data_table_column_keys, :data_table_column),
-                 :ok <- validate_data_table_column_width(Map.get(column, :width)),
-                 :ok <- validate_optional_boolean(Map.get(column, :sortable), :sortable),
-                 :ok <- validate_style(Map.get(column, :style)) do
-              {:cont, {:ok, MapSet.put(seen, id)}}
-            else
-              error -> {:halt, error}
-            end
+        if MapSet.member?(seen, id) do
+          {:halt, {:error, {:duplicate_data_table_column_id, id}}}
+        else
+          with :ok <- validate_known_keys(column, @data_table_column_keys, :data_table_column),
+               :ok <- validate_data_table_column_width(Map.get(column, :width)),
+               :ok <- validate_optional_boolean(Map.get(column, :sortable), :sortable),
+               :ok <- validate_style(Map.get(column, :style)) do
+            {:cont, {:ok, MapSet.put(seen, id)}}
+          else
+            error -> {:halt, error}
+          end
         end
 
       column, {:ok, _seen} ->
@@ -1788,18 +1786,16 @@ defmodule Guppy.IR do
   defp validate_data_table_rows(rows, column_ids) do
     Enum.reduce_while(rows, {:ok, MapSet.new()}, fn
       %{id: id, cells: cells} = row, {:ok, seen} when is_binary(id) and is_list(cells) ->
-        cond do
-          MapSet.member?(seen, id) ->
-            {:halt, {:error, {:duplicate_data_table_row_id, id}}}
-
-          true ->
-            with :ok <- validate_known_keys(row, @data_table_row_keys, :data_table_row),
-                 :ok <- validate_style(Map.get(row, :style)),
-                 :ok <- validate_data_table_cells(cells, column_ids) do
-              {:cont, {:ok, MapSet.put(seen, id)}}
-            else
-              error -> {:halt, error}
-            end
+        if MapSet.member?(seen, id) do
+          {:halt, {:error, {:duplicate_data_table_row_id, id}}}
+        else
+          with :ok <- validate_known_keys(row, @data_table_row_keys, :data_table_row),
+               :ok <- validate_style(Map.get(row, :style)),
+               :ok <- validate_data_table_cells(cells, column_ids) do
+            {:cont, {:ok, MapSet.put(seen, id)}}
+          else
+            error -> {:halt, error}
+          end
         end
 
       row, {:ok, _seen} ->
@@ -1821,7 +1817,7 @@ defmodule Guppy.IR do
           true ->
             with :ok <- validate_known_keys(cell, @data_table_cell_keys, :data_table_cell),
                  :ok <- validate_style(Map.get(cell, :style)),
-                 :ok <- validate_children(children) do
+                 :ok <- validate_data_table_cell_children(children) do
               {:cont, {:ok, MapSet.put(seen, column_id)}}
             else
               error -> {:halt, error}
@@ -1836,6 +1832,32 @@ defmodule Guppy.IR do
       error -> error
     end
   end
+
+  defp validate_data_table_cell_children(children) do
+    Enum.reduce_while(children, :ok, fn child, :ok ->
+      case validate_data_table_cell_child(child) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_data_table_cell_child(%{kind: kind} = node) when kind in [:text, :spacer],
+    do: validate_node(node)
+
+  defp validate_data_table_cell_child(%{kind: :div, children: children} = node)
+       when is_list(children) do
+    with :ok <- validate_known_keys(node, @list_row_div_keys, :data_table_cell_div),
+         :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_events(Map.get(node, :events), [:click]) do
+      validate_data_table_cell_children(children)
+    end
+  end
+
+  defp validate_data_table_cell_child(child),
+    do: {:error, {:unsupported_data_table_cell_child, child}}
 
   defp validate_data_table_selected_row(nil, _row_ids), do: :ok
 

@@ -220,7 +220,12 @@ defmodule Guppy.Server do
                :mouse_down,
                :mouse_up,
                :mouse_move,
-               :scroll_wheel
+               :scroll_wheel,
+               :data_table_row_click,
+               :data_table_cell_click,
+               :data_table_sort,
+               :tree_select,
+               :tree_toggle
              ] and
              is_binary(node_id) and is_binary(callback_id) do
     case Map.fetch(state.views, view_id) do

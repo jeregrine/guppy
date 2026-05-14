@@ -40,6 +40,31 @@ defmodule Guppy.ComponentTest do
             children: [Guppy.IR.div([Guppy.IR.text("Generic two detail")])]
           }
         ],
+        table_columns: [
+          %{id: "task", label: "Task", width: {:fr, 1}, sortable: true},
+          %{id: "status", label: "Status", width: {:px, 96}}
+        ],
+        table_rows: [
+          %{
+            id: "row_1",
+            cells: [
+              %{column_id: "task", children: [Guppy.IR.text("Template table row")]},
+              %{column_id: "status", children: [Guppy.IR.text("Ready")]}
+            ]
+          }
+        ],
+        selected_row_id: "row_1",
+        selected_cell: {"row_1", "status"},
+        table_sort: %{column_id: "task", direction: :asc},
+        tree_nodes: [
+          %{
+            id: "tree_root",
+            label: "Root",
+            expanded: true,
+            children: [%{id: "tree_child", label: "Child"}]
+          }
+        ],
+        selected_tree_id: "tree_child",
         rich_runs: [
           %{text: "Rich ", style: [:font_bold]},
           %{text: "intro", style: [{:text_color, :yellow}]}
@@ -76,6 +101,8 @@ defmodule Guppy.ComponentTest do
       scroll,
       uniform_list,
       list,
+      data_table,
+      tree,
       popover,
       select,
       text_input,
@@ -155,6 +182,26 @@ defmodule Guppy.ComponentTest do
     assert {:h_px, 140} in list.style
     assert :p_2 in list.item_style
     assert list.events == %{click: "generic_item_clicked"}
+
+    assert data_table.kind == :data_table
+    assert data_table.id == "task_table"
+    assert Enum.map(data_table.columns, & &1.id) == ["task", "status"]
+    assert Enum.map(data_table.rows, & &1.id) == ["row_1"]
+    assert data_table.selected_row_id == "row_1"
+    assert data_table.selected_cell == {"row_1", "status"}
+    assert data_table.sort == %{column_id: "task", direction: :asc}
+
+    assert data_table.events == %{
+             row_click: "table_row_clicked",
+             cell_click: "table_cell_clicked",
+             sort: "table_sorted"
+           }
+
+    assert tree.kind == :tree
+    assert tree.id == "task_tree"
+    assert Enum.map(tree.nodes, & &1.id) == ["tree_root"]
+    assert tree.selected_id == "tree_child"
+    assert tree.events == %{select: "tree_selected", toggle: "tree_toggled"}
 
     assert popover.kind == :popover
     assert popover.id == "help_popover"

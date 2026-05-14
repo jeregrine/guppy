@@ -217,6 +217,79 @@ defmodule Guppy.ServerNativeTest do
     refute_receive {:guppy_test_native_request, {:set_menus, _}, _}
   end
 
+  test "routes semantic data table and tree events with structured payloads" do
+    server = :"guppy_semantic_event_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    ir =
+      Guppy.IR.div([
+        Guppy.IR.data_table(
+          [%{id: "task", label: "Task"}],
+          [%{id: "row_1", cells: [%{column_id: "task", children: [Guppy.IR.text("Task")]}]}],
+          id: "tasks",
+          events: %{row_click: "select_row", cell_click: "select_cell", sort: "sort_table"}
+        ),
+        Guppy.IR.tree([%{id: "root", label: "Root"}],
+          id: "outline",
+          events: %{select: "select_node", toggle: "toggle_node"}
+        )
+      ])
+
+    assert {:ok, view_id} = Guppy.Server.open_window(server, self(), ir, [], 25)
+    assert_receive {:guppy_test_native_request, {:open_window, [^view_id, ^ir, %{}]}, 25}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      view_id,
+      :data_table_cell_click,
+      %{
+        id: "tasks.cell.row_1.task",
+        callback: "select_cell",
+        table_id: "tasks",
+        row_id: "row_1",
+        column_id: "task"
+      }
+    })
+
+    assert_receive {:guppy_event, ^view_id,
+                    %{
+                      type: :data_table_cell_click,
+                      callback: "select_cell",
+                      table_id: "tasks",
+                      row_id: "row_1",
+                      column_id: "task"
+                    }}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      view_id,
+      :tree_toggle,
+      %{
+        id: "outline.row.root.toggle",
+        callback: "toggle_node",
+        tree_id: "outline",
+        item_id: "root"
+      }
+    })
+
+    assert_receive {:guppy_event, ^view_id,
+                    %{
+                      type: :tree_toggle,
+                      callback: "toggle_node",
+                      tree_id: "outline",
+                      item_id: "root"
+                    }}
+  end
+
   test "native request timeout is passed through the server to the native bridge" do
     server = :"guppy_timeout_recording_native_#{System.unique_integer([:positive])}"
 

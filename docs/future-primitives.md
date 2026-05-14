@@ -133,7 +133,7 @@ Template classes support the compact static form `bg-linear-gradient-[90,#0f172a
 
 ## Data-table and tree virtualization
 
-Status: scoped separately from current `grid`, `uniform_list`, and generic `list` support.
+Status: first semantic virtualization pass implemented. `Guppy.IR.data_table/3` and `Guppy.IR.tree/2` are dedicated primitives with native virtual-row rendering and semantic event payloads.
 
 Current primitives are intentionally narrower:
 
@@ -145,41 +145,44 @@ Full data-table and tree virtualization should not be squeezed into those primit
 
 Initial implementation use case: a project-planning surface with a navigable outline/tree on the left and a task table on the right. Elixir owns selected node/row/cell state, sort state, and tree expansion; native emits selection, toggle, and sort requests.
 
-`Guppy.IR.data_table/3` and `Guppy.IR.tree/2` now define the dedicated semantic IR shape on the Elixir side with validation for column/node/row identity, cell references, selected state, sort state, and callback names. Native decode/render support is still in progress.
+`Guppy.IR.data_table/3` and `Guppy.IR.tree/2` define the dedicated semantic IR shape with validation for column/node/row identity, cell references, selected state, sort state, and callback names. Native decode maps the semantics into GPUI list-backed virtual rows. Native event payloads preserve `table_id`, `row_id`, `column_id`, `tree_id`, and `item_id` so Elixir remains the source of truth.
 
 ### Data-table scope
 
-A future table primitive needs explicit concepts for:
+The first table primitive includes:
 
 - table id, row ids, column ids, and cell identity;
-- column sizing, optional pinned headers/columns, and horizontal plus vertical viewport state;
+- `:auto`, `{:px, value}`, and `{:fr, value}` column sizing;
 - selected row/cell state owned by Elixir;
-- sort/filter requests as events, not native-owned data transforms;
-- keyboard navigation and focus-visible behavior across cells;
-- row and cell renderers that can start static and only later admit stateful controls.
+- sort requests as events, not native-owned data transforms;
+- virtualized rows backed by GPUI `ListState`;
+- static cell children (`text`, `spacer`, and nested static `div`) only.
 
 ### Tree scope
 
-A future tree primitive needs explicit concepts for:
+The first tree primitive includes:
 
 - node ids and parent/child relationships;
 - expanded/collapsed state owned by Elixir;
 - indentation/disclosure rendering;
-- selected/focused node state and keyboard navigation;
+- selected node state;
+- select/toggle event callbacks;
 - virtualization over the flattened visible node sequence.
+
+### Implemented coverage
+
+- `examples/data_table_tree.exs` demonstrates a project tree and task table with Elixir-owned expansion, selection, and sorting.
+- `bench/guppy_bench.exs` includes data-table/tree build and validation scenarios before any large-data performance claims.
+- ExUnit covers IR validation, template compilation, server routing for semantic payloads, and invalid table/tree shapes.
+- Rust coverage includes native ETF decode, invalid table child rejection, visible-tree flattening, GPUI list-state retention, and semantic event payload snapshots.
 
 ### Deferred
 
 - Reusing generic `list` row controls as a hidden table/tree implementation without a public semantic model.
 - Native sorting/filtering/tree expansion ownership.
-- Spreadsheet editing, column drag-resize/reorder, and accessibility semantics until a concrete app needs them.
-
-### Implementation gates
-
-- Capture a real table/tree use case before adding IR.
-- Measure with `examples/stress_test.exs` or a dedicated benchmark before promising large-data performance.
-- Add independent IR/template/native tests; do not rely on current grid/list tests as coverage for table/tree semantics.
-- Update the compliance matrix and examples only when the dedicated primitive exists end-to-end.
+- Stateful controls or text editors inside data-table cells.
+- Keyboard navigation and focus-visible behavior across cells/tree rows.
+- Pinned headers/columns, horizontal viewport synchronization, column drag-resize/reorder, spreadsheet editing, and accessibility semantics until a concrete app needs them.
 
 ## Custom painting, canvas, and pattern painting
 

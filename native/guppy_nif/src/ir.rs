@@ -18,6 +18,26 @@ struct IrFieldKeys {
     placeholder: Term,
     children: Term,
     items: Term,
+    columns: Term,
+    rows: Term,
+    cells: Term,
+    column_id: Term,
+    width: Term,
+    sortable: Term,
+    header_style: Term,
+    row_style: Term,
+    cell_style: Term,
+    selected_row_id: Term,
+    selected_cell: Term,
+    sort: Term,
+    row_click: Term,
+    cell_click: Term,
+    direction: Term,
+    nodes: Term,
+    selected_id: Term,
+    expanded: Term,
+    select: Term,
+    toggle: Term,
     options: Term,
     axis: Term,
     style: Term,
@@ -91,6 +111,26 @@ impl IrFieldKeys {
             placeholder: atom_term("placeholder"),
             children: atom_term("children"),
             items: atom_term("items"),
+            columns: atom_term("columns"),
+            rows: atom_term("rows"),
+            cells: atom_term("cells"),
+            column_id: atom_term("column_id"),
+            width: atom_term("width"),
+            sortable: atom_term("sortable"),
+            header_style: atom_term("header_style"),
+            row_style: atom_term("row_style"),
+            cell_style: atom_term("cell_style"),
+            selected_row_id: atom_term("selected_row_id"),
+            selected_cell: atom_term("selected_cell"),
+            sort: atom_term("sort"),
+            row_click: atom_term("row_click"),
+            cell_click: atom_term("cell_click"),
+            direction: atom_term("direction"),
+            nodes: atom_term("nodes"),
+            selected_id: atom_term("selected_id"),
+            expanded: atom_term("expanded"),
+            select: atom_term("select"),
+            toggle: atom_term("toggle"),
             options: atom_term("options"),
             axis: atom_term("axis"),
             style: atom_term("style"),
@@ -454,6 +494,85 @@ pub struct ListItem {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum DataTableColumnWidth {
+    Auto,
+    Px(f32),
+    Fr(u32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DataTableColumn {
+    pub id: String,
+    pub label: String,
+    pub width: DataTableColumnWidth,
+    pub sortable: bool,
+    pub style: DivStyle,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DataTableCell {
+    pub column_id: String,
+    pub children: Vec<IrNode>,
+    pub style: DivStyle,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DataTableRow {
+    pub id: String,
+    pub cells: Vec<DataTableCell>,
+    pub style: DivStyle,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum DataTableSortDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DataTableSort {
+    pub column_id: String,
+    pub direction: DataTableSortDirection,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DataTableNode {
+    pub id: Option<String>,
+    pub columns: Vec<DataTableColumn>,
+    pub rows: Vec<DataTableRow>,
+    pub style: DivStyle,
+    pub header_style: DivStyle,
+    pub row_style: DivStyle,
+    pub cell_style: DivStyle,
+    pub selected_row_id: Option<String>,
+    pub selected_cell: Option<(String, String)>,
+    pub sort: Option<DataTableSort>,
+    pub row_click: Option<String>,
+    pub cell_click: Option<String>,
+    pub sort_callback: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TreeItem {
+    pub id: String,
+    pub label: String,
+    pub expanded: bool,
+    pub children: Vec<TreeItem>,
+    pub style: DivStyle,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TreeNode {
+    pub id: Option<String>,
+    pub nodes: Vec<TreeItem>,
+    pub style: DivStyle,
+    pub row_style: DivStyle,
+    pub selected_id: Option<String>,
+    pub select: Option<String>,
+    pub toggle: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct SelectOption {
     pub value: String,
     pub label: String,
@@ -592,6 +711,8 @@ pub enum IrNode {
         item_style: DivStyle,
         click: Option<String>,
     },
+    DataTable(Box<DataTableNode>),
+    Tree(Box<TreeNode>),
     Select(Box<SelectNode>),
     Popover {
         id: Option<String>,
@@ -705,6 +826,55 @@ impl IrNode {
                 item_style: get_style_list_field(map, "item_style")?,
                 click: get_click_event(map)?,
             }),
+            "data_table" => {
+                let columns = get_data_table_columns_field(map)?;
+                let column_ids = columns
+                    .iter()
+                    .map(|column| column.id.clone())
+                    .collect::<HashSet<_>>();
+                let rows = get_data_table_rows_field(map, &column_ids)?;
+                let row_ids = rows
+                    .iter()
+                    .map(|row| row.id.clone())
+                    .collect::<HashSet<_>>();
+                let selected_row_id = get_optional_string_field(map, "selected_row_id")?;
+                ensure_optional_id_known(
+                    selected_row_id.as_deref(),
+                    &row_ids,
+                    "unknown data_table selected row",
+                )?;
+                let selected_cell = get_optional_string_pair_field(map, "selected_cell")?;
+                if let Some((row_id, column_id)) = selected_cell.as_ref() {
+                    ensure_id_known(row_id, &row_ids, "unknown data_table selected row")?;
+                    ensure_id_known(column_id, &column_ids, "unknown data_table selected column")?;
+                }
+                let sort = get_data_table_sort_field(map, &column_ids)?;
+
+                Ok(Self::DataTable(Box::new(DataTableNode {
+                    id,
+                    columns,
+                    rows,
+                    style: get_div_style(map)?,
+                    header_style: get_style_list_field(map, "header_style")?,
+                    row_style: get_style_list_field(map, "row_style")?,
+                    cell_style: get_style_list_field(map, "cell_style")?,
+                    selected_row_id,
+                    selected_cell,
+                    sort,
+                    row_click: get_optional_event(map, "row_click")?,
+                    cell_click: get_optional_event(map, "cell_click")?,
+                    sort_callback: get_optional_event(map, "sort")?,
+                })))
+            }
+            "tree" => Ok(Self::Tree(Box::new(TreeNode {
+                id,
+                nodes: get_tree_nodes_field(map)?,
+                style: get_div_style(map)?,
+                row_style: get_style_list_field(map, "row_style")?,
+                selected_id: get_optional_string_field(map, "selected_id")?,
+                select: get_optional_event(map, "select")?,
+                toggle: get_optional_event(map, "toggle")?,
+            }))),
             "select" => Ok(Self::Select(Box::new(SelectNode {
                 id,
                 value: get_optional_string_field(map, "value")?,
@@ -934,6 +1104,26 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "placeholder" => &keys.placeholder,
         "children" => &keys.children,
         "items" => &keys.items,
+        "columns" => &keys.columns,
+        "rows" => &keys.rows,
+        "cells" => &keys.cells,
+        "column_id" => &keys.column_id,
+        "width" => &keys.width,
+        "sortable" => &keys.sortable,
+        "header_style" => &keys.header_style,
+        "row_style" => &keys.row_style,
+        "cell_style" => &keys.cell_style,
+        "selected_row_id" => &keys.selected_row_id,
+        "selected_cell" => &keys.selected_cell,
+        "sort" => &keys.sort,
+        "row_click" => &keys.row_click,
+        "cell_click" => &keys.cell_click,
+        "direction" => &keys.direction,
+        "nodes" => &keys.nodes,
+        "selected_id" => &keys.selected_id,
+        "expanded" => &keys.expanded,
+        "select" => &keys.select,
+        "toggle" => &keys.toggle,
         "options" => &keys.options,
         "axis" => &keys.axis,
         "style" => &keys.style,
@@ -1236,6 +1426,255 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<ListItem>, Stri
             })
         })
         .collect()
+}
+
+fn get_data_table_columns_field(map: &HashMap<Term, Term>) -> Result<Vec<DataTableColumn>, String> {
+    let Some(columns_term) = get_field(map, "columns") else {
+        return Err("missing required field: columns".into());
+    };
+
+    let mut seen = HashSet::new();
+    get_list(columns_term)?
+        .iter()
+        .map(|term| {
+            let column = expect_map(term)?;
+            ensure_allowed_fields(
+                column,
+                &["id", "label", "width", "sortable", "style"],
+                "data_table column",
+            )?;
+            let id = get_string_field(column, "id")?;
+            if !seen.insert(id.clone()) {
+                return Err(format!("duplicate data_table column id: {id}"));
+            }
+
+            Ok(DataTableColumn {
+                id,
+                label: get_string_field(column, "label")?,
+                width: get_data_table_column_width(column)?,
+                sortable: get_boolean_field(column, "sortable")?,
+                style: get_div_style(column)?,
+            })
+        })
+        .collect()
+}
+
+fn get_data_table_column_width(map: &HashMap<Term, Term>) -> Result<DataTableColumnWidth, String> {
+    let Some(width) = get_field(map, "width") else {
+        return Ok(DataTableColumnWidth::Auto);
+    };
+
+    match width {
+        Term::Atom(atom) if atom.name == "auto" => Ok(DataTableColumnWidth::Auto),
+        Term::Tuple(Tuple { elements }) if elements.len() == 2 => {
+            let kind = match &elements[0] {
+                Term::Atom(atom) => atom.name.as_str(),
+                other => {
+                    return Err(format!(
+                        "expected data_table column width kind atom, got {other}"
+                    ));
+                }
+            };
+
+            match kind {
+                "px" => {
+                    let px = parse_f32(&elements[1])?;
+                    if px > 0.0 {
+                        Ok(DataTableColumnWidth::Px(px))
+                    } else {
+                        Err(format!(
+                            "expected positive data_table px width, got {width}"
+                        ))
+                    }
+                }
+                "fr" => parse_positive_u32(&elements[1]).map(DataTableColumnWidth::Fr),
+                other => Err(format!("unsupported data_table column width kind: {other}")),
+            }
+        }
+        other => Err(format!("expected data_table column width, got {other}")),
+    }
+}
+
+fn get_data_table_rows_field(
+    map: &HashMap<Term, Term>,
+    column_ids: &HashSet<String>,
+) -> Result<Vec<DataTableRow>, String> {
+    let Some(rows_term) = get_field(map, "rows") else {
+        return Err("missing required field: rows".into());
+    };
+
+    let mut seen = HashSet::new();
+    get_list(rows_term)?
+        .iter()
+        .map(|term| {
+            let row = expect_map(term)?;
+            ensure_allowed_fields(row, &["id", "cells", "style"], "data_table row")?;
+            let id = get_string_field(row, "id")?;
+            if !seen.insert(id.clone()) {
+                return Err(format!("duplicate data_table row id: {id}"));
+            }
+
+            Ok(DataTableRow {
+                id,
+                cells: get_data_table_cells(row, column_ids)?,
+                style: get_div_style(row)?,
+            })
+        })
+        .collect()
+}
+
+fn get_data_table_cells(
+    row: &HashMap<Term, Term>,
+    column_ids: &HashSet<String>,
+) -> Result<Vec<DataTableCell>, String> {
+    let Some(cells_term) = get_field(row, "cells") else {
+        return Err("missing required field: data_table row cells".into());
+    };
+
+    let mut seen = HashSet::new();
+    get_list(cells_term)?
+        .iter()
+        .map(|term| {
+            let cell = expect_map(term)?;
+            ensure_allowed_fields(cell, &["column_id", "children", "style"], "data_table cell")?;
+            let column_id = get_string_field(cell, "column_id")?;
+            ensure_id_known(&column_id, column_ids, "unknown data_table cell column")?;
+            if !seen.insert(column_id.clone()) {
+                return Err(format!("duplicate data_table cell column: {column_id}"));
+            }
+
+            Ok(DataTableCell {
+                column_id,
+                children: get_data_table_cell_children(cell)?,
+                style: get_div_style(cell)?,
+            })
+        })
+        .collect()
+}
+
+fn get_data_table_cell_children(map: &HashMap<Term, Term>) -> Result<Vec<IrNode>, String> {
+    let Some(children_term) = get_field(map, "children") else {
+        return Err("missing required field: data_table cell children".into());
+    };
+
+    get_list(children_term)?
+        .iter()
+        .map(decode_data_table_cell_child_term)
+        .collect::<Result<Vec<_>, _>>()
+}
+
+fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
+    let map = expect_map(term)?;
+    let kind = get_atom_field(map, "kind")?;
+
+    match kind.as_str() {
+        "text" => {
+            ensure_allowed_fields(
+                map,
+                &["kind", "content", "id", "style", "runs", "events"],
+                "data_table cell text",
+            )?;
+            ensure_allowed_event_fields(map, &["click"], "data_table cell text events")?;
+            IrNode::from_term(term)
+        }
+        "spacer" => {
+            ensure_allowed_fields(map, &["kind", "id", "style"], "data_table cell spacer")?;
+            IrNode::from_term(term)
+        }
+        "div" => decode_static_list_row_div(map),
+        _ => Err(format!("unsupported data_table cell child kind: {kind}")),
+    }
+}
+
+fn get_data_table_sort_field(
+    map: &HashMap<Term, Term>,
+    column_ids: &HashSet<String>,
+) -> Result<Option<DataTableSort>, String> {
+    let Some(sort_term) = get_field(map, "sort") else {
+        return Ok(None);
+    };
+
+    let sort = expect_map(sort_term)?;
+    ensure_allowed_fields(sort, &["column_id", "direction"], "data_table sort")?;
+    let column_id = get_string_field(sort, "column_id")?;
+    ensure_id_known(&column_id, column_ids, "unknown data_table sort column")?;
+    let direction = match get_field(sort, "direction") {
+        Some(Term::Atom(atom)) if atom.name == "asc" => DataTableSortDirection::Asc,
+        Some(Term::Atom(atom)) if atom.name == "desc" => DataTableSortDirection::Desc,
+        Some(other) => {
+            return Err(format!(
+                "expected data_table sort direction atom, got {other}"
+            ));
+        }
+        None => return Err("missing required field: direction".into()),
+    };
+
+    Ok(Some(DataTableSort {
+        column_id,
+        direction,
+    }))
+}
+
+fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<Vec<TreeItem>, String> {
+    let Some(nodes_term) = get_field(map, "nodes") else {
+        return Err("missing required field: nodes".into());
+    };
+
+    let mut seen = HashSet::new();
+    get_tree_nodes(nodes_term, &mut seen)
+}
+
+fn get_tree_nodes(term: &Term, seen: &mut HashSet<String>) -> Result<Vec<TreeItem>, String> {
+    get_list(term)?
+        .iter()
+        .map(|term| get_tree_item(term, seen))
+        .collect()
+}
+
+fn get_tree_item(term: &Term, seen: &mut HashSet<String>) -> Result<TreeItem, String> {
+    let item = expect_map(term)?;
+    ensure_allowed_fields(
+        item,
+        &["id", "label", "expanded", "children", "style"],
+        "tree item",
+    )?;
+    let id = get_string_field(item, "id")?;
+    if !seen.insert(id.clone()) {
+        return Err(format!("duplicate tree item id: {id}"));
+    }
+
+    let children = match get_field(item, "children") {
+        Some(children) => get_tree_nodes(children, seen)?,
+        None => Vec::new(),
+    };
+
+    Ok(TreeItem {
+        id,
+        label: get_string_field(item, "label")?,
+        expanded: get_boolean_field(item, "expanded")?,
+        children,
+        style: get_div_style(item)?,
+    })
+}
+
+fn ensure_optional_id_known(
+    id: Option<&str>,
+    known: &HashSet<String>,
+    context: &str,
+) -> Result<(), String> {
+    if let Some(id) = id {
+        ensure_id_known(id, known, context)?;
+    }
+
+    Ok(())
+}
+
+fn ensure_id_known(id: &str, known: &HashSet<String>, context: &str) -> Result<(), String> {
+    if known.contains(id) {
+        Ok(())
+    } else {
+        Err(format!("{context}: {id}"))
+    }
 }
 
 fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Vec<SelectOption>, String> {
@@ -1566,6 +2005,8 @@ fn ir_node_kind(node: &IrNode) -> &'static str {
         IrNode::Radio(_) => "radio",
         IrNode::UniformList { .. } => "uniform_list",
         IrNode::List { .. } => "list",
+        IrNode::DataTable(_) => "data_table",
+        IrNode::Tree(_) => "tree",
         IrNode::Select(_) => "select",
         IrNode::Popover { .. } => "popover",
         IrNode::Spacer { .. } => "spacer",
@@ -1581,6 +2022,32 @@ fn get_optional_string_field(
         Some(term) => term_to_string(term).map(Some),
         None => Ok(None),
     }
+}
+
+fn get_optional_string_pair_field(
+    map: &HashMap<Term, Term>,
+    key: &str,
+) -> Result<Option<(String, String)>, String> {
+    let Some(term) = get_field(map, key) else {
+        return Ok(None);
+    };
+
+    let Term::Tuple(Tuple { elements }) = term else {
+        return Err(format!(
+            "expected string pair tuple field {key}, got {term}"
+        ));
+    };
+
+    if elements.len() != 2 {
+        return Err(format!(
+            "expected string pair tuple field {key} with 2 elements, got {term}"
+        ));
+    }
+
+    Ok(Some((
+        term_to_string(&elements[0])?,
+        term_to_string(&elements[1])?,
+    )))
 }
 
 fn get_boolean_field(map: &HashMap<Term, Term>, key: &str) -> Result<bool, String> {
@@ -1661,6 +2128,22 @@ fn get_optional_u64_field(map: &HashMap<Term, Term>, key: &str) -> Result<Option
             .map_err(|_| format!("expected non-negative integer field {key}, got {value:?}")),
         Some(other) => Err(format!("expected integer field {key}, got {other}")),
         None => Ok(None),
+    }
+}
+
+fn parse_positive_u32(term: &Term) -> Result<u32, String> {
+    match term {
+        Term::FixInteger(value) => u32::try_from(value.value)
+            .ok()
+            .filter(|value| *value > 0)
+            .ok_or_else(|| format!("expected positive u32, got {term}")),
+        Term::BigInteger(value) => value
+            .to_string()
+            .parse::<u32>()
+            .ok()
+            .filter(|value| *value > 0)
+            .ok_or_else(|| format!("expected positive u32, got {term}")),
+        other => Err(format!("expected positive u32, got {other}")),
     }
 }
 
@@ -2265,8 +2748,8 @@ fn term_to_string(term: &Term) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        CheckboxNode, DivNode, IrNode, LinearGradientStop, StyleColor, StyleOp,
-        decode_list_row_child_term, ensure_unique_list_row_control_ids, parse_style_op,
+        CheckboxNode, DataTableSortDirection, DivNode, IrNode, LinearGradientStop, StyleColor,
+        StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids, parse_style_op,
         validate_list_row_child,
     };
     use eetf::{Atom, Binary, FixInteger, Float, List, Map, Term, Tuple};
@@ -2312,6 +2795,200 @@ mod tests {
             .into_iter()
             .map(|(key, value)| (atom(key), binary(value)))
             .collect())
+    }
+
+    #[test]
+    fn decodes_data_table_node() {
+        let node = map(vec![
+            (atom("kind"), atom("data_table")),
+            (atom("id"), binary("project_table")),
+            (
+                atom("columns"),
+                list(vec![
+                    map(vec![
+                        (atom("id"), binary("task")),
+                        (atom("label"), binary("Task")),
+                        (atom("width"), tuple(vec![atom("fr"), integer(1)])),
+                        (atom("sortable"), bool_atom(true)),
+                    ]),
+                    map(vec![
+                        (atom("id"), binary("status")),
+                        (atom("label"), binary("Status")),
+                        (atom("width"), tuple(vec![atom("px"), integer(120)])),
+                    ]),
+                ]),
+            ),
+            (
+                atom("rows"),
+                list(vec![map(vec![
+                    (atom("id"), binary("row_1")),
+                    (
+                        atom("cells"),
+                        list(vec![map(vec![
+                            (atom("column_id"), binary("task")),
+                            (
+                                atom("children"),
+                                list(vec![map(vec![
+                                    (atom("kind"), atom("text")),
+                                    (atom("content"), binary("Ship menus")),
+                                ])]),
+                            ),
+                        ])]),
+                    ),
+                ])]),
+            ),
+            (atom("selected_row_id"), binary("row_1")),
+            (
+                atom("selected_cell"),
+                tuple(vec![binary("row_1"), binary("task")]),
+            ),
+            (
+                atom("sort"),
+                map(vec![
+                    (atom("column_id"), binary("task")),
+                    (atom("direction"), atom("asc")),
+                ]),
+            ),
+            (
+                atom("events"),
+                events(vec![
+                    ("row_click", "select_row"),
+                    ("cell_click", "select_cell"),
+                    ("sort", "sort_table"),
+                ]),
+            ),
+        ]);
+
+        match IrNode::from_term(&node).unwrap() {
+            IrNode::DataTable(table) => {
+                assert_eq!(table.id.as_deref(), Some("project_table"));
+                assert_eq!(table.columns.len(), 2);
+                assert_eq!(table.columns[0].id, "task");
+                assert_eq!(table.rows[0].id, "row_1");
+                assert_eq!(table.rows[0].cells[0].column_id, "task");
+                assert_eq!(table.selected_row_id.as_deref(), Some("row_1"));
+                assert_eq!(
+                    table
+                        .selected_cell
+                        .as_ref()
+                        .map(|(row_id, column_id)| (row_id.as_str(), column_id.as_str())),
+                    Some(("row_1", "task"))
+                );
+                assert_eq!(
+                    table.sort.as_ref().unwrap().direction,
+                    DataTableSortDirection::Asc
+                );
+                assert_eq!(table.sort_callback.as_deref(), Some("sort_table"));
+            }
+            other => panic!("expected data table, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rejects_data_table_cell_unknown_columns() {
+        let node = map(vec![
+            (atom("kind"), atom("data_table")),
+            (
+                atom("columns"),
+                list(vec![map(vec![
+                    (atom("id"), binary("task")),
+                    (atom("label"), binary("Task")),
+                ])]),
+            ),
+            (
+                atom("rows"),
+                list(vec![map(vec![
+                    (atom("id"), binary("row_1")),
+                    (
+                        atom("cells"),
+                        list(vec![map(vec![
+                            (atom("column_id"), binary("missing")),
+                            (atom("children"), list(vec![])),
+                        ])]),
+                    ),
+                ])]),
+            ),
+        ]);
+
+        let err = IrNode::from_term(&node).unwrap_err();
+        assert!(err.contains("unknown data_table cell column"));
+    }
+
+    #[test]
+    fn rejects_unsupported_data_table_cell_children() {
+        let node = map(vec![
+            (atom("kind"), atom("data_table")),
+            (
+                atom("columns"),
+                list(vec![map(vec![
+                    (atom("id"), binary("task")),
+                    (atom("label"), binary("Task")),
+                ])]),
+            ),
+            (
+                atom("rows"),
+                list(vec![map(vec![
+                    (atom("id"), binary("row_1")),
+                    (
+                        atom("cells"),
+                        list(vec![map(vec![
+                            (atom("column_id"), binary("task")),
+                            (
+                                atom("children"),
+                                list(vec![map(vec![
+                                    (atom("kind"), atom("button")),
+                                    (atom("label"), binary("Edit")),
+                                ])]),
+                            ),
+                        ])]),
+                    ),
+                ])]),
+            ),
+        ]);
+
+        let err = IrNode::from_term(&node).unwrap_err();
+        assert!(err.contains("unsupported data_table cell child kind: button"));
+    }
+
+    #[test]
+    fn decodes_tree_node() {
+        let node = map(vec![
+            (atom("kind"), atom("tree")),
+            (atom("id"), binary("project_tree")),
+            (
+                atom("nodes"),
+                list(vec![map(vec![
+                    (atom("id"), binary("root")),
+                    (atom("label"), binary("Root")),
+                    (atom("expanded"), bool_atom(true)),
+                    (
+                        atom("children"),
+                        list(vec![map(vec![
+                            (atom("id"), binary("child")),
+                            (atom("label"), binary("Child")),
+                        ])]),
+                    ),
+                ])]),
+            ),
+            (atom("selected_id"), binary("child")),
+            (
+                atom("events"),
+                events(vec![("select", "select_node"), ("toggle", "toggle_node")]),
+            ),
+        ]);
+
+        match IrNode::from_term(&node).unwrap() {
+            IrNode::Tree(tree) => {
+                assert_eq!(tree.id.as_deref(), Some("project_tree"));
+                assert_eq!(tree.nodes[0].id, "root");
+                assert!(tree.nodes[0].expanded);
+                assert_eq!(tree.nodes[0].children[0].id, "child");
+                assert_eq!(tree.selected_id.as_deref(), Some("child"));
+                assert_eq!(tree.select.as_deref(), Some("select_node"));
+                assert_eq!(tree.toggle.as_deref(), Some("toggle_node"));
+            }
+            other => panic!("expected tree, got {other:?}"),
+        }
     }
 
     #[test]

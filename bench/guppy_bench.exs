@@ -96,6 +96,7 @@ defmodule Guppy.Bench do
     gradient_ir = gradient_tree(100)
     row_control_ir = row_control_list_tree(100)
     menu_spec = menu_spec(25)
+    data_table_tree_ir = data_table_tree(100)
 
     gradient_scenarios = [
       {"gradient class parse",
@@ -115,6 +116,17 @@ defmodule Guppy.Bench do
       {"list row controls validation 100 rows",
        fn ->
          :ok = Guppy.IR.validate(row_control_ir)
+       end}
+    ]
+
+    semantic_virtualization_scenarios = [
+      {"data_table/tree build 100 rows",
+       fn ->
+         data_table_tree(100)
+       end},
+      {"data_table/tree validation 100 rows",
+       fn ->
+         :ok = Guppy.IR.validate(data_table_tree_ir)
        end}
     ]
 
@@ -170,7 +182,11 @@ defmodule Guppy.Bench do
        end}
     ]
 
-    Map.new(node_scenarios ++ gradient_scenarios ++ menu_scenarios ++ kanban_scenarios)
+    Map.new(
+      node_scenarios ++
+        gradient_scenarios ++
+        semantic_virtualization_scenarios ++ menu_scenarios ++ kanban_scenarios
+    )
   end
 
   defp benchee_opts do
@@ -210,6 +226,55 @@ defmodule Guppy.Bench do
       end
 
     Guppy.IR.div(children, id: "gradient_bench_root", style: [:flex, :flex_col, :gap_1])
+  end
+
+  defp data_table_tree(row_count) do
+    rows =
+      for index <- 1..row_count do
+        %{
+          id: "task_#{index}",
+          cells: [
+            %{column_id: "title", children: [Guppy.IR.text("Task #{index}")]},
+            %{
+              column_id: "status",
+              children: [Guppy.IR.text(if(rem(index, 2) == 0, do: "Done", else: "Open"))]
+            },
+            %{column_id: "owner", children: [Guppy.IR.text("Owner #{rem(index, 5)}")]}
+          ]
+        }
+      end
+
+    Guppy.IR.div([
+      Guppy.IR.tree(
+        [
+          %{
+            id: "all_tasks",
+            label: "All tasks",
+            expanded: true,
+            children: [
+              %{id: "open_tasks", label: "Open"},
+              %{id: "done_tasks", label: "Done"}
+            ]
+          }
+        ],
+        id: "bench_tree",
+        selected_id: "all_tasks",
+        events: %{select: "select_tree", toggle: "toggle_tree"}
+      ),
+      Guppy.IR.data_table(
+        [
+          %{id: "title", label: "Task", width: {:fr, 1}, sortable: true},
+          %{id: "status", label: "Status", width: {:px, 120}, sortable: true},
+          %{id: "owner", label: "Owner", width: {:px, 120}, sortable: true}
+        ],
+        rows,
+        id: "bench_table",
+        selected_row_id: "task_1",
+        selected_cell: {"task_1", "status"},
+        sort: %{column_id: "title", direction: :asc},
+        events: %{row_click: "select_row", cell_click: "select_cell", sort: "sort_table"}
+      )
+    ])
   end
 
   defp menu_spec(action_count) do

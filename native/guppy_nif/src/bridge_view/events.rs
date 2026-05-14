@@ -44,6 +44,34 @@ mod ffi {
             control_id_len: usize,
         ) -> i32;
 
+        pub(super) fn guppy_c_send_data_table_event(
+            view_id: u64,
+            event_code: i32,
+            node_id_ptr: *const u8,
+            node_id_len: usize,
+            callback_id_ptr: *const u8,
+            callback_id_len: usize,
+            table_id_ptr: *const u8,
+            table_id_len: usize,
+            row_id_ptr: *const u8,
+            row_id_len: usize,
+            column_id_ptr: *const u8,
+            column_id_len: usize,
+        ) -> i32;
+
+        pub(super) fn guppy_c_send_tree_event(
+            view_id: u64,
+            event_code: i32,
+            node_id_ptr: *const u8,
+            node_id_len: usize,
+            callback_id_ptr: *const u8,
+            callback_id_len: usize,
+            tree_id_ptr: *const u8,
+            tree_id_len: usize,
+            item_id_ptr: *const u8,
+            item_id_len: usize,
+        ) -> i32;
+
         pub(super) fn guppy_c_send_close_event(
             view_id: u64,
             node_id_ptr: *const u8,
@@ -331,6 +359,61 @@ pub(crate) fn emit_row_control_click(
             context.row_id.len(),
             context.control_id.as_ptr(),
             context.control_id.len(),
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn emit_data_table_event(
+    view_id: u64,
+    event_code: i32,
+    node_id: &str,
+    callback_id: &str,
+    table_id: &str,
+    row_id: Option<&str>,
+    column_id: Option<&str>,
+) {
+    let row_id = row_id.unwrap_or("");
+    let column_id = column_id.unwrap_or("");
+
+    unsafe {
+        let _ = ffi::guppy_c_send_data_table_event(
+            view_id,
+            event_code,
+            node_id.as_ptr(),
+            node_id.len(),
+            callback_id.as_ptr(),
+            callback_id.len(),
+            table_id.as_ptr(),
+            table_id.len(),
+            row_id.as_ptr(),
+            row_id.len(),
+            column_id.as_ptr(),
+            column_id.len(),
+        );
+    }
+}
+
+pub(crate) fn emit_tree_event(
+    view_id: u64,
+    event_code: i32,
+    node_id: &str,
+    callback_id: &str,
+    tree_id: &str,
+    item_id: &str,
+) {
+    unsafe {
+        let _ = ffi::guppy_c_send_tree_event(
+            view_id,
+            event_code,
+            node_id.as_ptr(),
+            node_id.len(),
+            callback_id.as_ptr(),
+            callback_id.len(),
+            tree_id.as_ptr(),
+            tree_id.len(),
+            item_id.as_ptr(),
+            item_id.len(),
         );
     }
 }

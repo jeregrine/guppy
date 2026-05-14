@@ -51,6 +51,19 @@ defmodule Guppy.IRTest do
                  [%{id: "row_1", cells: [%{column_id: "missing", children: []}]}]
                )
              )
+
+    assert {:error, {:unsupported_data_table_cell_child, %{kind: :button, label: "Edit"}}} =
+             Guppy.IR.validate(
+               Guppy.IR.data_table(
+                 [%{id: "task", label: "Task"}],
+                 [
+                   %{
+                     id: "row_1",
+                     cells: [%{column_id: "task", children: [Guppy.IR.button("Edit")]}]
+                   }
+                 ]
+               )
+             )
   end
 
   test "tree validates nested nodes and selection events" do

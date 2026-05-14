@@ -1,6 +1,7 @@
 mod events;
 mod identity;
 mod render_checkbox;
+mod render_data_table;
 mod render_div;
 mod render_icon;
 mod render_image;
@@ -13,6 +14,7 @@ mod render_select;
 mod render_spacer;
 mod render_text;
 mod render_text_input;
+mod render_tree;
 mod render_uniform_list;
 mod style;
 
@@ -116,7 +118,10 @@ impl BridgeView {
 #[cfg(test)]
 mod tests {
     use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
-    use crate::ir::{DivNode, IrNode, ListItem, ScrollAxis, StyleOp};
+    use crate::ir::{
+        DataTableCell, DataTableColumn, DataTableColumnWidth, DataTableNode, DataTableRow, DivNode,
+        IrNode, ListItem, ScrollAxis, StyleOp, TreeItem, TreeNode,
+    };
     use gpui::{ListAlignment, ListState, Modifiers, Render, ScrollHandle, point, px};
 
     #[test]
@@ -336,6 +341,56 @@ mod tests {
     }
 
     #[gpui::test]
+    fn render_retains_data_table_and_tree_list_states(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 55,
+            ir: IrNode::Div(Box::new(DivNode {
+                id: Some("semantic_root".into()),
+                style: Vec::new().into(),
+                hover_style: Vec::new().into(),
+                focus_style: Vec::new().into(),
+                focus_visible_style: Vec::new().into(),
+                in_focus_style: Vec::new().into(),
+                active_style: Vec::new().into(),
+                disabled_style: Vec::new().into(),
+                animation: None,
+                disabled: false,
+                stack_priority: None,
+                occlude: false,
+                focusable: false,
+                tab_stop: None,
+                tab_index: None,
+                track_scroll: false,
+                anchor_scroll: false,
+                tooltip: None,
+                shortcuts: Vec::new(),
+                children: vec![data_table_ir(), tree_ir()],
+                click: None,
+                hover: None,
+                focus: None,
+                blur: None,
+                key_down: None,
+                key_up: None,
+                context_menu: None,
+                drag_start: None,
+                drag_move: None,
+                drop: None,
+                mouse_down: None,
+                mouse_up: None,
+                mouse_move: None,
+                scroll_wheel: None,
+            })),
+            retained: BridgeRetainedState::default(),
+        });
+
+        view.update_in(cx, |view, window, view_cx| {
+            let _ = view.render(window, view_cx);
+            assert!(view.retained.list_states.contains_key("tasks.rows"));
+            assert!(view.retained.list_states.contains_key("outline.rows"));
+        });
+    }
+
+    #[gpui::test]
     fn render_prunes_dead_text_input_entities(cx: &mut gpui::TestAppContext) {
         let (view, cx) = cx.add_window_view(|_, _| BridgeView {
             view_id: 9,
@@ -403,6 +458,62 @@ mod tests {
             mouse_up: None,
             mouse_move: None,
             scroll_wheel: None,
+        }))
+    }
+
+    fn data_table_ir() -> IrNode {
+        IrNode::DataTable(Box::new(DataTableNode {
+            id: Some("tasks".into()),
+            columns: vec![DataTableColumn {
+                id: "task".into(),
+                label: "Task".into(),
+                width: DataTableColumnWidth::Fr(1),
+                sortable: true,
+                style: Vec::new().into(),
+            }],
+            rows: vec![DataTableRow {
+                id: "row_1".into(),
+                cells: vec![DataTableCell {
+                    column_id: "task".into(),
+                    children: vec![IrNode::text("Ship")],
+                    style: Vec::new().into(),
+                }],
+                style: Vec::new().into(),
+            }],
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            header_style: Vec::new().into(),
+            row_style: Vec::new().into(),
+            cell_style: Vec::new().into(),
+            selected_row_id: Some("row_1".into()),
+            selected_cell: Some(("row_1".into(), "task".into())),
+            sort: None,
+            row_click: Some("select_row".into()),
+            cell_click: Some("select_cell".into()),
+            sort_callback: Some("sort_table".into()),
+        }))
+    }
+
+    fn tree_ir() -> IrNode {
+        IrNode::Tree(Box::new(TreeNode {
+            id: Some("outline".into()),
+            nodes: vec![TreeItem {
+                id: "root".into(),
+                label: "Root".into(),
+                expanded: true,
+                children: vec![TreeItem {
+                    id: "child".into(),
+                    label: "Child".into(),
+                    expanded: false,
+                    children: Vec::new(),
+                    style: Vec::new().into(),
+                }],
+                style: Vec::new().into(),
+            }],
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            row_style: Vec::new().into(),
+            selected_id: Some("child".into()),
+            select: Some("select_node".into()),
+            toggle: Some("toggle_node".into()),
         }))
     }
 

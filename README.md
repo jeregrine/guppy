@@ -114,6 +114,12 @@ mix run examples/menu_demo.exs
 App-level menu example with callback actions routed to the installing window process and Edit menu items wired to focused text input actions.
 
 ```bash
+mix run examples/data_table_tree.exs
+```
+
+Semantic data-table/tree example with Elixir-owned expansion, selection, and sorting over native virtual rows.
+
+```bash
 mix run examples/hello_world.exs
 ```
 
@@ -128,6 +134,8 @@ Native node kinds:
 - `scroll`
 - `uniform_list`
 - `list`
+- `data_table`
+- `tree`
 - `popover`
 - `select`
 - `button`
@@ -150,6 +158,8 @@ Template tags:
 - `<scroll>`
 - `<uniform_list />`
 - `<list />`
+- `<data_table />`
+- `<tree />`
 - `<popover>`
 - `<select />`
 - `<image />`
@@ -163,6 +173,8 @@ Native event coverage includes click, close, hover, focus/blur, key down/up, sho
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
 
 `list` rows support static/layout children (`text`, `spacer`, and nested static `div`) plus row-local `button`, `checkbox`, and `radio` controls with explicit control ids. Row-control events include `list_id`, `row_id`, and `control_id`; Elixir remains the source of truth for checked/selected values.
+
+`data_table` and `tree` are semantic virtualized primitives for Elixir-owned table selection/sort state and tree selection/expansion state. Data-table events include `table_id`, `row_id`, and/or `column_id`; tree events include `tree_id` and `item_id`. First-pass table cells intentionally support static `text`, `spacer`, and nested static `div` content.
 
 `Guppy.set_menus/1` installs app/runtime menus for the calling process. Custom menu actions use `%{id:, label:, callback:}` and arrive as `{:guppy_menu_event, %{type: :menu_action, id: id, callback: callback}}`; Edit menu items can use `%{id:, label:, os_action: :cut | :copy | :paste | :select_all}` to target focused native text inputs. Call `Guppy.set_menus([])` to clear menus; menus are also cleared when the installing process exits.
 
@@ -198,6 +210,8 @@ IR helpers:
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
 - `Guppy.IR.list/2`
+- `Guppy.IR.data_table/3`
+- `Guppy.IR.tree/2`
 - `Guppy.IR.popover/4`
 - `Guppy.IR.select/2`
 - `Guppy.IR.button/2`
@@ -351,7 +365,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 
 - full editor parity and advanced text layout beyond current rich text runs
 - richer select/dropdown menu semantics beyond the current Elixir-owned select
-- text/overlay controls inside generic virtualized list rows and custom scrollbar parity
+- text/overlay controls inside generic virtualized list rows or data-table cells and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
 - advanced animation effects beyond current opacity animation, multi-stop/radial gradients, canvas/custom painting, pattern painting, dock menus, and element-local/context menu primitives
