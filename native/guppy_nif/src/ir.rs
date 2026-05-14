@@ -7,6 +7,7 @@ use std::sync::{Arc, OnceLock};
 pub type DivStyle = Arc<[StyleOp]>;
 
 static IR_FIELD_KEYS: OnceLock<IrFieldKeys> = OnceLock::new();
+static EMPTY_STYLE: OnceLock<DivStyle> = OnceLock::new();
 static DEFAULT_BUTTON_STYLE: OnceLock<DivStyle> = OnceLock::new();
 static DEFAULT_BUTTON_FOCUS_STYLE: OnceLock<DivStyle> = OnceLock::new();
 static DEFAULT_BUTTON_ACTIVE_STYLE: OnceLock<DivStyle> = OnceLock::new();
@@ -801,7 +802,7 @@ impl IrNode {
             id: None,
             content: content.into(),
             runs: Arc::new([]),
-            style: Vec::new().into(),
+            style: empty_style(),
             click: None,
         }
     }
@@ -2097,7 +2098,7 @@ fn track_list_row_control_id(id: Option<&str>, seen: &mut HashSet<String>) -> Re
 }
 
 fn empty_style() -> DivStyle {
-    Vec::new().into()
+    EMPTY_STYLE.get_or_init(|| Arc::new([])).clone()
 }
 
 fn ensure_allowed_fields(
@@ -2513,7 +2514,7 @@ fn parse_shortcut_binding(
 
 fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle, String> {
     let Some(style_term) = get_field(map, key) else {
-        return Ok(Vec::new().into());
+        return Ok(empty_style());
     };
 
     let style_list = get_list(style_term)?;
