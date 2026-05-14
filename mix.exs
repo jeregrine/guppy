@@ -37,6 +37,7 @@ defmodule Guppy.MixProject do
           "docs/distribution.md",
           "docs/gpui-compliance.md",
           "docs/performance.md",
+          "docs/future-primitives.md",
           "native/guppy_nif/src",
           "native/guppy_nif/Cargo.toml",
           "native/guppy_nif/Cargo.lock",
