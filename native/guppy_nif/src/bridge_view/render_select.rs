@@ -172,7 +172,7 @@ fn render_option_list(view_id: u64, node_key: &str, node: &SelectNode) -> AnyEle
         });
     }
 
-    list.children(node.options.iter().cloned().map(|option| {
+    list.children(node.options.iter().map(|option| {
         render_option(
             view_id,
             node_key,
@@ -187,7 +187,7 @@ fn render_option_list(view_id: u64, node_key: &str, node: &SelectNode) -> AnyEle
 fn render_option(
     view_id: u64,
     node_key: &str,
-    option: SelectOption,
+    option: &SelectOption,
     option_style: &DivStyle,
     change: Option<&str>,
 ) -> AnyElement {
@@ -240,11 +240,11 @@ fn select_navigation_direction(event: &KeyDownEvent) -> Option<SelectNavigationD
     }
 }
 
-fn adjacent_enabled_option(
-    options: &[SelectOption],
+fn adjacent_enabled_option<'a>(
+    options: &'a [SelectOption],
     value: Option<&str>,
     direction: SelectNavigationDirection,
-) -> Option<SelectOption> {
+) -> Option<&'a SelectOption> {
     let enabled_count = options.iter().filter(|option| !option.disabled).count();
 
     if enabled_count == 0 {
@@ -265,11 +265,7 @@ fn adjacent_enabled_option(
         SelectNavigationDirection::Next => (current + 1).min(enabled_count - 1),
     };
 
-    options
-        .iter()
-        .filter(|option| !option.disabled)
-        .nth(next)
-        .cloned()
+    options.iter().filter(|option| !option.disabled).nth(next)
 }
 
 #[cfg(test)]
@@ -306,18 +302,18 @@ mod tests {
 
         assert_eq!(
             adjacent_enabled_option(&options, Some("todo"), SelectNavigationDirection::Next)
-                .map(|option| option.value),
-            Some("done".into())
+                .map(|option| option.value.as_str()),
+            Some("done")
         );
         assert_eq!(
             adjacent_enabled_option(&options, Some("done"), SelectNavigationDirection::Previous)
-                .map(|option| option.value),
-            Some("todo".into())
+                .map(|option| option.value.as_str()),
+            Some("todo")
         );
         assert_eq!(
             adjacent_enabled_option(&options, Some("missing"), SelectNavigationDirection::Next)
-                .map(|option| option.value),
-            Some("done".into())
+                .map(|option| option.value.as_str()),
+            Some("done")
         );
     }
 
