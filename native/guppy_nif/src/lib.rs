@@ -811,9 +811,7 @@ pub(crate) use native_event_test_support::{
     take_row_control_event_snapshot_for_test, take_semantic_event_snapshot_for_test,
 };
 
-fn send_id_callback_event(view_id: u64, event: Atom, node_id: &str, callback_id: &str) -> i32 {
-    let node_id = node_id.to_owned();
-    let callback_id = callback_id.to_owned();
+fn send_id_callback_event(view_id: u64, event: Atom, node_id: String, callback_id: String) -> i32 {
     send_event(view_id, event, move |env| {
         map_from_pairs(env, base_payload(env, &node_id, &callback_id))
     })
@@ -841,7 +839,7 @@ pub extern "C" fn guppy_c_send_click_event(
     }
 
     #[cfg(not(test))]
-    send_id_callback_event(view_id, click(), &node_id, &callback_id)
+    send_id_callback_event(view_id, click(), node_id, callback_id)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1116,7 +1114,7 @@ pub extern "C" fn guppy_c_send_close_event(
     else {
         return 0;
     };
-    send_id_callback_event(view_id, close(), &node_id, &callback_id)
+    send_id_callback_event(view_id, close(), node_id, callback_id)
 }
 
 #[unsafe(no_mangle)]
@@ -1153,7 +1151,7 @@ pub extern "C" fn guppy_c_send_focus_event(
     else {
         return 0;
     };
-    send_id_callback_event(view_id, focus(), &node_id, &callback_id)
+    send_id_callback_event(view_id, focus(), node_id, callback_id)
 }
 
 #[unsafe(no_mangle)]
@@ -1169,7 +1167,7 @@ pub extern "C" fn guppy_c_send_blur_event(
     else {
         return 0;
     };
-    send_id_callback_event(view_id, blur(), &node_id, &callback_id)
+    send_id_callback_event(view_id, blur(), node_id, callback_id)
 }
 
 #[unsafe(no_mangle)]
