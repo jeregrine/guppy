@@ -1,4 +1,3 @@
-
 use super::{GuppyMenuAction, MenuItemSpec, MenuOsAction, MenuSpec};
 use crate::bridge_text_input;
 use eetf::{Atom, Binary, List, Map, Term};
