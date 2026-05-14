@@ -49,6 +49,23 @@ fn events(entries: Vec<(&str, &str)>) -> Term {
 }
 
 #[test]
+fn rejects_text_run_content_mismatches() {
+    let node = map(vec![
+        (atom("kind"), atom("text")),
+        (atom("content"), binary("hello")),
+        (
+            atom("runs"),
+            list(vec![map(vec![(atom("text"), binary("hell"))])]),
+        ),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(err.contains("text runs content mismatch"));
+    assert!(err.contains("expected \"hello\""));
+    assert!(err.contains("got \"hell\""));
+}
+
+#[test]
 fn decodes_data_table_node() {
     let node = map(vec![
         (atom("kind"), atom("data_table")),

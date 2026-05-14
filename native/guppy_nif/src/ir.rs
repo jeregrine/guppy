@@ -1468,14 +1468,27 @@ fn get_text_runs_field(
         })
         .collect::<Result<Vec<_>, String>>()?;
 
-    let joined = runs.iter().map(|run| run.text.as_str()).collect::<String>();
-    if joined == content {
+    if text_runs_match_content(&runs, content) {
         Ok(runs.into())
     } else {
+        let joined = runs.iter().map(|run| run.text.as_str()).collect::<String>();
         Err(format!(
             "text runs content mismatch: expected {content:?}, got {joined:?}"
         ))
     }
+}
+
+fn text_runs_match_content(runs: &[TextRunSegment], content: &str) -> bool {
+    let mut remaining = content;
+
+    for run in runs {
+        let Some(next_remaining) = remaining.strip_prefix(run.text.as_str()) else {
+            return false;
+        };
+        remaining = next_remaining;
+    }
+
+    remaining.is_empty()
 }
 
 fn get_uniform_list_items_field(
