@@ -532,14 +532,14 @@ pub struct DataTableColumn {
 #[derive(Clone, Debug, PartialEq)]
 pub struct DataTableCell {
     pub column_id: String,
-    pub children: Vec<IrNode>,
+    pub children: Arc<[IrNode]>,
     pub style: DivStyle,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DataTableRow {
     pub id: String,
-    pub cells: Vec<DataTableCell>,
+    pub cells: Arc<[DataTableCell]>,
     pub style: DivStyle,
 }
 
@@ -1625,7 +1625,7 @@ fn get_data_table_rows_field(
 
             Ok(DataTableRow {
                 id,
-                cells: get_data_table_cells(row, column_ids)?,
+                cells: get_data_table_cells(row, column_ids)?.into(),
                 style: get_div_style(row)?,
             })
         })
@@ -1654,7 +1654,7 @@ fn get_data_table_cells(
 
             Ok(DataTableCell {
                 column_id,
-                children: get_data_table_cell_children(cell)?,
+                children: get_data_table_cell_children(cell)?.into(),
                 style: get_div_style(cell)?,
             })
         })

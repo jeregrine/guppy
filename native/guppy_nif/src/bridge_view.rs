@@ -512,9 +512,10 @@ mod tests {
                 id: "row_1".into(),
                 cells: vec![DataTableCell {
                     column_id: "task".into(),
-                    children: vec![IrNode::text("Ship")],
+                    children: vec![IrNode::text("Ship")].into(),
                     style: Vec::new().into(),
-                }],
+                }]
+                .into(),
                 style: Vec::new().into(),
             }]
             .into(),
