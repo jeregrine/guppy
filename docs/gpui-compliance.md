@@ -21,7 +21,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 - **Animation primitives**: div-like opacity animation supports stable native animation ids, duration, repeat, and from/to opacity; broader transform/keyframe animation remains partial.
 - **Gradient style primitives**: not exposed in the style surface today. A narrow background-linear-gradient scope is recorded in [`docs/future-primitives.md`](future-primitives.md#gradient-style-primitives).
 - **Grid layout**: current grid style ops cover GPUI's basic grid, row/column counts, and row/column spans; advanced table semantics are not exposed.
-- **Custom painting / canvas / pattern painting**: would require a new retained drawing primitive.
+- **Custom painting / canvas / pattern painting**: would require a new retained drawing primitive. Scope and deferral are recorded in [`docs/future-primitives.md`](future-primitives.md#custom-painting-canvas-and-pattern-painting).
 - **Menu APIs**: not exposed as core IR/window primitives today. App-level menu scope is recorded in [`docs/future-primitives.md`](future-primitives.md#menu-apis).
 - **Mouse pressure payloads**: basic mouse events are routed, but pressure-specific data is not exposed.
 
@@ -62,9 +62,9 @@ Intentionally narrow parity areas:
 | `examples/on_window_close_quit.rs` | `Guppy.close_window/2`; native `window_close_requested` and `window_closed` events | partial | close-request is intentionally informational today; no synchronous Elixir veto protocol | README documents semantics; server route tests cover close-request and closed lifecycle events |
 | `examples/opacity.rs` | style token `{:opacity, value}` | partial | exact visual parity not smoke-tested | IR/style validation |
 | `examples/ownership_post.rs` | `Guppy.Server` owner tracking | partial | direct GPUI entity ownership scenario not ported | server tests |
-| `examples/painting.rs` | none | unsupported | custom painting/canvas deferred; would require a new retained drawing primitive | explicitly deferred in PLAN; no implementation |
+| `examples/painting.rs` | none | unsupported | custom painting/canvas scope is recorded in `docs/future-primitives.md`; would require a retained drawing primitive | no implementation; future draw-command validation/native paint tests required before support claims |
 | `examples/paths_bench.rs` | none | out of scope | GPUI internal path benchmark | none |
-| `examples/pattern.rs` | none | unsupported | pattern painting deferred with custom painting/canvas work | explicitly deferred in PLAN; no implementation |
+| `examples/pattern.rs` | none | unsupported | pattern painting is scoped with custom painting/canvas work in `docs/future-primitives.md` | no implementation; future style/canvas tests required before support claims |
 | `examples/popover.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | close-on-outside-click and deferred priority are exposed; deeper nested popover parity and advanced deferred-layer lifecycle controls remain incomplete | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
 | `examples/set_menus.rs` | none | unsupported | menu APIs are scoped as app/runtime state in `docs/future-primitives.md`, not core IR primitives | no implementation; future native tests required before support claims |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |

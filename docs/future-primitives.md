@@ -168,3 +168,36 @@ A future tree primitive needs explicit concepts for:
 - Measure with `examples/stress_test.exs` or a dedicated benchmark before promising large-data performance.
 - Add independent IR/template/native tests; do not rely on current grid/list tests as coverage for table/tree semantics.
 - Update the compliance matrix and examples only when the dedicated primitive exists end-to-end.
+
+## Custom painting, canvas, and pattern painting
+
+Status: scoped and deferred until narrower compliance gaps matter in practice.
+
+GPUI exposes low-level painting through custom elements, window paint APIs such as `paint_path`, `PaintQuad` fills, and background helpers such as `pattern_slash`. Guppy should not expose those raw APIs directly to Elixir without a bounded retained primitive.
+
+### Guppy scope
+
+If this becomes necessary, introduce a retained `canvas`/drawing primitive instead of ad-hoc style tokens or Elixir callbacks during paint. A first primitive should be data-only:
+
+- explicit `id`, viewport/style, and optional pointer events;
+- ordered draw commands such as rect, rounded rect, line, path, text label, and image/icon reference;
+- colors using the existing validated color formats;
+- no arbitrary Elixir code executed from the native paint pass;
+- retained native resources keyed by stable canvas id and pruned on full-tree replacement.
+
+Pattern painting can either be a small background style op backed by GPUI `pattern_slash` or a canvas command, but it should be chosen only with a real visual requirement. It should not be bundled into the first gradient style pass.
+
+### Deferred
+
+- Arbitrary custom GPUI elements authored from Elixir.
+- Per-frame Elixir paint callbacks.
+- Rich vector/SVG authoring beyond current `icon`/`image` support.
+- Canvas hit-testing beyond coarse element pointer events.
+- Pattern, path, or canvas APIs without performance measurements.
+
+### Implementation gates
+
+- A real example must need custom drawing that cannot be expressed with current `div`, `text`, `image`, `icon`, grid, list, or future gradient primitives.
+- Add an isolated benchmark or stress-test mode for draw-command volume before optimizing or claiming performance.
+- Add Elixir validation tests for command schemas and native Rust tests for decode, paint mapping, retained-resource pruning, and stale render deadlines.
+- Update examples and the compliance matrix only after the primitive is implemented end-to-end.
