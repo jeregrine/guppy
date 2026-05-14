@@ -765,9 +765,7 @@ fn mouse_button_atom(code: i32) -> Atom {
 }
 
 fn map_from_pairs<'a>(env: Env<'a>, pairs: Vec<(Term<'a>, Term<'a>)>) -> Term<'a> {
-    let (keys, values): (Vec<_>, Vec<_>) = pairs.into_iter().unzip();
-
-    match Term::map_from_term_arrays(env, &keys, &values) {
+    match Term::map_from_pairs(env, &pairs) {
         Ok(term) => term,
         Err(_) => rustler::types::atom::undefined().encode(env),
     }
