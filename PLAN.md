@@ -56,11 +56,11 @@ Scope: [`docs/future-primitives.md`](docs/future-primitives.md#data-table-and-tr
 
 ### 5. Custom painting, canvas, and pattern painting
 
-Scope: [`docs/future-primitives.md`](docs/future-primitives.md#custom-painting-canvas-and-pattern-painting). Status: scoped, not active.
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#custom-painting-canvas-and-pattern-painting). Status: first bounded canvas pass complete; path/text/image commands, retained canvas resources, per-command hit testing, and general pattern background styles remain deferred.
 
-- [ ] Confirm a real drawing need that cannot be expressed with existing nodes, styles, image/icon support, or future gradient primitives.
-- [ ] Design a retained, data-only canvas/drawing IR with explicit ids, viewport/style, optional pointer events, and ordered draw commands.
-- [ ] Keep Elixir code out of the native paint pass; native retained resources must be keyed by stable canvas id and pruned on full-tree replacement.
-- [ ] Decide whether pattern painting belongs as a small background style op or as a canvas command based on the real use case.
-- [ ] Add benchmark or stress-test coverage for draw-command volume before optimizing or claiming performance.
-- [ ] Add ExUnit command-schema tests and Rust decode/paint/pruning/deadline tests before updating docs/examples.
+- [x] Confirm a real drawing need that cannot be expressed with existing nodes, styles, image/icon support, or future gradient primitives (`examples/canvas_pattern.exs` release-health card with a slash-pattern capacity band).
+- [x] Design a retained, data-only canvas/drawing IR with explicit ids, viewport/style, optional pointer events, and ordered draw commands (`Guppy.IR.canvas/2` with `:rect`, `:rounded_rect`, and `:pattern_rect`).
+- [x] Keep Elixir code out of the native paint pass; native retained resources must be keyed by stable canvas id and pruned on full-tree replacement (first pass has no retained canvas resources beyond stable node identity; future retained resources must be keyed/pruned by canvas id).
+- [x] Decide whether pattern painting belongs as a small background style op or as a canvas command based on the real use case (`:pattern_rect` canvas command).
+- [x] Add benchmark or stress-test coverage for draw-command volume before optimizing or claiming performance (`bench/guppy_bench.exs` 100-command canvas scenarios).
+- [x] Add ExUnit command-schema tests and Rust decode/paint/pruning/deadline tests before updating docs/examples.

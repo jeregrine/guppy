@@ -1,5 +1,6 @@
 mod events;
 mod identity;
+mod render_canvas;
 mod render_checkbox;
 mod render_data_table;
 mod render_div;
@@ -119,8 +120,9 @@ impl BridgeView {
 mod tests {
     use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
     use crate::ir::{
-        DataTableCell, DataTableColumn, DataTableColumnWidth, DataTableNode, DataTableRow, DivNode,
-        IrNode, ListItem, ScrollAxis, StyleOp, TreeItem, TreeNode,
+        CanvasCommand, CanvasNode, ColorToken, DataTableCell, DataTableColumn,
+        DataTableColumnWidth, DataTableNode, DataTableRow, DivNode, IrNode, ListItem, ScrollAxis,
+        StyleColor, StyleOp, TreeItem, TreeNode,
     };
     use gpui::{ListAlignment, ListState, Modifiers, Render, ScrollHandle, point, px};
 
@@ -193,6 +195,40 @@ mod tests {
         let after = crate::native_event_send_snapshot_for_test();
         assert!(after.0 > before.0);
         assert!(after.1 > before.1);
+    }
+
+    #[gpui::test]
+    fn simulated_canvas_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+        let before = crate::native_event_send_snapshot_for_test();
+        let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 44,
+            ir: canvas_ir(),
+            retained: BridgeRetainedState::default(),
+        });
+
+        cx.update(|window, cx| window.draw(cx).clear());
+        cx.simulate_click(point(px(10.), px(10.)), Modifiers::none());
+
+        let after = crate::native_event_send_snapshot_for_test();
+        assert!(after.0 > before.0);
+        assert!(after.1 > before.1);
+    }
+
+    #[gpui::test]
+    fn render_canvas_keeps_no_retained_resources(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 45,
+            ir: canvas_ir(),
+            retained: BridgeRetainedState::default(),
+        });
+
+        view.update_in(cx, |view, window, view_cx| {
+            let _ = view.render(window, view_cx);
+            assert!(view.retained.scroll_handles.is_empty());
+            assert!(view.retained.list_states.is_empty());
+            assert!(view.retained.focus_handles.is_empty());
+            assert!(view.retained.text_inputs.is_empty());
+        });
     }
 
     #[gpui::test]
@@ -514,6 +550,34 @@ mod tests {
             selected_id: Some("child".into()),
             select: Some("select_node".into()),
             toggle: Some("toggle_node".into()),
+        }))
+    }
+
+    fn canvas_ir() -> IrNode {
+        IrNode::Canvas(Box::new(CanvasNode {
+            id: Some("summary_canvas".into()),
+            commands: vec![
+                CanvasCommand::Rect {
+                    x: 0.0,
+                    y: 0.0,
+                    width: 120.0,
+                    height: 80.0,
+                    fill: StyleColor::Hex("#0f172a".into()),
+                    radius: 0.0,
+                },
+                CanvasCommand::PatternRect {
+                    x: 12.0,
+                    y: 12.0,
+                    width: 96.0,
+                    height: 24.0,
+                    color: StyleColor::Token(ColorToken::Blue),
+                    line_width: 0.05,
+                    interval: 0.12,
+                    radius: 8.0,
+                },
+            ],
+            style: vec![StyleOp::WPx(120.0), StyleOp::HPx(80.0)].into(),
+            click: Some("canvas_clicked".into()),
         }))
     }
 

@@ -188,6 +188,73 @@ defmodule Guppy.IRTest do
              Guppy.IR.validate(Guppy.IR.div([], style: [invalid_options]))
   end
 
+  test "canvas validates ordered data-only drawing commands" do
+    ir =
+      Guppy.IR.canvas(
+        [
+          %{op: :rect, x: 0, y: 0, width: 120, height: 80, fill: "#0f172a"},
+          %{op: :rounded_rect, x: 12, y: 12, width: 96, height: 24, radius: 8, fill: :blue},
+          %{
+            op: :pattern_rect,
+            x: 12,
+            y: 48,
+            width: 96,
+            height: 20,
+            color: :yellow,
+            line_width: 0.05,
+            interval: 0.12
+          }
+        ],
+        id: "summary_canvas",
+        style: [{:w_px, 120}, {:h_px, 80}],
+        events: %{click: "canvas_clicked"}
+      )
+
+    assert :ok = Guppy.IR.validate(ir)
+
+    assert {:error, {:invalid_canvas_command, %{op: :rect, width: 10}}} =
+             Guppy.IR.validate(Guppy.IR.canvas([%{op: :rect, width: 10}]))
+
+    assert {:error, {:invalid_canvas_color, "0f172a"}} =
+             Guppy.IR.validate(
+               Guppy.IR.canvas([
+                 %{op: :rect, x: 0, y: 0, width: 10, height: 10, fill: "0f172a"}
+               ])
+             )
+
+    assert {:error, {:invalid_canvas_number, :line_width, 0}} =
+             Guppy.IR.validate(
+               Guppy.IR.canvas([
+                 %{
+                   op: :pattern_rect,
+                   x: 0,
+                   y: 0,
+                   width: 10,
+                   height: 10,
+                   color: :blue,
+                   line_width: 0,
+                   interval: 0.12
+                 }
+               ])
+             )
+
+    assert {:error, {:invalid_canvas_number, :interval, 1.5}} =
+             Guppy.IR.validate(
+               Guppy.IR.canvas([
+                 %{
+                   op: :pattern_rect,
+                   x: 0,
+                   y: 0,
+                   width: 10,
+                   height: 10,
+                   color: :blue,
+                   line_width: 0.05,
+                   interval: 1.5
+                 }
+               ])
+             )
+  end
+
   test "ir validation accepts ordered style lists and rejects invalid values" do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))

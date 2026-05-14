@@ -65,6 +65,10 @@ defmodule Guppy.ComponentTest do
           }
         ],
         selected_tree_id: "tree_child",
+        canvas_commands: [
+          %{op: :rect, x: 0, y: 0, width: 120, height: 80, fill: "#0f172a"},
+          %{op: :rounded_rect, x: 12, y: 12, width: 96, height: 24, radius: 8, fill: :blue}
+        ],
         rich_runs: [
           %{text: "Rich ", style: [:font_bold]},
           %{text: "intro", style: [{:text_color, :yellow}]}
@@ -103,6 +107,7 @@ defmodule Guppy.ComponentTest do
       list,
       data_table,
       tree,
+      canvas,
       popover,
       select,
       text_input,
@@ -202,6 +207,13 @@ defmodule Guppy.ComponentTest do
     assert Enum.map(tree.nodes, & &1.id) == ["tree_root"]
     assert tree.selected_id == "tree_child"
     assert tree.events == %{select: "tree_selected", toggle: "tree_toggled"}
+
+    assert canvas.kind == :canvas
+    assert canvas.id == "summary_canvas"
+    assert length(canvas.commands) == 2
+    assert canvas.events == %{click: "canvas_clicked"}
+    assert {:w_px, 120} in canvas.style
+    assert {:h_px, 80} in canvas.style
 
     assert popover.kind == :popover
     assert popover.id == "help_popover"

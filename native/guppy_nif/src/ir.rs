@@ -38,6 +38,16 @@ struct IrFieldKeys {
     expanded: Term,
     select: Term,
     toggle: Term,
+    commands: Term,
+    op: Term,
+    x: Term,
+    y: Term,
+    height: Term,
+    fill: Term,
+    color: Term,
+    line_width: Term,
+    interval: Term,
+    radius: Term,
     options: Term,
     axis: Term,
     style: Term,
@@ -131,6 +141,16 @@ impl IrFieldKeys {
             expanded: atom_term("expanded"),
             select: atom_term("select"),
             toggle: atom_term("toggle"),
+            commands: atom_term("commands"),
+            op: atom_term("op"),
+            x: atom_term("x"),
+            y: atom_term("y"),
+            height: atom_term("height"),
+            fill: atom_term("fill"),
+            color: atom_term("color"),
+            line_width: atom_term("line_width"),
+            interval: atom_term("interval"),
+            radius: atom_term("radius"),
             options: atom_term("options"),
             axis: atom_term("axis"),
             style: atom_term("style"),
@@ -573,6 +593,36 @@ pub struct TreeNode {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum CanvasCommand {
+    Rect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        fill: StyleColor,
+        radius: f32,
+    },
+    PatternRect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        color: StyleColor,
+        line_width: f32,
+        interval: f32,
+        radius: f32,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CanvasNode {
+    pub id: Option<String>,
+    pub commands: Vec<CanvasCommand>,
+    pub style: DivStyle,
+    pub click: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct SelectOption {
     pub value: String,
     pub label: String,
@@ -713,6 +763,7 @@ pub enum IrNode {
     },
     DataTable(Box<DataTableNode>),
     Tree(Box<TreeNode>),
+    Canvas(Box<CanvasNode>),
     Select(Box<SelectNode>),
     Popover {
         id: Option<String>,
@@ -874,6 +925,12 @@ impl IrNode {
                 selected_id: get_optional_string_field(map, "selected_id")?,
                 select: get_optional_event(map, "select")?,
                 toggle: get_optional_event(map, "toggle")?,
+            }))),
+            "canvas" => Ok(Self::Canvas(Box::new(CanvasNode {
+                id,
+                commands: get_canvas_commands_field(map)?,
+                style: get_div_style(map)?,
+                click: get_click_event(map)?,
             }))),
             "select" => Ok(Self::Select(Box::new(SelectNode {
                 id,
@@ -1124,6 +1181,16 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "expanded" => &keys.expanded,
         "select" => &keys.select,
         "toggle" => &keys.toggle,
+        "commands" => &keys.commands,
+        "op" => &keys.op,
+        "x" => &keys.x,
+        "y" => &keys.y,
+        "height" => &keys.height,
+        "fill" => &keys.fill,
+        "color" => &keys.color,
+        "line_width" => &keys.line_width,
+        "interval" => &keys.interval,
+        "radius" => &keys.radius,
         "options" => &keys.options,
         "axis" => &keys.axis,
         "style" => &keys.style,
@@ -1306,6 +1373,33 @@ fn get_optional_point_field(
     }
 
     Ok(Some((parse_f32(&elements[0])?, parse_f32(&elements[1])?)))
+}
+
+fn get_f32_field(map: &HashMap<Term, Term>, key: &str) -> Result<f32, String> {
+    match get_field(map, key) {
+        Some(term) => parse_f32(term),
+        None => Err(format!("missing required field: {key}")),
+    }
+}
+
+fn get_positive_f32_field(map: &HashMap<Term, Term>, key: &str) -> Result<f32, String> {
+    let value = get_f32_field(map, key)?;
+    if value > 0.0 {
+        Ok(value)
+    } else {
+        Err(format!(
+            "expected positive numeric field {key}, got {value}"
+        ))
+    }
+}
+
+fn get_positive_unit_f32_field(map: &HashMap<Term, Term>, key: &str) -> Result<f32, String> {
+    let value = get_f32_field(map, key)?;
+    if value > 0.0 && value <= 1.0 {
+        Ok(value)
+    } else {
+        Err(format!("expected unit numeric field {key}, got {value}"))
+    }
 }
 
 fn get_non_neg_f32_field(
@@ -1677,6 +1771,97 @@ fn ensure_id_known(id: &str, known: &HashSet<String>, context: &str) -> Result<(
     }
 }
 
+fn get_canvas_commands_field(map: &HashMap<Term, Term>) -> Result<Vec<CanvasCommand>, String> {
+    let Some(commands_term) = get_field(map, "commands") else {
+        return Err("missing required field: commands".into());
+    };
+
+    get_list(commands_term)?
+        .iter()
+        .map(decode_canvas_command)
+        .collect()
+}
+
+fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
+    let command = expect_map(term)?;
+    let op = get_atom_field(command, "op")?;
+    let x = get_f32_field(command, "x")?;
+    let y = get_f32_field(command, "y")?;
+    let width = get_positive_f32_field(command, "width")?;
+    let height = get_positive_f32_field(command, "height")?;
+
+    match op.as_str() {
+        "rect" => {
+            ensure_allowed_fields(
+                command,
+                &["op", "x", "y", "width", "height", "fill", "radius"],
+                "canvas rect command",
+            )?;
+            Ok(CanvasCommand::Rect {
+                x,
+                y,
+                width,
+                height,
+                fill: get_canvas_color_field(command, "fill")?,
+                radius: get_non_neg_f32_field(command, "radius", 0.0)?,
+            })
+        }
+        "rounded_rect" => {
+            ensure_allowed_fields(
+                command,
+                &["op", "x", "y", "width", "height", "fill", "radius"],
+                "canvas rounded_rect command",
+            )?;
+            if get_field(command, "radius").is_none() {
+                return Err("missing required field: radius".into());
+            }
+            Ok(CanvasCommand::Rect {
+                x,
+                y,
+                width,
+                height,
+                fill: get_canvas_color_field(command, "fill")?,
+                radius: get_non_neg_f32_field(command, "radius", 0.0)?,
+            })
+        }
+        "pattern_rect" => {
+            ensure_allowed_fields(
+                command,
+                &[
+                    "op",
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "color",
+                    "line_width",
+                    "interval",
+                    "radius",
+                ],
+                "canvas pattern_rect command",
+            )?;
+            Ok(CanvasCommand::PatternRect {
+                x,
+                y,
+                width,
+                height,
+                color: get_canvas_color_field(command, "color")?,
+                line_width: get_positive_unit_f32_field(command, "line_width")?,
+                interval: get_positive_unit_f32_field(command, "interval")?,
+                radius: get_non_neg_f32_field(command, "radius", 0.0)?,
+            })
+        }
+        other => Err(format!("unsupported canvas command op: {other}")),
+    }
+}
+
+fn get_canvas_color_field(map: &HashMap<Term, Term>, key: &str) -> Result<StyleColor, String> {
+    match get_field(map, key) {
+        Some(term) => parse_style_color(term),
+        None => Err(format!("missing required field: {key}")),
+    }
+}
+
 fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Vec<SelectOption>, String> {
     let Some(options_term) = get_field(map, "options") else {
         return Err("missing required field: options".into());
@@ -2007,6 +2192,7 @@ fn ir_node_kind(node: &IrNode) -> &'static str {
         IrNode::List { .. } => "list",
         IrNode::DataTable(_) => "data_table",
         IrNode::Tree(_) => "tree",
+        IrNode::Canvas(_) => "canvas",
         IrNode::Select(_) => "select",
         IrNode::Popover { .. } => "popover",
         IrNode::Spacer { .. } => "spacer",
@@ -2748,9 +2934,9 @@ fn term_to_string(term: &Term) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        CheckboxNode, DataTableSortDirection, DivNode, IrNode, LinearGradientStop, StyleColor,
-        StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids, parse_style_op,
-        validate_list_row_child,
+        CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode, IrNode, LinearGradientStop,
+        StyleColor, StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids,
+        parse_style_op, validate_list_row_child,
     };
     use eetf::{Atom, Binary, FixInteger, Float, List, Map, Term, Tuple};
 
@@ -2989,6 +3175,108 @@ mod tests {
             }
             other => panic!("expected tree, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn decodes_canvas_commands() {
+        let node = map(vec![
+            (atom("kind"), atom("canvas")),
+            (atom("id"), binary("summary_canvas")),
+            (
+                atom("commands"),
+                list(vec![
+                    map(vec![
+                        (atom("op"), atom("rect")),
+                        (atom("x"), integer(0)),
+                        (atom("y"), integer(0)),
+                        (atom("width"), integer(120)),
+                        (atom("height"), integer(80)),
+                        (atom("fill"), binary("#0f172a")),
+                    ]),
+                    map(vec![
+                        (atom("op"), atom("rounded_rect")),
+                        (atom("x"), integer(12)),
+                        (atom("y"), integer(12)),
+                        (atom("width"), integer(96)),
+                        (atom("height"), integer(24)),
+                        (atom("radius"), integer(8)),
+                        (atom("fill"), atom("blue")),
+                    ]),
+                    map(vec![
+                        (atom("op"), atom("pattern_rect")),
+                        (atom("x"), integer(12)),
+                        (atom("y"), integer(48)),
+                        (atom("width"), integer(96)),
+                        (atom("height"), integer(20)),
+                        (atom("color"), atom("yellow")),
+                        (atom("line_width"), float(0.05)),
+                        (atom("interval"), float(0.12)),
+                    ]),
+                ]),
+            ),
+            (atom("events"), events(vec![("click", "canvas_clicked")])),
+        ]);
+
+        match IrNode::from_term(&node).unwrap() {
+            IrNode::Canvas(canvas) => {
+                assert_eq!(canvas.id.as_deref(), Some("summary_canvas"));
+                assert_eq!(canvas.commands.len(), 3);
+                assert!(matches!(
+                    canvas.commands[2],
+                    CanvasCommand::PatternRect {
+                        line_width,
+                        interval,
+                        ..
+                    } if line_width == 0.05 && interval == 0.12
+                ));
+                assert_eq!(canvas.click.as_deref(), Some("canvas_clicked"));
+            }
+            other => panic!("expected canvas, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rejects_canvas_command_shape_mismatches() {
+        let node = map(vec![
+            (atom("kind"), atom("canvas")),
+            (
+                atom("commands"),
+                list(vec![map(vec![
+                    (atom("op"), atom("pattern_rect")),
+                    (atom("x"), integer(0)),
+                    (atom("y"), integer(0)),
+                    (atom("width"), integer(20)),
+                    (atom("height"), integer(20)),
+                    (atom("fill"), atom("blue")),
+                    (atom("color"), atom("yellow")),
+                    (atom("line_width"), float(0.05)),
+                    (atom("interval"), float(0.12)),
+                ])]),
+            ),
+        ]);
+
+        let err = IrNode::from_term(&node).unwrap_err();
+        assert!(err.contains("unsupported canvas pattern_rect command field"));
+
+        let node = map(vec![
+            (atom("kind"), atom("canvas")),
+            (
+                atom("commands"),
+                list(vec![map(vec![
+                    (atom("op"), atom("pattern_rect")),
+                    (atom("x"), integer(0)),
+                    (atom("y"), integer(0)),
+                    (atom("width"), integer(20)),
+                    (atom("height"), integer(20)),
+                    (atom("color"), atom("yellow")),
+                    (atom("line_width"), float(0.05)),
+                    (atom("interval"), float(1.5)),
+                ])]),
+            ),
+        ]);
+
+        let err = IrNode::from_term(&node).unwrap_err();
+        assert!(err.contains("expected unit numeric field interval"));
     }
 
     #[test]

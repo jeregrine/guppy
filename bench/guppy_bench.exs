@@ -95,6 +95,7 @@ defmodule Guppy.Bench do
 
     gradient_ir = gradient_tree(100)
     row_control_ir = row_control_list_tree(100)
+    canvas_ir = canvas_tree(100)
     menu_spec = menu_spec(25)
     data_table_tree_ir = data_table_tree(100)
 
@@ -116,6 +117,21 @@ defmodule Guppy.Bench do
       {"list row controls validation 100 rows",
        fn ->
          :ok = Guppy.IR.validate(row_control_ir)
+       end}
+    ]
+
+    canvas_scenarios = [
+      {"canvas command tree build 100 commands",
+       fn ->
+         canvas_tree(100)
+       end},
+      {"canvas command validation 100 commands",
+       fn ->
+         :ok = Guppy.IR.validate(canvas_ir)
+       end},
+      {"canvas command encode/decode proxy 100 commands",
+       fn ->
+         canvas_ir |> :erlang.term_to_binary() |> :erlang.binary_to_term()
        end}
     ]
 
@@ -185,6 +201,7 @@ defmodule Guppy.Bench do
     Map.new(
       node_scenarios ++
         gradient_scenarios ++
+        canvas_scenarios ++
         semantic_virtualization_scenarios ++ menu_scenarios ++ kanban_scenarios
     )
   end
@@ -226,6 +243,44 @@ defmodule Guppy.Bench do
       end
 
     Guppy.IR.div(children, id: "gradient_bench_root", style: [:flex, :flex_col, :gap_1])
+  end
+
+  defp canvas_tree(command_count) do
+    commands =
+      for index <- 0..(command_count - 1) do
+        x = rem(index * 7, 240)
+        y = rem(index * 11, 160)
+
+        if rem(index, 4) == 0 do
+          %{
+            op: :pattern_rect,
+            x: x,
+            y: y,
+            width: 48,
+            height: 18,
+            radius: 4,
+            color: :blue,
+            line_width: 0.04,
+            interval: 0.14
+          }
+        else
+          %{
+            op: :rounded_rect,
+            x: x,
+            y: y,
+            width: 42,
+            height: 14,
+            radius: 4,
+            fill: if(rem(index, 2) == 0, do: "#2563eb", else: "#16a34a")
+          }
+        end
+      end
+
+    Guppy.IR.canvas(commands,
+      id: "bench_canvas",
+      style: [{:w_px, 320}, {:h_px, 180}],
+      events: %{click: "canvas_clicked"}
+    )
   end
 
   defp data_table_tree(row_count) do

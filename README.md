@@ -120,6 +120,12 @@ mix run examples/data_table_tree.exs
 Semantic data-table/tree example with Elixir-owned expansion, selection, and sorting over native virtual rows.
 
 ```bash
+mix run examples/canvas_pattern.exs
+```
+
+Data-only canvas example with ordered rect/rounded-rect draw commands, GPUI slash-pattern painting, and a coarse canvas click callback.
+
+```bash
 mix run examples/hello_world.exs
 ```
 
@@ -136,6 +142,7 @@ Native node kinds:
 - `list`
 - `data_table`
 - `tree`
+- `canvas`
 - `popover`
 - `select`
 - `button`
@@ -160,6 +167,7 @@ Template tags:
 - `<list />`
 - `<data_table />`
 - `<tree />`
+- `<canvas />`
 - `<popover>`
 - `<select />`
 - `<image />`
@@ -168,13 +176,15 @@ Template tags:
 - `<text_input />`
 - `<textarea />`
 
-Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, popover callbacks, text input/textarea changes and focus/blur, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops.
+Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, canvas clicks, popover callbacks, text input/textarea changes and focus/blur, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops.
 
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
 
 `list` rows support static/layout children (`text`, `spacer`, and nested static `div`) plus row-local `button`, `checkbox`, and `radio` controls with explicit control ids. Row-control events include `list_id`, `row_id`, and `control_id`; Elixir remains the source of truth for checked/selected values.
 
 `data_table` and `tree` are semantic virtualized primitives for Elixir-owned table selection/sort state and tree selection/expansion state. Data-table events include `table_id`, `row_id`, and/or `column_id`; tree events include `tree_id` and `item_id`. First-pass table cells intentionally support static `text`, `spacer`, and nested static `div` content.
+
+`canvas` is a data-only drawing primitive for bounded custom painting. It supports ordered `:rect`, `:rounded_rect`, and `:pattern_rect` commands with existing named/hex color validation, unit slash-pattern parameters, wrapper style/viewport sizing, and a coarse optional `:click` callback. Elixir code does not run during native paint; path/text/image canvas commands and per-command hit testing remain deferred.
 
 `Guppy.set_menus/1` installs app/runtime menus for the calling process. Custom menu actions use `%{id:, label:, callback:}` and arrive as `{:guppy_menu_event, %{type: :menu_action, id: id, callback: callback}}`; Edit menu items can use `%{id:, label:, os_action: :cut | :copy | :paste | :select_all}` to target focused native text inputs. Call `Guppy.set_menus([])` to clear menus; menus are also cleared when the installing process exits.
 
@@ -212,6 +222,7 @@ IR helpers:
 - `Guppy.IR.list/2`
 - `Guppy.IR.data_table/3`
 - `Guppy.IR.tree/2`
+- `Guppy.IR.canvas/2`
 - `Guppy.IR.popover/4`
 - `Guppy.IR.select/2`
 - `Guppy.IR.button/2`
@@ -368,7 +379,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 - text/overlay controls inside generic virtualized list rows or data-table cells and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
-- advanced animation effects beyond current opacity animation, multi-stop/radial gradients, canvas/custom painting, pattern painting, dock menus, and element-local/context menu primitives
+- advanced animation effects beyond current opacity animation, multi-stop/radial gradients, path/text/image canvas commands, per-command canvas hit testing, dock menus, and element-local/context menu primitives
 - published precompiled native artifacts
 
 ## Hacking on Guppy

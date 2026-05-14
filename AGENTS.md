@@ -134,6 +134,9 @@ Useful IR helpers today:
 - `Guppy.IR.scroll/2`
 - `Guppy.IR.uniform_list/2`
 - `Guppy.IR.list/2`
+- `Guppy.IR.data_table/3`
+- `Guppy.IR.tree/2`
+- `Guppy.IR.canvas/2`
 - `Guppy.IR.popover/4`
 - `Guppy.IR.select/2`
 - `Guppy.IR.button/2`
@@ -155,6 +158,9 @@ Supported native nodes today:
 - `:scroll`
 - `:uniform_list`
 - `:list`
+- `:data_table`
+- `:tree`
+- `:canvas`
 - `:popover`
 - `:select`
 - `:button`
@@ -170,7 +176,8 @@ Still missing higher-value nodes/primitives:
 
 - full editor parity and advanced text layout beyond current rich text runs/highlights
 - full popover parity / nested overlay edge cases
-- advanced grid/data-table semantics beyond current grid style ops
+- advanced data-table/tree semantics beyond current first-pass virtualized primitives
+- advanced canvas commands such as paths/text/images and fine-grained hit testing
 
 ## Current preferred authoring model
 

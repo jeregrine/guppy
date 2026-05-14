@@ -18,6 +18,7 @@ defmodule Guppy.Component do
   - `<list />`
   - `<data_table />`
   - `<tree />`
+  - `<canvas />`
   - `<popover>`
   - `<select />`
   - `<image />`

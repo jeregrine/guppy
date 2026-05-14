@@ -186,33 +186,39 @@ The first tree primitive includes:
 
 ## Custom painting, canvas, and pattern painting
 
-Status: scoped and deferred until narrower compliance gaps matter in practice.
+Status: first bounded canvas pass implemented. `Guppy.IR.canvas/2` exposes data-only rect, rounded-rect, and slash-pattern rect commands with coarse canvas click events; arbitrary custom elements, paint callbacks, paths, text, image drawing, and per-command hit testing remain deferred.
 
-GPUI exposes low-level painting through custom elements, window paint APIs such as `paint_path`, `PaintQuad` fills, and background helpers such as `pattern_slash`. Guppy should not expose those raw APIs directly to Elixir without a bounded retained primitive.
+GPUI exposes low-level painting through custom elements, window paint APIs such as `paint_path`, `PaintQuad` fills, and background helpers such as `pattern_slash`. Guppy does not expose those raw APIs directly to Elixir. The first primitive is deliberately bounded around native-owned painting from validated draw data.
 
-### Guppy scope
+### Implemented first pass
 
-If this becomes necessary, introduce a retained `canvas`/drawing primitive instead of ad-hoc style tokens or Elixir callbacks during paint. A first primitive should be data-only:
+The real use case is `examples/canvas_pattern.exs`: a release-health card with a slash-pattern capacity band. That visual cannot be expressed by current `div`, `text`, `image`, `icon`, grid/list primitives, or the two-stop gradient style op without introducing pattern painting.
 
-- explicit `id`, viewport/style, and optional pointer events;
-- ordered draw commands such as rect, rounded rect, line, path, text label, and image/icon reference;
-- colors using the existing validated color formats;
+`Guppy.IR.canvas/2` produces a node with:
+
+- explicit optional `id`, wrapper `style`/viewport sizing, and optional coarse `events: %{click: callback}`;
+- ordered draw commands: `:rect`, `:rounded_rect`, and `:pattern_rect`;
+- named color tokens or strict `#RRGGBB` colors using the same validated color set as gradients;
+- unit slash-pattern `line_width` and `interval` values for `:pattern_rect`;
 - no arbitrary Elixir code executed from the native paint pass;
-- retained native resources keyed by stable canvas id and pruned on full-tree replacement.
+- native rendering through GPUI `canvas`, `PaintQuad` fills, and `pattern_slash` backgrounds.
 
-Pattern painting can either be a small background style op backed by GPUI `pattern_slash` or a canvas command, but it should be chosen only with a real visual requirement. It should not be bundled into the first gradient style pass.
+Canvas currently has no retained native resources beyond the stable node identity used for event routing. If later commands introduce retained images, paths, shaders, or text layouts, those resources must be keyed by stable canvas id and pruned on full-tree replacement.
+
+Pattern painting is implemented as a canvas command (`:pattern_rect`) rather than a global background style op because the concrete use case needs a bounded drawn region inside a custom card, not a general semantic background token.
+
+### Implemented coverage
+
+- ExUnit validates command schemas, op-specific fields, colors, dimensions, pattern parameters, template compilation, and click callback shape.
+- Rust tests cover native ETF decode, op-specific rejection, GPUI render/click smoke, the current stateless retained-resource behavior, and expired queued render requests carrying canvas IR.
+- `bench/guppy_bench.exs` includes canvas build, validation, and encode/decode proxy scenarios for 100 draw commands before any performance claims.
+- `examples/canvas_pattern.exs`, README, and `docs/gpui-compliance.md` document the supported first pass.
 
 ### Deferred
 
 - Arbitrary custom GPUI elements authored from Elixir.
 - Per-frame Elixir paint callbacks.
 - Rich vector/SVG authoring beyond current `icon`/`image` support.
+- Line/path/text/image canvas commands and retained resources for those commands.
 - Canvas hit-testing beyond coarse element pointer events.
-- Pattern, path, or canvas APIs without performance measurements.
-
-### Implementation gates
-
-- A real example must need custom drawing that cannot be expressed with current `div`, `text`, `image`, `icon`, grid, list, or future gradient primitives.
-- Add an isolated benchmark or stress-test mode for draw-command volume before optimizing or claiming performance.
-- Add Elixir validation tests for command schemas and native Rust tests for decode, paint mapping, retained-resource pruning, and stale render deadlines.
-- Update examples and the compliance matrix only after the primitive is implemented end-to-end.
+- General pattern background style ops, until a real style-level use case needs them.

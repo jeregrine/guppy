@@ -481,6 +481,31 @@ defmodule Guppy.IR do
           optional(:events) => tree_events()
         }
 
+  @type canvas_color :: gradient_color()
+
+  @type canvas_command :: %{
+          required(:op) => :rect | :rounded_rect | :pattern_rect,
+          required(:x) => number(),
+          required(:y) => number(),
+          required(:width) => number(),
+          required(:height) => number(),
+          optional(:fill) => canvas_color(),
+          optional(:color) => canvas_color(),
+          optional(:line_width) => number(),
+          optional(:interval) => number(),
+          optional(:radius) => number()
+        }
+
+  @type canvas_events :: %{optional(:click) => String.t()}
+
+  @type canvas_node :: %{
+          required(:kind) => :canvas,
+          required(:commands) => [canvas_command()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:events) => canvas_events()
+        }
+
   @type popover_events :: %{optional(:click) => String.t(), optional(:close) => String.t()}
   @type popover_anchor :: :top_left | :top_right | :bottom_left | :bottom_right
   @type popover_anchor_position_mode :: :window | :local
@@ -555,6 +580,7 @@ defmodule Guppy.IR do
           | list_node()
           | data_table_node()
           | tree_node()
+          | canvas_node()
           | popover_node()
           | spacer_node()
           | text_input_node()
@@ -707,6 +733,18 @@ defmodule Guppy.IR do
   @data_table_cell_keys [:column_id, :children, :style]
   @data_table_sort_keys [:column_id, :direction]
   @tree_item_keys [:id, :label, :expanded, :children, :style]
+  @canvas_command_keys [
+    :op,
+    :x,
+    :y,
+    :width,
+    :height,
+    :fill,
+    :color,
+    :line_width,
+    :interval,
+    :radius
+  ]
   @select_option_keys [:value, :label, :disabled]
   @list_row_div_keys [:kind, :children, :id, :style, :disabled, :events]
   @list_row_control_kinds [:button, :checkbox, :radio]
@@ -938,6 +976,18 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
     |> maybe_put(:row_style, row_style)
     |> maybe_put(:selected_id, selected_id)
+    |> maybe_put(:events, events)
+  end
+
+  @spec canvas([canvas_command()], keyword()) :: canvas_node()
+  def canvas(commands, opts \\ []) when is_list(commands) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :canvas, commands: commands}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
     |> maybe_put(:events, events)
   end
 
@@ -1197,6 +1247,7 @@ defmodule Guppy.IR do
       :events
     ],
     tree: [:kind, :nodes, :id, :style, :row_style, :selected_id, :events],
+    canvas: [:kind, :commands, :id, :style, :events],
     select: [
       :kind,
       :options,
@@ -1407,6 +1458,16 @@ defmodule Guppy.IR do
          :ok <- validate_events(Map.get(node, :events), [:select, :toggle]),
          {:ok, node_ids} <- validate_tree_nodes(nodes),
          :ok <- validate_tree_selected_id(Map.get(node, :selected_id), node_ids) do
+      :ok
+    end
+  end
+
+  defp validate_node(%{kind: :canvas, commands: commands} = node) when is_list(commands) do
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_events(Map.get(node, :events), [:click]),
+         :ok <- validate_canvas_commands(commands) do
       :ok
     end
   end
@@ -1965,6 +2026,102 @@ defmodule Guppy.IR do
   end
 
   defp validate_tree_selected_id(id, _node_ids), do: {:error, {:invalid_tree_selected_id, id}}
+
+  defp validate_canvas_commands(commands) do
+    Enum.reduce_while(commands, :ok, fn command, :ok ->
+      case validate_canvas_command(command) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_canvas_command(%{op: op, x: x, y: y, width: width, height: height} = command)
+       when op in [:rect, :rounded_rect, :pattern_rect] and is_number(x) and is_number(y) and
+              is_number(width) and is_number(height) and width > 0 and height > 0 do
+    with :ok <- validate_known_keys(command, @canvas_command_keys, :canvas_command),
+         :ok <- validate_canvas_command_fields(op, command),
+         :ok <- validate_canvas_radius(op, Map.get(command, :radius)) do
+      :ok
+    end
+  end
+
+  defp validate_canvas_command(command), do: {:error, {:invalid_canvas_command, command}}
+
+  defp validate_canvas_command_fields(op, command) when op in [:rect, :rounded_rect] do
+    allowed = [:op, :x, :y, :width, :height, :fill, :radius]
+
+    cond do
+      Map.has_key?(command, :color) or Map.has_key?(command, :line_width) or
+          Map.has_key?(command, :interval) ->
+        {:error, {:invalid_canvas_command, command}}
+
+      not Map.has_key?(command, :fill) ->
+        {:error, {:invalid_canvas_command, command}}
+
+      Map.keys(command) -- allowed != [] ->
+        {:error, {:invalid_canvas_command, command}}
+
+      true ->
+        validate_canvas_color(command.fill)
+    end
+  end
+
+  defp validate_canvas_command_fields(:pattern_rect, command) do
+    allowed = [:op, :x, :y, :width, :height, :color, :line_width, :interval, :radius]
+
+    cond do
+      Map.has_key?(command, :fill) ->
+        {:error, {:invalid_canvas_command, command}}
+
+      not (Map.has_key?(command, :color) and Map.has_key?(command, :line_width) and
+               Map.has_key?(command, :interval)) ->
+        {:error, {:invalid_canvas_command, command}}
+
+      Map.keys(command) -- allowed != [] ->
+        {:error, {:invalid_canvas_command, command}}
+
+      true ->
+        with :ok <- validate_canvas_color(command.color),
+             :ok <- validate_unit_canvas_number(:line_width, command.line_width),
+             :ok <- validate_unit_canvas_number(:interval, command.interval) do
+          :ok
+        end
+    end
+  end
+
+  defp validate_unit_canvas_number(_field, value)
+       when is_number(value) and value > 0 and value <= 1,
+       do: :ok
+
+  defp validate_unit_canvas_number(field, value),
+    do: {:error, {:invalid_canvas_number, field, value}}
+
+  defp validate_canvas_color(color) when color in @color_tokens, do: :ok
+
+  defp validate_canvas_color(color) when is_binary(color) do
+    if valid_gradient_color?(color) do
+      :ok
+    else
+      {:error, {:invalid_canvas_color, color}}
+    end
+  end
+
+  defp validate_canvas_color(color), do: {:error, {:invalid_canvas_color, color}}
+
+  defp validate_canvas_radius(:rect, nil), do: :ok
+  defp validate_canvas_radius(:rect, radius) when is_number(radius) and radius >= 0, do: :ok
+
+  defp validate_canvas_radius(:rounded_rect, radius) when is_number(radius) and radius >= 0,
+    do: :ok
+
+  defp validate_canvas_radius(:rounded_rect, nil), do: {:error, {:invalid_canvas_radius, nil}}
+  defp validate_canvas_radius(:pattern_rect, nil), do: :ok
+
+  defp validate_canvas_radius(:pattern_rect, radius) when is_number(radius) and radius >= 0,
+    do: :ok
+
+  defp validate_canvas_radius(_op, radius), do: {:error, {:invalid_canvas_radius, radius}}
 
   defp validate_select_options(options) do
     Enum.reduce_while(options, {:ok, MapSet.new()}, fn

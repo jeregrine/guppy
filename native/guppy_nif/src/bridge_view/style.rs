@@ -396,7 +396,7 @@ fn color_token_to_color(color: ColorToken) -> gpui::Hsla {
     }
 }
 
-fn style_color_to_color(color: &StyleColor) -> gpui::Hsla {
+pub(crate) fn style_color_to_color(color: &StyleColor) -> gpui::Hsla {
     match color {
         StyleColor::Token(color) => color_token_to_color(*color),
         StyleColor::Hex(value) => hex_color_to_color(value),

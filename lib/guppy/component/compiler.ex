@@ -174,6 +174,7 @@ defmodule Guppy.Component.Compiler do
         "list" -> compile_generic_list(attrs, xmlElement(element, :content), caller)
         "data_table" -> compile_data_table(attrs, xmlElement(element, :content), caller)
         "tree" -> compile_tree(attrs, xmlElement(element, :content), caller)
+        "canvas" -> compile_canvas(attrs, xmlElement(element, :content), caller)
         "popover" -> compile_popover(attrs, xmlElement(element, :content), caller)
         "button" -> compile_button(attrs, xmlElement(element, :content), caller)
         "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
@@ -288,6 +289,23 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.tree(unquote(nodes), unquote(opts))
+    end
+  end
+
+  defp compile_canvas(attrs, content, caller) do
+    assert_allowed_attrs!(attrs, canvas_allowed_attrs(), "canvas", caller)
+    assert_empty_element!(content, "canvas", caller)
+    commands = fetch_required_attr!(attrs, "commands", :expr_only, caller)
+
+    opts =
+      keyword_ast([
+        maybe_attr_entry(attrs, "id", :string, caller),
+        style_entry(attrs, "class", "style", :style),
+        events_entry(attrs, ["click"], caller)
+      ])
+
+    quote do
+      Guppy.IR.canvas(unquote(commands), unquote(opts))
     end
   end
 
@@ -1493,6 +1511,10 @@ defmodule Guppy.Component.Compiler do
       "select",
       "toggle"
     ]
+  end
+
+  defp canvas_allowed_attrs do
+    [":if", ":for", "id", "commands", "class", "style", "click"]
   end
 
   defp popover_allowed_attrs do
