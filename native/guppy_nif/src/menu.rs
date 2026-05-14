@@ -450,7 +450,9 @@ fn get_list(term: &Term) -> Result<&Vec<Term>, String> {
 fn term_to_string(term: &Term) -> Result<String, String> {
     match term {
         Term::Binary(Binary { bytes }) | Term::ByteList(ByteList { bytes }) => {
-            String::from_utf8(bytes.clone()).map_err(|error| error.to_string())
+            std::str::from_utf8(bytes)
+                .map(str::to_owned)
+                .map_err(|error| error.to_string())
         }
         other => Err(format!("expected utf8 binary/string, got {other}")),
     }
