@@ -358,7 +358,7 @@ fn list_row_decode_accepts_supported_controls_with_explicit_ids() {
             assert_eq!(node.id.as_deref(), Some("save"));
             assert_eq!(node.click.as_deref(), Some("save_row"));
             assert!(
-                matches!(node.children.as_slice(), [IrNode::Text { content, .. }] if content == "Save")
+                matches!(node.children.as_ref(), [IrNode::Text { content, .. }] if content == "Save")
             );
         }
         other => panic!("expected button row control, got {other:?}"),
@@ -452,7 +452,7 @@ fn list_row_control_ids_are_unique_within_a_row() {
             anchor_scroll: false,
             tooltip: None,
             shortcuts: Vec::new().into(),
-            children: vec![IrNode::text("Done")],
+            children: vec![IrNode::text("Done")].into(),
             click: None,
             hover: None,
             focus: None,
