@@ -700,7 +700,7 @@ pub enum IrNode {
     Text {
         id: Option<String>,
         content: String,
-        runs: Vec<TextRunSegment>,
+        runs: Arc<[TextRunSegment]>,
         style: DivStyle,
         click: Option<String>,
     },
@@ -796,7 +796,7 @@ impl IrNode {
         Self::Text {
             id: None,
             content: content.into(),
-            runs: Vec::new(),
+            runs: Arc::new([]),
             style: Vec::new().into(),
             click: None,
         }
@@ -1462,9 +1462,9 @@ fn get_animation_field(map: &HashMap<Term, Term>) -> Result<Option<AnimationSpec
 fn get_text_runs_field(
     map: &HashMap<Term, Term>,
     content: &str,
-) -> Result<Vec<TextRunSegment>, String> {
+) -> Result<Arc<[TextRunSegment]>, String> {
     let Some(runs_term) = get_field(map, "runs") else {
-        return Ok(Vec::new());
+        return Ok(Arc::new([]));
     };
 
     let runs = get_list(runs_term)?
@@ -1480,7 +1480,7 @@ fn get_text_runs_field(
 
     let joined = runs.iter().map(|run| run.text.as_str()).collect::<String>();
     if joined == content {
-        Ok(runs)
+        Ok(runs.into())
     } else {
         Err(format!(
             "text runs content mismatch: expected {content:?}, got {joined:?}"
