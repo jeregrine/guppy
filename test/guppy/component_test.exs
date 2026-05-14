@@ -1,7 +1,7 @@
 defmodule Guppy.ComponentTest do
   use ExUnit.Case
 
-  test "Guppy.Component imports ~GUI and does not expose the old ~GUI sigil" do
+  test "Guppy.Component imports ~GUI and does not expose the old ~G sigil" do
     macros = Guppy.Component.__info__(:macros)
 
     assert {:sigil_GUI, 2} in macros
