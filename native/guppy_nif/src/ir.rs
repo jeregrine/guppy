@@ -1736,14 +1736,15 @@ fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[TreeItem]>, St
     };
 
     let mut seen = HashSet::new();
-    get_tree_nodes(nodes_term, &mut seen).map(Into::into)
+    get_tree_nodes(nodes_term, &mut seen)
 }
 
-fn get_tree_nodes(term: &Term, seen: &mut HashSet<String>) -> Result<Vec<TreeItem>, String> {
+fn get_tree_nodes(term: &Term, seen: &mut HashSet<String>) -> Result<Arc<[TreeItem]>, String> {
     get_list(term)?
         .iter()
         .map(|term| get_tree_item(term, seen))
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn get_tree_item(term: &Term, seen: &mut HashSet<String>) -> Result<TreeItem, String> {
@@ -1760,14 +1761,14 @@ fn get_tree_item(term: &Term, seen: &mut HashSet<String>) -> Result<TreeItem, St
 
     let children = match get_field(item, "children") {
         Some(children) => get_tree_nodes(children, seen)?,
-        None => Vec::new(),
+        None => Arc::new([]),
     };
 
     Ok(TreeItem {
         id,
         label: get_string_field(item, "label")?,
         expanded: get_boolean_field(item, "expanded")?,
-        children: children.into(),
+        children,
         style: get_div_style(item)?,
     })
 }
