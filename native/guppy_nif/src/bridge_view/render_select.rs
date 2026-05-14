@@ -245,26 +245,31 @@ fn adjacent_enabled_option(
     value: Option<&str>,
     direction: SelectNavigationDirection,
 ) -> Option<SelectOption> {
-    let enabled = options
-        .iter()
-        .filter(|option| !option.disabled)
-        .cloned()
-        .collect::<Vec<_>>();
+    let enabled_count = options.iter().filter(|option| !option.disabled).count();
 
-    if enabled.is_empty() {
+    if enabled_count == 0 {
         return None;
     }
 
     let current = value
-        .and_then(|value| enabled.iter().position(|option| option.value == value))
+        .and_then(|value| {
+            options
+                .iter()
+                .filter(|option| !option.disabled)
+                .position(|option| option.value == value)
+        })
         .unwrap_or(0);
 
     let next = match direction {
         SelectNavigationDirection::Previous => current.saturating_sub(1),
-        SelectNavigationDirection::Next => (current + 1).min(enabled.len() - 1),
+        SelectNavigationDirection::Next => (current + 1).min(enabled_count - 1),
     };
 
-    enabled.get(next).cloned()
+    options
+        .iter()
+        .filter(|option| !option.disabled)
+        .nth(next)
+        .cloned()
 }
 
 #[cfg(test)]
@@ -308,6 +313,11 @@ mod tests {
             adjacent_enabled_option(&options, Some("done"), SelectNavigationDirection::Previous)
                 .map(|option| option.value),
             Some("todo".into())
+        );
+        assert_eq!(
+            adjacent_enabled_option(&options, Some("missing"), SelectNavigationDirection::Next)
+                .map(|option| option.value),
+            Some("done".into())
         );
     }
 
