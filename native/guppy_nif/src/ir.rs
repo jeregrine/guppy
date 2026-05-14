@@ -2388,6 +2388,14 @@ fn default_button_disabled_style() -> DivStyle {
 }
 
 fn prepend_style(defaults: DivStyle, style: DivStyle) -> DivStyle {
+    if defaults.is_empty() {
+        return style;
+    }
+
+    if style.is_empty() {
+        return defaults;
+    }
+
     defaults
         .iter()
         .cloned()
