@@ -881,12 +881,12 @@ impl IrNode {
                 let columns = get_data_table_columns_field(map)?;
                 let column_ids = columns
                     .iter()
-                    .map(|column| column.id.clone())
+                    .map(|column| column.id.as_str())
                     .collect::<HashSet<_>>();
                 let rows = get_data_table_rows_field(map, &column_ids)?;
                 let row_ids = rows
                     .iter()
-                    .map(|row| row.id.clone())
+                    .map(|row| row.id.as_str())
                     .collect::<HashSet<_>>();
                 let selected_row_id = get_optional_string_field(map, "selected_row_id")?;
                 ensure_optional_id_known(
@@ -1606,7 +1606,7 @@ fn get_data_table_column_width(map: &HashMap<Term, Term>) -> Result<DataTableCol
 
 fn get_data_table_rows_field(
     map: &HashMap<Term, Term>,
-    column_ids: &HashSet<String>,
+    column_ids: &HashSet<&str>,
 ) -> Result<Vec<DataTableRow>, String> {
     let Some(rows_term) = get_field(map, "rows") else {
         return Err("missing required field: rows".into());
@@ -1634,7 +1634,7 @@ fn get_data_table_rows_field(
 
 fn get_data_table_cells(
     row: &HashMap<Term, Term>,
-    column_ids: &HashSet<String>,
+    column_ids: &HashSet<&str>,
 ) -> Result<Vec<DataTableCell>, String> {
     let Some(cells_term) = get_field(row, "cells") else {
         return Err("missing required field: data_table row cells".into());
@@ -1697,7 +1697,7 @@ fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
 
 fn get_data_table_sort_field(
     map: &HashMap<Term, Term>,
-    column_ids: &HashSet<String>,
+    column_ids: &HashSet<&str>,
 ) -> Result<Option<DataTableSort>, String> {
     let Some(sort_term) = get_field(map, "sort") else {
         return Ok(None);
@@ -1768,7 +1768,7 @@ fn get_tree_item(term: &Term, seen: &mut HashSet<String>) -> Result<TreeItem, St
 
 fn ensure_optional_id_known(
     id: Option<&str>,
-    known: &HashSet<String>,
+    known: &HashSet<&str>,
     context: &str,
 ) -> Result<(), String> {
     if let Some(id) = id {
@@ -1778,7 +1778,7 @@ fn ensure_optional_id_known(
     Ok(())
 }
 
-fn ensure_id_known(id: &str, known: &HashSet<String>, context: &str) -> Result<(), String> {
+fn ensure_id_known(id: &str, known: &HashSet<&str>, context: &str) -> Result<(), String> {
     if known.contains(id) {
         Ok(())
     } else {
