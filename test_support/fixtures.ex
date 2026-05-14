@@ -181,10 +181,10 @@ defmodule Guppy.FunctionComponentExample do
   def render(assigns) do
     ~GUI"""
     <div id="component_root" class="flex flex-col gap-2 p-2 bg-[#0f172a] text-[#f8fafc]">
-      <stat_card :for={item <- @items} id={"stat_#{item.id}"} title={item.title} value={item.value} />
-      <panel id="activity_panel">
+      <.stat_card :for={item <- @items} id={"stat_#{item.id}"} title={item.title} value={item.value} />
+      <.panel id="activity_panel">
         <text id="activity_text">Inner activity feed</text>
-      </panel>
+      </.panel>
       <Guppy.RemoteBadgeComponent id="release_badge" label="Beta ready" />
     </div>
     """

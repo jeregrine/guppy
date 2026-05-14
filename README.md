@@ -221,10 +221,10 @@ Preferred `Guppy.Window` modules treat `window_closed` as lifecycle-driving toda
 
 `Guppy.Component` provides `~GUI` templates and first-pass function components. Inside a `render(assigns)` or `render(window)` function, `@name` reads from the assigns map or window assigns.
 
-Local lower-case tags call a function in the same module:
+Dotted local tags call a function in the same module:
 
 ```elixir
-<stat_badge stat={stat} />
+<.stat_badge stat={stat} />
 ```
 
 Remote tags call `render/1` on the referenced module:

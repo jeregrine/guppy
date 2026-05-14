@@ -180,7 +180,7 @@ defmodule Examples.KanbanTodoWindow do
           </div>
 
           <div id="header_metrics" class="flex flex-row items-center gap-2">
-            <metric_badge :for={metric <- @header_metrics} metric={metric} />
+            <.metric_badge :for={metric <- @header_metrics} metric={metric} />
           </div>
         </div>
 
@@ -224,7 +224,7 @@ defmodule Examples.KanbanTodoWindow do
       <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-xl border-1 border-[#1e293b] bg-[#0d1526] shadow-md p-2">
         <scroll id="board_scroll" axis="x" class="flex-1 min-h-0 scrollbar-w-[10px]">
           <div id="board_columns" class={@board_columns_class}>
-            <kanban_lane :for={column <- @columns} lane={column} />
+            <.kanban_lane :for={column <- @columns} lane={column} />
           </div>
         </scroll>
       </div>
@@ -525,7 +525,7 @@ defmodule Examples.KanbanTodoWindow do
             </text>
           </div>
 
-          <kanban_card :for={task <- @lane.tasks} task={task} />
+          <.kanban_card :for={task <- @lane.tasks} task={task} />
         </div>
       </scroll>
     </div>

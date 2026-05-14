@@ -26,7 +26,7 @@ defmodule Guppy.Component do
 
   It also supports first-pass function components:
 
-  - local lower-case tags call a function in the current module with an assigns map
+  - dotted local tags like `<.my_component>` call a function in the current module with an assigns map
   - remote module tags call `render/1` on that module
   - nested component content is passed as `@children`
   - `prop/4` can declare required props, defaults, and simple validations

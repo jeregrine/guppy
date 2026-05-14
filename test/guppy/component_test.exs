@@ -254,6 +254,28 @@ defmodule Guppy.ComponentTest do
     assert badge.children == [%{kind: :text, id: "release_badge_label", content: "Beta ready"}]
   end
 
+  test "Guppy.Component rejects bare local function component tags" do
+    source = """
+    defmodule Guppy.BareLocalComponentExample do
+      use Guppy.Component
+
+      def render(assigns) do
+        ~GUI\"\"\"
+        <div>
+          <stat_card />
+        </div>
+        \"\"\"
+      end
+
+      defp stat_card(assigns), do: Guppy.IR.text(assigns[:label] || "bad")
+    end
+    """
+
+    assert_raise CompileError, ~r/use <\.stat_card> for local function components/, fn ->
+      Code.compile_string(source)
+    end
+  end
+
   test "Guppy.Component prop declarations apply defaults and validate required and typed props" do
     assigns =
       Guppy.Component.validate_props!(Guppy.ComponentPropsExample, :render, %{

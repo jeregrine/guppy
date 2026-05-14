@@ -60,6 +60,8 @@ defmodule Guppy.Component.Compiler do
   @text_input_events ["change", "focus", "blur"]
   @input_attrs ["id", "value", "placeholder", "class", "style", "disabled", "tab_index"]
 
+  @local_component_prefix "guppy-local-"
+
   @style_attr_pairs [
     {"class", :style},
     {"style", :style},
@@ -98,7 +100,12 @@ defmodule Guppy.Component.Compiler do
 
   def compile!(template, caller) when is_binary(template) do
     assigns_var = Macro.unique_var(:guppy_template_assigns, __MODULE__)
-    {safe_template, placeholders} = preprocess_dynamic_attributes(template)
+
+    {safe_template, placeholders} =
+      template
+      |> preprocess_local_component_tags()
+      |> preprocess_dynamic_attributes()
+
     Process.put({__MODULE__, :placeholders}, placeholders)
     Process.put({__MODULE__, :assigns_var}, assigns_var)
     Process.put({__MODULE__, :uses_assigns}, false)
@@ -177,7 +184,7 @@ defmodule Guppy.Component.Compiler do
         "image" -> compile_image(attrs, xmlElement(element, :content), caller)
         "icon" -> compile_icon(attrs, xmlElement(element, :content), caller)
         "spacer" -> compile_spacer(attrs, xmlElement(element, :content), caller)
-        other -> compile_component(other, attrs, xmlElement(element, :content), caller)
+        other -> compile_unknown_tag(other, attrs, xmlElement(element, :content), caller)
       end
 
     apply_directives(base, directives, caller)
@@ -451,6 +458,19 @@ defmodule Guppy.Component.Compiler do
 
     quote do
       Guppy.IR.spacer(unquote(opts))
+    end
+  end
+
+  defp compile_unknown_tag(tag, attrs, content, caller) do
+    cond do
+      local_component_tag?(tag) or remote_component_tag?(tag) ->
+        compile_component(tag, attrs, content, caller)
+
+      true ->
+        raise_compile_error!(
+          caller,
+          "unsupported tag <#{tag}>; use <.#{tag}> for local function components or a module tag for remote components"
+        )
     end
   end
 
@@ -776,17 +796,39 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp component_target_ast(tag) do
-    if String.contains?(tag, ".") do
-      module_ast = tag |> String.split(".") |> Module.concat()
-      {:remote, module_ast}
+    cond do
+      local_component_tag?(tag) ->
+        function_name =
+          tag
+          |> String.replace_prefix(@local_component_prefix, "")
+          |> String.replace("-", "_")
+          |> String.to_atom()
+
+        {:local, function_name}
+
+      remote_component_tag?(tag) ->
+        module_ast = tag |> String.split(".") |> Module.concat()
+        {:remote, module_ast}
+    end
+  end
+
+  defp local_component_tag?(tag), do: String.starts_with?(tag, @local_component_prefix)
+  defp remote_component_tag?(tag), do: String.contains?(tag, ".")
+
+  defp component_display_tag(tag) do
+    if local_component_tag?(tag) do
+      "." <> String.replace_prefix(tag, @local_component_prefix, "")
     else
-      {:local, tag |> String.replace("-", "_") |> String.to_atom()}
+      tag
     end
   end
 
   defp assert_component_attrs!(tag, attrs, caller) do
     if Map.has_key?(attrs, "children") do
-      raise_compile_error!(caller, "component <#{tag}> cannot accept a children attribute")
+      raise_compile_error!(
+        caller,
+        "component <#{component_display_tag(tag)}> cannot accept a children attribute"
+      )
     end
 
     :ok
@@ -1112,6 +1154,71 @@ defmodule Guppy.Component.Compiler do
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
   end
+
+  defp preprocess_local_component_tags(template) do
+    do_preprocess_local_component_tags(template, [])
+  end
+
+  defp do_preprocess_local_component_tags(<<>>, acc) do
+    IO.iodata_to_binary(Enum.reverse(acc))
+  end
+
+  defp do_preprocess_local_component_tags(<<"{", rest::binary>>, acc) do
+    {expression, rest_after} = consume_expression(rest, 1, "")
+    do_preprocess_local_component_tags(rest_after, ["}", expression, "{" | acc])
+  end
+
+  defp do_preprocess_local_component_tags(<<"</.", rest::binary>>, acc) do
+    case take_local_component_name(rest) do
+      {:ok, name, rest_after} ->
+        do_preprocess_local_component_tags(rest_after, [name, @local_component_prefix, "</" | acc])
+
+      :error ->
+        do_preprocess_local_component_tags(rest, ["</." | acc])
+    end
+  end
+
+  defp do_preprocess_local_component_tags(<<"<.", rest::binary>>, acc) do
+    case take_local_component_name(rest) do
+      {:ok, name, rest_after} ->
+        do_preprocess_local_component_tags(rest_after, [name, @local_component_prefix, "<" | acc])
+
+      :error ->
+        do_preprocess_local_component_tags(rest, ["<." | acc])
+    end
+  end
+
+  defp do_preprocess_local_component_tags(<<char::utf8, rest::binary>>, acc) do
+    do_preprocess_local_component_tags(rest, [<<char::utf8>> | acc])
+  end
+
+  defp take_local_component_name(<<first::utf8, rest::binary>>) do
+    if local_component_name_start?(first) do
+      do_take_local_component_name(rest, <<first::utf8>>)
+    else
+      :error
+    end
+  end
+
+  defp take_local_component_name(_), do: :error
+
+  defp do_take_local_component_name(<<char::utf8, rest::binary>>, name)
+       when (char >= ?a and char <= ?z) or (char >= ?A and char <= ?Z) or
+              (char >= ?0 and char <= ?9) or char in [?_, ?-] do
+    do_take_local_component_name(rest, name <> <<char::utf8>>)
+  end
+
+  defp do_take_local_component_name(rest, name) do
+    if local_component_name_boundary?(rest), do: {:ok, name, rest}, else: :error
+  end
+
+  defp local_component_name_start?(char),
+    do: (char >= ?a and char <= ?z) or (char >= ?A and char <= ?Z) or char == ?_
+
+  defp local_component_name_boundary?(<<>>), do: false
+
+  defp local_component_name_boundary?(<<char::utf8, _rest::binary>>),
+    do: char in [?>, ?/, 32, 9, 10, 13]
 
   defp preprocess_dynamic_attributes(template) do
     do_preprocess_dynamic_attributes(template, %{}, [], 0, :text)

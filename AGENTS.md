@@ -179,7 +179,7 @@ Prefer this style unless the task is explicitly lower-level:
 - `use Guppy.Window`
 - assign helpers
 - `~GUI`
-- local function components
+- dotted local function components (`<.my_fun>`)
 - prop declarations with `prop/3` / `prop/4`
 
 Current `Guppy.Window` callback shape:

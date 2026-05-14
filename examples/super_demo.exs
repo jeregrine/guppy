@@ -929,7 +929,7 @@ defmodule Guppy.SuperDemo do
       <rich_text id="components_intro" runs={@intro_runs} class="text-base leading-relaxed" />
 
       <div id="component_card_grid" class="grid grid-cols-[3] gap-2 w-full">
-        <feature_card
+        <.feature_card
           :for={card <- @cards}
           id={card.id}
           title={card.title}
@@ -939,7 +939,7 @@ defmodule Guppy.SuperDemo do
           animation={card.animation}
         >
           <text id={card.detail_id} class="text-xs text-[#94a3b8] leading-snug">{card.detail}</text>
-        </feature_card>
+        </.feature_card>
       </div>
 
       <div id="component_controls" class="flex flex-row flex-wrap gap-2 items-center p-2 rounded-lg border-1 border-[#334155] bg-[#111827]">
@@ -2427,7 +2427,7 @@ defmodule Guppy.SuperDemo do
         badge: "~GUI",
         body:
           "Local function components keep example markup small while prop declarations catch bad calls early.",
-        detail: "This card is rendered by <feature_card> with typed props and nested children.",
+        detail: "This card is rendered by <.feature_card> with typed props and nested children.",
         detail_id: "component_card_templates_detail",
         class: feature_card_class("#172554", "#60a5fa", "#dbeafe"),
         animation: nil
