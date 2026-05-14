@@ -269,7 +269,7 @@ Files you will most often need:
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI app bootstrap, request drain, window registry
 - `native/guppy_nif/src/bridge_view.rs` — native root renderer
 - `native/guppy_nif/src/bridge_view_tests.rs` — root renderer retention/simulated-event tests
-- `native/guppy_nif/src/bridge_view/` — render pass, style mapping, event bridge, identity, per-node renderers
+- `native/guppy_nif/src/bridge_view/` — render pass, style mapping, event bridge, identity, per-node renderers and focused renderer tests
 - `native/guppy_nif/src/bridge_view/render_canvas.rs` — canvas/custom painting renderer
 - `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
 - `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
