@@ -778,137 +778,19 @@ fn duration_to_u64_nanos(duration: Duration) -> u64 {
 }
 
 #[cfg(test)]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct RowControlEventSnapshot {
-    pub event: &'static str,
-    pub view_id: u64,
-    pub node_id: String,
-    pub callback_id: String,
-    pub list_id: String,
-    pub row_id: String,
-    pub control_id: String,
-    pub value: Option<String>,
-    pub checked: Option<bool>,
-}
+mod native_event_test_support;
 
 #[cfg(test)]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct MenuEventSnapshot {
-    pub action_id: String,
-    pub callback_id: String,
-}
+use native_event_test_support::{
+    record_menu_event_snapshot_for_test, record_row_control_event_snapshot_for_test,
+    record_semantic_event_snapshot_for_test,
+};
 
 #[cfg(test)]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct SemanticEventSnapshot {
-    pub event: &'static str,
-    pub view_id: u64,
-    pub node_id: String,
-    pub callback_id: String,
-    pub table_id: Option<String>,
-    pub row_id: Option<String>,
-    pub column_id: Option<String>,
-    pub tree_id: Option<String>,
-    pub item_id: Option<String>,
-}
-
-#[cfg(test)]
-static ROW_CONTROL_EVENT_SNAPSHOT: Mutex<Option<RowControlEventSnapshot>> = Mutex::new(None);
-
-#[cfg(test)]
-static MENU_EVENT_SNAPSHOT: Mutex<Option<MenuEventSnapshot>> = Mutex::new(None);
-
-#[cfg(test)]
-static SEMANTIC_EVENT_SNAPSHOT: Mutex<Option<SemanticEventSnapshot>> = Mutex::new(None);
-
-#[cfg(test)]
-pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
-    (
-        NATIVE_EVENT_SEND_COUNT.load(Ordering::Relaxed),
-        NATIVE_EVENT_SEND_FAILURE_COUNT.load(Ordering::Relaxed),
-    )
-}
-
-#[cfg(test)]
-pub(crate) fn take_row_control_event_snapshot_for_test() -> Option<RowControlEventSnapshot> {
-    ROW_CONTROL_EVENT_SNAPSHOT.lock().ok()?.take()
-}
-
-#[cfg(test)]
-pub(crate) fn take_menu_event_snapshot_for_test() -> Option<MenuEventSnapshot> {
-    MENU_EVENT_SNAPSHOT.lock().ok()?.take()
-}
-
-#[cfg(test)]
-pub(crate) fn take_semantic_event_snapshot_for_test() -> Option<SemanticEventSnapshot> {
-    SEMANTIC_EVENT_SNAPSHOT.lock().ok()?.take()
-}
-
-#[cfg(test)]
-fn record_menu_event_snapshot_for_test(action_id: String, callback_id: String) {
-    if let Ok(mut snapshot) = MENU_EVENT_SNAPSHOT.lock() {
-        *snapshot = Some(MenuEventSnapshot {
-            action_id,
-            callback_id,
-        });
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::too_many_arguments)]
-fn record_semantic_event_snapshot_for_test(
-    event: &'static str,
-    view_id: u64,
-    node_id: String,
-    callback_id: String,
-    table_id: Option<String>,
-    row_id: Option<String>,
-    column_id: Option<String>,
-    tree_id: Option<String>,
-    item_id: Option<String>,
-) {
-    if let Ok(mut snapshot) = SEMANTIC_EVENT_SNAPSHOT.lock() {
-        *snapshot = Some(SemanticEventSnapshot {
-            event,
-            view_id,
-            node_id,
-            callback_id,
-            table_id,
-            row_id,
-            column_id,
-            tree_id,
-            item_id,
-        });
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::too_many_arguments)]
-fn record_row_control_event_snapshot_for_test(
-    event: &'static str,
-    view_id: u64,
-    node_id: String,
-    callback_id: String,
-    list_id: String,
-    row_id: String,
-    control_id: String,
-    value: Option<String>,
-    checked: Option<bool>,
-) {
-    if let Ok(mut snapshot) = ROW_CONTROL_EVENT_SNAPSHOT.lock() {
-        *snapshot = Some(RowControlEventSnapshot {
-            event,
-            view_id,
-            node_id,
-            callback_id,
-            list_id,
-            row_id,
-            control_id,
-            value,
-            checked,
-        });
-    }
-}
+pub(crate) use native_event_test_support::{
+    native_event_send_snapshot_for_test, take_menu_event_snapshot_for_test,
+    take_row_control_event_snapshot_for_test, take_semantic_event_snapshot_for_test,
+};
 
 fn send_id_callback_event(view_id: u64, event: Atom, node_id: &str, callback_id: &str) -> i32 {
     let node_id = node_id.to_owned();
