@@ -2813,7 +2813,7 @@ fn parse_gradient_percentage(term: &Term) -> Result<f32, String> {
 fn parse_style_color(term: &Term) -> Result<StyleColor, String> {
     match term {
         Term::Atom(atom) => parse_color_token(&atom.name).map(StyleColor::Token),
-        Term::Binary(_) | Term::ByteList(_) => parse_hex_style_color(term)
+        Term::Binary(_) | Term::ByteList(_) => parse_strict_hex_color(term)
             .map(StyleColor::Hex)
             .map_err(|error| format!("invalid gradient color: {error}")),
         other => Err(format!(
@@ -2825,19 +2825,28 @@ fn parse_style_color(term: &Term) -> Result<StyleColor, String> {
 fn parse_hex_style_color(term: &Term) -> Result<String, String> {
     let value = term_to_string(term)?;
 
-    if is_strict_hex_color(&value) {
+    if is_hex_color(&value, false) {
         Ok(value)
     } else {
         Err(format!("invalid style hex color: {value}"))
     }
 }
 
-fn is_strict_hex_color(value: &str) -> bool {
-    value.len() == 7
-        && value.starts_with('#')
-        && value.as_bytes()[1..]
-            .iter()
-            .all(|byte| byte.is_ascii_hexdigit())
+fn parse_strict_hex_color(term: &Term) -> Result<String, String> {
+    let value = term_to_string(term)?;
+
+    if is_hex_color(&value, true) {
+        Ok(value)
+    } else {
+        Err(format!("invalid strict hex color: {value}"))
+    }
+}
+
+fn is_hex_color(value: &str, require_hash: bool) -> bool {
+    let normalized = value.strip_prefix('#').unwrap_or(value);
+    (!require_hash || value.starts_with('#'))
+        && normalized.len() == 6
+        && normalized.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn parse_unit_style_f32(term: &Term, key: &str) -> Result<f32, String> {
@@ -3522,8 +3531,20 @@ mod tests {
     }
 
     #[test]
+    fn parses_style_hex_color_ops_with_optional_hash() {
+        assert_eq!(
+            parse_style_op(&tuple(vec![atom("bg_hex"), binary("#0f172a")])).unwrap(),
+            StyleOp::BgHex("#0f172a".into())
+        );
+        assert_eq!(
+            parse_style_op(&tuple(vec![atom("text_color_hex"), binary("445566")])).unwrap(),
+            StyleOp::TextColorHex("445566".into())
+        );
+    }
+
+    #[test]
     fn rejects_invalid_hex_style_color_ops() {
-        let term = tuple(vec![atom("bg_hex"), binary("0f172a")]);
+        let term = tuple(vec![atom("bg_hex"), binary("#12")]);
 
         let err = parse_style_op(&term).unwrap_err();
         assert!(err.contains("invalid style hex color"));
