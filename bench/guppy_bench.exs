@@ -337,14 +337,6 @@ defmodule Guppy.Bench do
         "skip native render/request latency; benchmark setup failed: #{Exception.message(error)}"
       )
   end
-
-  defp maybe_close(view_id) do
-    case Guppy.close_window(view_id) do
-      :ok -> :ok
-      {:error, :unknown_view_id} -> :ok
-      {:error, :nif_not_loaded} -> :ok
-    end
-  end
 end
 
 Guppy.Bench.main(System.argv())
