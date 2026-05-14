@@ -44,7 +44,7 @@ Selected results from `mix run bench/guppy_bench.exs`:
 
 ## 2026-05-14 native cleanup spot-check
 
-After the native IR/style cleanup pass that tightened native style validation and moved list/table/canvas payloads toward `Arc<[T]>`, `mix run bench/guppy_bench.exs` on the same local M1 Pro/macOS class machine reported these selected non-native scenarios. These numbers are a spot-check for regressions, not a release baseline.
+After the native IR/style cleanup pass that tightened native style validation and moved list/table/tree/select/canvas/rich-text payloads toward `Arc<[T]>`, `mix run bench/guppy_bench.exs` on the same local M1 Pro/macOS class machine reported these selected non-native scenarios. These numbers are a spot-check for regressions, not a release baseline.
 
 | Scenario | Average | 99th percentile |
 | --- | ---: | ---: |
