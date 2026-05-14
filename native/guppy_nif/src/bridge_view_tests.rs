@@ -240,7 +240,7 @@ fn render_retains_scroll_and_focus_state_for_compliance_smoke(cx: &mut gpui::Tes
             id: Some("compliance_scroll".into()),
             axis: ScrollAxis::Y,
             style: Vec::new().into(),
-            children: vec![tab_stop_div()],
+            children: vec![tab_stop_div()].into(),
         },
         retained: BridgeRetainedState::default(),
     });

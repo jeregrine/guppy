@@ -730,7 +730,7 @@ pub enum IrNode {
         id: Option<String>,
         axis: ScrollAxis,
         style: DivStyle,
-        children: Vec<IrNode>,
+        children: Arc<[IrNode]>,
     },
     Image {
         id: Option<String>,
@@ -860,7 +860,7 @@ impl IrNode {
                     id,
                     axis: get_scroll_axis_field(map)?,
                     style: get_div_style(map)?,
-                    children,
+                    children: children.into(),
                 })
             }
             "uniform_list" => Ok(Self::UniformList {
