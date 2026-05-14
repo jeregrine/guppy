@@ -2,7 +2,7 @@ defmodule Guppy.Bench.Template do
   use Guppy.Component
 
   def render(assigns) do
-    ~G"""
+    ~GUI"""
     <div id="bench_root" class="flex flex-col gap-1 p-2">
       <div :for={item <- @items} id={"bench_item_#{item}"} class="p-1 border-1 border-gray">
         <text>{"Item #{item}"}</text>
@@ -76,7 +76,7 @@ defmodule Guppy.Bench do
         ir = tree(count)
 
         [
-          {"~G template render #{count} nodes",
+          {"~GUI template render #{count} nodes",
            fn ->
              Guppy.Bench.Template.render(%{items: items})
            end},
