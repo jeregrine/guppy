@@ -1035,11 +1035,11 @@ fn get_child_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, Str
         return Ok(Arc::new([]));
     };
 
-    get_list(children_term)?
-        .iter()
-        .map(IrNode::from_term)
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    collect_arc(get_list(children_term)?.iter().map(IrNode::from_term))
+}
+
+fn collect_arc<T, E>(items: impl Iterator<Item = Result<T, E>>) -> Result<Arc<[T]>, E> {
+    items.collect::<Result<Vec<_>, _>>().map(Into::into)
 }
 
 fn decode_button_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<DivNode, String> {
@@ -1498,18 +1498,14 @@ fn get_uniform_list_items_field(
         return Err("missing required field: items".into());
     };
 
-    get_list(items_term)?
-        .iter()
-        .map(|term| {
-            let item = expect_map(term)?;
-            ensure_allowed_fields(item, &["id", "label"], "uniform_list item")?;
-            Ok(UniformListItem {
-                id: get_string_field(item, "id")?,
-                label: get_string_field(item, "label")?,
-            })
+    collect_arc(get_list(items_term)?.iter().map(|term| {
+        let item = expect_map(term)?;
+        ensure_allowed_fields(item, &["id", "label"], "uniform_list item")?;
+        Ok(UniformListItem {
+            id: get_string_field(item, "id")?,
+            label: get_string_field(item, "label")?,
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    }))
 }
 
 fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, String> {
@@ -1517,27 +1513,23 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, St
         return Err("missing required field: items".into());
     };
 
-    get_list(items_term)?
-        .iter()
-        .map(|term| {
-            let item = expect_map(term)?;
-            ensure_allowed_fields(item, &["id", "children"], "list item")?;
-            let Some(children_term) = get_field(item, "children") else {
-                return Err("missing required field: list item children".into());
-            };
-            let children = get_list(children_term)?
-                .iter()
-                .map(decode_list_row_child_term)
-                .collect::<Result<Vec<_>, _>>()?;
-            ensure_unique_list_row_control_ids(&children)?;
+    collect_arc(get_list(items_term)?.iter().map(|term| {
+        let item = expect_map(term)?;
+        ensure_allowed_fields(item, &["id", "children"], "list item")?;
+        let Some(children_term) = get_field(item, "children") else {
+            return Err("missing required field: list item children".into());
+        };
+        let children = get_list(children_term)?
+            .iter()
+            .map(decode_list_row_child_term)
+            .collect::<Result<Vec<_>, _>>()?;
+        ensure_unique_list_row_control_ids(&children)?;
 
-            Ok(ListItem {
-                id: get_string_field(item, "id")?,
-                children: children.into(),
-            })
+        Ok(ListItem {
+            id: get_string_field(item, "id")?,
+            children: children.into(),
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    }))
 }
 
 fn get_data_table_columns_field(
@@ -1548,30 +1540,26 @@ fn get_data_table_columns_field(
     };
 
     let mut seen = HashSet::new();
-    get_list(columns_term)?
-        .iter()
-        .map(|term| {
-            let column = expect_map(term)?;
-            ensure_allowed_fields(
-                column,
-                &["id", "label", "width", "sortable", "style"],
-                "data_table column",
-            )?;
-            let id = get_string_field(column, "id")?;
-            if !seen.insert(id.clone()) {
-                return Err(format!("duplicate data_table column id: {id}"));
-            }
+    collect_arc(get_list(columns_term)?.iter().map(|term| {
+        let column = expect_map(term)?;
+        ensure_allowed_fields(
+            column,
+            &["id", "label", "width", "sortable", "style"],
+            "data_table column",
+        )?;
+        let id = get_string_field(column, "id")?;
+        if !seen.insert(id.clone()) {
+            return Err(format!("duplicate data_table column id: {id}"));
+        }
 
-            Ok(DataTableColumn {
-                id,
-                label: get_string_field(column, "label")?,
-                width: get_data_table_column_width(column)?,
-                sortable: get_boolean_field(column, "sortable")?,
-                style: get_div_style(column)?,
-            })
+        Ok(DataTableColumn {
+            id,
+            label: get_string_field(column, "label")?,
+            width: get_data_table_column_width(column)?,
+            sortable: get_boolean_field(column, "sortable")?,
+            style: get_div_style(column)?,
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    }))
 }
 
 fn get_data_table_column_width(map: &HashMap<Term, Term>) -> Result<DataTableColumnWidth, String> {
@@ -1619,24 +1607,20 @@ fn get_data_table_rows_field(
     };
 
     let mut seen = HashSet::new();
-    get_list(rows_term)?
-        .iter()
-        .map(|term| {
-            let row = expect_map(term)?;
-            ensure_allowed_fields(row, &["id", "cells", "style"], "data_table row")?;
-            let id = get_string_field(row, "id")?;
-            if !seen.insert(id.clone()) {
-                return Err(format!("duplicate data_table row id: {id}"));
-            }
+    collect_arc(get_list(rows_term)?.iter().map(|term| {
+        let row = expect_map(term)?;
+        ensure_allowed_fields(row, &["id", "cells", "style"], "data_table row")?;
+        let id = get_string_field(row, "id")?;
+        if !seen.insert(id.clone()) {
+            return Err(format!("duplicate data_table row id: {id}"));
+        }
 
-            Ok(DataTableRow {
-                id,
-                cells: get_data_table_cells(row, column_ids)?,
-                style: get_div_style(row)?,
-            })
+        Ok(DataTableRow {
+            id,
+            cells: get_data_table_cells(row, column_ids)?,
+            style: get_div_style(row)?,
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    }))
 }
 
 fn get_data_table_cells(
@@ -1648,25 +1632,21 @@ fn get_data_table_cells(
     };
 
     let mut seen = HashSet::new();
-    get_list(cells_term)?
-        .iter()
-        .map(|term| {
-            let cell = expect_map(term)?;
-            ensure_allowed_fields(cell, &["column_id", "children", "style"], "data_table cell")?;
-            let column_id = get_string_field(cell, "column_id")?;
-            ensure_id_known(&column_id, column_ids, "unknown data_table cell column")?;
-            if !seen.insert(column_id.clone()) {
-                return Err(format!("duplicate data_table cell column: {column_id}"));
-            }
+    collect_arc(get_list(cells_term)?.iter().map(|term| {
+        let cell = expect_map(term)?;
+        ensure_allowed_fields(cell, &["column_id", "children", "style"], "data_table cell")?;
+        let column_id = get_string_field(cell, "column_id")?;
+        ensure_id_known(&column_id, column_ids, "unknown data_table cell column")?;
+        if !seen.insert(column_id.clone()) {
+            return Err(format!("duplicate data_table cell column: {column_id}"));
+        }
 
-            Ok(DataTableCell {
-                column_id,
-                children: get_data_table_cell_children(cell)?,
-                style: get_div_style(cell)?,
-            })
+        Ok(DataTableCell {
+            column_id,
+            children: get_data_table_cell_children(cell)?,
+            style: get_div_style(cell)?,
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    }))
 }
 
 fn get_data_table_cell_children(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, String> {
@@ -1674,11 +1654,11 @@ fn get_data_table_cell_children(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode
         return Err("missing required field: data_table cell children".into());
     };
 
-    get_list(children_term)?
-        .iter()
-        .map(decode_data_table_cell_child_term)
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    collect_arc(
+        get_list(children_term)?
+            .iter()
+            .map(decode_data_table_cell_child_term),
+    )
 }
 
 fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
@@ -1743,11 +1723,7 @@ fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[TreeItem]>, St
 }
 
 fn get_tree_nodes(term: &Term, seen: &mut HashSet<String>) -> Result<Arc<[TreeItem]>, String> {
-    get_list(term)?
-        .iter()
-        .map(|term| get_tree_item(term, seen))
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    collect_arc(get_list(term)?.iter().map(|term| get_tree_item(term, seen)))
 }
 
 fn get_tree_item(term: &Term, seen: &mut HashSet<String>) -> Result<TreeItem, String> {
@@ -1801,11 +1777,7 @@ fn get_canvas_commands_field(map: &HashMap<Term, Term>) -> Result<Arc<[CanvasCom
         return Err("missing required field: commands".into());
     };
 
-    get_list(commands_term)?
-        .iter()
-        .map(decode_canvas_command)
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    collect_arc(get_list(commands_term)?.iter().map(decode_canvas_command))
 }
 
 fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
@@ -1893,19 +1865,15 @@ fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Arc<[SelectOpti
         return Err("missing required field: options".into());
     };
 
-    get_list(options_term)?
-        .iter()
-        .map(|term| {
-            let option = expect_map(term)?;
-            ensure_allowed_fields(option, &["value", "label", "disabled"], "select option")?;
-            Ok(SelectOption {
-                value: get_string_field(option, "value")?,
-                label: get_string_field(option, "label")?,
-                disabled: get_boolean_field(option, "disabled")?,
-            })
+    collect_arc(get_list(options_term)?.iter().map(|term| {
+        let option = expect_map(term)?;
+        ensure_allowed_fields(option, &["value", "label", "disabled"], "select option")?;
+        Ok(SelectOption {
+            value: get_string_field(option, "value")?,
+            label: get_string_field(option, "label")?,
+            disabled: get_boolean_field(option, "disabled")?,
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    }))
 }
 
 fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
@@ -2486,11 +2454,11 @@ fn get_div_shortcuts(
     };
 
     let shortcuts = get_list(shortcuts_term)?;
-    shortcuts
-        .iter()
-        .map(|shortcut| parse_shortcut_binding(shortcut, actions))
-        .collect::<Result<Vec<_>, _>>()
-        .map(Into::into)
+    collect_arc(
+        shortcuts
+            .iter()
+            .map(|shortcut| parse_shortcut_binding(shortcut, actions)),
+    )
 }
 
 fn parse_shortcut_binding(
@@ -2531,11 +2499,7 @@ fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle
     };
 
     let style_list = get_list(style_term)?;
-    let ops = style_list
-        .iter()
-        .map(parse_style_op)
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(ops.into())
+    collect_arc(style_list.iter().map(parse_style_op))
 }
 
 fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
