@@ -9,6 +9,84 @@ defmodule Guppy.IRTest do
              Guppy.IR.validate(Map.put(Guppy.IR.div([], id: "root"), :bogus, "nope"))
   end
 
+  test "data_table validates semantic columns rows and events" do
+    ir =
+      Guppy.IR.data_table(
+        [
+          %{id: "task", label: "Task", width: {:fr, 1}, sortable: true},
+          %{id: "status", label: "Status", width: {:px, 120}}
+        ],
+        [
+          %{
+            id: "row_1",
+            cells: [
+              %{column_id: "task", children: [Guppy.IR.text("Ship menus")]},
+              %{column_id: "status", children: [Guppy.IR.text("Done")]}
+            ]
+          }
+        ],
+        id: "project_table",
+        selected_row_id: "row_1",
+        selected_cell: {"row_1", "status"},
+        sort: %{column_id: "task", direction: :asc},
+        events: %{row_click: "select_row", cell_click: "select_cell", sort: "sort_table"}
+      )
+
+    assert :ok = Guppy.IR.validate(ir)
+  end
+
+  test "data_table rejects duplicate columns and invalid cell references" do
+    assert {:error, {:duplicate_data_table_column_id, "task"}} =
+             Guppy.IR.validate(
+               Guppy.IR.data_table(
+                 [%{id: "task", label: "Task"}, %{id: "task", label: "Duplicate"}],
+                 []
+               )
+             )
+
+    assert {:error, {:unknown_data_table_cell_column, "missing"}} =
+             Guppy.IR.validate(
+               Guppy.IR.data_table(
+                 [%{id: "task", label: "Task"}],
+                 [%{id: "row_1", cells: [%{column_id: "missing", children: []}]}]
+               )
+             )
+  end
+
+  test "tree validates nested nodes and selection events" do
+    ir =
+      Guppy.IR.tree(
+        [
+          %{
+            id: "root",
+            label: "Root",
+            expanded: true,
+            children: [
+              %{id: "child", label: "Child", children: []}
+            ]
+          }
+        ],
+        id: "project_tree",
+        selected_id: "child",
+        events: %{select: "select_node", toggle: "toggle_node"}
+      )
+
+    assert :ok = Guppy.IR.validate(ir)
+  end
+
+  test "tree rejects duplicate node ids and invalid expansion state" do
+    assert {:error, {:duplicate_tree_node_id, "dup"}} =
+             Guppy.IR.validate(
+               Guppy.IR.tree([
+                 %{id: "dup", label: "One"},
+                 %{id: "dup", label: "Two"}
+               ])
+             )
+
+    assert {:error, {:invalid_tree_node, %{id: "bad", label: "Bad", expanded: "yes"}}} =
+             Guppy.IR.validate(Guppy.IR.tree([%{id: "bad", label: "Bad", expanded: "yes"}]))
+  end
+
   test "generic list rows support explicitly identified button checkbox and radio controls" do
     ir =
       Guppy.IR.list([

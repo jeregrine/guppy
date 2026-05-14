@@ -143,6 +143,10 @@ Current primitives are intentionally narrower:
 
 Full data-table and tree virtualization should not be squeezed into those primitives. They need dedicated semantics so identity, selection, focus, and scrolling remain predictable.
 
+Initial implementation use case: a project-planning surface with a navigable outline/tree on the left and a task table on the right. Elixir owns selected node/row/cell state, sort state, and tree expansion; native emits selection, toggle, and sort requests.
+
+`Guppy.IR.data_table/3` and `Guppy.IR.tree/2` now define the dedicated semantic IR shape on the Elixir side with validation for column/node/row identity, cell references, selected state, sort state, and callback names. Native decode/render support is still in progress.
+
 ### Data-table scope
 
 A future table primitive needs explicit concepts for:

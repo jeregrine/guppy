@@ -45,10 +45,10 @@ Scope: [`docs/future-primitives.md`](docs/future-primitives.md#gradient-style-pr
 
 ### 4. Data-table and tree virtualization
 
-Scope: [`docs/future-primitives.md`](docs/future-primitives.md#data-table-and-tree-virtualization). Status: scoped, not active.
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#data-table-and-tree-virtualization). Status: implementation in progress; Elixir semantic IR helpers and validation are in place.
 
-- [ ] Capture a concrete table or tree use case before adding IR.
-- [ ] Define dedicated semantic IR instead of hiding table/tree behavior inside current `grid`, `uniform_list`, or `list` primitives.
+- [x] Capture a concrete table or tree use case before adding IR (project planner tree plus task table with sort/select callbacks).
+- [x] Define dedicated semantic IR instead of hiding table/tree behavior inside current `grid`, `uniform_list`, or `list` primitives (`Guppy.IR.data_table/3` and `Guppy.IR.tree/2`).
 - [ ] For tables, specify row ids, column ids, cell identity, sizing, selection, sort/filter events, and keyboard navigation.
 - [ ] For trees, specify node ids, parent/child relationships, Elixir-owned expansion state, selection/focus, disclosure rendering, and flattened visible-node virtualization.
 - [ ] Add stress-test or benchmark coverage before making large-data performance claims.

@@ -413,6 +413,74 @@ defmodule Guppy.IR do
           optional(:events) => text_events()
         }
 
+  @type data_table_column_width :: :auto | {:px, number()} | {:fr, pos_integer()}
+
+  @type data_table_column :: %{
+          required(:id) => node_id(),
+          required(:label) => String.t(),
+          optional(:width) => data_table_column_width(),
+          optional(:sortable) => boolean(),
+          optional(:style) => style()
+        }
+
+  @type data_table_cell :: %{
+          required(:column_id) => node_id(),
+          required(:children) => [ir_node()],
+          optional(:style) => style()
+        }
+
+  @type data_table_row :: %{
+          required(:id) => node_id(),
+          required(:cells) => [data_table_cell()],
+          optional(:style) => style()
+        }
+
+  @type data_table_events :: %{
+          optional(:row_click) => String.t(),
+          optional(:cell_click) => String.t(),
+          optional(:sort) => String.t()
+        }
+
+  @type data_table_sort :: %{
+          required(:column_id) => node_id(),
+          required(:direction) => :asc | :desc
+        }
+
+  @type data_table_node :: %{
+          required(:kind) => :data_table,
+          required(:columns) => [data_table_column()],
+          required(:rows) => [data_table_row()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:header_style) => style(),
+          optional(:row_style) => style(),
+          optional(:cell_style) => style(),
+          optional(:selected_row_id) => node_id(),
+          optional(:selected_cell) => {node_id(), node_id()},
+          optional(:sort) => data_table_sort(),
+          optional(:events) => data_table_events()
+        }
+
+  @type tree_item :: %{
+          required(:id) => node_id(),
+          required(:label) => String.t(),
+          optional(:expanded) => boolean(),
+          optional(:children) => [tree_item()],
+          optional(:style) => style()
+        }
+
+  @type tree_events :: %{optional(:select) => String.t(), optional(:toggle) => String.t()}
+
+  @type tree_node :: %{
+          required(:kind) => :tree,
+          required(:nodes) => [tree_item()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:row_style) => style(),
+          optional(:selected_id) => node_id(),
+          optional(:events) => tree_events()
+        }
+
   @type popover_events :: %{optional(:click) => String.t(), optional(:close) => String.t()}
   @type popover_anchor :: :top_left | :top_right | :bottom_left | :bottom_right
   @type popover_anchor_position_mode :: :window | :local
@@ -485,6 +553,8 @@ defmodule Guppy.IR do
           | select_node()
           | uniform_list_node()
           | list_node()
+          | data_table_node()
+          | tree_node()
           | popover_node()
           | spacer_node()
           | text_input_node()
@@ -632,6 +702,11 @@ defmodule Guppy.IR do
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
   @uniform_list_item_keys [:id, :label]
   @list_item_keys [:id, :children]
+  @data_table_column_keys [:id, :label, :width, :sortable, :style]
+  @data_table_row_keys [:id, :cells, :style]
+  @data_table_cell_keys [:column_id, :children, :style]
+  @data_table_sort_keys [:column_id, :direction]
+  @tree_item_keys [:id, :label, :expanded, :children, :style]
   @select_option_keys [:value, :label, :disabled]
   @list_row_div_keys [:kind, :children, :id, :style, :disabled, :events]
   @list_row_control_kinds [:button, :checkbox, :radio]
@@ -822,6 +897,47 @@ defmodule Guppy.IR do
     |> maybe_put(:id, id)
     |> maybe_put(:style, style)
     |> maybe_put(:item_style, item_style)
+    |> maybe_put(:events, events)
+  end
+
+  @spec data_table([data_table_column()], [data_table_row()], keyword()) :: data_table_node()
+  def data_table(columns, rows, opts \\ [])
+      when is_list(columns) and is_list(rows) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    header_style = Keyword.get(opts, :header_style)
+    row_style = Keyword.get(opts, :row_style)
+    cell_style = Keyword.get(opts, :cell_style)
+    selected_row_id = Keyword.get(opts, :selected_row_id)
+    selected_cell = Keyword.get(opts, :selected_cell)
+    sort = Keyword.get(opts, :sort)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :data_table, columns: columns, rows: rows}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+    |> maybe_put(:header_style, header_style)
+    |> maybe_put(:row_style, row_style)
+    |> maybe_put(:cell_style, cell_style)
+    |> maybe_put(:selected_row_id, selected_row_id)
+    |> maybe_put(:selected_cell, selected_cell)
+    |> maybe_put(:sort, sort)
+    |> maybe_put(:events, events)
+  end
+
+  @spec tree([tree_item()], keyword()) :: tree_node()
+  def tree(nodes, opts \\ []) when is_list(nodes) and is_list(opts) do
+    id = Keyword.get(opts, :id)
+    style = Keyword.get(opts, :style)
+    row_style = Keyword.get(opts, :row_style)
+    selected_id = Keyword.get(opts, :selected_id)
+    events = Keyword.get(opts, :events)
+
+    %{kind: :tree, nodes: nodes}
+    |> maybe_put(:id, id)
+    |> maybe_put(:style, style)
+    |> maybe_put(:row_style, row_style)
+    |> maybe_put(:selected_id, selected_id)
     |> maybe_put(:events, events)
   end
 
@@ -1066,6 +1182,21 @@ defmodule Guppy.IR do
     ],
     uniform_list: [:kind, :items, :id, :style, :item_style, :events],
     list: [:kind, :items, :id, :style, :item_style, :events],
+    data_table: [
+      :kind,
+      :columns,
+      :rows,
+      :id,
+      :style,
+      :header_style,
+      :row_style,
+      :cell_style,
+      :selected_row_id,
+      :selected_cell,
+      :sort,
+      :events
+    ],
+    tree: [:kind, :nodes, :id, :style, :row_style, :selected_id, :events],
     select: [
       :kind,
       :options,
@@ -1245,6 +1376,37 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :item_style)),
          :ok <- validate_events(Map.get(node, :events), [:click]),
          :ok <- validate_list_items(items) do
+      :ok
+    end
+  end
+
+  defp validate_node(%{kind: :data_table, columns: columns, rows: rows} = node)
+       when is_list(columns) and is_list(rows) do
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :header_style)),
+         :ok <- validate_style(Map.get(node, :row_style)),
+         :ok <- validate_style(Map.get(node, :cell_style)),
+         :ok <- validate_events(Map.get(node, :events), [:row_click, :cell_click, :sort]),
+         {:ok, column_ids} <- validate_data_table_columns(columns),
+         {:ok, row_ids} <- validate_data_table_rows(rows, column_ids),
+         :ok <- validate_data_table_selected_row(Map.get(node, :selected_row_id), row_ids),
+         :ok <-
+           validate_data_table_selected_cell(Map.get(node, :selected_cell), row_ids, column_ids),
+         :ok <- validate_data_table_sort(Map.get(node, :sort), column_ids) do
+      :ok
+    end
+  end
+
+  defp validate_node(%{kind: :tree, nodes: nodes} = node) when is_list(nodes) do
+    with :ok <- validate_node_keys(node),
+         :ok <- validate_id(Map.get(node, :id)),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :row_style)),
+         :ok <- validate_events(Map.get(node, :events), [:select, :toggle]),
+         {:ok, node_ids} <- validate_tree_nodes(nodes),
+         :ok <- validate_tree_selected_id(Map.get(node, :selected_id), node_ids) do
       :ok
     end
   end
@@ -1590,6 +1752,198 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_data_table_columns(columns) do
+    Enum.reduce_while(columns, {:ok, MapSet.new()}, fn
+      %{id: id, label: label} = column, {:ok, seen} when is_binary(id) and is_binary(label) ->
+        cond do
+          MapSet.member?(seen, id) ->
+            {:halt, {:error, {:duplicate_data_table_column_id, id}}}
+
+          true ->
+            with :ok <- validate_known_keys(column, @data_table_column_keys, :data_table_column),
+                 :ok <- validate_data_table_column_width(Map.get(column, :width)),
+                 :ok <- validate_optional_boolean(Map.get(column, :sortable), :sortable),
+                 :ok <- validate_style(Map.get(column, :style)) do
+              {:cont, {:ok, MapSet.put(seen, id)}}
+            else
+              error -> {:halt, error}
+            end
+        end
+
+      column, {:ok, _seen} ->
+        {:halt, {:error, {:invalid_data_table_column, column}}}
+    end)
+  end
+
+  defp validate_data_table_column_width(nil), do: :ok
+  defp validate_data_table_column_width(:auto), do: :ok
+  defp validate_data_table_column_width({:px, value}) when is_number(value) and value > 0, do: :ok
+
+  defp validate_data_table_column_width({:fr, value}) when is_integer(value) and value > 0,
+    do: :ok
+
+  defp validate_data_table_column_width(width),
+    do: {:error, {:invalid_data_table_column_width, width}}
+
+  defp validate_data_table_rows(rows, column_ids) do
+    Enum.reduce_while(rows, {:ok, MapSet.new()}, fn
+      %{id: id, cells: cells} = row, {:ok, seen} when is_binary(id) and is_list(cells) ->
+        cond do
+          MapSet.member?(seen, id) ->
+            {:halt, {:error, {:duplicate_data_table_row_id, id}}}
+
+          true ->
+            with :ok <- validate_known_keys(row, @data_table_row_keys, :data_table_row),
+                 :ok <- validate_style(Map.get(row, :style)),
+                 :ok <- validate_data_table_cells(cells, column_ids) do
+              {:cont, {:ok, MapSet.put(seen, id)}}
+            else
+              error -> {:halt, error}
+            end
+        end
+
+      row, {:ok, _seen} ->
+        {:halt, {:error, {:invalid_data_table_row, row}}}
+    end)
+  end
+
+  defp validate_data_table_cells(cells, column_ids) do
+    Enum.reduce_while(cells, {:ok, MapSet.new()}, fn
+      %{column_id: column_id, children: children} = cell, {:ok, seen}
+      when is_binary(column_id) and is_list(children) ->
+        cond do
+          not MapSet.member?(column_ids, column_id) ->
+            {:halt, {:error, {:unknown_data_table_cell_column, column_id}}}
+
+          MapSet.member?(seen, column_id) ->
+            {:halt, {:error, {:duplicate_data_table_cell_column, column_id}}}
+
+          true ->
+            with :ok <- validate_known_keys(cell, @data_table_cell_keys, :data_table_cell),
+                 :ok <- validate_style(Map.get(cell, :style)),
+                 :ok <- validate_children(children) do
+              {:cont, {:ok, MapSet.put(seen, column_id)}}
+            else
+              error -> {:halt, error}
+            end
+        end
+
+      cell, {:ok, _seen} ->
+        {:halt, {:error, {:invalid_data_table_cell, cell}}}
+    end)
+    |> case do
+      {:ok, _seen} -> :ok
+      error -> error
+    end
+  end
+
+  defp validate_data_table_selected_row(nil, _row_ids), do: :ok
+
+  defp validate_data_table_selected_row(row_id, row_ids) when is_binary(row_id) do
+    if MapSet.member?(row_ids, row_id) do
+      :ok
+    else
+      {:error, {:unknown_data_table_selected_row, row_id}}
+    end
+  end
+
+  defp validate_data_table_selected_row(row_id, _row_ids),
+    do: {:error, {:invalid_data_table_selected_row, row_id}}
+
+  defp validate_data_table_selected_cell(nil, _row_ids, _column_ids), do: :ok
+
+  defp validate_data_table_selected_cell({row_id, column_id}, row_ids, column_ids)
+       when is_binary(row_id) and is_binary(column_id) do
+    cond do
+      not MapSet.member?(row_ids, row_id) ->
+        {:error, {:unknown_data_table_selected_row, row_id}}
+
+      not MapSet.member?(column_ids, column_id) ->
+        {:error, {:unknown_data_table_selected_column, column_id}}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_data_table_selected_cell(cell, _row_ids, _column_ids),
+    do: {:error, {:invalid_data_table_selected_cell, cell}}
+
+  defp validate_data_table_sort(nil, _column_ids), do: :ok
+
+  defp validate_data_table_sort(%{column_id: column_id, direction: direction} = sort, column_ids)
+       when is_binary(column_id) and direction in [:asc, :desc] do
+    with :ok <- validate_known_keys(sort, @data_table_sort_keys, :data_table_sort) do
+      if MapSet.member?(column_ids, column_id) do
+        :ok
+      else
+        {:error, {:unknown_data_table_sort_column, column_id}}
+      end
+    end
+  end
+
+  defp validate_data_table_sort(sort, _column_ids), do: {:error, {:invalid_data_table_sort, sort}}
+
+  defp validate_tree_nodes(nodes) do
+    case validate_tree_nodes(nodes, MapSet.new()) do
+      {:ok, ids} -> {:ok, ids}
+      error -> error
+    end
+  end
+
+  defp validate_tree_nodes(nodes, seen) do
+    Enum.reduce_while(nodes, {:ok, seen}, fn node, {:ok, acc_seen} ->
+      case validate_tree_node(node, acc_seen) do
+        {:ok, next_seen} -> {:cont, {:ok, next_seen}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_tree_node(%{id: id, label: label} = node, seen)
+       when is_binary(id) and is_binary(label) do
+    cond do
+      MapSet.member?(seen, id) ->
+        {:error, {:duplicate_tree_node_id, id}}
+
+      not valid_tree_node_shape?(node) ->
+        {:error, {:invalid_tree_node, node}}
+
+      true ->
+        children = Map.get(node, :children, [])
+
+        with :ok <- validate_known_keys(node, @tree_item_keys, :tree_item),
+             :ok <- validate_style(Map.get(node, :style)),
+             {:ok, next_seen} <- validate_tree_nodes(children, MapSet.put(seen, id)) do
+          {:ok, next_seen}
+        end
+    end
+  end
+
+  defp validate_tree_node(node, _seen), do: {:error, {:invalid_tree_node, node}}
+
+  defp valid_tree_node_shape?(node) do
+    valid_tree_expanded?(node) and valid_tree_children?(node)
+  end
+
+  defp valid_tree_expanded?(%{expanded: expanded}), do: is_boolean(expanded)
+  defp valid_tree_expanded?(_node), do: true
+
+  defp valid_tree_children?(%{children: children}), do: is_list(children)
+  defp valid_tree_children?(_node), do: true
+
+  defp validate_tree_selected_id(nil, _node_ids), do: :ok
+
+  defp validate_tree_selected_id(id, node_ids) when is_binary(id) do
+    if MapSet.member?(node_ids, id) do
+      :ok
+    else
+      {:error, {:unknown_tree_selected_id, id}}
+    end
+  end
+
+  defp validate_tree_selected_id(id, _node_ids), do: {:error, {:invalid_tree_selected_id, id}}
+
   defp validate_select_options(options) do
     Enum.reduce_while(options, {:ok, MapSet.new()}, fn
       %{value: value, label: label} = option, {:ok, seen}
@@ -1682,6 +2036,23 @@ defmodule Guppy.IR do
     end)
   end
 
+  defp collect_child_ids(%{kind: :data_table, rows: rows}, ids) when is_list(rows) do
+    Enum.reduce_while(rows, {:ok, ids}, fn %{id: id, cells: cells}, {:ok, acc_ids} ->
+      if MapSet.member?(acc_ids, id) do
+        {:halt, {:error, {:duplicate_id, id}}}
+      else
+        case collect_data_table_cell_child_ids(cells, MapSet.put(acc_ids, id)) do
+          {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+      end
+    end)
+  end
+
+  defp collect_child_ids(%{kind: :tree, nodes: nodes}, ids) when is_list(nodes) do
+    collect_tree_item_ids(nodes, ids)
+  end
+
   defp collect_child_ids(_node, ids), do: {:ok, ids}
 
   defp collect_list_item_child_ids(children, ids) do
@@ -1709,6 +2080,28 @@ defmodule Guppy.IR do
     do: collect_list_item_child_ids(children, ids)
 
   defp collect_list_row_ids(node, ids), do: collect_ids(node, ids)
+
+  defp collect_data_table_cell_child_ids(cells, ids) do
+    Enum.reduce_while(cells, {:ok, ids}, fn %{children: children}, {:ok, acc_ids} ->
+      case collect_list_item_child_ids(children, acc_ids) do
+        {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp collect_tree_item_ids(nodes, ids) do
+    Enum.reduce_while(nodes, {:ok, ids}, fn %{id: id} = node, {:ok, acc_ids} ->
+      if MapSet.member?(acc_ids, id) do
+        {:halt, {:error, {:duplicate_id, id}}}
+      else
+        case collect_tree_item_ids(Map.get(node, :children, []), MapSet.put(acc_ids, id)) do
+          {:ok, next_ids} -> {:cont, {:ok, next_ids}}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+      end
+    end)
+  end
 
   defp validate_id(nil), do: :ok
   defp validate_id(id) when is_binary(id), do: :ok
