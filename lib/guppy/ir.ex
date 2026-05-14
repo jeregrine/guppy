@@ -634,6 +634,39 @@ defmodule Guppy.IR do
   @list_item_keys [:id, :children]
   @select_option_keys [:value, :label, :disabled]
   @list_row_div_keys [:kind, :children, :id, :style, :disabled, :events]
+  @list_row_control_kinds [:button, :checkbox, :radio]
+  @list_row_button_keys [
+    :kind,
+    :label,
+    :id,
+    :style,
+    :hover_style,
+    :focus_style,
+    :focus_visible_style,
+    :in_focus_style,
+    :active_style,
+    :disabled_style,
+    :disabled,
+    :tab_index,
+    :events
+  ]
+  @list_row_checkbox_keys [
+    :kind,
+    :label,
+    :checked,
+    :id,
+    :style,
+    :hover_style,
+    :focus_style,
+    :focus_visible_style,
+    :in_focus_style,
+    :active_style,
+    :disabled_style,
+    :disabled,
+    :tab_index,
+    :events
+  ]
+  @list_row_radio_keys [:value | @list_row_checkbox_keys]
 
   @spec text(String.t(), keyword()) :: text_node()
   def text(content, opts \\ []) when is_binary(content) and is_list(opts) do
@@ -1450,30 +1483,112 @@ defmodule Guppy.IR do
   end
 
   defp validate_list_item_children(children) do
-    Enum.reduce_while(children, :ok, fn child, :ok ->
-      case validate_list_row_node(child) do
-        :ok -> {:cont, :ok}
+    case validate_list_item_children(children, MapSet.new()) do
+      {:ok, _seen_control_ids} -> :ok
+      error -> error
+    end
+  end
+
+  defp validate_list_item_children(children, seen_control_ids) do
+    Enum.reduce_while(children, {:ok, seen_control_ids}, fn child, {:ok, seen} ->
+      case validate_list_row_node(child, seen) do
+        {:ok, next_seen} -> {:cont, {:ok, next_seen}}
         error -> {:halt, error}
       end
     end)
   end
 
-  defp validate_list_row_node(%{kind: kind} = node) when kind in [:text, :spacer] do
-    validate_node(node)
+  defp validate_list_row_node(%{kind: kind} = node, seen_control_ids)
+       when kind in [:text, :spacer] do
+    case validate_node(node) do
+      :ok -> {:ok, seen_control_ids}
+      error -> error
+    end
   end
 
-  defp validate_list_row_node(%{kind: :div, children: children} = node) when is_list(children) do
+  defp validate_list_row_node(%{kind: :div, children: children} = node, seen_control_ids)
+       when is_list(children) do
     with :ok <- validate_known_keys(node, @list_row_div_keys, :list_row_div),
          :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
-         :ok <- validate_events(Map.get(node, :events), [:click]),
-         :ok <- validate_list_item_children(children) do
+         :ok <- validate_events(Map.get(node, :events), [:click]) do
+      validate_list_item_children(children, seen_control_ids)
+    end
+  end
+
+  defp validate_list_row_node(%{kind: kind} = node, seen_control_ids)
+       when kind in @list_row_control_kinds do
+    with :ok <- validate_list_row_control_node(node),
+         {:ok, next_seen} <- track_list_row_control_id(kind, Map.get(node, :id), seen_control_ids) do
+      {:ok, next_seen}
+    end
+  end
+
+  defp validate_list_row_node(other, _seen_control_ids),
+    do: {:error, {:unsupported_list_item_child, other}}
+
+  defp validate_list_row_control_node(%{kind: :button, label: label} = node)
+       when is_binary(label) do
+    with :ok <- validate_known_keys(node, @list_row_button_keys, :list_row_button),
+         :ok <- validate_required_id(Map.get(node, :id), :button),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :hover_style)),
+         :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :focus_visible_style)),
+         :ok <- validate_style(Map.get(node, :in_focus_style)),
+         :ok <- validate_style(Map.get(node, :active_style)),
+         :ok <- validate_style(Map.get(node, :disabled_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
+         :ok <- validate_events(Map.get(node, :events), [:click]) do
       :ok
     end
   end
 
-  defp validate_list_row_node(other), do: {:error, {:unsupported_list_item_child, other}}
+  defp validate_list_row_control_node(%{kind: :checkbox, label: label, checked: checked} = node)
+       when is_binary(label) and is_boolean(checked) do
+    validate_list_row_choice_node(node, :checkbox, :list_row_checkbox, @list_row_checkbox_keys, [
+      :change
+    ])
+  end
+
+  defp validate_list_row_control_node(
+         %{kind: :radio, label: label, value: value, checked: checked} = node
+       )
+       when is_binary(label) and is_binary(value) and is_boolean(checked) do
+    validate_list_row_choice_node(node, :radio, :list_row_radio, @list_row_radio_keys, [:change])
+  end
+
+  defp validate_list_row_control_node(node), do: {:error, {:invalid_list_row_control, node}}
+
+  defp validate_list_row_choice_node(node, kind, error_kind, allowed_keys, allowed_events) do
+    with :ok <- validate_known_keys(node, allowed_keys, error_kind),
+         :ok <- validate_required_id(Map.get(node, :id), kind),
+         :ok <- validate_style(Map.get(node, :style)),
+         :ok <- validate_style(Map.get(node, :hover_style)),
+         :ok <- validate_style(Map.get(node, :focus_style)),
+         :ok <- validate_style(Map.get(node, :focus_visible_style)),
+         :ok <- validate_style(Map.get(node, :in_focus_style)),
+         :ok <- validate_style(Map.get(node, :active_style)),
+         :ok <- validate_style(Map.get(node, :disabled_style)),
+         :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
+         :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
+         :ok <- validate_events(Map.get(node, :events), allowed_events) do
+      :ok
+    end
+  end
+
+  defp validate_required_id(id, _kind) when is_binary(id), do: :ok
+  defp validate_required_id(_id, kind), do: {:error, {:missing_list_row_control_id, kind}}
+
+  defp track_list_row_control_id(_kind, id, seen_control_ids) do
+    if MapSet.member?(seen_control_ids, id) do
+      {:error, {:duplicate_list_row_control_id, id}}
+    else
+      {:ok, MapSet.put(seen_control_ids, id)}
+    end
+  end
 
   defp validate_select_options(options) do
     Enum.reduce_while(options, {:ok, MapSet.new()}, fn
@@ -1571,12 +1686,29 @@ defmodule Guppy.IR do
 
   defp collect_list_item_child_ids(children, ids) do
     Enum.reduce_while(children, {:ok, ids}, fn child, {:ok, acc_ids} ->
-      case collect_ids(child, acc_ids) do
+      case collect_list_row_ids(child, acc_ids) do
         {:ok, next_ids} -> {:cont, {:ok, next_ids}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
   end
+
+  defp collect_list_row_ids(%{kind: kind}, ids) when kind in @list_row_control_kinds,
+    do: {:ok, ids}
+
+  defp collect_list_row_ids(%{kind: :div, id: id, children: children}, ids)
+       when is_binary(id) and is_list(children) do
+    if MapSet.member?(ids, id) do
+      {:error, {:duplicate_id, id}}
+    else
+      collect_list_item_child_ids(children, MapSet.put(ids, id))
+    end
+  end
+
+  defp collect_list_row_ids(%{kind: :div, children: children}, ids) when is_list(children),
+    do: collect_list_item_child_ids(children, ids)
+
+  defp collect_list_row_ids(node, ids), do: collect_ids(node, ids)
 
   defp validate_id(nil), do: :ok
   defp validate_id(id) when is_binary(id), do: :ok

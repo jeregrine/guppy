@@ -9,6 +9,14 @@ pub(crate) struct BridgeDragState {
     pub source_id: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RowControlEventContext {
+    pub node_id: String,
+    pub list_id: String,
+    pub row_id: String,
+    pub control_id: String,
+}
+
 mod ffi {
     // SAFETY: these declarations match the Rust NIF event bridge functions exported from
     // native/guppy_nif/src/lib.rs. Callers pass borrowed Rust string bytes that are copied by
@@ -20,6 +28,20 @@ mod ffi {
             node_id_len: usize,
             callback_id_ptr: *const u8,
             callback_id_len: usize,
+        ) -> i32;
+
+        pub(super) fn guppy_c_send_row_control_click_event(
+            view_id: u64,
+            node_id_ptr: *const u8,
+            node_id_len: usize,
+            callback_id_ptr: *const u8,
+            callback_id_len: usize,
+            list_id_ptr: *const u8,
+            list_id_len: usize,
+            row_id_ptr: *const u8,
+            row_id_len: usize,
+            control_id_ptr: *const u8,
+            control_id_len: usize,
         ) -> i32;
 
         pub(super) fn guppy_c_send_close_event(
@@ -63,6 +85,37 @@ mod ffi {
             callback_id_len: usize,
             value_ptr: *const u8,
             value_len: usize,
+        ) -> i32;
+
+        pub(super) fn guppy_c_send_row_control_change_event(
+            view_id: u64,
+            node_id_ptr: *const u8,
+            node_id_len: usize,
+            callback_id_ptr: *const u8,
+            callback_id_len: usize,
+            list_id_ptr: *const u8,
+            list_id_len: usize,
+            row_id_ptr: *const u8,
+            row_id_len: usize,
+            control_id_ptr: *const u8,
+            control_id_len: usize,
+            value_ptr: *const u8,
+            value_len: usize,
+        ) -> i32;
+
+        pub(super) fn guppy_c_send_row_control_checkbox_change_event(
+            view_id: u64,
+            node_id_ptr: *const u8,
+            node_id_len: usize,
+            callback_id_ptr: *const u8,
+            callback_id_len: usize,
+            list_id_ptr: *const u8,
+            list_id_len: usize,
+            row_id_ptr: *const u8,
+            row_id_len: usize,
+            control_id_ptr: *const u8,
+            control_id_len: usize,
+            checked: i32,
         ) -> i32;
 
         pub(super) fn guppy_c_send_key_down_event(
@@ -256,6 +309,77 @@ pub(crate) fn emit_click(view_id: u64, node_id: &str, callback_id: &str) {
             node_id.len(),
             callback_id.as_ptr(),
             callback_id.len(),
+        );
+    }
+}
+
+pub(crate) fn emit_row_control_click(
+    view_id: u64,
+    context: &RowControlEventContext,
+    callback_id: &str,
+) {
+    unsafe {
+        let _ = ffi::guppy_c_send_row_control_click_event(
+            view_id,
+            context.node_id.as_ptr(),
+            context.node_id.len(),
+            callback_id.as_ptr(),
+            callback_id.len(),
+            context.list_id.as_ptr(),
+            context.list_id.len(),
+            context.row_id.as_ptr(),
+            context.row_id.len(),
+            context.control_id.as_ptr(),
+            context.control_id.len(),
+        );
+    }
+}
+
+pub(crate) fn emit_row_control_change(
+    view_id: u64,
+    context: &RowControlEventContext,
+    callback_id: &str,
+    value: &str,
+) {
+    unsafe {
+        let _ = ffi::guppy_c_send_row_control_change_event(
+            view_id,
+            context.node_id.as_ptr(),
+            context.node_id.len(),
+            callback_id.as_ptr(),
+            callback_id.len(),
+            context.list_id.as_ptr(),
+            context.list_id.len(),
+            context.row_id.as_ptr(),
+            context.row_id.len(),
+            context.control_id.as_ptr(),
+            context.control_id.len(),
+            value.as_ptr(),
+            value.len(),
+        );
+    }
+}
+
+pub(crate) fn emit_row_control_checkbox_change(
+    view_id: u64,
+    context: &RowControlEventContext,
+    callback_id: &str,
+    checked: bool,
+) {
+    unsafe {
+        let _ = ffi::guppy_c_send_row_control_checkbox_change_event(
+            view_id,
+            context.node_id.as_ptr(),
+            context.node_id.len(),
+            callback_id.as_ptr(),
+            callback_id.len(),
+            context.list_id.as_ptr(),
+            context.list_id.len(),
+            context.row_id.as_ptr(),
+            context.row_id.len(),
+            context.control_id.as_ptr(),
+            context.control_id.len(),
+            if checked { 1 } else { 0 },
         );
     }
 }

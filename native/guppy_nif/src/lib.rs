@@ -62,6 +62,7 @@ rustler::atoms! {
     key_up,
     left,
     lines,
+    list_id,
     middle,
     modifiers,
     native_timeout,
@@ -78,6 +79,7 @@ rustler::atoms! {
     pong,
     pressed_button,
     right,
+    row_id,
     runtime_unavailable,
     rust_core_unavailable,
     scroll_wheel,
@@ -87,6 +89,7 @@ rustler::atoms! {
     some,
     unknown_view_id,
     value,
+    control_id,
     window_close_requested,
     window_closed,
     x,
@@ -591,6 +594,24 @@ fn base_payload<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Vec<(Term
     ]
 }
 
+#[cfg_attr(test, allow(dead_code))]
+fn row_control_payload<'a>(
+    env: Env<'a>,
+    node_id: &str,
+    callback_id: &str,
+    list_id_value: &str,
+    row_id_value: &str,
+    control_id_value: &str,
+) -> Vec<(Term<'a>, Term<'a>)> {
+    let mut pairs = base_payload(env, node_id, callback_id);
+    pairs.extend([
+        (list_id().encode(env), list_id_value.encode(env)),
+        (row_id().encode(env), row_id_value.encode(env)),
+        (control_id().encode(env), control_id_value.encode(env)),
+    ]);
+    pairs
+}
+
 fn modifiers_payload<'a>(
     env: Env<'a>,
     control_value: i32,
@@ -657,11 +678,61 @@ fn duration_to_u64_nanos(duration: Duration) -> u64 {
 }
 
 #[cfg(test)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RowControlEventSnapshot {
+    pub event: &'static str,
+    pub view_id: u64,
+    pub node_id: String,
+    pub callback_id: String,
+    pub list_id: String,
+    pub row_id: String,
+    pub control_id: String,
+    pub value: Option<String>,
+    pub checked: Option<bool>,
+}
+
+#[cfg(test)]
+static ROW_CONTROL_EVENT_SNAPSHOT: Mutex<Option<RowControlEventSnapshot>> = Mutex::new(None);
+
+#[cfg(test)]
 pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
     (
         NATIVE_EVENT_SEND_COUNT.load(Ordering::Relaxed),
         NATIVE_EVENT_SEND_FAILURE_COUNT.load(Ordering::Relaxed),
     )
+}
+
+#[cfg(test)]
+pub(crate) fn take_row_control_event_snapshot_for_test() -> Option<RowControlEventSnapshot> {
+    ROW_CONTROL_EVENT_SNAPSHOT.lock().ok()?.take()
+}
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn record_row_control_event_snapshot_for_test(
+    event: &'static str,
+    view_id: u64,
+    node_id: String,
+    callback_id: String,
+    list_id: String,
+    row_id: String,
+    control_id: String,
+    value: Option<String>,
+    checked: Option<bool>,
+) {
+    if let Ok(mut snapshot) = ROW_CONTROL_EVENT_SNAPSHOT.lock() {
+        *snapshot = Some(RowControlEventSnapshot {
+            event,
+            view_id,
+            node_id,
+            callback_id,
+            list_id,
+            row_id,
+            control_id,
+            value,
+            checked,
+        });
+    }
 }
 
 fn send_id_callback_event(view_id: u64, event: Atom, node_id: &str, callback_id: &str) -> i32 {
@@ -696,6 +767,92 @@ pub extern "C" fn guppy_c_send_click_event(
 
     #[cfg(not(test))]
     send_id_callback_event(view_id, click(), &node_id, &callback_id)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn row_control_strings(
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+    list_id_ptr: *const u8,
+    list_id_len: usize,
+    row_id_ptr: *const u8,
+    row_id_len: usize,
+    control_id_ptr: *const u8,
+    control_id_len: usize,
+) -> Option<(String, String, String, String, String)> {
+    Some((
+        binary_str(node_id_ptr, node_id_len)?,
+        binary_str(callback_id_ptr, callback_id_len)?,
+        binary_str(list_id_ptr, list_id_len)?,
+        binary_str(row_id_ptr, row_id_len)?,
+        binary_str(control_id_ptr, control_id_len)?,
+    ))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn guppy_c_send_row_control_click_event(
+    view_id: u64,
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+    list_id_ptr: *const u8,
+    list_id_len: usize,
+    row_id_ptr: *const u8,
+    row_id_len: usize,
+    control_id_ptr: *const u8,
+    control_id_len: usize,
+) -> i32 {
+    let Some((node_id, callback_id, list_id_value, row_id_value, control_id_value)) =
+        row_control_strings(
+            node_id_ptr,
+            node_id_len,
+            callback_id_ptr,
+            callback_id_len,
+            list_id_ptr,
+            list_id_len,
+            row_id_ptr,
+            row_id_len,
+            control_id_ptr,
+            control_id_len,
+        )
+    else {
+        return 0;
+    };
+
+    #[cfg(test)]
+    {
+        record_row_control_event_snapshot_for_test(
+            "click",
+            view_id,
+            node_id,
+            callback_id,
+            list_id_value,
+            row_id_value,
+            control_id_value,
+            None,
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, click(), move |env| {
+        map_from_pairs(
+            env,
+            row_control_payload(
+                env,
+                &node_id,
+                &callback_id,
+                &list_id_value,
+                &row_id_value,
+                &control_id_value,
+            ),
+        )
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -814,6 +971,138 @@ pub extern "C" fn guppy_c_send_checkbox_change_event(
     };
     send_event(view_id, change(), move |env| {
         let mut pairs = base_payload(env, &node_id, &callback_id);
+        pairs.push((checked().encode(env), (checked_value != 0).encode(env)));
+        map_from_pairs(env, pairs)
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn guppy_c_send_row_control_change_event(
+    view_id: u64,
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+    list_id_ptr: *const u8,
+    list_id_len: usize,
+    row_id_ptr: *const u8,
+    row_id_len: usize,
+    control_id_ptr: *const u8,
+    control_id_len: usize,
+    value_ptr: *const u8,
+    value_len: usize,
+) -> i32 {
+    let Some((node_id, callback_id, list_id_value, row_id_value, control_id_value)) =
+        row_control_strings(
+            node_id_ptr,
+            node_id_len,
+            callback_id_ptr,
+            callback_id_len,
+            list_id_ptr,
+            list_id_len,
+            row_id_ptr,
+            row_id_len,
+            control_id_ptr,
+            control_id_len,
+        )
+    else {
+        return 0;
+    };
+    let Some(value_string) = binary_str(value_ptr, value_len) else {
+        return 0;
+    };
+
+    #[cfg(test)]
+    {
+        record_row_control_event_snapshot_for_test(
+            "change",
+            view_id,
+            node_id,
+            callback_id,
+            list_id_value,
+            row_id_value,
+            control_id_value,
+            Some(value_string),
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, change(), move |env| {
+        let mut pairs = row_control_payload(
+            env,
+            &node_id,
+            &callback_id,
+            &list_id_value,
+            &row_id_value,
+            &control_id_value,
+        );
+        pairs.push((value().encode(env), value_string.encode(env)));
+        map_from_pairs(env, pairs)
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn guppy_c_send_row_control_checkbox_change_event(
+    view_id: u64,
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+    list_id_ptr: *const u8,
+    list_id_len: usize,
+    row_id_ptr: *const u8,
+    row_id_len: usize,
+    control_id_ptr: *const u8,
+    control_id_len: usize,
+    checked_value: i32,
+) -> i32 {
+    let Some((node_id, callback_id, list_id_value, row_id_value, control_id_value)) =
+        row_control_strings(
+            node_id_ptr,
+            node_id_len,
+            callback_id_ptr,
+            callback_id_len,
+            list_id_ptr,
+            list_id_len,
+            row_id_ptr,
+            row_id_len,
+            control_id_ptr,
+            control_id_len,
+        )
+    else {
+        return 0;
+    };
+
+    #[cfg(test)]
+    {
+        record_row_control_event_snapshot_for_test(
+            "change",
+            view_id,
+            node_id,
+            callback_id,
+            list_id_value,
+            row_id_value,
+            control_id_value,
+            None,
+            Some(checked_value != 0),
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, change(), move |env| {
+        let mut pairs = row_control_payload(
+            env,
+            &node_id,
+            &callback_id,
+            &list_id_value,
+            &row_id_value,
+            &control_id_value,
+        );
         pairs.push((checked().encode(env), (checked_value != 0).encode(env)));
         map_from_pairs(env, pairs)
     })

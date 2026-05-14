@@ -700,6 +700,29 @@ defmodule Guppy.ServerNativeTest do
         send(Guppy.server(), {
           :guppy_native_event,
           view_id,
+          :click,
+          %{
+            id: "guppy-row-control:#{view_id}:todo_list:row_1:open",
+            list_id: "todo_list",
+            row_id: "row_1",
+            control_id: "open",
+            callback: "open_row"
+          }
+        })
+
+        assert_receive {:guppy_event, ^view_id,
+                        %{
+                          type: :click,
+                          id: "guppy-row-control:" <> _,
+                          list_id: "todo_list",
+                          row_id: "row_1",
+                          control_id: "open",
+                          callback: "open_row"
+                        }}
+
+        send(Guppy.server(), {
+          :guppy_native_event,
+          view_id,
           :close,
           %{id: "native_popover.popover", callback: "close_popover"}
         })

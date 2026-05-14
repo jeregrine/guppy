@@ -135,7 +135,7 @@ fn enabled_change_callback(disabled: bool, callback: Option<&String>) -> Option<
     if disabled { None } else { callback }
 }
 
-fn checkbox_indicator(checked: bool, disabled: bool) -> AnyElement {
+pub(crate) fn checkbox_indicator(checked: bool, disabled: bool) -> AnyElement {
     let border = if disabled { 0x5b6472 } else { 0x94a3b8 };
     let fill = if checked {
         if disabled { 0x475569 } else { 0x2563eb }
@@ -159,7 +159,7 @@ fn checkbox_indicator(checked: bool, disabled: bool) -> AnyElement {
         .into_any_element()
 }
 
-fn checkbox_label(node: &CheckboxNode) -> AnyElement {
+pub(crate) fn checkbox_label(node: &CheckboxNode) -> AnyElement {
     let text_color = if node.disabled { 0x94a3b8 } else { 0xe2e8f0 };
 
     div()
@@ -183,7 +183,7 @@ fn emit_checkbox_change(view_id: u64, node_id: &str, callback_id: &str, checked:
     }
 }
 
-fn is_checkbox_toggle_key(event: &KeyDownEvent) -> bool {
+pub(crate) fn is_checkbox_toggle_key(event: &KeyDownEvent) -> bool {
     matches!(event.keystroke.key.as_str(), "space" | "enter")
 }
 

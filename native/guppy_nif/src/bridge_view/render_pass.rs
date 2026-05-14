@@ -215,6 +215,8 @@ impl<'a> RenderPass<'a> {
                 style,
                 item_style,
                 click.as_deref(),
+                window,
+                cx,
             ),
             IrNode::Select(node) => render_select::render(self, path, node, window, cx),
             IrNode::Image {
@@ -238,7 +240,7 @@ impl<'a> RenderPass<'a> {
             IrNode::Checkbox(node) => render_checkbox::render(self, path, node, window, cx),
             IrNode::Radio(node) => render_radio::render(self, path, node, window, cx),
             IrNode::Spacer { id, style } => render_spacer::render(self, path, id.as_deref(), style),
-            IrNode::Div(div) => {
+            IrNode::Button(div) | IrNode::Div(div) => {
                 render_div::render(self, path, div, parent_scroll_handle, window, cx)
             }
         }

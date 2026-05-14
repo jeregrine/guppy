@@ -4,7 +4,7 @@ This document records scoped designs for planned primitives without making them 
 
 ## Retained controls inside generic `list` rows
 
-Status: design recorded; implementation remains deferred. `list` rows stay static/layout-only until this design is implemented end-to-end.
+Status: first control set implemented. Generic `list` rows support row-local `button`, `checkbox`, and `radio` controls with explicit ids; text-editor and overlay-backed controls remain deferred.
 
 ### Goals
 
@@ -34,15 +34,16 @@ view_id / list_identity / row_id / control_id
 - If a focused control is unmounted because its row is removed or the control disappears, native must clear focus state and emit at most the normal blur/change events that GPUI would produce for the control. It must not synthesize semantic value changes.
 - Stale queued native requests must continue to obey request deadlines; expired renders must not prune or mutate row-control registries.
 
-### Implementation shape
+### Implemented first pass
 
-1. Add an explicit native `RowControlKey` and a per-list row-control registry under `BridgeView` retained state.
-2. Relax list-row validation only for supported row-control kinds, requiring explicit control ids and preserving row-local identity checks.
-3. Thread list/row/control identity through static-row rendering so event bridge payloads include structured row-control fields.
-4. Start with controls that do not need text-editor entities (`button`, `checkbox`, `radio`) before enabling `text_input`, `textarea`, or overlay-backed controls like `select`.
-5. Add Rust tests for key construction, pruning, duplicate row/control validation, and event payloads; add ExUnit tests for IR/template validation and server event routing.
+- Native `RowControlKey` identity uses `view_id / list_identity / row_id / control_id` and keys retained focus handles for row controls.
+- List-row validation admits only `button`, `checkbox`, and `radio` controls, requires explicit control ids, and rejects duplicate row-local control ids.
+- Native row-control click/change emissions include structured `list_id`, `row_id`, and `control_id` fields along with the existing callback and value/checked fields.
+- Retained row-control focus handles are marked from the full rendered item/control set and pruned on full-tree replacement.
+- ExUnit and Rust coverage exists for validation, duplicate ids, key construction, pruning, event payloads, and server routing.
+- `examples/list_row_controls.exs` demonstrates the supported first control set, and `bench/guppy_bench.exs` includes row-control list build/validation scenarios.
 
-### Non-goals for the first implementation
+### Still deferred
 
 - No keyed diffing of arbitrary subtrees.
 - No native ownership of row values.

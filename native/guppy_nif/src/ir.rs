@@ -1,6 +1,6 @@
 use eetf::{Atom, Binary, ByteList, List, Map, Term, Tuple};
 use gpui::{KeybindingKeystroke, Keystroke};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
 use std::sync::{Arc, OnceLock};
 
@@ -575,6 +575,7 @@ pub enum IrNode {
         source: ImageSource,
         style: DivStyle,
     },
+    Button(Box<DivNode>),
     Checkbox(Box<CheckboxNode>),
     Radio(Box<RadioNode>),
     UniformList {
@@ -819,7 +820,7 @@ impl IrNode {
                     get_div_disabled_style(map)?,
                 );
 
-                Ok(Self::Div(Box::new(DivNode {
+                Ok(Self::Button(Box::new(DivNode {
                     id,
                     style,
                     hover_style,
@@ -1227,6 +1228,7 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Vec<ListItem>, Stri
                 .iter()
                 .map(decode_list_row_child_term)
                 .collect::<Result<Vec<_>, _>>()?;
+            ensure_unique_list_row_control_ids(&children)?;
 
             Ok(ListItem {
                 id: get_string_field(item, "id")?,
@@ -1274,7 +1276,95 @@ fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
             IrNode::from_term(term)
         }
         "div" => decode_static_list_row_div(map),
+        "button" => decode_list_row_button(map),
+        "checkbox" => decode_list_row_checkbox(map),
+        "radio" => decode_list_row_radio(map),
         _ => Err(format!("unsupported list row child kind: {kind}")),
+    }
+}
+
+fn decode_list_row_button(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+    ensure_allowed_fields(
+        map,
+        &[
+            "kind",
+            "label",
+            "id",
+            "style",
+            "hover_style",
+            "focus_style",
+            "focus_visible_style",
+            "in_focus_style",
+            "active_style",
+            "disabled_style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        "list row button",
+    )?;
+    ensure_allowed_event_fields(map, &["click"], "list row button events")?;
+    ensure_list_row_control_id(map, "button")?;
+    IrNode::from_term(&Term::Map(Map { map: map.clone() }))
+}
+
+fn decode_list_row_checkbox(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+    ensure_allowed_fields(
+        map,
+        &[
+            "kind",
+            "label",
+            "checked",
+            "id",
+            "style",
+            "hover_style",
+            "focus_style",
+            "focus_visible_style",
+            "in_focus_style",
+            "active_style",
+            "disabled_style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        "list row checkbox",
+    )?;
+    ensure_allowed_event_fields(map, &["change"], "list row checkbox events")?;
+    ensure_list_row_control_id(map, "checkbox")?;
+    IrNode::from_term(&Term::Map(Map { map: map.clone() }))
+}
+
+fn decode_list_row_radio(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+    ensure_allowed_fields(
+        map,
+        &[
+            "kind",
+            "label",
+            "value",
+            "checked",
+            "id",
+            "style",
+            "hover_style",
+            "focus_style",
+            "focus_visible_style",
+            "in_focus_style",
+            "active_style",
+            "disabled_style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        "list row radio",
+    )?;
+    ensure_allowed_event_fields(map, &["change"], "list row radio events")?;
+    ensure_list_row_control_id(map, "radio")?;
+    IrNode::from_term(&Term::Map(Map { map: map.clone() }))
+}
+
+fn ensure_list_row_control_id(map: &HashMap<Term, Term>, kind: &str) -> Result<(), String> {
+    match get_field(map, "id") {
+        Some(term) => term_to_string(term).map(|_| ()),
+        None => Err(format!("missing list row control id: {kind}")),
     }
 }
 
@@ -1332,6 +1422,40 @@ fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, Strin
         mouse_move: None,
         scroll_wheel: None,
     })))
+}
+
+fn ensure_unique_list_row_control_ids(children: &[IrNode]) -> Result<(), String> {
+    let mut seen = HashSet::new();
+    collect_list_row_control_ids(children, &mut seen)
+}
+
+fn collect_list_row_control_ids(
+    children: &[IrNode],
+    seen: &mut HashSet<String>,
+) -> Result<(), String> {
+    for child in children {
+        match child {
+            IrNode::Button(node) => track_list_row_control_id(node.id.as_deref(), seen)?,
+            IrNode::Checkbox(node) => track_list_row_control_id(node.id.as_deref(), seen)?,
+            IrNode::Radio(node) => track_list_row_control_id(node.id.as_deref(), seen)?,
+            IrNode::Div(node) => collect_list_row_control_ids(&node.children, seen)?,
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+fn track_list_row_control_id(id: Option<&str>, seen: &mut HashSet<String>) -> Result<(), String> {
+    let Some(id) = id else {
+        return Err("missing list row control id".into());
+    };
+
+    if seen.insert(id.to_owned()) {
+        Ok(())
+    } else {
+        Err(format!("duplicate list row control id: {id}"))
+    }
 }
 
 fn empty_style() -> DivStyle {
@@ -1437,6 +1561,7 @@ fn ir_node_kind(node: &IrNode) -> &'static str {
         IrNode::Scroll { .. } => "scroll",
         IrNode::Image { .. } => "image",
         IrNode::Icon { .. } => "icon",
+        IrNode::Button(_) => "button",
         IrNode::Checkbox(_) => "checkbox",
         IrNode::Radio(_) => "radio",
         IrNode::UniformList { .. } => "uniform_list",
@@ -2140,9 +2265,11 @@ fn term_to_string(term: &Term) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        IrNode, LinearGradientStop, StyleColor, StyleOp, parse_style_op, validate_list_row_child,
+        CheckboxNode, DivNode, IrNode, LinearGradientStop, StyleColor, StyleOp,
+        decode_list_row_child_term, ensure_unique_list_row_control_ids, parse_style_op,
+        validate_list_row_child,
     };
-    use eetf::{Atom, Binary, FixInteger, Float, List, Term, Tuple};
+    use eetf::{Atom, Binary, FixInteger, Float, List, Map, Term, Tuple};
 
     fn atom(name: &str) -> Term {
         Term::Atom(Atom::from(name))
@@ -2168,6 +2295,116 @@ mod tests {
 
     fn list(elements: Vec<Term>) -> Term {
         Term::List(List { elements })
+    }
+
+    fn map(entries: Vec<(Term, Term)>) -> Term {
+        Term::Map(Map {
+            map: entries.into_iter().collect(),
+        })
+    }
+
+    fn bool_atom(value: bool) -> Term {
+        atom(if value { "true" } else { "false" })
+    }
+
+    fn events(entries: Vec<(&str, &str)>) -> Term {
+        map(entries
+            .into_iter()
+            .map(|(key, value)| (atom(key), binary(value)))
+            .collect())
+    }
+
+    #[test]
+    fn list_row_decode_accepts_supported_controls_with_explicit_ids() {
+        let checkbox = map(vec![
+            (atom("kind"), atom("checkbox")),
+            (atom("id"), binary("done")),
+            (atom("label"), binary("Done")),
+            (atom("checked"), bool_atom(false)),
+            (atom("events"), events(vec![("change", "toggle_done")])),
+        ]);
+
+        match decode_list_row_child_term(&checkbox).unwrap() {
+            IrNode::Checkbox(node) => {
+                assert_eq!(node.id.as_deref(), Some("done"));
+                assert_eq!(node.change.as_deref(), Some("toggle_done"));
+            }
+            other => panic!("expected checkbox row control, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_row_decode_rejects_supported_controls_without_ids() {
+        let checkbox = map(vec![
+            (atom("kind"), atom("checkbox")),
+            (atom("label"), binary("Done")),
+            (atom("checked"), bool_atom(false)),
+        ]);
+
+        let err = decode_list_row_child_term(&checkbox).unwrap_err();
+        assert!(err.contains("missing list row control id"));
+    }
+
+    #[test]
+    fn list_row_control_ids_are_unique_within_a_row() {
+        let children = vec![
+            IrNode::Checkbox(Box::new(CheckboxNode {
+                id: Some("done".into()),
+                label: "Done".into(),
+                checked: false,
+                style: Vec::new().into(),
+                hover_style: Vec::new().into(),
+                focus_style: Vec::new().into(),
+                focus_visible_style: Vec::new().into(),
+                in_focus_style: Vec::new().into(),
+                active_style: Vec::new().into(),
+                disabled_style: Vec::new().into(),
+                disabled: false,
+                tab_index: None,
+                change: None,
+                focus: None,
+                blur: None,
+            })),
+            IrNode::Button(Box::new(DivNode {
+                id: Some("done".into()),
+                style: Vec::new().into(),
+                hover_style: Vec::new().into(),
+                focus_style: Vec::new().into(),
+                focus_visible_style: Vec::new().into(),
+                in_focus_style: Vec::new().into(),
+                active_style: Vec::new().into(),
+                disabled_style: Vec::new().into(),
+                animation: None,
+                disabled: false,
+                stack_priority: None,
+                occlude: false,
+                focusable: true,
+                tab_stop: Some(true),
+                tab_index: None,
+                track_scroll: false,
+                anchor_scroll: false,
+                tooltip: None,
+                shortcuts: Vec::new(),
+                children: vec![IrNode::text("Done")],
+                click: None,
+                hover: None,
+                focus: None,
+                blur: None,
+                key_down: None,
+                key_up: None,
+                context_menu: None,
+                drag_start: None,
+                drag_move: None,
+                drop: None,
+                mouse_down: None,
+                mouse_up: None,
+                mouse_move: None,
+                scroll_wheel: None,
+            })),
+        ];
+
+        let err = ensure_unique_list_row_control_ids(&children).unwrap_err();
+        assert!(err.contains("duplicate list row control id: done"));
     }
 
     #[test]

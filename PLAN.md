@@ -10,15 +10,15 @@ No feature implementation is active. Keep stabilization, bug fixes, verification
 
 ### 1. Retained controls inside generic `list` rows
 
-Scope: [`docs/future-primitives.md`](docs/future-primitives.md#retained-controls-inside-generic-list-rows). Status: scoped, not active.
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#retained-controls-inside-generic-list-rows). Status: first supported control set complete.
 
-- [ ] Confirm the concrete row-control use case and first supported control set (`button`, `checkbox`, and `radio` before text/overlay controls).
-- [ ] Add native `RowControlKey` identity using `view_id / list_identity / row_id / control_id`.
-- [ ] Relax list-row validation only for supported stateful controls, requiring explicit control ids.
-- [ ] Thread structured `list_id`, `row_id`, and `control_id` fields through native event payloads and server routing.
-- [ ] Retain and prune row-control state from the full rendered item/control set while preserving request-deadline stale-render behavior.
-- [ ] Add ExUnit and Rust tests for validation, duplicate ids, key construction, pruning, and event payloads.
-- [ ] Update README, examples, and `docs/gpui-compliance.md` after end-to-end support lands.
+- [x] Confirm the concrete row-control use case and first supported control set (`button`, `checkbox`, and `radio` before text/overlay controls).
+- [x] Add native `RowControlKey` identity using `view_id / list_identity / row_id / control_id`.
+- [x] Relax list-row validation only for supported stateful controls, requiring explicit control ids.
+- [x] Thread structured `list_id`, `row_id`, and `control_id` fields through native event payloads and server routing.
+- [x] Retain and prune row-control state from the full rendered item/control set while preserving request-deadline stale-render behavior.
+- [x] Add ExUnit and Rust tests for validation, duplicate ids, key construction, pruning, and event payloads.
+- [x] Update README, examples, and `docs/gpui-compliance.md` after end-to-end support lands.
 
 ### 2. App-level menu APIs
 

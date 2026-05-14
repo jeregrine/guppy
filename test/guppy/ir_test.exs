@@ -9,6 +9,60 @@ defmodule Guppy.IRTest do
              Guppy.IR.validate(Map.put(Guppy.IR.div([], id: "root"), :bogus, "nope"))
   end
 
+  test "generic list rows support explicitly identified button checkbox and radio controls" do
+    ir =
+      Guppy.IR.list([
+        %{
+          id: "row_1",
+          children: [
+            Guppy.IR.checkbox("Done", false, id: "done", events: %{change: "toggle_done"}),
+            Guppy.IR.button("Open", id: "open", events: %{click: "open_row"}),
+            Guppy.IR.radio("High", "high", true,
+              id: "priority",
+              events: %{change: "set_priority"}
+            )
+          ]
+        },
+        %{
+          id: "row_2",
+          children: [
+            Guppy.IR.checkbox("Done", true, id: "done", events: %{change: "toggle_done"}),
+            Guppy.IR.button("Open", id: "open", events: %{click: "open_row"}),
+            Guppy.IR.radio("High", "high", false,
+              id: "priority",
+              events: %{change: "set_priority"}
+            )
+          ]
+        }
+      ])
+
+    assert :ok = Guppy.IR.validate(ir)
+  end
+
+  test "generic list row controls require row-local unique explicit ids" do
+    assert {:error, {:missing_list_row_control_id, :checkbox}} =
+             Guppy.IR.validate(
+               Guppy.IR.list([
+                 %{id: "row", children: [Guppy.IR.checkbox("Done", false)]}
+               ])
+             )
+
+    assert {:error, {:duplicate_list_row_control_id, "done"}} =
+             Guppy.IR.validate(
+               Guppy.IR.list([
+                 %{
+                   id: "row",
+                   children: [
+                     Guppy.IR.checkbox("Done", false, id: "done"),
+                     Guppy.IR.div([
+                       Guppy.IR.button("Done", id: "done", events: %{click: "done"})
+                     ])
+                   ]
+                 }
+               ])
+             )
+  end
+
   test "ir validation accepts background linear gradient style ops" do
     gradient = {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}, to: {:blue, 1.0}]}
 

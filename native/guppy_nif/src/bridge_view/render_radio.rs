@@ -136,7 +136,7 @@ fn enabled_change_callback(disabled: bool, callback: Option<&String>) -> Option<
     if disabled { None } else { callback }
 }
 
-fn radio_indicator(checked: bool, disabled: bool) -> AnyElement {
+pub(crate) fn radio_indicator(checked: bool, disabled: bool) -> AnyElement {
     let border = if disabled { 0x5b6472 } else { 0x94a3b8 };
     let fill = if checked {
         if disabled { 0x475569 } else { 0x2563eb }
@@ -157,7 +157,7 @@ fn radio_indicator(checked: bool, disabled: bool) -> AnyElement {
         .into_any_element()
 }
 
-fn radio_label(node: &RadioNode) -> AnyElement {
+pub(crate) fn radio_label(node: &RadioNode) -> AnyElement {
     let text_color = if node.disabled { 0x94a3b8 } else { 0xe2e8f0 };
 
     div()
@@ -182,7 +182,7 @@ fn emit_radio_change(view_id: u64, node_id: &str, callback_id: &str, value: &str
     }
 }
 
-fn is_radio_toggle_key(event: &KeyDownEvent) -> bool {
+pub(crate) fn is_radio_toggle_key(event: &KeyDownEvent) -> bool {
     matches!(event.keystroke.key.as_str(), "space" | "enter")
 }
 

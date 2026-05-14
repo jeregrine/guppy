@@ -6,6 +6,11 @@ pub(crate) struct NodeIdentity {
     resolved: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct RowControlKey {
+    resolved: String,
+}
+
 impl NodeIdentity {
     pub fn new(view_id: u64, path: &str, explicit_id: Option<&str>) -> Self {
         let resolved = match explicit_id {
@@ -33,9 +38,29 @@ impl fmt::Display for NodeIdentity {
     }
 }
 
+impl RowControlKey {
+    pub fn new(view_id: u64, list_identity: &str, row_id: &str, control_id: &str) -> Self {
+        Self {
+            resolved: format!("guppy-row-control:{view_id}:{list_identity}:{row_id}:{control_id}"),
+        }
+    }
+}
+
+impl AsRef<str> for RowControlKey {
+    fn as_ref(&self) -> &str {
+        &self.resolved
+    }
+}
+
+impl fmt::Display for RowControlKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.resolved)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::NodeIdentity;
+    use super::{NodeIdentity, RowControlKey};
 
     #[test]
     fn explicit_id_wins_over_generated_path() {
@@ -47,5 +72,11 @@ mod tests {
     fn generated_id_uses_view_id_and_path() {
         let identity = NodeIdentity::new(42, "root.1.2", None);
         assert_eq!(identity.to_string(), "guppy-42-root.1.2");
+    }
+
+    #[test]
+    fn row_control_key_uses_list_row_and_control_identity() {
+        let key = RowControlKey::new(42, "todos", "row_1", "done");
+        assert_eq!(key.to_string(), "guppy-row-control:42:todos:row_1:done");
     }
 }

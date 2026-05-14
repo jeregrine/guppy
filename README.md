@@ -102,6 +102,12 @@ MIX_ENV=prod mix run examples/stress_test.exs
 Stress test for full-tree IR replacement, native decode, retained scrolling, and virtual-list churn. `MIX_ENV=prod` selects an optimized native build; `GUPPY_NATIVE_RELEASE=1 mix run examples/stress_test.exs` does the same while keeping Mix in dev. Tune it with `GUPPY_STRESS_*` environment variables; run `mix run examples/stress_test.exs -- --help` for knobs.
 
 ```bash
+mix run examples/list_row_controls.exs
+```
+
+Focused generic `list` example with row-local button, checkbox, and radio controls plus structured `list_id` / `row_id` / `control_id` events.
+
+```bash
 mix run examples/hello_world.exs
 ```
 
@@ -150,7 +156,7 @@ Native event coverage includes click, close, hover, focus/blur, key down/up, sho
 
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
 
-`list` rows are intentionally static/layout-only today: row children may use `text`, `spacer`, and nested static `div` nodes with click callbacks. Put stateful controls outside virtual list rows until retained row-control support is explicitly designed.
+`list` rows support static/layout children (`text`, `spacer`, and nested static `div`) plus row-local `button`, `checkbox`, and `radio` controls with explicit control ids. Row-control events include `list_id`, `row_id`, and `control_id`; Elixir remains the source of truth for checked/selected values.
 
 `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 
@@ -336,7 +342,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 
 - full editor parity and advanced text layout beyond current rich text runs
 - richer select/dropdown menu semantics beyond the current Elixir-owned select
-- stateful controls inside generic virtualized list rows and custom scrollbar parity
+- text/overlay controls inside generic virtualized list rows and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
 - advanced animation effects beyond current opacity animation, multi-stop/radial gradients, canvas/custom painting, pattern painting, and menu APIs

@@ -94,6 +94,7 @@ defmodule Guppy.Bench do
     kanban = kanban_tree(columns: 4, cards: 40)
 
     gradient_ir = gradient_tree(100)
+    row_control_ir = row_control_list_tree(100)
 
     gradient_scenarios = [
       {"gradient class parse",
@@ -105,6 +106,14 @@ defmodule Guppy.Bench do
       {"gradient style validation 100 nodes",
        fn ->
          :ok = Guppy.IR.validate(gradient_ir)
+       end},
+      {"list row controls tree build 100 rows",
+       fn ->
+         row_control_list_tree(100)
+       end},
+      {"list row controls validation 100 rows",
+       fn ->
+         :ok = Guppy.IR.validate(row_control_ir)
        end}
     ]
 
@@ -189,6 +198,35 @@ defmodule Guppy.Bench do
       end
 
     Guppy.IR.div(children, id: "gradient_bench_root", style: [:flex, :flex_col, :gap_1])
+  end
+
+  defp row_control_list_tree(count) do
+    items =
+      for index <- 1..count do
+        %{
+          id: "row_#{index}",
+          children: [
+            Guppy.IR.div([
+              Guppy.IR.text("Task #{index}", id: "row_#{index}_label"),
+              Guppy.IR.checkbox("Done", rem(index, 2) == 0,
+                id: "done",
+                events: %{change: "toggle_done"}
+              ),
+              Guppy.IR.radio("High", "high", rem(index, 3) == 0,
+                id: "priority",
+                events: %{change: "set_priority"}
+              ),
+              Guppy.IR.button("Open", id: "open", events: %{click: "open_row"})
+            ])
+          ]
+        }
+      end
+
+    Guppy.IR.list(items,
+      id: "row_control_bench",
+      style: [{:h_px, 400}],
+      item_style: [:p_1]
+    )
   end
 
   defp kanban_tree(opts) do

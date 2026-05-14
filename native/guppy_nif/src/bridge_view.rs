@@ -116,7 +116,7 @@ impl BridgeView {
 #[cfg(test)]
 mod tests {
     use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
-    use crate::ir::{DivNode, IrNode, ScrollAxis, StyleOp};
+    use crate::ir::{DivNode, IrNode, ListItem, ScrollAxis, StyleOp};
     use gpui::{ListAlignment, ListState, Modifiers, Render, ScrollHandle, point, px};
 
     #[test]
@@ -188,6 +188,54 @@ mod tests {
         let after = crate::native_event_send_snapshot_for_test();
         assert!(after.0 > before.0);
         assert!(after.1 > before.1);
+    }
+
+    #[gpui::test]
+    fn render_prunes_dead_list_row_control_focus_handles(cx: &mut gpui::TestAppContext) {
+        let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 43,
+            ir: list_with_row_button(),
+            retained: BridgeRetainedState::default(),
+        });
+
+        view.update_in(cx, |view, window, view_cx| {
+            let _ = view.render(window, view_cx);
+            assert!(
+                view.retained
+                    .focus_handles
+                    .contains_key("guppy-row-control:43:todo_list:row_1:open")
+            );
+
+            view.ir = IrNode::text("no list anymore");
+            let _ = view.render(window, view_cx);
+            assert!(view.retained.focus_handles.is_empty());
+        });
+    }
+
+    #[gpui::test]
+    fn simulated_list_row_button_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+        let before = crate::native_event_send_snapshot_for_test();
+        let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+            view_id: 43,
+            ir: list_with_row_button(),
+            retained: BridgeRetainedState::default(),
+        });
+
+        cx.update(|window, cx| window.draw(cx).clear());
+        cx.simulate_click(point(px(10.), px(10.)), Modifiers::none());
+
+        let after = crate::native_event_send_snapshot_for_test();
+        assert!(after.0 > before.0);
+        assert!(after.1 > before.1);
+
+        let event = crate::take_row_control_event_snapshot_for_test().unwrap();
+        assert_eq!(event.event, "click");
+        assert_eq!(event.view_id, 43);
+        assert_eq!(event.callback_id, "open_row");
+        assert_eq!(event.list_id, "todo_list");
+        assert_eq!(event.row_id, "row_1");
+        assert_eq!(event.control_id, "open");
+        assert_eq!(event.node_id, "guppy-row-control:43:todo_list:row_1:open");
     }
 
     #[gpui::test]
@@ -356,6 +404,54 @@ mod tests {
             mouse_move: None,
             scroll_wheel: None,
         }))
+    }
+
+    fn list_with_row_button() -> IrNode {
+        IrNode::List {
+            id: Some("todo_list".into()),
+            items: vec![ListItem {
+                id: "row_1".into(),
+                children: vec![IrNode::Button(Box::new(DivNode {
+                    id: Some("open".into()),
+                    style: vec![StyleOp::W96, StyleOp::H32, StyleOp::P4, StyleOp::Border1].into(),
+                    hover_style: Vec::new().into(),
+                    focus_style: Vec::new().into(),
+                    focus_visible_style: Vec::new().into(),
+                    in_focus_style: Vec::new().into(),
+                    active_style: Vec::new().into(),
+                    disabled_style: Vec::new().into(),
+                    animation: None,
+                    disabled: false,
+                    stack_priority: None,
+                    occlude: false,
+                    focusable: true,
+                    tab_stop: Some(true),
+                    tab_index: None,
+                    track_scroll: false,
+                    anchor_scroll: false,
+                    tooltip: None,
+                    shortcuts: Vec::new(),
+                    children: vec![IrNode::text("Open")],
+                    click: Some("open_row".into()),
+                    hover: None,
+                    focus: None,
+                    blur: None,
+                    key_down: None,
+                    key_up: None,
+                    context_menu: None,
+                    drag_start: None,
+                    drag_move: None,
+                    drop: None,
+                    mouse_down: None,
+                    mouse_up: None,
+                    mouse_move: None,
+                    scroll_wheel: None,
+                }))],
+            }],
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            item_style: Vec::new().into(),
+            click: None,
+        }
     }
 
     fn clickable_div() -> IrNode {
