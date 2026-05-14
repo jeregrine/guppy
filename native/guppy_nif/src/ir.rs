@@ -992,98 +992,13 @@ impl IrNode {
                 source: get_image_source_field(map)?,
                 style: get_div_style(map)?,
             }),
-            "checkbox" => Ok(Self::Checkbox(Box::new(CheckboxNode {
-                id,
-                label: get_string_field(map, "label")?,
-                checked: get_required_boolean_field(map, "checked")?,
-                style: get_div_style(map)?,
-                hover_style: get_div_hover_style(map)?,
-                focus_style: get_div_focus_style(map)?,
-                focus_visible_style: get_div_focus_visible_style(map)?,
-                in_focus_style: get_div_in_focus_style(map)?,
-                active_style: get_div_active_style(map)?,
-                disabled_style: get_div_disabled_style(map)?,
-                disabled: get_boolean_field(map, "disabled")?,
-                tab_index: get_optional_integer_field(map, "tab_index")?,
-                change: get_change_event(map)?,
-                focus: get_focus_event(map)?,
-                blur: get_blur_event(map)?,
-            }))),
-            "radio" => Ok(Self::Radio(Box::new(RadioNode {
-                id,
-                label: get_string_field(map, "label")?,
-                value: get_string_field(map, "value")?,
-                checked: get_required_boolean_field(map, "checked")?,
-                style: get_div_style(map)?,
-                hover_style: get_div_hover_style(map)?,
-                focus_style: get_div_focus_style(map)?,
-                focus_visible_style: get_div_focus_visible_style(map)?,
-                in_focus_style: get_div_in_focus_style(map)?,
-                active_style: get_div_active_style(map)?,
-                disabled_style: get_div_disabled_style(map)?,
-                disabled: get_boolean_field(map, "disabled")?,
-                tab_index: get_optional_integer_field(map, "tab_index")?,
-                change: get_change_event(map)?,
-                focus: get_focus_event(map)?,
-                blur: get_blur_event(map)?,
-            }))),
+            "checkbox" => Ok(Self::Checkbox(Box::new(decode_checkbox_node(map, id)?))),
+            "radio" => Ok(Self::Radio(Box::new(decode_radio_node(map, id)?))),
             "spacer" => Ok(Self::Spacer {
                 id,
                 style: get_div_style(map)?,
             }),
-            "button" => {
-                let actions = get_div_actions(map)?;
-                let label = get_string_field(map, "label")?;
-                let style = prepend_style(default_button_style(), get_div_style(map)?);
-                let hover_style = get_div_hover_style(map)?;
-                let focus_style =
-                    prepend_style(default_button_focus_style(), get_div_focus_style(map)?);
-                let focus_visible_style = get_div_focus_visible_style(map)?;
-                let in_focus_style = get_div_in_focus_style(map)?;
-                let active_style =
-                    prepend_style(default_button_active_style(), get_div_active_style(map)?);
-                let disabled_style = prepend_style(
-                    default_button_disabled_style(),
-                    get_div_disabled_style(map)?,
-                );
-
-                Ok(Self::Button(Box::new(DivNode {
-                    id,
-                    style,
-                    hover_style,
-                    focus_style,
-                    focus_visible_style,
-                    in_focus_style,
-                    active_style,
-                    disabled_style,
-                    animation: get_animation_field(map)?,
-                    disabled: get_boolean_field(map, "disabled")?,
-                    stack_priority: None,
-                    occlude: false,
-                    focusable: true,
-                    tab_stop: Some(true),
-                    tab_index: get_optional_integer_field(map, "tab_index")?,
-                    track_scroll: false,
-                    anchor_scroll: false,
-                    tooltip: get_optional_string_field(map, "tooltip")?,
-                    shortcuts: get_div_shortcuts(map, &actions)?,
-                    children: vec![Self::text(label)],
-                    click: get_click_event(map)?,
-                    hover: get_hover_event(map)?,
-                    focus: get_focus_event(map)?,
-                    blur: get_blur_event(map)?,
-                    key_down: get_key_down_event(map)?,
-                    key_up: get_key_up_event(map)?,
-                    context_menu: get_context_menu_event(map)?,
-                    drag_start: None,
-                    drag_move: None,
-                    drop: None,
-                    mouse_down: get_mouse_down_event(map)?,
-                    mouse_up: get_mouse_up_event(map)?,
-                    mouse_move: get_mouse_move_event(map)?,
-                    scroll_wheel: None,
-                })))
-            }
+            "button" => Ok(Self::Button(Box::new(decode_button_node(map, id)?))),
             "div" => {
                 let children = match get_field(map, "children") {
                     Some(term) => get_list(term)?
@@ -1135,6 +1050,102 @@ impl IrNode {
             other => Err(format!("unsupported ir kind: {other}")),
         }
     }
+}
+
+fn decode_button_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<DivNode, String> {
+    let actions = get_div_actions(map)?;
+    let label = get_string_field(map, "label")?;
+    let style = prepend_style(default_button_style(), get_div_style(map)?);
+    let hover_style = get_div_hover_style(map)?;
+    let focus_style = prepend_style(default_button_focus_style(), get_div_focus_style(map)?);
+    let focus_visible_style = get_div_focus_visible_style(map)?;
+    let in_focus_style = get_div_in_focus_style(map)?;
+    let active_style = prepend_style(default_button_active_style(), get_div_active_style(map)?);
+    let disabled_style = prepend_style(
+        default_button_disabled_style(),
+        get_div_disabled_style(map)?,
+    );
+
+    Ok(DivNode {
+        id,
+        style,
+        hover_style,
+        focus_style,
+        focus_visible_style,
+        in_focus_style,
+        active_style,
+        disabled_style,
+        animation: get_animation_field(map)?,
+        disabled: get_boolean_field(map, "disabled")?,
+        stack_priority: None,
+        occlude: false,
+        focusable: true,
+        tab_stop: Some(true),
+        tab_index: get_optional_integer_field(map, "tab_index")?,
+        track_scroll: false,
+        anchor_scroll: false,
+        tooltip: get_optional_string_field(map, "tooltip")?,
+        shortcuts: get_div_shortcuts(map, &actions)?,
+        children: vec![IrNode::text(label)],
+        click: get_click_event(map)?,
+        hover: get_hover_event(map)?,
+        focus: get_focus_event(map)?,
+        blur: get_blur_event(map)?,
+        key_down: get_key_down_event(map)?,
+        key_up: get_key_up_event(map)?,
+        context_menu: get_context_menu_event(map)?,
+        drag_start: None,
+        drag_move: None,
+        drop: None,
+        mouse_down: get_mouse_down_event(map)?,
+        mouse_up: get_mouse_up_event(map)?,
+        mouse_move: get_mouse_move_event(map)?,
+        scroll_wheel: None,
+    })
+}
+
+fn decode_checkbox_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+) -> Result<CheckboxNode, String> {
+    Ok(CheckboxNode {
+        id,
+        label: get_string_field(map, "label")?,
+        checked: get_required_boolean_field(map, "checked")?,
+        style: get_div_style(map)?,
+        hover_style: get_div_hover_style(map)?,
+        focus_style: get_div_focus_style(map)?,
+        focus_visible_style: get_div_focus_visible_style(map)?,
+        in_focus_style: get_div_in_focus_style(map)?,
+        active_style: get_div_active_style(map)?,
+        disabled_style: get_div_disabled_style(map)?,
+        disabled: get_boolean_field(map, "disabled")?,
+        tab_index: get_optional_integer_field(map, "tab_index")?,
+        change: get_change_event(map)?,
+        focus: get_focus_event(map)?,
+        blur: get_blur_event(map)?,
+    })
+}
+
+fn decode_radio_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<RadioNode, String> {
+    Ok(RadioNode {
+        id,
+        label: get_string_field(map, "label")?,
+        value: get_string_field(map, "value")?,
+        checked: get_required_boolean_field(map, "checked")?,
+        style: get_div_style(map)?,
+        hover_style: get_div_hover_style(map)?,
+        focus_style: get_div_focus_style(map)?,
+        focus_visible_style: get_div_focus_visible_style(map)?,
+        in_focus_style: get_div_in_focus_style(map)?,
+        active_style: get_div_active_style(map)?,
+        disabled_style: get_div_disabled_style(map)?,
+        disabled: get_boolean_field(map, "disabled")?,
+        tab_index: get_optional_integer_field(map, "tab_index")?,
+        change: get_change_event(map)?,
+        focus: get_focus_event(map)?,
+        blur: get_blur_event(map)?,
+    })
 }
 
 fn expect_map(term: &Term) -> Result<&HashMap<Term, Term>, String> {
@@ -1928,8 +1939,8 @@ fn decode_list_row_button(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
         "list row button",
     )?;
     ensure_allowed_event_fields(map, &["click"], "list row button events")?;
-    ensure_list_row_control_id(map, "button")?;
-    IrNode::from_term(&Term::Map(Map { map: map.clone() }))
+    let id = get_list_row_control_id(map, "button")?;
+    Ok(IrNode::Button(Box::new(decode_button_node(map, Some(id))?)))
 }
 
 fn decode_list_row_checkbox(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
@@ -1954,8 +1965,11 @@ fn decode_list_row_checkbox(map: &HashMap<Term, Term>) -> Result<IrNode, String>
         "list row checkbox",
     )?;
     ensure_allowed_event_fields(map, &["change"], "list row checkbox events")?;
-    ensure_list_row_control_id(map, "checkbox")?;
-    IrNode::from_term(&Term::Map(Map { map: map.clone() }))
+    let id = get_list_row_control_id(map, "checkbox")?;
+    Ok(IrNode::Checkbox(Box::new(decode_checkbox_node(
+        map,
+        Some(id),
+    )?)))
 }
 
 fn decode_list_row_radio(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
@@ -1981,15 +1995,13 @@ fn decode_list_row_radio(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
         "list row radio",
     )?;
     ensure_allowed_event_fields(map, &["change"], "list row radio events")?;
-    ensure_list_row_control_id(map, "radio")?;
-    IrNode::from_term(&Term::Map(Map { map: map.clone() }))
+    let id = get_list_row_control_id(map, "radio")?;
+    Ok(IrNode::Radio(Box::new(decode_radio_node(map, Some(id))?)))
 }
 
-fn ensure_list_row_control_id(map: &HashMap<Term, Term>, kind: &str) -> Result<(), String> {
-    match get_field(map, "id") {
-        Some(term) => term_to_string(term).map(|_| ()),
-        None => Err(format!("missing list row control id: {kind}")),
-    }
+fn get_list_row_control_id(map: &HashMap<Term, Term>, kind: &str) -> Result<String, String> {
+    get_optional_string_field(map, "id")?
+        .ok_or_else(|| format!("missing list row control id: {kind}"))
 }
 
 fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
@@ -3281,6 +3293,24 @@ mod tests {
 
     #[test]
     fn list_row_decode_accepts_supported_controls_with_explicit_ids() {
+        let button = map(vec![
+            (atom("kind"), atom("button")),
+            (atom("id"), binary("save")),
+            (atom("label"), binary("Save")),
+            (atom("events"), events(vec![("click", "save_row")])),
+        ]);
+
+        match decode_list_row_child_term(&button).unwrap() {
+            IrNode::Button(node) => {
+                assert_eq!(node.id.as_deref(), Some("save"));
+                assert_eq!(node.click.as_deref(), Some("save_row"));
+                assert!(
+                    matches!(node.children.as_slice(), [IrNode::Text { content, .. }] if content == "Save")
+                );
+            }
+            other => panic!("expected button row control, got {other:?}"),
+        }
+
         let checkbox = map(vec![
             (atom("kind"), atom("checkbox")),
             (atom("id"), binary("done")),
@@ -3295,6 +3325,25 @@ mod tests {
                 assert_eq!(node.change.as_deref(), Some("toggle_done"));
             }
             other => panic!("expected checkbox row control, got {other:?}"),
+        }
+
+        let radio = map(vec![
+            (atom("kind"), atom("radio")),
+            (atom("id"), binary("priority_high")),
+            (atom("label"), binary("High")),
+            (atom("value"), binary("high")),
+            (atom("checked"), bool_atom(true)),
+            (atom("events"), events(vec![("change", "set_priority")])),
+        ]);
+
+        match decode_list_row_child_term(&radio).unwrap() {
+            IrNode::Radio(node) => {
+                assert_eq!(node.id.as_deref(), Some("priority_high"));
+                assert_eq!(node.value, "high");
+                assert!(node.checked);
+                assert_eq!(node.change.as_deref(), Some("set_priority"));
+            }
+            other => panic!("expected radio row control, got {other:?}"),
         }
     }
 
