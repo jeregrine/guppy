@@ -68,6 +68,9 @@ Important current invariants:
 - runtime telemetry events exist for native NIF calls (`[:guppy, :native, :nif]`), server-mediated native requests (`[:guppy, :native, :request]`), native event routing (`[:guppy, :event, :route]`), and `Guppy.Window` rerenders (`[:guppy, :window, :rerender]`)
 - native root views bind Tab/Shift-Tab for GPUI tab-stop traversal and track keyboard-vs-mouse focus-visible state for `focus_visible_style`
 - div-like nodes support a narrow native opacity animation spec keyed by stable animation id
+- app/runtime menus are process-owned via `Guppy.set_menus/1` / `Guppy.set_menus/2`; menu callback actions route back through `Guppy.Server` and menus are cleared when the owner exits
+- semantic `data_table` and `tree` primitives are first-pass virtualized/list-backed nodes; Elixir owns sort, selection, and expansion state
+- `canvas` is a bounded data-only native painting primitive for rect, rounded-rect, and slash-pattern rect commands with coarse click events
 
 ### Native side
 
@@ -83,8 +86,9 @@ Important current invariants:
 - event-target loss clears native event delivery state and enqueues best-effort native window cleanup
 - native performance counters track Rust boundary IR/options encode-decode timing and native event send timing/failures
 - native tests include GPUI simulated-click coverage for event bridge delivery
-- virtual `uniform_list`/`list` renderers size their GPUI list element to the styled wrapper viewport; list-like nodes need a concrete viewport size in IR/style
+- virtual `uniform_list`/`list`/`data_table`/`tree` renderers size their GPUI list element to the styled wrapper viewport; list-like nodes need a concrete viewport size in IR/style
 - generic list-row `div` decode uses a restricted static-row path and avoids duplicate native decode/validation of nested row IR
+- native canvas rendering uses GPUI `canvas`, `PaintQuad` fills, and `pattern_slash`; it currently retains no canvas-specific native resources beyond stable node identity
 
 ### Performance guidance
 
@@ -106,6 +110,8 @@ Debug native builds can feel much worse than release builds.
 
 Do **not** add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching as a blind fix. First prove the cause with `examples/stress_test.exs`, benchmarks, `Guppy.native_performance_counters/0`, or telemetry.
 
+After the recent primitive expansion, prioritize a measured native cleanup/de-slopification pass before adding new primitives. Look for duplicated decode/render helpers, avoidable clones and string allocations, repeated full-tree conversion work, and style/color conversion duplication. Keep cleanups behavior-preserving, test-backed, and benchmarked when they touch hot paths.
+
 ## Current public API surface
 
 Useful top-level API:
@@ -116,6 +122,8 @@ Useful top-level API:
 - `Guppy.open_window/3` (`Guppy.open_window(ir, opts, timeout)`)
 - `Guppy.render/2`
 - `Guppy.close_window/1`
+- `Guppy.set_menus/1`
+- `Guppy.set_menus/2`
 - `Guppy.native_view_count/0`
 - `Guppy.native_build_info/0`
 - `Guppy.native_runtime_status/0`
@@ -177,7 +185,9 @@ Still missing higher-value nodes/primitives:
 - full editor parity and advanced text layout beyond current rich text runs/highlights
 - full popover parity / nested overlay edge cases
 - advanced data-table/tree semantics beyond current first-pass virtualized primitives
+- richer select/popover/overlay lifecycle and positioning
 - advanced canvas commands such as paths/text/images and fine-grained hit testing
+- dock menus and element-local/context menu primitives
 
 ## Current preferred authoring model
 
@@ -259,8 +269,10 @@ Files you will most often need:
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI app bootstrap, request drain, window registry
 - `native/guppy_nif/src/bridge_view.rs` — native root renderer
 - `native/guppy_nif/src/bridge_view/` — render pass, style mapping, event bridge, identity, per-node renderers
+- `native/guppy_nif/src/bridge_view/render_canvas.rs` — canvas/custom painting renderer
 - `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
 - `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
+- `native/guppy_nif/src/menu.rs` — native app-menu decode/mapping/action dispatch
 - `examples/` — runnable demos
 - `examples/stress_test.exs` — IR bridge stress probe with CLI performance output and isolation knobs
 - `test/guppy_test.exs` — current coverage
@@ -325,6 +337,11 @@ Run the main examples:
 mix run examples/super_demo.exs
 mix run examples/kanban_todo.exs
 mix run examples/hello_world.exs
+mix run examples/style_gallery.exs
+mix run examples/list_row_controls.exs
+mix run examples/menu_demo.exs
+mix run examples/data_table_tree.exs
+mix run examples/canvas_pattern.exs
 MIX_ENV=prod mix run examples/stress_test.exs
 ```
 
@@ -363,18 +380,20 @@ Especially if you change:
 - anything under `native/guppy_nif/src/bridge_view/`
 - `native/guppy_nif/src/bridge_text_input.rs`
 - `native/guppy_nif/src/ir.rs`
+- `native/guppy_nif/src/menu.rs`
 
 ## What to prioritize next
 
-`PLAN.md` tracks only the forward feature plan. Operationally, keep the project in stabilization/maintenance mode unless the user explicitly scopes new feature work. Prefer bug fixes, evidence-backed hardening, documentation/examples, and compliance-matrix maintenance over speculative new surface area.
+`PLAN.md` tracks prospective work. Operationally, keep the project in stabilization/maintenance mode unless the user explicitly scopes new feature work. Prefer bug fixes, evidence-backed hardening, documentation/examples, and compliance-matrix maintenance over speculative new surface area.
 
 Current priority order:
 
 1. keep `scripts/check`, `mix compile`, `scripts/clean_install_load_test`, `scripts/package_smoke`, and the macOS source-build CI path green
-2. fix bugs found by real example usage or tests
-3. keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes
-4. improve existing primitives only when a real gap is identified
-5. add new primitives or publish precompiled artifacts only when explicitly prioritized
+2. perform the native cleanup/de-slopification pass in `PLAN.md`: duplicated decode/render helpers, unnecessary clones/allocations, style/color conversion duplication, and hot-path full-tree replacement costs
+3. fix bugs found by real example usage or tests
+4. keep `README.md`, `AGENTS.md`, `PLAN.md`, `docs/gpui-compliance.md`, `docs/distribution.md`, `docs/performance.md`, and examples current when behavior changes
+5. harden existing primitives only when a real gap is identified, especially select/popover overlays, data-table/tree keyboard/focus behavior, richer text/editor parity, list row controls, canvas commands, gradients/animations, and menus
+6. add brand-new primitives or publish precompiled artifacts only when explicitly prioritized and validated
 
 Performance hardening has a useful baseline now; keep using measurements before optimizing and keep detailed baselines/next steps in `docs/performance.md`. Do not add default scroll debounce, high-frequency event coalescing, keyed diffing, or `Guppy.Window` rerender batching without stress-test, benchmark, counter, or telemetry evidence.
 
