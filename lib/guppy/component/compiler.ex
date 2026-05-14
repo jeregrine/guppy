@@ -462,15 +462,13 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp compile_unknown_tag(tag, attrs, content, caller) do
-    cond do
-      local_component_tag?(tag) or remote_component_tag?(tag) ->
-        compile_component(tag, attrs, content, caller)
-
-      true ->
-        raise_compile_error!(
-          caller,
-          "unsupported tag <#{tag}>; use <.#{tag}> for local function components or a module tag for remote components"
-        )
+    if local_component_tag?(tag) or remote_component_tag?(tag) do
+      compile_component(tag, attrs, content, caller)
+    else
+      raise_compile_error!(
+        caller,
+        "unsupported tag <#{tag}>; use <.#{tag}> for local function components or a module tag for remote components"
+      )
     end
   end
 
