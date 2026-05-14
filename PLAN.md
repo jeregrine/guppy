@@ -4,12 +4,63 @@ Operational rules, checks, and maintenance reminders live in `AGENTS.md`. This f
 
 ## Next work
 
-No new feature or scoping item is active. Keep stabilization, bug fixes, verification paths, docs, examples, and compliance tracking ahead of speculative surface area. Pick one of the designed implementation candidates below only when explicitly prioritized by a real use case.
+No feature implementation is active. Keep stabilization, bug fixes, verification paths, docs, examples, and compliance tracking ahead of speculative surface area. Start one of the scoped tasks below only when explicitly prioritized by a real use case.
 
-## Designed implementation candidates
+## Scoped task backlog
 
-- Retained controls inside generic `list` rows: identity/lifecycle design is recorded in [`docs/future-primitives.md`](docs/future-primitives.md#retained-controls-inside-generic-list-rows). Implementation remains deferred until explicitly prioritized.
-- App-level menu APIs: scope is recorded in [`docs/future-primitives.md`](docs/future-primitives.md#menu-apis). Implementation waits for a real app need and macOS/native verification.
-- Gradient style primitives: background-linear-gradient scope is recorded in [`docs/future-primitives.md`](docs/future-primitives.md#gradient-style-primitives). Implementation waits for a real visual need.
-- Data-table and tree virtualization: dedicated primitive scope is recorded in [`docs/future-primitives.md`](docs/future-primitives.md#data-table-and-tree-virtualization). Implementation waits for a concrete app use case and separate benchmarks/tests.
-- Custom painting, canvas, and pattern painting: retained drawing primitive scope is recorded in [`docs/future-primitives.md`](docs/future-primitives.md#custom-painting-canvas-and-pattern-painting). Implementation waits until narrower compliance gaps matter in practice.
+### 1. Retained controls inside generic `list` rows
+
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#retained-controls-inside-generic-list-rows). Status: scoped, not active.
+
+- [ ] Confirm the concrete row-control use case and first supported control set (`button`, `checkbox`, and `radio` before text/overlay controls).
+- [ ] Add native `RowControlKey` identity using `view_id / list_identity / row_id / control_id`.
+- [ ] Relax list-row validation only for supported stateful controls, requiring explicit control ids.
+- [ ] Thread structured `list_id`, `row_id`, and `control_id` fields through native event payloads and server routing.
+- [ ] Retain and prune row-control state from the full rendered item/control set while preserving request-deadline stale-render behavior.
+- [ ] Add ExUnit and Rust tests for validation, duplicate ids, key construction, pruning, and event payloads.
+- [ ] Update README, examples, and `docs/gpui-compliance.md` after end-to-end support lands.
+
+### 2. App-level menu APIs
+
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#menu-apis). Status: scoped, not active.
+
+- [ ] Capture a real app menu use case before adding public API.
+- [ ] Design the Elixir menu spec for labels, ids, callbacks, shortcuts, enabled state, separators, and nested items.
+- [ ] Add narrow public APIs such as `Guppy.set_menus/1` and, only if needed, `Guppy.set_dock_menu/1`.
+- [ ] Decode specs to GPUI 0.2.2 app menus and OS edit actions where focused controls can support them.
+- [ ] Route menu action callbacks through `Guppy.Server` to the registering/owning process.
+- [ ] Add native tests for spec decoding, action identity, callback emission, clearing, and replacement.
+- [ ] Manually verify macOS menu installation before documenting menu support.
+
+### 3. Gradient style primitives
+
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#gradient-style-primitives). Status: scoped, not active.
+
+- [ ] Confirm an example or product design needs gradients.
+- [ ] Finalize the first background-only op shape, currently scoped as `{:bg_linear_gradient, [angle: ..., from: ..., to: ...]}`.
+- [ ] Add Elixir IR validation for angle, exactly two color stops, supported color formats, and stop percentages.
+- [ ] Add template/class parsing only for the chosen op shape.
+- [ ] Add native ETF decode and style mapping to GPUI `linear_gradient`.
+- [ ] Add ExUnit and Rust style tests, then update examples and compliance docs when used.
+
+### 4. Data-table and tree virtualization
+
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#data-table-and-tree-virtualization). Status: scoped, not active.
+
+- [ ] Capture a concrete table or tree use case before adding IR.
+- [ ] Define dedicated semantic IR instead of hiding table/tree behavior inside current `grid`, `uniform_list`, or `list` primitives.
+- [ ] For tables, specify row ids, column ids, cell identity, sizing, selection, sort/filter events, and keyboard navigation.
+- [ ] For trees, specify node ids, parent/child relationships, Elixir-owned expansion state, selection/focus, disclosure rendering, and flattened visible-node virtualization.
+- [ ] Add stress-test or benchmark coverage before making large-data performance claims.
+- [ ] Add independent IR/template/native tests and update docs/examples only after end-to-end support lands.
+
+### 5. Custom painting, canvas, and pattern painting
+
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#custom-painting-canvas-and-pattern-painting). Status: scoped, not active.
+
+- [ ] Confirm a real drawing need that cannot be expressed with existing nodes, styles, image/icon support, or future gradient primitives.
+- [ ] Design a retained, data-only canvas/drawing IR with explicit ids, viewport/style, optional pointer events, and ordered draw commands.
+- [ ] Keep Elixir code out of the native paint pass; native retained resources must be keyed by stable canvas id and pruned on full-tree replacement.
+- [ ] Decide whether pattern painting belongs as a small background style op or as a canvas command based on the real use case.
+- [ ] Add benchmark or stress-test coverage for draw-command volume before optimizing or claiming performance.
+- [ ] Add ExUnit command-schema tests and Rust decode/paint/pruning/deadline tests before updating docs/examples.
