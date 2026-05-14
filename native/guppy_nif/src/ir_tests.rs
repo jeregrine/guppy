@@ -493,7 +493,7 @@ fn parses_bg_linear_gradient_style_op() {
         StyleOp::BgLinearGradient {
             angle: 90.0,
             from: LinearGradientStop {
-                color: StyleColor::Hex("#0f172a".into()),
+                color: StyleColor::Hex(0x0f172a),
                 percentage: 0.0,
             },
             to: LinearGradientStop {
@@ -526,11 +526,11 @@ fn rejects_invalid_bg_linear_gradient_style_op() {
 fn parses_style_hex_color_ops_with_optional_hash() {
     assert_eq!(
         parse_style_op(&tuple(vec![atom("bg_hex"), binary("#0f172a")])).unwrap(),
-        StyleOp::BgHex("#0f172a".into())
+        StyleOp::BgHex(0x0f172a)
     );
     assert_eq!(
         parse_style_op(&tuple(vec![atom("text_color_hex"), binary("445566")])).unwrap(),
-        StyleOp::TextColorHex("445566".into())
+        StyleOp::TextColorHex(0x445566)
     );
 }
 

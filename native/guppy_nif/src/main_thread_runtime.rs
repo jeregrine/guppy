@@ -393,7 +393,7 @@ mod tests {
                     y: 0.0,
                     width: 10.0,
                     height: 10.0,
-                    fill: StyleColor::Hex("#0f172a".into()),
+                    fill: StyleColor::Hex(0x0f172a),
                     radius: 0.0,
                 }]
                 .into(),

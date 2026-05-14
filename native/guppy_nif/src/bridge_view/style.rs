@@ -144,9 +144,9 @@ where
             StyleOp::Bg(color) => element.bg(color_token_to_color(*color)),
             StyleOp::TextColor(color) => element.text_color(color_token_to_color(*color)),
             StyleOp::BorderColor(color) => element.border_color(color_token_to_color(*color)),
-            StyleOp::BgHex(value) => element.bg(hex_color_to_color(value)),
-            StyleOp::TextColorHex(value) => element.text_color(hex_color_to_color(value)),
-            StyleOp::BorderColorHex(value) => element.border_color(hex_color_to_color(value)),
+            StyleOp::BgHex(value) => element.bg(hex_color_to_color(*value)),
+            StyleOp::TextColorHex(value) => element.text_color(hex_color_to_color(*value)),
+            StyleOp::BorderColorHex(value) => element.border_color(hex_color_to_color(*value)),
             StyleOp::BgLinearGradient { angle, from, to } => element.bg(linear_gradient(
                 *angle,
                 linear_gradient_stop_to_gpui(from),
@@ -177,11 +177,11 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
     for op in ops.iter() {
         match op {
             StyleOp::TextColor(color) => highlight.color = Some(color_token_to_color(*color)),
-            StyleOp::TextColorHex(value) => highlight.color = Some(hex_color_to_color(value)),
+            StyleOp::TextColorHex(value) => highlight.color = Some(hex_color_to_color(*value)),
             StyleOp::Bg(color) => {
                 highlight.background_color = Some(color_token_to_color(*color));
             }
-            StyleOp::BgHex(value) => highlight.background_color = Some(hex_color_to_color(value)),
+            StyleOp::BgHex(value) => highlight.background_color = Some(hex_color_to_color(*value)),
             StyleOp::FontThin => highlight.font_weight = Some(FontWeight::THIN),
             StyleOp::FontExtralight => highlight.font_weight = Some(FontWeight::EXTRA_LIGHT),
             StyleOp::FontLight => highlight.font_weight = Some(FontWeight::LIGHT),
@@ -357,9 +357,9 @@ pub(crate) fn apply_refinement_style(
             StyleOp::Bg(color) => style.bg(color_token_to_color(*color)),
             StyleOp::TextColor(color) => style.text_color(color_token_to_color(*color)),
             StyleOp::BorderColor(color) => style.border_color(color_token_to_color(*color)),
-            StyleOp::BgHex(value) => style.bg(hex_color_to_color(value)),
-            StyleOp::TextColorHex(value) => style.text_color(hex_color_to_color(value)),
-            StyleOp::BorderColorHex(value) => style.border_color(hex_color_to_color(value)),
+            StyleOp::BgHex(value) => style.bg(hex_color_to_color(*value)),
+            StyleOp::TextColorHex(value) => style.text_color(hex_color_to_color(*value)),
+            StyleOp::BorderColorHex(value) => style.border_color(hex_color_to_color(*value)),
             StyleOp::BgLinearGradient { angle, from, to } => style.bg(linear_gradient(
                 *angle,
                 linear_gradient_stop_to_gpui(from),
@@ -395,7 +395,7 @@ fn color_token_to_color(color: ColorToken) -> gpui::Hsla {
 pub(crate) fn style_color_to_color(color: &StyleColor) -> gpui::Hsla {
     match color {
         StyleColor::Token(color) => color_token_to_color(*color),
-        StyleColor::Hex(value) => hex_color_to_color(value),
+        StyleColor::Hex(value) => hex_color_to_color(*value),
     }
 }
 
@@ -403,10 +403,8 @@ fn linear_gradient_stop_to_gpui(stop: &LinearGradientStop) -> gpui::LinearColorS
     linear_color_stop(style_color_to_color(&stop.color), stop.percentage)
 }
 
-fn hex_color_to_color(value: &str) -> gpui::Hsla {
-    let normalized = value.trim_start_matches('#');
-    let parsed = u32::from_str_radix(normalized, 16).unwrap_or(0xff00ff);
-    rgb(parsed).into()
+fn hex_color_to_color(value: u32) -> gpui::Hsla {
+    rgb(value).into()
 }
 
 #[cfg(test)]
@@ -422,11 +420,11 @@ mod tests {
             StyleOp::BgLinearGradient {
                 angle: 90.0,
                 from: LinearGradientStop {
-                    color: StyleColor::Hex("#0f172a".into()),
+                    color: StyleColor::Hex(0x0f172a),
                     percentage: 0.0,
                 },
                 to: LinearGradientStop {
-                    color: StyleColor::Hex("#2563eb".into()),
+                    color: StyleColor::Hex(0x2563eb),
                     percentage: 1.0,
                 },
             },
