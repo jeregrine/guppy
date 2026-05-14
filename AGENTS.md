@@ -177,7 +177,7 @@ Still missing higher-value nodes/primitives:
 Prefer this style unless the task is explicitly lower-level:
 
 - `use Guppy.Window`
-- assign/update helpers
+- assign helpers
 - `~GUI`
 - local function components
 - prop declarations with `prop/3` / `prop/4`

@@ -13,6 +13,14 @@ defmodule Guppy.WindowTest do
 
   import Guppy.TestSupport
 
+  test "Guppy.Window exposes assign helpers without the old update helper" do
+    functions = Guppy.Window.__info__(:functions)
+
+    assert {:assign, 2} in functions
+    assert {:assign, 3} in functions
+    refute {:update, 3} in functions
+  end
+
   test "Guppy.Window modules expose a supervisor child spec" do
     assert %{
              id: Guppy.DefaultCallbackWindow,

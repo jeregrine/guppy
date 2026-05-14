@@ -30,7 +30,7 @@ defmodule CounterWindow do
   end
 
   def handle_event("increment", _event_data, window) do
-    {:noreply, update(window, :count, &(&1 + 1))}
+    {:noreply, assign(window, :count, window.assigns.count + 1)}
   end
 end
 
@@ -44,7 +44,7 @@ Guppy is unreleased and macOS-first today. It can open native GPUI windows, rend
 The preferred authoring model is:
 
 - `use Guppy.Window`
-- assign/update helpers
+- assign helpers
 - `~GUI` templates
 - local function components
 - full-tree rerendering from Elixir-owned state
@@ -211,7 +211,6 @@ Helpers imported by `use Guppy.Window` include:
 
 - `assign/2`
 - `assign/3`
-- `update/3`
 - `put_private/3`
 - `put_window_opts/2`
 

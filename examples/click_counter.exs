@@ -14,7 +14,7 @@ defmodule Examples.ClickCounterWindow do
 
   @impl Guppy.Window
   def handle_event("increment", _event_data, window) do
-    next_window = update(window, :count, &(&1 + 1))
+    next_window = assign(window, :count, window.assigns.count + 1)
     IO.puts("incremented to #{next_window.assigns.count}")
     {:noreply, next_window}
   end

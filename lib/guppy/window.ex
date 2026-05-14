@@ -163,11 +163,6 @@ defmodule Guppy.Window do
     Enum.reduce(attrs, window, fn {key, value}, acc -> assign(acc, key, value) end)
   end
 
-  def update(%__MODULE__{} = window, key, fun) when is_atom(key) and is_function(fun, 1) do
-    current = Map.get(window.assigns, key)
-    assign(window, key, fun.(current))
-  end
-
   def put_private(%__MODULE__{} = window, key, value) when is_atom(key) do
     %{window | private: Map.put(window.private, key, value)}
   end
