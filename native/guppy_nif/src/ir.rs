@@ -2526,19 +2526,44 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     let (angle, from, to) = parse_linear_gradient_options(&elements[1])?;
                     Ok(StyleOp::BgLinearGradient { angle, from, to })
                 }
-                "opacity" => Ok(StyleOp::Opacity(parse_f32(&elements[1])?)),
+                "opacity" => Ok(StyleOp::Opacity(parse_unit_style_f32(
+                    &elements[1],
+                    "opacity",
+                )?)),
                 "grid_cols" => Ok(StyleOp::GridCols(parse_grid_u16(&elements[1])?)),
                 "grid_rows" => Ok(StyleOp::GridRows(parse_grid_u16(&elements[1])?)),
                 "col_span" => Ok(StyleOp::ColSpan(parse_grid_u16(&elements[1])?)),
                 "row_span" => Ok(StyleOp::RowSpan(parse_grid_u16(&elements[1])?)),
-                "w_px" => Ok(StyleOp::WPx(parse_f32(&elements[1])?)),
-                "w_rem" => Ok(StyleOp::WRem(parse_f32(&elements[1])?)),
-                "w_frac" => Ok(StyleOp::WFrac(parse_f32(&elements[1])?)),
-                "h_px" => Ok(StyleOp::HPx(parse_f32(&elements[1])?)),
-                "h_rem" => Ok(StyleOp::HRem(parse_f32(&elements[1])?)),
-                "h_frac" => Ok(StyleOp::HFrac(parse_f32(&elements[1])?)),
-                "scrollbar_width_px" => Ok(StyleOp::ScrollbarWidthPx(parse_f32(&elements[1])?)),
-                "scrollbar_width_rem" => Ok(StyleOp::ScrollbarWidthRem(parse_f32(&elements[1])?)),
+                "w_px" => Ok(StyleOp::WPx(parse_non_negative_style_f32(
+                    &elements[1],
+                    "w_px",
+                )?)),
+                "w_rem" => Ok(StyleOp::WRem(parse_non_negative_style_f32(
+                    &elements[1],
+                    "w_rem",
+                )?)),
+                "w_frac" => Ok(StyleOp::WFrac(parse_unit_style_f32(
+                    &elements[1],
+                    "w_frac",
+                )?)),
+                "h_px" => Ok(StyleOp::HPx(parse_non_negative_style_f32(
+                    &elements[1],
+                    "h_px",
+                )?)),
+                "h_rem" => Ok(StyleOp::HRem(parse_non_negative_style_f32(
+                    &elements[1],
+                    "h_rem",
+                )?)),
+                "h_frac" => Ok(StyleOp::HFrac(parse_unit_style_f32(
+                    &elements[1],
+                    "h_frac",
+                )?)),
+                "scrollbar_width_px" => Ok(StyleOp::ScrollbarWidthPx(
+                    parse_non_negative_style_f32(&elements[1], "scrollbar_width_px")?,
+                )),
+                "scrollbar_width_rem" => Ok(StyleOp::ScrollbarWidthRem(
+                    parse_non_negative_style_f32(&elements[1], "scrollbar_width_rem")?,
+                )),
                 other => Err(format!("unsupported style tuple key: {other}")),
             }
         }
@@ -2813,6 +2838,26 @@ fn is_strict_hex_color(value: &str) -> bool {
         && value.as_bytes()[1..]
             .iter()
             .all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn parse_unit_style_f32(term: &Term, key: &str) -> Result<f32, String> {
+    let value = parse_f32(term)?;
+
+    if value.is_finite() && (0.0..=1.0).contains(&value) {
+        Ok(value)
+    } else {
+        Err(format!("invalid unit numeric style {key}: {value}"))
+    }
+}
+
+fn parse_non_negative_style_f32(term: &Term, key: &str) -> Result<f32, String> {
+    let value = parse_f32(term)?;
+
+    if value.is_finite() && value >= 0.0 {
+        Ok(value)
+    } else {
+        Err(format!("invalid non-negative numeric style {key}: {value}"))
+    }
 }
 
 fn parse_grid_u16(term: &Term) -> Result<u16, String> {
@@ -3482,6 +3527,19 @@ mod tests {
 
         let err = parse_style_op(&term).unwrap_err();
         assert!(err.contains("invalid style hex color"));
+    }
+
+    #[test]
+    fn rejects_invalid_numeric_style_ops() {
+        for term in [
+            tuple(vec![atom("opacity"), float(1.5)]),
+            tuple(vec![atom("w_px"), integer(-1)]),
+            tuple(vec![atom("w_frac"), float(1.2)]),
+            tuple(vec![atom("scrollbar_width_px"), integer(-1)]),
+        ] {
+            let err = parse_style_op(&term).unwrap_err();
+            assert!(err.contains("invalid"), "unexpected error: {err}");
+        }
     }
 
     #[test]
