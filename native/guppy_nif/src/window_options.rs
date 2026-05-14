@@ -306,8 +306,8 @@ impl WindowDecorationsConfig {
     }
 }
 
-fn parse_window_bounds_state(value: String) -> Result<WindowBoundsState, String> {
-    match value.as_str() {
+fn parse_window_bounds_state(value: &str) -> Result<WindowBoundsState, String> {
+    match value {
         "windowed" => Ok(WindowBoundsState::Windowed),
         "maximized" => Ok(WindowBoundsState::Maximized),
         "fullscreen" => Ok(WindowBoundsState::Fullscreen),
@@ -315,8 +315,8 @@ fn parse_window_bounds_state(value: String) -> Result<WindowBoundsState, String>
     }
 }
 
-fn parse_window_kind(value: String) -> Result<WindowKindConfig, String> {
-    match value.as_str() {
+fn parse_window_kind(value: &str) -> Result<WindowKindConfig, String> {
+    match value {
         "normal" => Ok(WindowKindConfig::Normal),
         "popup" | "pop_up" => Ok(WindowKindConfig::PopUp),
         "floating" => Ok(WindowKindConfig::Floating),
@@ -324,8 +324,8 @@ fn parse_window_kind(value: String) -> Result<WindowKindConfig, String> {
     }
 }
 
-fn parse_window_background(value: String) -> Result<WindowBackgroundConfig, String> {
-    match value.as_str() {
+fn parse_window_background(value: &str) -> Result<WindowBackgroundConfig, String> {
+    match value {
         "opaque" => Ok(WindowBackgroundConfig::Opaque),
         "transparent" => Ok(WindowBackgroundConfig::Transparent),
         "blurred" => Ok(WindowBackgroundConfig::Blurred),
@@ -337,8 +337,8 @@ fn display_id_from_raw(id: u32) -> DisplayId {
     unsafe { std::mem::transmute::<u32, DisplayId>(id) }
 }
 
-fn parse_window_decorations(value: String) -> Result<WindowDecorationsConfig, String> {
-    match value.as_str() {
+fn parse_window_decorations(value: &str) -> Result<WindowDecorationsConfig, String> {
+    match value {
         "server" => Ok(WindowDecorationsConfig::Server),
         "client" => Ok(WindowDecorationsConfig::Client),
         _ => Err("invalid window_decorations".into()),
@@ -377,9 +377,9 @@ fn get_optional_string_field(map: &Map, key: &str) -> Result<Option<String>, Str
     }
 }
 
-fn get_optional_atom_field(map: &Map, key: &str) -> Result<Option<String>, String> {
+fn get_optional_atom_field<'a>(map: &'a Map, key: &str) -> Result<Option<&'a str>, String> {
     match get_field(map, key) {
-        Some(Term::Atom(atom)) => Ok(Some(atom.name.clone())),
+        Some(Term::Atom(atom)) => Ok(Some(atom.name.as_str())),
         Some(_) => Err(format!("expected atom for {key}")),
         None => Ok(None),
     }
