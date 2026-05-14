@@ -54,7 +54,6 @@ pub(crate) fn render(
     let list = list(state, move |index, window, _cx| {
         items
             .get(index)
-            .cloned()
             .map(|item| {
                 render_item(
                     view_id,
@@ -191,7 +190,7 @@ fn insert_row_control_state(
 fn render_item(
     view_id: u64,
     list_key: &str,
-    item: ListItem,
+    item: &ListItem,
     item_style: &DivStyle,
     click: Option<&str>,
     row_controls: &HashMap<String, RowControlRenderState>,
