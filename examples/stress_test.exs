@@ -71,13 +71,16 @@ defmodule Examples.StressTest do
     Validate one generated frame without opening a window:
       mix run --no-start examples/stress_test.exs -- --validate-only
 
+    The stress test runs continuously until the window is closed or the process
+    is interrupted. For bounded automated checks, use --validate-only.
+
     Optional knobs:
       GUPPY_STRESS_FPS=60
       GUPPY_STRESS_UNIFORM_ITEMS=12000
       GUPPY_STRESS_LIST_ROWS=1200
       GUPPY_STRESS_SCROLL_ROWS=900
       GUPPY_STRESS_GRID_CELLS=384
-      GUPPY_STRESS_TIMEOUT_MS=15000
+      GUPPY_STRESS_TIMEOUT_MS=15000     # native render request timeout, not run duration
       GUPPY_STRESS_PRINT=1              # default: 1; set 0 to silence per-sample lines
       GUPPY_STRESS_SAMPLE_MS=1000       # command-line sample interval
       GUPPY_STRESS_FORMAT=kv            # kv or jsonl

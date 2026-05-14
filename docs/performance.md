@@ -80,6 +80,12 @@ Run it with an optimized native build:
 MIX_ENV=prod mix run examples/stress_test.exs
 ```
 
+The interactive stress probe runs continuously until the window is closed or the process is interrupted. `GUPPY_STRESS_TIMEOUT_MS` controls each native render request timeout, not total run duration. For bounded automated syntax/IR validation, use:
+
+```sh
+mix run --no-start examples/stress_test.exs -- --validate-only
+```
+
 Useful isolation/output knobs:
 
 ```sh
