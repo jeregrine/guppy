@@ -506,7 +506,8 @@ mod tests {
                 width: DataTableColumnWidth::Fr(1),
                 sortable: true,
                 style: Vec::new().into(),
-            }],
+            }]
+            .into(),
             rows: vec![DataTableRow {
                 id: "row_1".into(),
                 cells: vec![DataTableCell {
@@ -515,7 +516,8 @@ mod tests {
                     style: Vec::new().into(),
                 }],
                 style: Vec::new().into(),
-            }],
+            }]
+            .into(),
             style: vec![StyleOp::W96, StyleOp::H32].into(),
             header_style: Vec::new().into(),
             row_style: Vec::new().into(),

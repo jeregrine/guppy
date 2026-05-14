@@ -558,8 +558,8 @@ pub struct DataTableSort {
 #[derive(Clone, Debug, PartialEq)]
 pub struct DataTableNode {
     pub id: Option<String>,
-    pub columns: Vec<DataTableColumn>,
-    pub rows: Vec<DataTableRow>,
+    pub columns: Arc<[DataTableColumn]>,
+    pub rows: Arc<[DataTableRow]>,
     pub style: DivStyle,
     pub header_style: DivStyle,
     pub row_style: DivStyle,
@@ -903,8 +903,8 @@ impl IrNode {
 
                 Ok(Self::DataTable(Box::new(DataTableNode {
                     id,
-                    columns,
-                    rows,
+                    columns: columns.into(),
+                    rows: rows.into(),
                     style: get_div_style(map)?,
                     header_style: get_style_list_field(map, "header_style")?,
                     row_style: get_style_list_field(map, "row_style")?,

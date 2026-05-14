@@ -10,8 +10,6 @@ use gpui::{
     AnyElement, Context, InteractiveElement, InteractiveText, IntoElement, ParentElement,
     SharedString, StatefulInteractiveElement, Styled, Window, div, list, px,
 };
-use std::sync::Arc;
-
 const ROW_CLICK_EVENT: i32 = 1;
 const CELL_CLICK_EVENT: i32 = 2;
 const SORT_EVENT: i32 = 3;
@@ -28,8 +26,8 @@ pub(crate) fn render(
     let table_id = node_id.to_string();
     let list_id = format!("{table_id}.rows");
     let state = pass.retain_list_state(&list_id, table.rows.len());
-    let columns: Arc<[DataTableColumn]> = table.columns.clone().into();
-    let rows: Arc<[DataTableRow]> = table.rows.clone().into();
+    let columns = table.columns.clone();
+    let rows = table.rows.clone();
     let row_style = table.row_style.clone();
     let cell_style = table.cell_style.clone();
     let row_click = table.row_click.clone();
@@ -57,7 +55,7 @@ pub(crate) fn render(
     let header = render_header(
         view_id,
         &table_id,
-        &table.columns,
+        table.columns.as_ref(),
         &table.header_style,
         table.sort_callback.as_deref(),
     );
