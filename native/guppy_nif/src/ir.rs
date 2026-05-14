@@ -510,7 +510,7 @@ pub struct UniformListItem {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ListItem {
     pub id: String,
-    pub children: Vec<IrNode>,
+    pub children: Arc<[IrNode]>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -1530,7 +1530,7 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, St
 
             Ok(ListItem {
                 id: get_string_field(item, "id")?,
-                children,
+                children: children.into(),
             })
         })
         .collect::<Result<Vec<_>, _>>()

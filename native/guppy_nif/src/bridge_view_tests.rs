@@ -507,7 +507,8 @@ fn list_with_row_button() -> IrNode {
                 mouse_up: None,
                 mouse_move: None,
                 scroll_wheel: None,
-            }))],
+            }))]
+            .into(),
         }]
         .into(),
         style: vec![StyleOp::W96, StyleOp::H32].into(),
