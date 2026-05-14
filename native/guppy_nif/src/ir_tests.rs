@@ -1,7 +1,7 @@
 use super::{
-    CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode, IrNode, LinearGradientStop,
-    StyleColor, StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids,
-    parse_style_op, validate_list_row_child,
+    CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode, ImageObjectFit, ImageSource,
+    IrNode, LinearGradientStop, StyleColor, StyleOp, decode_list_row_child_term,
+    ensure_unique_list_row_control_ids, parse_style_op, validate_list_row_child,
 };
 use eetf::{Atom, Binary, FixInteger, Float, List, Map, Term, Tuple};
 
@@ -46,6 +46,70 @@ fn events(entries: Vec<(&str, &str)>) -> Term {
         .into_iter()
         .map(|(key, value)| (atom(key), binary(value)))
         .collect())
+}
+
+#[test]
+fn decodes_image_source_variants() {
+    let auto = map(vec![
+        (atom("kind"), atom("image")),
+        (atom("source"), binary("logo.png")),
+        (atom("object_fit"), atom("cover")),
+        (atom("grayscale"), bool_atom(true)),
+    ]);
+
+    match IrNode::from_term(&auto).unwrap() {
+        IrNode::Image {
+            source,
+            object_fit,
+            grayscale,
+            ..
+        } => {
+            assert_eq!(source, ImageSource::Auto("logo.png".into()));
+            assert_eq!(object_fit, ImageObjectFit::Cover);
+            assert!(grayscale);
+        }
+        other => panic!("expected image, got {other:?}"),
+    }
+
+    let uri = map(vec![
+        (atom("kind"), atom("image")),
+        (
+            atom("source"),
+            tuple(vec![atom("uri"), binary("https://example.com/logo.svg")]),
+        ),
+    ]);
+
+    match IrNode::from_term(&uri).unwrap() {
+        IrNode::Image {
+            source,
+            object_fit,
+            grayscale,
+            ..
+        } => {
+            assert_eq!(
+                source,
+                ImageSource::Uri("https://example.com/logo.svg".into())
+            );
+            assert_eq!(object_fit, ImageObjectFit::Contain);
+            assert!(!grayscale);
+        }
+        other => panic!("expected image, got {other:?}"),
+    }
+
+    let icon = map(vec![
+        (atom("kind"), atom("icon")),
+        (
+            atom("source"),
+            tuple(vec![atom("path"), binary("/tmp/icon.png")]),
+        ),
+    ]);
+
+    match IrNode::from_term(&icon).unwrap() {
+        IrNode::Icon { source, .. } => {
+            assert_eq!(source, ImageSource::Path("/tmp/icon.png".into()));
+        }
+        other => panic!("expected icon, got {other:?}"),
+    }
 }
 
 #[test]

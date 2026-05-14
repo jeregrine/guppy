@@ -1275,9 +1275,8 @@ fn get_scroll_axis_field(map: &HashMap<Term, Term>) -> Result<ScrollAxis, String
 
 fn get_image_source_field(map: &HashMap<Term, Term>) -> Result<ImageSource, String> {
     match get_field(map, "source") {
-        Some(Term::Binary(_)) | Some(Term::ByteList(_)) => {
-            term_to_string(get_field(map, "source").expect("source field present"))
-                .map(ImageSource::Auto)
+        Some(source @ (Term::Binary(_) | Term::ByteList(_))) => {
+            term_to_string(source).map(ImageSource::Auto)
         }
         Some(Term::Tuple(Tuple { elements })) if elements.len() == 2 => {
             let kind = match &elements[0] {
