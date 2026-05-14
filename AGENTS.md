@@ -267,6 +267,7 @@ Files you will most often need:
 - `lib/guppy/ir.ex` — Elixir IR validation/helpers
 - `native/guppy_nif/src/lib.rs` — Rustler NIF entrypoints, event encoding, and request path
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI app bootstrap, request drain, window registry
+- `native/guppy_nif/src/main_thread_runtime_tests.rs` — focused main-thread request/deadline tests
 - `native/guppy_nif/src/bridge_view.rs` — native root renderer
 - `native/guppy_nif/src/bridge_view_tests.rs` — root renderer retention/simulated-event tests
 - `native/guppy_nif/src/bridge_view/` — render pass, style mapping, event bridge, identity, per-node renderers and focused renderer tests
