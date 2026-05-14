@@ -677,7 +677,7 @@ pub struct DivNode {
     pub track_scroll: bool,
     pub anchor_scroll: bool,
     pub tooltip: Option<String>,
-    pub shortcuts: Vec<ShortcutBinding>,
+    pub shortcuts: Arc<[ShortcutBinding]>,
     pub children: Vec<IrNode>,
     pub click: Option<String>,
     pub hover: Option<String>,
@@ -2047,7 +2047,7 @@ fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, Strin
         track_scroll: false,
         anchor_scroll: false,
         tooltip: None,
-        shortcuts: Vec::new(),
+        shortcuts: Arc::new([]),
         children,
         click: get_click_event(map)?,
         hover: None,
@@ -2452,16 +2452,17 @@ fn get_div_actions(map: &HashMap<Term, Term>) -> Result<HashMap<String, String>,
 fn get_div_shortcuts(
     map: &HashMap<Term, Term>,
     actions: &HashMap<String, String>,
-) -> Result<Vec<ShortcutBinding>, String> {
+) -> Result<Arc<[ShortcutBinding]>, String> {
     let Some(shortcuts_term) = get_field(map, "shortcuts") else {
-        return Ok(Vec::new());
+        return Ok(Arc::new([]));
     };
 
     let shortcuts = get_list(shortcuts_term)?;
     shortcuts
         .iter()
         .map(|shortcut| parse_shortcut_binding(shortcut, actions))
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn parse_shortcut_binding(

@@ -451,7 +451,7 @@ fn list_row_control_ids_are_unique_within_a_row() {
             track_scroll: false,
             anchor_scroll: false,
             tooltip: None,
-            shortcuts: Vec::new(),
+            shortcuts: Vec::new().into(),
             children: vec![IrNode::text("Done")],
             click: None,
             hover: None,

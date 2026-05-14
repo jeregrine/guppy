@@ -12,7 +12,7 @@ use gpui::{
     MouseMoveEvent, MouseUpEvent, ParentElement, Render, ScrollAnchor, ScrollHandle, SharedString,
     Stateful, StatefulInteractiveElement, Styled, Window, deferred, div, px, rgb,
 };
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 struct DisabledEventFilter {
     disabled: bool,
@@ -27,11 +27,11 @@ impl DisabledEventFilter {
         if self.disabled { None } else { callback }
     }
 
-    fn shortcuts(&self, shortcuts: &[ShortcutBinding]) -> Vec<ShortcutBinding> {
+    fn shortcuts(&self, shortcuts: &Arc<[ShortcutBinding]>) -> Arc<[ShortcutBinding]> {
         if self.disabled {
-            Vec::new()
+            Arc::new([])
         } else {
-            shortcuts.to_vec()
+            shortcuts.clone()
         }
     }
 
@@ -81,7 +81,7 @@ struct DivInteractionSpec<'a> {
     mouse_up: Option<&'a str>,
     mouse_move: Option<&'a str>,
     scroll_wheel: Option<&'a str>,
-    shortcuts: Vec<ShortcutBinding>,
+    shortcuts: Arc<[ShortcutBinding]>,
     keyboard_actionable: bool,
 }
 
