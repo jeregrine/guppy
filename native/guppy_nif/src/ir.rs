@@ -847,22 +847,12 @@ impl IrNode {
                 focus: get_focus_event(map)?,
                 blur: get_blur_event(map)?,
             }),
-            "scroll" => {
-                let children = match get_field(map, "children") {
-                    Some(term) => get_list(term)?
-                        .iter()
-                        .map(Self::from_term)
-                        .collect::<Result<Vec<_>, _>>()?,
-                    None => Vec::new(),
-                };
-
-                Ok(Self::Scroll {
-                    id,
-                    axis: get_scroll_axis_field(map)?,
-                    style: get_div_style(map)?,
-                    children: children.into(),
-                })
-            }
+            "scroll" => Ok(Self::Scroll {
+                id,
+                axis: get_scroll_axis_field(map)?,
+                style: get_div_style(map)?,
+                children: get_child_nodes_field(map)?,
+            }),
             "uniform_list" => Ok(Self::UniformList {
                 id,
                 items: get_uniform_list_items_field(map)?,
@@ -950,36 +940,26 @@ impl IrNode {
                 focus: get_focus_event(map)?,
                 blur: get_blur_event(map)?,
             }))),
-            "popover" => {
-                let children = match get_field(map, "children") {
-                    Some(term) => get_list(term)?
-                        .iter()
-                        .map(Self::from_term)
-                        .collect::<Result<Vec<_>, _>>()?,
-                    None => Vec::new(),
-                };
-
-                Ok(Self::Popover {
-                    id,
-                    label: get_string_field(map, "label")?,
-                    open: get_required_boolean_field(map, "open")?,
-                    style: get_div_style(map)?,
-                    popover_style: get_style_list_field(map, "popover_style")?,
-                    anchor: get_popover_anchor_field(map)?,
-                    anchor_position: get_optional_point_field(map, "anchor_position")?,
-                    anchor_offset: get_optional_point_field(map, "anchor_offset")?,
-                    anchor_position_mode: get_popover_anchor_position_mode_field(map)?,
-                    anchor_fit: get_popover_anchor_fit_field(map)?,
-                    snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
-                    close_on_click_outside: get_boolean_field(map, "close_on_click_outside")?
-                        || get_field(map, "close_on_click_outside").is_none(),
-                    stack_priority: get_optional_usize_field(map, "stack_priority")?.or(Some(1)),
-                    disabled: get_boolean_field(map, "disabled")?,
-                    click: get_click_event(map)?,
-                    close: get_close_event(map)?,
-                    children: children.into(),
-                })
-            }
+            "popover" => Ok(Self::Popover {
+                id,
+                label: get_string_field(map, "label")?,
+                open: get_required_boolean_field(map, "open")?,
+                style: get_div_style(map)?,
+                popover_style: get_style_list_field(map, "popover_style")?,
+                anchor: get_popover_anchor_field(map)?,
+                anchor_position: get_optional_point_field(map, "anchor_position")?,
+                anchor_offset: get_optional_point_field(map, "anchor_offset")?,
+                anchor_position_mode: get_popover_anchor_position_mode_field(map)?,
+                anchor_fit: get_popover_anchor_fit_field(map)?,
+                snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
+                close_on_click_outside: get_boolean_field(map, "close_on_click_outside")?
+                    || get_field(map, "close_on_click_outside").is_none(),
+                stack_priority: get_optional_usize_field(map, "stack_priority")?.or(Some(1)),
+                disabled: get_boolean_field(map, "disabled")?,
+                click: get_click_event(map)?,
+                close: get_close_event(map)?,
+                children: get_child_nodes_field(map)?,
+            }),
             "image" => Ok(Self::Image {
                 id,
                 source: get_image_source_field(map)?,
@@ -1000,14 +980,7 @@ impl IrNode {
             }),
             "button" => Ok(Self::Button(Box::new(decode_button_node(map, id)?))),
             "div" => {
-                let children = match get_field(map, "children") {
-                    Some(term) => get_list(term)?
-                        .iter()
-                        .map(Self::from_term)
-                        .collect::<Result<Vec<_>, _>>()?,
-                    None => Vec::new(),
-                };
-
+                let children = get_child_nodes_field(map)?;
                 let actions = get_div_actions(map)?;
 
                 Ok(Self::Div(Box::new(DivNode {
@@ -1050,6 +1023,18 @@ impl IrNode {
             other => Err(format!("unsupported ir kind: {other}")),
         }
     }
+}
+
+fn get_child_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, String> {
+    let Some(children_term) = get_field(map, "children") else {
+        return Ok(Arc::new([]));
+    };
+
+    get_list(children_term)?
+        .iter()
+        .map(IrNode::from_term)
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn decode_button_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<DivNode, String> {
