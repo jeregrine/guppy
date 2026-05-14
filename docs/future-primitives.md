@@ -48,3 +48,35 @@ view_id / list_identity / row_id / control_id
 - No native ownership of row values.
 - No stateful controls in `uniform_list`; use generic `list` only.
 - No nested popover/select overlay support inside virtual rows until anchor lifecycle is tested separately.
+
+## Menu APIs
+
+Status: scoped; no public menu API yet.
+
+### GPUI 0.2.2 surface
+
+The active GPUI dependency exposes application-level menus through `App::set_menus(Vec<Menu>)`, `App::get_menus()`, and `App::set_dock_menu(Vec<MenuItem>)`. A menu item can be a separator, submenu, system submenu (`Services` on macOS), or action. Action items may carry GPUI OS actions for Cut, Copy, Paste, Select All, Undo, and Redo.
+
+### Guppy scope
+
+Menus should be app/runtime state, not IR nodes. They are not part of a window render tree and should not be rebuilt by every window render unless the owner explicitly changes menus.
+
+A first Guppy API should be deliberately narrow:
+
+- `Guppy.set_menus/1` for app menus and `Guppy.set_dock_menu/1` only if a real macOS app needs it.
+- Menu specs are Elixir data with `:label`, `:id`, `:callback`, `:shortcut`, `:enabled`, nested `:items`, and `:separator` entries.
+- Event delivery routes selected menu actions to the Guppy runtime server, then to the process that registered or owns the menu spec.
+- Built-in OS edit actions may be represented explicitly (`:cut`, `:copy`, `:paste`, `:select_all`, `:undo`, `:redo`) but should only be wired when focused native controls can answer them correctly.
+
+### Deferred until proven by app needs
+
+- Context menus or element-local popup menus. Existing div `context_menu` events are only notifications today.
+- Per-window dynamic menu ownership and validation callbacks.
+- Arbitrary Rust action types from Elixir.
+- Cross-platform promises beyond the validated `gpui = 0.2.2` behavior on supported targets.
+
+### Implementation gates
+
+- A concrete example needs a real menu before adding public API.
+- Native tests must cover spec decoding, action identity, callback emission, and clearing/replacing menus.
+- Manual macOS smoke must verify top-level menu installation and basic OS edit items before docs claim menu support.

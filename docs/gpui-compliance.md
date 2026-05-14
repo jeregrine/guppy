@@ -22,7 +22,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 - **Gradient style primitives**: not exposed in the style surface today.
 - **Grid layout**: current grid style ops cover GPUI's basic grid, row/column counts, and row/column spans; advanced table semantics are not exposed.
 - **Custom painting / canvas / pattern painting**: would require a new retained drawing primitive.
-- **Menu APIs**: not exposed as core IR/window primitives today.
+- **Menu APIs**: not exposed as core IR/window primitives today. App-level menu scope is recorded in [`docs/future-primitives.md`](future-primitives.md#menu-apis).
 - **Mouse pressure payloads**: basic mouse events are routed, but pressure-specific data is not exposed.
 
 Intentionally narrow parity areas:
@@ -66,7 +66,7 @@ Intentionally narrow parity areas:
 | `examples/paths_bench.rs` | none | out of scope | GPUI internal path benchmark | none |
 | `examples/pattern.rs` | none | unsupported | pattern painting deferred with custom painting/canvas work | explicitly deferred in PLAN; no implementation |
 | `examples/popover.rs` | `Guppy.IR.popover/4`, `<popover>`, `examples/super_demo.exs` | partial | close-on-outside-click and deferred priority are exposed; deeper nested popover parity and advanced deferred-layer lifecycle controls remain incomplete | ExUnit IR/template/native hidden-window coverage; manual super_demo smoke |
-| `examples/set_menus.rs` | none | unsupported | menu APIs deferred to runtime/window API hardening, not core IR primitives | explicitly deferred in PLAN; no implementation |
+| `examples/set_menus.rs` | none | unsupported | menu APIs are scoped as app/runtime state in `docs/future-primitives.md`, not core IR primitives | no implementation; future native tests required before support claims |
 | `examples/shadow.rs` | style tokens `shadow_sm/md/lg` | partial | complete shadow controls/visual parity | IR/style validation |
 | `examples/testing.rs` | ExUnit/Rust tests | partial | GPUI test API parity not exposed | existing test suites |
 | `examples/text.rs` | `text` node with style-token support; `Guppy.IR.rich_text/2` / `<rich_text />` runs; practical multiline input via `textarea` | partial | advanced text layout controls and full editor parity incomplete | IR/template/native hidden-window coverage; Rust rich text highlight range tests; textarea example/manual smoke |
