@@ -105,8 +105,8 @@ defmodule Guppy.Component.Compiler do
 
     case non_empty_root_children(children) do
       [child] -> child
-      [] -> raise_compile_error!(caller, "~G requires a root element")
-      _ -> raise_compile_error!(caller, "~G requires exactly one root element")
+      [] -> raise_compile_error!(caller, "~GUI requires a root element")
+      _ -> raise_compile_error!(caller, "~GUI requires exactly one root element")
     end
   after
     Process.delete({__MODULE__, :placeholders})
@@ -121,7 +121,7 @@ defmodule Guppy.Component.Compiler do
     end
   rescue
     error ->
-      raise_compile_error!(caller, "failed to parse ~G template: #{Exception.message(error)}")
+      raise_compile_error!(caller, "failed to parse ~GUI template: #{Exception.message(error)}")
   end
 
   defp compile_children(nodes, caller) do
@@ -972,7 +972,7 @@ defmodule Guppy.Component.Compiler do
     error ->
       raise_compile_error!(
         caller,
-        "invalid expression in ~G template: #{Exception.message(error)}"
+        "invalid expression in ~GUI template: #{Exception.message(error)}"
       )
   end
 
@@ -1040,7 +1040,7 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp consume_expression(<<>>, _depth, _current),
-    do: raise("unterminated {expression} in ~G template")
+    do: raise("unterminated {expression} in ~GUI template")
 
   defp consume_expression(<<"{", rest::binary>>, depth, current) do
     consume_expression(rest, depth + 1, current <> "{")
@@ -1062,7 +1062,7 @@ defmodule Guppy.Component.Compiler do
     consume_expression(rest, depth, current <> <<char::utf8>>)
   end
 
-  defp consume_quoted(<<>>, _quote, _current), do: raise("unterminated string in ~G expression")
+  defp consume_quoted(<<>>, _quote, _current), do: raise("unterminated string in ~GUI expression")
 
   defp consume_quoted(<<"\\", char::utf8, rest::binary>>, quote, current) do
     consume_quoted(rest, quote, current <> "\\" <> <<char::utf8>>)

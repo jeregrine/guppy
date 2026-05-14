@@ -908,7 +908,7 @@ defmodule Guppy.SuperDemo do
       ],
       intro_runs: [
         %{text: "New authoring path: ", style: [:font_semibold]},
-        %{text: "~G templates", style: [{:text_color_hex, "#93c5fd"}, :font_bold]},
+        %{text: "~GUI templates", style: [{:text_color_hex, "#93c5fd"}, :font_bold]},
         %{text: " + local components + native controls."}
       ],
       notifications_enabled: state.notifications_enabled,
@@ -923,7 +923,7 @@ defmodule Guppy.SuperDemo do
       status_select_open: state.status_select_open
     }
 
-    ~G"""
+    ~GUI"""
     <div id="components_demo" class="flex flex-col gap-4 p-4 rounded-xl border-1 border-[#334155] bg-[#0f172a] text-[#e2e8f0]">
       <text id="components_title" class="text-xl font-black">Components and new primitives</text>
       <rich_text id="components_intro" runs={@intro_runs} class="text-base leading-relaxed" />
@@ -2358,7 +2358,7 @@ defmodule Guppy.SuperDemo do
         Guppy.Markdown.render(%{
           id: "help_markdown",
           source:
-            "## What to try\n\nUse the demos to exercise **native GPUI** features rendered from Elixir IR. Inline `code` and lists come from the Markdown component.\n\n- Runtime: refresh status without leaving the window.\n- Components: inspect `~G`, local function components, checkbox/select/popover controls, and animation.\n- Interactions: click text, controls, pointer, and keyboard pads."
+            "## What to try\n\nUse the demos to exercise **native GPUI** features rendered from Elixir IR. Inline `code` and lists come from the Markdown component.\n\n- Runtime: refresh status without leaving the window.\n- Components: inspect `~GUI`, local function components, checkbox/select/popover controls, and animation.\n- Interactions: click text, controls, pointer, and keyboard pads."
         }),
         Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
         Guppy.IR.text(
@@ -2424,7 +2424,7 @@ defmodule Guppy.SuperDemo do
       %{
         id: "component_card_templates",
         title: "Template components",
-        badge: "~G",
+        badge: "~GUI",
         body:
           "Local function components keep example markup small while prop declarations catch bad calls early.",
         detail: "This card is rendered by <feature_card> with typed props and nested children.",
@@ -2466,7 +2466,7 @@ defmodule Guppy.SuperDemo do
   end
 
   defp feature_card(assigns) do
-    ~G"""
+    ~GUI"""
     <div id={@id} class={@class} animation={@animation}>
       <div id={@id <> "_header"} class="flex flex-row items-center justify-between gap-2">
         <text id={@id <> "_title"} class="text-base font-bold">{@title}</text>
@@ -2712,7 +2712,7 @@ defmodule Guppy.SuperDemo do
   defp button_theme(:black), do: %{bg: "#020617", border: "#475569", text: "#f8fafc"}
 
   defp aux_window_ir do
-    ~G"""
+    ~GUI"""
     <div id="aux_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
       <text id="aux_title" class="text-2xl font-black">Auxiliary window</text>
       <text>This window is owned by the main demo process.</text>
@@ -2736,7 +2736,7 @@ defmodule Guppy.SuperDemo do
   end
 
   defp child_owner_ir do
-    ~G"""
+    ~GUI"""
     <div id="child_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
       <text id="child_title" class="text-2xl font-black">Child owner window</text>
       <text>Kill the owner from the main demo to test DOWN cleanup.</text>

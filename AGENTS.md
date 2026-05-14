@@ -61,7 +61,7 @@ Important current invariants:
 - there is **not** a forwarding NIF GenServer anymore
 - `Guppy.Native.Nif` is now a direct Elixir wrapper module around the NIF functions
 - `Guppy.Window` is the preferred assign-based per-window process abstraction
-- `Guppy.Component` / `~G` is the preferred template authoring path
+- `Guppy.Component` / `~GUI` is the preferred template authoring path
 - `Guppy.Markdown` is an Elixir-side Markdown-to-IR component for a small subset; do not add Zed markdown crates unless explicitly designing that dependency
 - `Guppy.IR.validated/1` and `Guppy.IR.validated!/1` wrap trusted/static IR after one validation pass; server APIs unwrap before native dispatch
 - `Guppy.Window` monitors the Guppy runtime server and reopens from current assigns after supervised server restart; while reopen retry has `view_id: nil`, rerenders are skipped/deferred instead of rendering to an unknown view
@@ -178,7 +178,7 @@ Prefer this style unless the task is explicitly lower-level:
 
 - `use Guppy.Window`
 - assign/update helpers
-- `~G`
+- `~GUI`
 - local function components
 - prop declarations with `prop/3` / `prop/4`
 
@@ -244,7 +244,7 @@ Files you will most often need:
 - `lib/guppy.ex` — public API
 - `lib/guppy/server.ex` — ownership, lifecycle, event routing
 - `lib/guppy/window.ex` — per-window Elixir abstraction
-- `lib/guppy/component.ex` — `~G` and component helpers
+- `lib/guppy/component.ex` — `~GUI` and component helpers
 - `lib/guppy/component/compiler.ex` — template compiler
 - `lib/guppy/native/nif.ex` — direct Elixir NIF wrapper
 - `lib/guppy/ir.ex` — Elixir IR validation/helpers

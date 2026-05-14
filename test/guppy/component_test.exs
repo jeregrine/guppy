@@ -1,7 +1,14 @@
 defmodule Guppy.ComponentTest do
   use ExUnit.Case
 
-  test "Guppy.Component compiles ~G templates into valid IR" do
+  test "Guppy.Component imports ~GUI and does not expose the old ~GUI sigil" do
+    macros = Guppy.Component.__info__(:macros)
+
+    assert {:sigil_GUI, 2} in macros
+    refute {:sigil_G, 2} in macros
+  end
+
+  test "Guppy.Component compiles ~GUI templates into valid IR" do
     ir =
       Guppy.TemplateExample.render(%{
         title: "Template demo",

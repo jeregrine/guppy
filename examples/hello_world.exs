@@ -36,7 +36,7 @@ defmodule Examples.HelloWorldWindow do
         ]
       })
 
-    ~G"""
+    ~GUI"""
     <div id="hello_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
       <div id="hero_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
         <text id="title" class="text-3xl font-black">Guppy hello world</text>

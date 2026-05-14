@@ -2,7 +2,7 @@ defmodule Guppy.Component do
   @moduledoc """
   Compile-time Guppy template support.
 
-  `use Guppy.Component` imports the `~G` sigil and common window assign helpers,
+  `use Guppy.Component` imports the `~GUI` sigil and common window assign helpers,
   compiling a restricted HEEx-style template syntax directly to Guppy IR.
 
   The current template vocabulary intentionally matches Guppy's real IR surface:
@@ -42,7 +42,7 @@ defmodule Guppy.Component do
 
       import Guppy.Component,
         only: [
-          sigil_G: 2,
+          sigil_GUI: 2,
           prop: 3,
           prop: 4,
           assign: 2,
@@ -78,7 +78,7 @@ defmodule Guppy.Component do
     end
   end
 
-  defmacro sigil_G({:<<>>, _meta, [template]}, _modifiers) when is_binary(template) do
+  defmacro sigil_GUI({:<<>>, _meta, [template]}, _modifiers) when is_binary(template) do
     Guppy.Component.Compiler.compile!(template, __CALLER__)
   end
 

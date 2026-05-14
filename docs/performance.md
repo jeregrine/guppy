@@ -24,9 +24,9 @@ Selected results from `mix run bench/guppy_bench.exs`:
 
 | Scenario | Average | 99th percentile |
 | --- | ---: | ---: |
-| `~G` template render 10 nodes | 100.77 μs | 174.96 μs |
-| `~G` template render 100 nodes | 908.40 μs | 1197.58 μs |
-| `~G` template render 1,000 nodes | 8900.84 μs | 9745.56 μs |
+| `~GUI` template render 10 nodes | 100.77 μs | 174.96 μs |
+| `~GUI` template render 100 nodes | 908.40 μs | 1197.58 μs |
+| `~GUI` template render 1,000 nodes | 8900.84 μs | 9745.56 μs |
 | IR validation 10 nodes | 8.61 μs | 15.96 μs |
 | IR validation 100 nodes | 57.52 μs | 89.99 μs |
 | IR validation 1,000 nodes | 593.31 μs | 863.59 μs |

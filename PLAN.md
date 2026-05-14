@@ -5,7 +5,7 @@ Operational rules, checks, and maintenance reminders live in `AGENTS.md`. This f
 ## Next work
 
 1. Make template/window authoring feel HEEx-like:
-   - Replace `~G` with `~GUI`.
+   - Use `~GUI` as the template sigil.
    - Align assignment/update naming with HEEx/LiveView expectations; prefer `assign` ergonomics over the current `update` shape.
    - Support HEEx-style assigns in `~GUI`, so `@my_var` reads from the render assigns/window assigns context like `assigns.my_var`.
    - Make `handle_info/2` an implicit optional callback in the window API, like LiveView/GenServer usage, not something authors have to think about as explicit ceremony.

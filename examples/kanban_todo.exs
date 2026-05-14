@@ -168,7 +168,7 @@ defmodule Examples.KanbanTodoWindow do
         columns: columns
       })
 
-    ~G"""
+    ~GUI"""
     <div id="kanban_root" class="flex flex-col w-full h-full gap-2 p-2 bg-[#09111f] text-[#f8fafc]">
       <div id="top_shell" class="flex flex-col gap-2 p-2 rounded-xl border-1 border-[#1e293b] bg-[#0f172a] shadow-md">
         <div id="board_header" class="flex flex-row items-center justify-between gap-2">
@@ -496,7 +496,7 @@ defmodule Examples.KanbanTodoWindow do
   end
 
   defp metric_badge(assigns) do
-    ~G"""
+    ~GUI"""
     <div id={@metric.id} class={@metric.class}>
       <text id={@metric.id <> "_label"} class="text-xs text-[#94a3b8]">{@metric.label}</text>
       <text id={@metric.id <> "_value"} class="text-sm font-bold">{@metric.value}</text>
@@ -505,7 +505,7 @@ defmodule Examples.KanbanTodoWindow do
   end
 
   defp kanban_lane(assigns) do
-    ~G"""
+    ~GUI"""
     <div id={@lane.id} drop={@lane.drop_event} class={@lane.class} animation={@lane.animation}>
       <div id={@lane.header_id} class="flex flex-row items-center justify-between gap-2 p-1">
         <div id={@lane.title_id <> "_wrap"} class="flex flex-row items-center gap-2 flex-1">
@@ -534,7 +534,7 @@ defmodule Examples.KanbanTodoWindow do
   end
 
   defp kanban_card(assigns) do
-    ~G"""
+    ~GUI"""
     <div
       id={@task.card_id}
       drag_start="drag_started"

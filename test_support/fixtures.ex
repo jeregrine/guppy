@@ -92,7 +92,7 @@ defmodule Guppy.TemplateExample do
   use Guppy.Component
 
   def render(assigns) do
-    ~G"""
+    ~GUI"""
     <div id="root" tooltip="Template root" animation={@root_animation} class="flex flex-col gap-4 p-4 bg-[#0f172a] text-[#f8fafc]">
       <text id="title" class="text-3xl font-black">{@title}</text>
       <rich_text id="rich_intro" runs={@rich_runs} class="text-base col-span-[3] row-span-[2]" />
@@ -130,7 +130,7 @@ defmodule Guppy.TemplateTextExpressionExample do
   use Guppy.Component
 
   def render(assigns) do
-    ~G"""
+    ~GUI"""
     <div id="text_expression_root">
       <text id="equals_spaced">count = {@count}</text>
       <text id="equals_tight">x={@x}</text>
@@ -146,7 +146,7 @@ defmodule Guppy.RemoteBadgeComponent do
   prop(:render, :label, :string, required: true)
 
   def render(assigns) do
-    ~G"""
+    ~GUI"""
     <div id={@id} class="rounded-md border-1 border-blue p-2 bg-[#172554] text-[#dbeafe]">
       <text id={@id <> "_label"}>{@label}</text>
     </div>
@@ -164,7 +164,7 @@ defmodule Guppy.FunctionComponentExample do
   prop(:panel, :id, :string, required: true)
 
   def render(assigns) do
-    ~G"""
+    ~GUI"""
     <div id="component_root" class="flex flex-col gap-2 p-2 bg-[#0f172a] text-[#f8fafc]">
       <stat_card :for={item <- @items} id={"stat_#{item.id}"} title={item.title} value={item.value} />
       <panel id="activity_panel">
@@ -176,7 +176,7 @@ defmodule Guppy.FunctionComponentExample do
   end
 
   defp stat_card(assigns) do
-    ~G"""
+    ~GUI"""
     <div id={@id} class="rounded-md border-1 border-white p-2">
       <text id={@id <> "_title"} class="text-sm font-bold">{@title}</text>
       <text id={@id <> "_value"}>{@value}</text>
@@ -185,7 +185,7 @@ defmodule Guppy.FunctionComponentExample do
   end
 
   defp panel(assigns) do
-    ~G"""
+    ~GUI"""
     <div id={@id} class="rounded-md border-1 border-gray p-2">
       {@children}
     </div>
@@ -200,7 +200,7 @@ defmodule Guppy.ComponentPropsExample do
   prop(:render, :tone, {:one_of, [:info, :warning]}, default: :info)
 
   def render(assigns) do
-    ~G"""
+    ~GUI"""
     <div id="props_root" class="flex flex-col gap-2 p-2 bg-[#0f172a] text-[#f8fafc]">
       <text id="props_title">{@title}</text>
       <text id="props_tone">{@tone}</text>
@@ -213,7 +213,7 @@ defmodule Guppy.ComponentPropsTagCaller do
   use Guppy.Component
 
   def render(assigns) do
-    ~G"""
+    ~GUI"""
     <Guppy.ComponentPropsExample title={@title} />
     """
   end

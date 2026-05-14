@@ -19,7 +19,7 @@ defmodule CounterWindow do
   def render(window) do
     count = window.assigns.count
 
-    ~G"""
+    ~GUI"""
     <div class="flex flex-col gap-2 p-4 bg-[#0f172a] text-[#f8fafc]">
       <text id="count_label" class="text-2xl font-bold">count = {count}</text>
       <button id="increment_button" click="increment" class="p-2 rounded-md border-1">
@@ -45,7 +45,7 @@ The preferred authoring model is:
 
 - `use Guppy.Window`
 - assign/update helpers
-- `~G` templates
+- `~GUI` templates
 - local function components
 - full-tree rerendering from Elixir-owned state
 
@@ -95,7 +95,7 @@ Broad tour of the bridge: multiple node kinds, multiple windows, scrolling, focu
 GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
 ```
 
-Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render/1`, `~G`, and local function components.
+Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render/1`, `~GUI`, and local function components.
 
 ```bash
 MIX_ENV=prod mix run examples/stress_test.exs
@@ -221,7 +221,7 @@ Preferred `Guppy.Window` modules treat `window_closed` as lifecycle-driving toda
 
 ## Templates and components
 
-`Guppy.Component` provides `~G` templates and first-pass function components.
+`Guppy.Component` provides `~GUI` templates and first-pass function components.
 
 Local lower-case tags call a function in the same module:
 
