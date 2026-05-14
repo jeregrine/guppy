@@ -20,7 +20,18 @@ pub(crate) fn render(
     style: &DivStyle,
     click: Option<&str>,
 ) -> AnyElement {
-    let view_id = pass.view_id();
+    render_with_view_id(pass.view_id(), path, id, content, runs, style, click)
+}
+
+pub(crate) fn render_with_view_id(
+    view_id: u64,
+    path: &str,
+    id: Option<&str>,
+    content: &str,
+    runs: &[TextRunSegment],
+    style: &DivStyle,
+    click: Option<&str>,
+) -> AnyElement {
     let node_id = NodeIdentity::new(view_id, path, id);
     let interactive_text =
         InteractiveText::new(node_id.to_shared_string(), styled_text(content, runs));

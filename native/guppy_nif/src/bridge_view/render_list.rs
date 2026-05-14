@@ -3,17 +3,16 @@ use super::{
     identity::{NodeIdentity, RowControlKey},
     render_checkbox,
     render_pass::RenderPass,
-    render_radio,
+    render_radio, render_text,
     style::{apply_div_style, apply_refinement_style},
 };
 use crate::{
     bridge_view::BridgeView,
-    ir::{CheckboxNode, DivNode, DivStyle, IrNode, ListItem, RadioNode, TextRunSegment},
+    ir::{CheckboxNode, DivNode, DivStyle, IrNode, ListItem, RadioNode},
 };
 use gpui::{
-    AnyElement, Context, FocusHandle, InteractiveElement, InteractiveText, IntoElement,
-    KeyDownEvent, ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div,
-    list,
+    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, ParentElement,
+    SharedString, StatefulInteractiveElement, Styled, Window, div, list,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -247,7 +246,7 @@ fn render_static_node(
             runs,
             style,
             click,
-        } => render_static_text(
+        } => render_text::render_with_view_id(
             view_id,
             path,
             id.as_deref(),
@@ -291,48 +290,6 @@ fn render_static_node(
             )))
             .child("Unsupported list row child")
             .into_any_element(),
-    }
-}
-
-fn render_static_text(
-    view_id: u64,
-    path: &str,
-    id: Option<&str>,
-    content: &str,
-    runs: &[TextRunSegment],
-    style: &DivStyle,
-    click: Option<&str>,
-) -> AnyElement {
-    let node_id = NodeIdentity::new(view_id, path, id);
-    let interactive_text = InteractiveText::new(
-        node_id.to_shared_string(),
-        super::render_text::styled_text(content, runs),
-    );
-
-    let element = match click {
-        Some(callback_id) if !content.is_empty() => {
-            let callback_id = callback_id.to_owned();
-            let click_node_id = node_id.to_string();
-            let clickable_ranges = std::iter::once(0..content.len()).collect::<Vec<_>>();
-
-            interactive_text
-                .on_click(clickable_ranges, move |_, _, _| {
-                    events::emit_click(view_id, &click_node_id, &callback_id);
-                })
-                .into_any_element()
-        }
-        _ => interactive_text.into_any_element(),
-    };
-
-    if style.is_empty() {
-        element
-    } else {
-        apply_div_style(
-            div().id(SharedString::from(format!("{}::text_style", node_id))),
-            style,
-        )
-        .child(element)
-        .into_any_element()
     }
 }
 
@@ -446,7 +403,7 @@ fn render_static_text_child(view_id: u64, path: &str, index: usize, child: &IrNo
             runs,
             style,
             click,
-        } => render_static_text(
+        } => render_text::render_with_view_id(
             view_id,
             &format!("{path}.{index}"),
             id.as_deref(),

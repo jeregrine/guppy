@@ -1,14 +1,16 @@
-use super::{events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
+use super::{
+    events, identity::NodeIdentity, render_pass::RenderPass, render_text, style::apply_div_style,
+};
 use crate::{
     bridge_view::BridgeView,
     ir::{
         DataTableCell, DataTableColumn, DataTableColumnWidth, DataTableNode, DataTableRow,
-        DivStyle, IrNode, TextRunSegment,
+        DivStyle, IrNode,
     },
 };
 use gpui::{
-    AnyElement, Context, InteractiveElement, InteractiveText, IntoElement, ParentElement,
-    SharedString, StatefulInteractiveElement, Styled, Window, div, list, px,
+    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
+    StatefulInteractiveElement, Styled, Window, div, list, px,
 };
 const ROW_CLICK_EVENT: i32 = 1;
 const CELL_CLICK_EVENT: i32 = 2;
@@ -239,7 +241,7 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
             runs,
             style,
             click,
-        } => render_static_text(
+        } => render_text::render_with_view_id(
             view_id,
             path,
             id.as_deref(),
@@ -266,48 +268,6 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
         _ => div()
             .child("Unsupported data-table cell child")
             .into_any_element(),
-    }
-}
-
-fn render_static_text(
-    view_id: u64,
-    path: &str,
-    id: Option<&str>,
-    content: &str,
-    runs: &[TextRunSegment],
-    style: &DivStyle,
-    click: Option<&str>,
-) -> AnyElement {
-    let node_id = NodeIdentity::new(view_id, path, id);
-    let interactive_text = InteractiveText::new(
-        node_id.to_shared_string(),
-        super::render_text::styled_text(content, runs),
-    );
-
-    let element = match click {
-        Some(callback_id) if !content.is_empty() => {
-            let callback_id = callback_id.to_owned();
-            let click_node_id = node_id.to_string();
-            let clickable_ranges = std::iter::once(0..content.len()).collect::<Vec<_>>();
-
-            interactive_text
-                .on_click(clickable_ranges, move |_, _, _| {
-                    events::emit_click(view_id, &click_node_id, &callback_id);
-                })
-                .into_any_element()
-        }
-        _ => interactive_text.into_any_element(),
-    };
-
-    if style.is_empty() {
-        element
-    } else {
-        apply_div_style(
-            div().id(SharedString::from(format!("{}::text_style", node_id))),
-            style,
-        )
-        .child(element)
-        .into_any_element()
     }
 }
 
