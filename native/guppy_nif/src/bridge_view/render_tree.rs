@@ -186,8 +186,9 @@ mod tests {
                     label: "Child".into(),
                     expanded: false,
                     style: Vec::new().into(),
-                    children: Vec::new(),
-                }],
+                    children: Vec::new().into(),
+                }]
+                .into(),
             },
             TreeItem {
                 id: "closed".into(),
@@ -199,8 +200,9 @@ mod tests {
                     label: "Hidden".into(),
                     expanded: false,
                     style: Vec::new().into(),
-                    children: Vec::new(),
-                }],
+                    children: Vec::new().into(),
+                }]
+                .into(),
             },
         ]);
 

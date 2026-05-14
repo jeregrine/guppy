@@ -577,14 +577,14 @@ pub struct TreeItem {
     pub id: String,
     pub label: String,
     pub expanded: bool,
-    pub children: Vec<TreeItem>,
+    pub children: Arc<[TreeItem]>,
     pub style: DivStyle,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TreeNode {
     pub id: Option<String>,
-    pub nodes: Vec<TreeItem>,
+    pub nodes: Arc<[TreeItem]>,
     pub style: DivStyle,
     pub row_style: DivStyle,
     pub selected_id: Option<String>,
@@ -1724,13 +1724,13 @@ fn get_data_table_sort_field(
     }))
 }
 
-fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<Vec<TreeItem>, String> {
+fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[TreeItem]>, String> {
     let Some(nodes_term) = get_field(map, "nodes") else {
         return Err("missing required field: nodes".into());
     };
 
     let mut seen = HashSet::new();
-    get_tree_nodes(nodes_term, &mut seen)
+    get_tree_nodes(nodes_term, &mut seen).map(Into::into)
 }
 
 fn get_tree_nodes(term: &Term, seen: &mut HashSet<String>) -> Result<Vec<TreeItem>, String> {
@@ -1761,7 +1761,7 @@ fn get_tree_item(term: &Term, seen: &mut HashSet<String>) -> Result<TreeItem, St
         id,
         label: get_string_field(item, "label")?,
         expanded: get_boolean_field(item, "expanded")?,
-        children,
+        children: children.into(),
         style: get_div_style(item)?,
     })
 }

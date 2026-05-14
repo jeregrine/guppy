@@ -542,11 +542,13 @@ mod tests {
                     id: "child".into(),
                     label: "Child".into(),
                     expanded: false,
-                    children: Vec::new(),
+                    children: Vec::new().into(),
                     style: Vec::new().into(),
-                }],
+                }]
+                .into(),
                 style: Vec::new().into(),
-            }],
+            }]
+            .into(),
             style: vec![StyleOp::W96, StyleOp::H32].into(),
             row_style: Vec::new().into(),
             selected_id: Some("child".into()),
