@@ -903,8 +903,8 @@ impl IrNode {
 
                 Ok(Self::DataTable(Box::new(DataTableNode {
                     id,
-                    columns: columns.into(),
-                    rows: rows.into(),
+                    columns,
+                    rows,
                     style: get_div_style(map)?,
                     header_style: get_style_list_field(map, "header_style")?,
                     row_style: get_style_list_field(map, "row_style")?,
@@ -1537,7 +1537,9 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, St
         .map(Into::into)
 }
 
-fn get_data_table_columns_field(map: &HashMap<Term, Term>) -> Result<Vec<DataTableColumn>, String> {
+fn get_data_table_columns_field(
+    map: &HashMap<Term, Term>,
+) -> Result<Arc<[DataTableColumn]>, String> {
     let Some(columns_term) = get_field(map, "columns") else {
         return Err("missing required field: columns".into());
     };
@@ -1565,7 +1567,8 @@ fn get_data_table_columns_field(map: &HashMap<Term, Term>) -> Result<Vec<DataTab
                 style: get_div_style(column)?,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn get_data_table_column_width(map: &HashMap<Term, Term>) -> Result<DataTableColumnWidth, String> {
@@ -1607,7 +1610,7 @@ fn get_data_table_column_width(map: &HashMap<Term, Term>) -> Result<DataTableCol
 fn get_data_table_rows_field(
     map: &HashMap<Term, Term>,
     column_ids: &HashSet<&str>,
-) -> Result<Vec<DataTableRow>, String> {
+) -> Result<Arc<[DataTableRow]>, String> {
     let Some(rows_term) = get_field(map, "rows") else {
         return Err("missing required field: rows".into());
     };
@@ -1625,17 +1628,18 @@ fn get_data_table_rows_field(
 
             Ok(DataTableRow {
                 id,
-                cells: get_data_table_cells(row, column_ids)?.into(),
+                cells: get_data_table_cells(row, column_ids)?,
                 style: get_div_style(row)?,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn get_data_table_cells(
     row: &HashMap<Term, Term>,
     column_ids: &HashSet<&str>,
-) -> Result<Vec<DataTableCell>, String> {
+) -> Result<Arc<[DataTableCell]>, String> {
     let Some(cells_term) = get_field(row, "cells") else {
         return Err("missing required field: data_table row cells".into());
     };
@@ -1654,14 +1658,15 @@ fn get_data_table_cells(
 
             Ok(DataTableCell {
                 column_id,
-                children: get_data_table_cell_children(cell)?.into(),
+                children: get_data_table_cell_children(cell)?,
                 style: get_div_style(cell)?,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
-fn get_data_table_cell_children(map: &HashMap<Term, Term>) -> Result<Vec<IrNode>, String> {
+fn get_data_table_cell_children(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, String> {
     let Some(children_term) = get_field(map, "children") else {
         return Err("missing required field: data_table cell children".into());
     };
@@ -1670,6 +1675,7 @@ fn get_data_table_cell_children(map: &HashMap<Term, Term>) -> Result<Vec<IrNode>
         .iter()
         .map(decode_data_table_cell_child_term)
         .collect::<Result<Vec<_>, _>>()
+        .map(Into::into)
 }
 
 fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
