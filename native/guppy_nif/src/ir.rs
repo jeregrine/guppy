@@ -782,7 +782,7 @@ pub enum IrNode {
         disabled: bool,
         click: Option<String>,
         close: Option<String>,
-        children: Vec<IrNode>,
+        children: Arc<[IrNode]>,
     },
     Spacer {
         id: Option<String>,
@@ -977,7 +977,7 @@ impl IrNode {
                     disabled: get_boolean_field(map, "disabled")?,
                     click: get_click_event(map)?,
                     close: get_close_event(map)?,
-                    children,
+                    children: children.into(),
                 })
             }
             "image" => Ok(Self::Image {
