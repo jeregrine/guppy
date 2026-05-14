@@ -36,7 +36,7 @@ pub(crate) fn render(
 
     let list = uniform_list(element_id, items.len(), move |range, _window, _cx| {
         range
-            .filter_map(|index| items.get(index).cloned())
+            .filter_map(|index| items.get(index))
             .map(|item| render_item(view_id, &item_list_key, item, &item_style, click.as_deref()))
             .collect::<Vec<_>>()
     })
@@ -54,7 +54,7 @@ pub(crate) fn render(
 fn render_item(
     view_id: u64,
     list_key: &str,
-    item: UniformListItem,
+    item: &UniformListItem,
     item_style: &DivStyle,
     click: Option<&str>,
 ) -> AnyElement {
@@ -65,7 +65,7 @@ fn render_item(
             .w_full()
             .px_2()
             .py_2()
-            .child(item.label),
+            .child(item.label.clone()),
         item_style,
     );
 
@@ -104,6 +104,6 @@ mod tests {
             id: "item_1".into(),
             label: "Item 1".into(),
         };
-        let _ = render_item(1, "list", item, &Vec::new().into(), Some("clicked"));
+        let _ = render_item(1, "list", &item, &Vec::new().into(), Some("clicked"));
     }
 }
