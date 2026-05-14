@@ -19,7 +19,7 @@ These are the main primitive gaps visible from the current GPUI matrix. They are
 - **Data table / tree**: grid style ops, nested `div`/`text`, and text-row `uniform_list` cover basic scenarios; table/tree-specific virtualization and interaction are missing.
 - **Full popover / anchored overlay controls**: popovers now expose anchor corner, optional anchor position/offset, fit mode, close-on-outside-click, and deferred-layer priority; deeper nested-overlay edge cases and richer lifecycle semantics remain partial.
 - **Animation primitives**: div-like opacity animation supports stable native animation ids, duration, repeat, and from/to opacity; broader transform/keyframe animation remains partial.
-- **Gradient style primitives**: not exposed in the style surface today.
+- **Gradient style primitives**: not exposed in the style surface today. A narrow background-linear-gradient scope is recorded in [`docs/future-primitives.md`](future-primitives.md#gradient-style-primitives).
 - **Grid layout**: current grid style ops cover GPUI's basic grid, row/column counts, and row/column spans; advanced table semantics are not exposed.
 - **Custom painting / canvas / pattern painting**: would require a new retained drawing primitive.
 - **Menu APIs**: not exposed as core IR/window primitives today. App-level menu scope is recorded in [`docs/future-primitives.md`](future-primitives.md#menu-apis).
@@ -51,7 +51,7 @@ Intentionally narrow parity areas:
 | `examples/data_table.rs` | grid style ops plus `uniform_list`/`list` cover simple repeated rows and basic columns | partial | full data-table columns, cells, sorting, and virtualization semantics beyond simple rows | IR/template/native smoke for grid/list/uniform_list; no full data-table port |
 | `examples/focus_visible.rs` | `focus_visible_style` on div-like controls; Tab/Shift-Tab focus-visible state tracking | partial | exact GPUI input-modality edge cases remain narrow | IR/template/native hidden-window coverage; Rust simulated Tab/mouse focus-visible state coverage |
 | `examples/gif_viewer.rs` | image node | partial | animated GIF controls/loading states | manual only |
-| `examples/gradient.rs` | none | unsupported | gradient style primitives deferred until style surface expansion | explicitly deferred in PLAN; no implementation |
+| `examples/gradient.rs` | none | unsupported | background-linear-gradient style scope is recorded in `docs/future-primitives.md`; no gradient style ops are exposed today | no implementation; future IR/native style tests required before support claims |
 | `examples/grid_layout.rs` | grid style ops (`:grid`, `grid_cols`, `grid_rows`, `col_span`, `row_span`, full-span flags); `examples/super_demo.exs` | partial | start/end line placement and exact visual parity remain narrow | IR/component/native hidden-window coverage; manual super_demo smoke |
 | `examples/image_gallery.rs` | image node examples | partial | gallery layout primitives and loading states | manual only |
 | `examples/image_loading.rs` | image node | partial | async loading/error state parity | manual only |

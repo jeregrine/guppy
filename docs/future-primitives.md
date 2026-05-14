@@ -80,3 +80,45 @@ A first Guppy API should be deliberately narrow:
 - A concrete example needs a real menu before adding public API.
 - Native tests must cover spec decoding, action identity, callback emission, and clearing/replacing menus.
 - Manual macOS smoke must verify top-level menu installation and basic OS edit items before docs claim menu support.
+
+## Gradient style primitives
+
+Status: scoped; no gradient style ops are exposed today.
+
+### GPUI 0.2.2 surface
+
+GPUI exposes `linear_gradient(angle, from, to)` as a `Background`, with two `LinearColorStop` values and stop percentages from `0.0` to `1.0`. GPUI also has `pattern_slash`, but pattern painting should stay with the custom-painting scope rather than the first gradient style pass.
+
+### Guppy scope
+
+Only add gradients when an example or product design actually needs them. The first style primitive should be background-only and ordered like every other style op, so later background ops override earlier ones.
+
+Preferred first shape:
+
+```elixir
+{:bg_linear_gradient,
+ [angle: 90.0,
+  from: {"#0f172a", 0.0},
+  to: {"#2563eb", 1.0}]}
+```
+
+Validation should require:
+
+- numeric `:angle` in degrees;
+- exactly `:from` and `:to` color stops;
+- named Guppy color tokens or `#RRGGBB` strings;
+- stop percentages in `0.0..1.0`.
+
+### Deferred
+
+- Multi-stop, radial, conic, border, and text gradients.
+- Semantic theme-token expansion in core IR.
+- Gradient animation.
+- Pattern/slash backgrounds, which belong with custom painting/pattern scope.
+
+### Implementation gates
+
+- Add Elixir IR validation and template/class parsing only for the chosen op shape.
+- Add native ETF decode and style mapping to GPUI `linear_gradient`.
+- Add ExUnit style validation/template coverage and Rust style mapping tests.
+- Update examples only when a real example uses the primitive.
