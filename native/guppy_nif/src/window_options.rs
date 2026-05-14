@@ -446,3 +446,7 @@ fn key_matches(term: &Term, expected: &str) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+#[path = "window_options_tests.rs"]
+mod tests;
