@@ -42,6 +42,23 @@ Selected results from `mix run bench/guppy_bench.exs`:
 | High-frequency drag move payload encode | 0.46 μs | 0.50 μs |
 | High-frequency scroll wheel payload encode | 0.46 μs | 0.50 μs |
 
+## 2026-05-14 native cleanup spot-check
+
+After the native IR/style cleanup pass that tightened native style validation and moved list/table/canvas payloads toward `Arc<[T]>`, `mix run bench/guppy_bench.exs` on the same local M1 Pro/macOS class machine reported these selected non-native scenarios. These numbers are a spot-check for regressions, not a release baseline.
+
+| Scenario | Average | 99th percentile |
+| --- | ---: | ---: |
+| ETF encode/decode proxy 100 nodes | 77.09 μs | 90.61 μs |
+| ETF encode/decode proxy 1,000 nodes | 912.57 μs | 3063.11 μs |
+| IR validation 100 nodes | 71.45 μs | 94.56 μs |
+| IR validation 1,000 nodes | 722.40 μs | 1096.91 μs |
+| Canvas command encode/decode proxy 100 commands | 49.97 μs | 56.79 μs |
+| Canvas command validation 100 commands | 65.35 μs | 75.52 μs |
+| Data-table/tree build 100 rows | 27.62 μs | 31.43 μs |
+| Data-table/tree validation 100 rows | 137.35 μs | 191.89 μs |
+| List row controls tree build 100 rows | 92.29 μs | 131.13 μs |
+| List row controls validation 100 rows | 140.02 μs | 163.95 μs |
+
 ## Release native snapshot
 
 With an optimized native build, selected `GUPPY_NATIVE_RELEASE=1 mix run bench/guppy_bench.exs --native` results:
