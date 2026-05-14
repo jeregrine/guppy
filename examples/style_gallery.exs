@@ -56,14 +56,17 @@ defmodule Examples.StyleGalleryWindow do
       Map.merge(window.assigns, %{
         preview_label: label,
         preview_class:
-          "flex flex-col gap-2 p-6 rounded-xl border-1 shadow-md border-[#{border_hex}] bg-[#{bg_hex}] text-[#{text_hex}]",
+          "flex flex-col gap-2 p-6 rounded-xl border-1 shadow-md border-[#{border_hex}] bg-linear-gradient-[135,#{bg_hex}:0,#0f172a:1] text-[#{text_hex}]",
         swatches: swatches,
         info_rows: [
           %{
             id: "info_consistency",
             label: "Swatches use the same spacing and surface language as the other samples"
           },
-          %{id: "info_preview", label: "The preview uses the selected color as a panel theme"},
+          %{
+            id: "info_preview",
+            label: "The preview uses a two-stop background gradient from the selected swatch"
+          },
           %{
             id: "info_window",
             label: "This example now uses Guppy.Window instead of a manual receive loop"
@@ -73,7 +76,7 @@ defmodule Examples.StyleGalleryWindow do
 
     ~GUI"""
     <div id="style_gallery_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
-      <div id="header_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+      <div id="header_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-linear-gradient-[120,#111827:0,#1e3a8a:1] shadow-md">
         <text id="title" class="text-3xl font-black">Style gallery</text>
         <text id="subtitle" class="text-base text-[#94a3b8]">
           A consistent sample shell, clickable swatches, and a preview surface driven by window assigns.

@@ -317,6 +317,9 @@ defmodule Guppy.Component do
 
   defp class_token_to_style!(token) do
     cond do
+      gradient_style = parse_linear_gradient_style(token) ->
+        gradient_style
+
       color_style = parse_named_color_style(token) ->
         color_style
 
@@ -356,6 +359,45 @@ defmodule Guppy.Component do
       ["text", hex] -> {:text_color_hex, hex}
       ["border", hex] -> {:border_color_hex, hex}
       _ -> nil
+    end
+  end
+
+  defp parse_linear_gradient_style(token) do
+    with [payload] <-
+           Regex.run(~r/^bg-linear-gradient-\[(.+)\]$/, token, capture: :all_but_first),
+         [angle, from, to] <- String.split(payload, ",", parts: 3),
+         {:ok, angle} <- parse_number(angle),
+         {:ok, from} <- parse_gradient_stop(from),
+         {:ok, to} <- parse_gradient_stop(to) do
+      {:bg_linear_gradient, [angle: angle, from: from, to: to]}
+    else
+      _ -> nil
+    end
+  end
+
+  defp parse_gradient_stop(stop) do
+    with [color, percentage] <- String.split(stop, ":", parts: 2),
+         {:ok, color} <- parse_gradient_color(color),
+         {:ok, percentage} <- parse_number(percentage) do
+      {:ok, {color, percentage}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_gradient_color(color) do
+    color = String.trim(color)
+
+    case named_color(color) do
+      {:ok, color_atom} ->
+        {:ok, color_atom}
+
+      :error ->
+        if Regex.match?(~r/^#[0-9A-Fa-f]{6}$/, color) do
+          {:ok, color}
+        else
+          :error
+        end
     end
   end
 
@@ -421,10 +463,20 @@ defmodule Guppy.Component do
   defp named_color("gray"), do: {:ok, :gray}
   defp named_color(_), do: :error
 
-  defp parse_number!(number) do
+  defp parse_number(number) do
+    number = String.trim(number)
+
     case Float.parse(number) do
-      {value, ""} when value == trunc(value) -> trunc(value)
-      {value, ""} -> value
+      {value, ""} when value == trunc(value) -> {:ok, trunc(value)}
+      {value, ""} -> {:ok, value}
+      _ -> :error
+    end
+  end
+
+  defp parse_number!(number) do
+    case parse_number(number) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "invalid numeric style value: #{inspect(number)}"
     end
   end
 end

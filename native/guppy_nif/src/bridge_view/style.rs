@@ -1,7 +1,8 @@
-use crate::ir::{ColorToken, DivStyle, StyleOp};
+use crate::ir::{ColorToken, DivStyle, LinearGradientStop, StyleColor, StyleOp};
 use gpui::{
     FontStyle, FontWeight, HighlightStyle, StatefulInteractiveElement, StrikethroughStyle,
-    StyleRefinement, Styled, UnderlineStyle, px, relative, rems, rgb,
+    StyleRefinement, Styled, UnderlineStyle, linear_color_stop, linear_gradient, px, relative,
+    rems, rgb,
 };
 
 pub(crate) fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
@@ -148,6 +149,11 @@ where
             StyleOp::BgHex(value) => element.bg(hex_color_to_color(value)),
             StyleOp::TextColorHex(value) => element.text_color(hex_color_to_color(value)),
             StyleOp::BorderColorHex(value) => element.border_color(hex_color_to_color(value)),
+            StyleOp::BgLinearGradient { angle, from, to } => element.bg(linear_gradient(
+                *angle,
+                linear_gradient_stop_to_gpui(from),
+                linear_gradient_stop_to_gpui(to),
+            )),
             StyleOp::Opacity(value) => element.opacity(value.to_owned()),
             StyleOp::GridCols(value) => element.grid_cols(*value),
             StyleOp::GridRows(value) => element.grid_rows(*value),
@@ -358,6 +364,11 @@ pub(crate) fn apply_refinement_style(
             StyleOp::BgHex(value) => style.bg(hex_color_to_color(value)),
             StyleOp::TextColorHex(value) => style.text_color(hex_color_to_color(value)),
             StyleOp::BorderColorHex(value) => style.border_color(hex_color_to_color(value)),
+            StyleOp::BgLinearGradient { angle, from, to } => style.bg(linear_gradient(
+                *angle,
+                linear_gradient_stop_to_gpui(from),
+                linear_gradient_stop_to_gpui(to),
+            )),
             StyleOp::Opacity(value) => style.opacity(value.to_owned()),
             StyleOp::WPx(value) => style.w(px(value.to_owned())),
             StyleOp::WRem(value) => style.w(rems(value.to_owned())),
@@ -385,8 +396,56 @@ fn color_token_to_color(color: ColorToken) -> gpui::Hsla {
     }
 }
 
+fn style_color_to_color(color: &StyleColor) -> gpui::Hsla {
+    match color {
+        StyleColor::Token(color) => color_token_to_color(*color),
+        StyleColor::Hex(value) => hex_color_to_color(value),
+    }
+}
+
+fn linear_gradient_stop_to_gpui(stop: &LinearGradientStop) -> gpui::LinearColorStop {
+    linear_color_stop(style_color_to_color(&stop.color), stop.percentage)
+}
+
 fn hex_color_to_color(value: &str) -> gpui::Hsla {
     let normalized = value.trim_start_matches('#');
     let parsed = u32::from_str_radix(normalized, 16).unwrap_or(0xff00ff);
     rgb(parsed).into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{LinearGradientStop, StyleColor};
+    use gpui::{Fill, StyleRefinement, linear_color_stop, linear_gradient};
+
+    #[test]
+    fn applies_bg_linear_gradient_to_refinement_background() {
+        let ops = vec![
+            StyleOp::Bg(ColorToken::Gray),
+            StyleOp::BgLinearGradient {
+                angle: 90.0,
+                from: LinearGradientStop {
+                    color: StyleColor::Hex("#0f172a".into()),
+                    percentage: 0.0,
+                },
+                to: LinearGradientStop {
+                    color: StyleColor::Hex("#2563eb".into()),
+                    percentage: 1.0,
+                },
+            },
+        ]
+        .into();
+
+        let style = apply_refinement_style(StyleRefinement::default(), &ops);
+
+        assert_eq!(
+            style.background,
+            Some(Fill::from(linear_gradient(
+                90.0,
+                linear_color_stop(rgb(0x0f172a), 0.0),
+                linear_color_stop(rgb(0x2563eb), 1.0),
+            )))
+        );
+    }
 }

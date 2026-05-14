@@ -9,6 +9,40 @@ defmodule Guppy.IRTest do
              Guppy.IR.validate(Map.put(Guppy.IR.div([], id: "root"), :bogus, "nope"))
   end
 
+  test "ir validation accepts background linear gradient style ops" do
+    gradient = {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}, to: {:blue, 1.0}]}
+
+    missing_stop = {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}]}
+
+    invalid_angle =
+      {:bg_linear_gradient, [angle: -1.0, from: {"#0f172a", 0.0}, to: {"#2563eb", 1.0}]}
+
+    invalid_color =
+      {:bg_linear_gradient, [angle: 90.0, from: {"0f172a", 0.0}, to: {"#2563eb", 1.0}]}
+
+    invalid_stop =
+      {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}, to: {"#2563eb", 1.5}]}
+
+    invalid_options = {:bg_linear_gradient, [:bad]}
+
+    assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: [gradient]))
+
+    assert {:error, {:invalid_style_op, ^missing_stop}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [missing_stop]))
+
+    assert {:error, {:invalid_style_op, ^invalid_angle}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_angle]))
+
+    assert {:error, {:invalid_style_op, ^invalid_color}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_color]))
+
+    assert {:error, {:invalid_style_op, ^invalid_stop}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_stop]))
+
+    assert {:error, {:invalid_style_op, ^invalid_options}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_options]))
+  end
+
   test "ir validation accepts ordered style lists and rejects invalid values" do
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", id: "greeting"))
     assert :ok = Guppy.IR.validate(Guppy.IR.text("hello", events: %{click: "open"}))

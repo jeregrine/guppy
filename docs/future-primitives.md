@@ -83,7 +83,7 @@ A first Guppy API should be deliberately narrow:
 
 ## Gradient style primitives
 
-Status: scoped; no gradient style ops are exposed today.
+Status: first narrow pass implemented. Guppy now exposes ordered, two-stop background linear gradients; deferred gradient variants remain future work.
 
 ### GPUI 0.2.2 surface
 
@@ -91,9 +91,9 @@ GPUI exposes `linear_gradient(angle, from, to)` as a `Background`, with two `Lin
 
 ### Guppy scope
 
-Only add gradients when an example or product design actually needs them. The first style primitive should be background-only and ordered like every other style op, so later background ops override earlier ones.
+The first style primitive is background-only and ordered like every other style op, so later background ops override earlier ones.
 
-Preferred first shape:
+Implemented shape:
 
 ```elixir
 {:bg_linear_gradient,
@@ -102,12 +102,14 @@ Preferred first shape:
   to: {"#2563eb", 1.0}]}
 ```
 
-Validation should require:
+Validation requires:
 
-- numeric `:angle` in degrees;
+- numeric `:angle` in degrees from `0.0..360.0`;
 - exactly `:from` and `:to` color stops;
 - named Guppy color tokens or `#RRGGBB` strings;
 - stop percentages in `0.0..1.0`.
+
+Template classes support the compact static form `bg-linear-gradient-[90,#0f172a:0,#2563eb:1]`.
 
 ### Deferred
 
@@ -116,12 +118,12 @@ Validation should require:
 - Gradient animation.
 - Pattern/slash backgrounds, which belong with custom painting/pattern scope.
 
-### Implementation gates
+### Implemented coverage
 
-- Add Elixir IR validation and template/class parsing only for the chosen op shape.
-- Add native ETF decode and style mapping to GPUI `linear_gradient`.
-- Add ExUnit style validation/template coverage and Rust style mapping tests.
-- Update examples only when a real example uses the primitive.
+- Elixir IR validation and template/class parsing cover the chosen op shape.
+- Native ETF decode and style mapping target GPUI `linear_gradient`.
+- ExUnit style validation/template coverage and Rust decode/style mapping tests cover regressions.
+- `examples/style_gallery.exs` demonstrates static and dynamic gradient classes, and `bench/guppy_bench.exs` includes gradient class-parse/style-validation scenarios.
 
 ## Data-table and tree virtualization
 

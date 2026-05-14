@@ -93,6 +93,21 @@ defmodule Guppy.Bench do
 
     kanban = kanban_tree(columns: 4, cards: 40)
 
+    gradient_ir = gradient_tree(100)
+
+    gradient_scenarios = [
+      {"gradient class parse",
+       fn ->
+         Guppy.Component.class_to_style!(
+           "bg-linear-gradient-[135,#0f172a:0,#2563eb:1] text-white"
+         )
+       end},
+      {"gradient style validation 100 nodes",
+       fn ->
+         :ok = Guppy.IR.validate(gradient_ir)
+       end}
+    ]
+
     kanban_scenarios = [
       {"kanban initial render tree build",
        fn ->
@@ -134,7 +149,7 @@ defmodule Guppy.Bench do
        end}
     ]
 
-    Map.new(node_scenarios ++ kanban_scenarios)
+    Map.new(node_scenarios ++ gradient_scenarios ++ kanban_scenarios)
   end
 
   defp benchee_opts do
@@ -159,6 +174,21 @@ defmodule Guppy.Bench do
       end
 
     Guppy.IR.div(children, id: "bench_root", style: [:flex, :flex_col, :gap_1])
+  end
+
+  defp gradient_tree(count) do
+    gradient = {:bg_linear_gradient, [angle: 135, from: {"#0f172a", 0}, to: {"#2563eb", 1}]}
+
+    children =
+      for index <- 1..count do
+        Guppy.IR.div(
+          [Guppy.IR.text("Gradient item #{index}", id: "gradient_bench_text_#{index}")],
+          id: "gradient_bench_item_#{index}",
+          style: [:p_1, :rounded_md, gradient]
+        )
+      end
+
+    Guppy.IR.div(children, id: "gradient_bench_root", style: [:flex, :flex_col, :gap_1])
   end
 
   defp kanban_tree(opts) do

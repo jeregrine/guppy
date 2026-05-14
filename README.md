@@ -302,6 +302,16 @@ Stateful style lists are explicit:
 
 Text nodes and div-like nodes support the current style-token surface where applicable. Grid style ops include `:grid`, `{:grid_cols, n}`, `{:grid_rows, n}`, `{:col_span, n}`, `:col_span_full`, `{:row_span, n}`, and `:row_span_full`.
 
+Div-like nodes support two-stop background linear gradients:
+
+```elixir
+style: [
+  {:bg_linear_gradient, [angle: 135, from: {"#0f172a", 0.0}, to: {"#2563eb", 1.0}]}
+]
+```
+
+The equivalent template class form is `bg-linear-gradient-[135,#0f172a:0,#2563eb:1]`.
+
 Div-like nodes can also opt into a native opacity animation with `animation: %{id: "stable_id", duration_ms: 500, repeat: true, from: 0.4, to: 1.0}`.
 
 ## Distribution
@@ -329,7 +339,7 @@ Still missing or intentionally narrow unless explicitly scoped:
 - stateful controls inside generic virtualized list rows and custom scrollbar parity
 - exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
 - full popover parity, including nested/deferred layer edge cases
-- advanced animation effects beyond current opacity animation, gradient, canvas/custom painting, pattern painting, and menu APIs
+- advanced animation effects beyond current opacity animation, multi-stop/radial gradients, canvas/custom painting, pattern painting, and menu APIs
 - published precompiled native artifacts
 
 ## Hacking on Guppy

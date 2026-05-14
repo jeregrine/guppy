@@ -8,6 +8,21 @@ defmodule Guppy.ComponentTest do
     refute {:sigil_G, 2} in macros
   end
 
+  test "Guppy.Component parses background linear gradient class tokens" do
+    assert Guppy.Component.class_to_style!(
+             "bg-linear-gradient-[90,#0f172a:0,#2563eb:1] text-white"
+           ) == [
+             {:bg_linear_gradient, [angle: 90, from: {"#0f172a", 0}, to: {"#2563eb", 1}]},
+             {:text_color, :white}
+           ]
+
+    ir = Guppy.GradientTemplateExample.render(%{})
+
+    assert :ok = Guppy.IR.validate(ir)
+
+    assert {:bg_linear_gradient, [angle: 90, from: {"#0f172a", 0}, to: {"#2563eb", 1}]} in ir.style
+  end
+
   test "Guppy.Component compiles ~GUI templates into valid IR" do
     ir =
       Guppy.TemplateExample.render(%{

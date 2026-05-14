@@ -154,6 +154,18 @@ defmodule Guppy.TemplateTextExpressionExample do
   end
 end
 
+defmodule Guppy.GradientTemplateExample do
+  use Guppy.Component
+
+  def render(_assigns) do
+    ~GUI"""
+    <div id="gradient_template_root" class="bg-linear-gradient-[90,#0f172a:0,#2563eb:1] text-white">
+      <text id="gradient_template_label">Gradient template</text>
+    </div>
+    """
+  end
+end
+
 defmodule Guppy.RemoteBadgeComponent do
   use Guppy.Component
 

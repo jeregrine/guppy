@@ -308,6 +308,11 @@ pub enum StyleOp {
     BgHex(String),
     TextColorHex(String),
     BorderColorHex(String),
+    BgLinearGradient {
+        angle: f32,
+        from: LinearGradientStop,
+        to: LinearGradientStop,
+    },
     Opacity(f32),
     GridCols(u16),
     GridRows(u16),
@@ -328,6 +333,18 @@ pub enum ScrollAxis {
     X,
     Y,
     Both,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum StyleColor {
+    Token(ColorToken),
+    Hex(String),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LinearGradientStop {
+    pub color: StyleColor,
+    pub percentage: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1696,6 +1713,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "bg_hex" => Ok(StyleOp::BgHex(term_to_string(&elements[1])?)),
                 "text_color_hex" => Ok(StyleOp::TextColorHex(term_to_string(&elements[1])?)),
                 "border_color_hex" => Ok(StyleOp::BorderColorHex(term_to_string(&elements[1])?)),
+                "bg_linear_gradient" => {
+                    let (angle, from, to) = parse_linear_gradient_options(&elements[1])?;
+                    Ok(StyleOp::BgLinearGradient { angle, from, to })
+                }
                 "opacity" => Ok(StyleOp::Opacity(parse_f32(&elements[1])?)),
                 "grid_cols" => Ok(StyleOp::GridCols(parse_grid_u16(&elements[1])?)),
                 "grid_rows" => Ok(StyleOp::GridRows(parse_grid_u16(&elements[1])?)),
@@ -1859,6 +1880,128 @@ fn parse_atom_color(term: &Term) -> Result<ColorToken, String> {
     }
 }
 
+fn parse_linear_gradient_options(
+    term: &Term,
+) -> Result<(f32, LinearGradientStop, LinearGradientStop), String> {
+    let options = get_list(term)?;
+    let mut angle = None;
+    let mut from = None;
+    let mut to = None;
+
+    for option in options {
+        let Term::Tuple(Tuple { elements }) = option else {
+            return Err(format!("expected gradient option tuple, got {option}"));
+        };
+
+        if elements.len() != 2 {
+            return Err(format!(
+                "expected gradient option tuple with 2 elements, got {option}"
+            ));
+        }
+
+        let Term::Atom(key) = &elements[0] else {
+            return Err(format!(
+                "expected gradient option key atom, got {}",
+                elements[0]
+            ));
+        };
+
+        match key.name.as_str() {
+            "angle" => {
+                if angle.is_some() {
+                    return Err("duplicate gradient angle option".into());
+                }
+
+                angle = Some(parse_gradient_angle(&elements[1])?);
+            }
+            "from" => {
+                if from.is_some() {
+                    return Err("duplicate gradient from option".into());
+                }
+
+                from = Some(parse_linear_gradient_stop(&elements[1])?);
+            }
+            "to" => {
+                if to.is_some() {
+                    return Err("duplicate gradient to option".into());
+                }
+
+                to = Some(parse_linear_gradient_stop(&elements[1])?);
+            }
+            other => return Err(format!("unsupported gradient option: {other}")),
+        }
+    }
+
+    Ok((
+        angle.ok_or_else(|| "missing gradient angle option".to_string())?,
+        from.ok_or_else(|| "missing gradient from option".to_string())?,
+        to.ok_or_else(|| "missing gradient to option".to_string())?,
+    ))
+}
+
+fn parse_gradient_angle(term: &Term) -> Result<f32, String> {
+    let value = parse_f32(term)?;
+
+    if value.is_finite() && (0.0..=360.0).contains(&value) {
+        Ok(value)
+    } else {
+        Err(format!("invalid gradient angle: {value}"))
+    }
+}
+
+fn parse_linear_gradient_stop(term: &Term) -> Result<LinearGradientStop, String> {
+    let Term::Tuple(Tuple { elements }) = term else {
+        return Err(format!("expected gradient stop tuple, got {term}"));
+    };
+
+    if elements.len() != 2 {
+        return Err(format!(
+            "expected gradient stop tuple with 2 elements, got {term}"
+        ));
+    }
+
+    Ok(LinearGradientStop {
+        color: parse_style_color(&elements[0])?,
+        percentage: parse_gradient_percentage(&elements[1])?,
+    })
+}
+
+fn parse_gradient_percentage(term: &Term) -> Result<f32, String> {
+    let value = parse_f32(term)?;
+
+    if value.is_finite() && (0.0..=1.0).contains(&value) {
+        Ok(value)
+    } else {
+        Err(format!("invalid gradient percentage: {value}"))
+    }
+}
+
+fn parse_style_color(term: &Term) -> Result<StyleColor, String> {
+    match term {
+        Term::Atom(atom) => parse_color_token(&atom.name).map(StyleColor::Token),
+        Term::Binary(_) | Term::ByteList(_) => {
+            let value = term_to_string(term)?;
+
+            if is_strict_hex_color(&value) {
+                Ok(StyleColor::Hex(value))
+            } else {
+                Err(format!("invalid gradient color: {value}"))
+            }
+        }
+        other => Err(format!(
+            "expected gradient color atom or #RRGGBB string, got {other}"
+        )),
+    }
+}
+
+fn is_strict_hex_color(value: &str) -> bool {
+    value.len() == 7
+        && value.starts_with('#')
+        && value.as_bytes()[1..]
+            .iter()
+            .all(|byte| byte.is_ascii_hexdigit())
+}
+
 fn parse_grid_u16(term: &Term) -> Result<u16, String> {
     let value = match term {
         Term::FixInteger(value) => value.value,
@@ -1996,7 +2139,84 @@ fn term_to_string(term: &Term) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{IrNode, validate_list_row_child};
+    use super::{
+        IrNode, LinearGradientStop, StyleColor, StyleOp, parse_style_op, validate_list_row_child,
+    };
+    use eetf::{Atom, Binary, FixInteger, Float, List, Term, Tuple};
+
+    fn atom(name: &str) -> Term {
+        Term::Atom(Atom::from(name))
+    }
+
+    fn binary(value: &str) -> Term {
+        Term::Binary(Binary {
+            bytes: value.as_bytes().to_vec(),
+        })
+    }
+
+    fn integer(value: i32) -> Term {
+        Term::FixInteger(FixInteger { value })
+    }
+
+    fn float(value: f64) -> Term {
+        Term::Float(Float { value })
+    }
+
+    fn tuple(elements: Vec<Term>) -> Term {
+        Term::Tuple(Tuple { elements })
+    }
+
+    fn list(elements: Vec<Term>) -> Term {
+        Term::List(List { elements })
+    }
+
+    #[test]
+    fn parses_bg_linear_gradient_style_op() {
+        let term = tuple(vec![
+            atom("bg_linear_gradient"),
+            list(vec![
+                tuple(vec![atom("angle"), integer(90)]),
+                tuple(vec![
+                    atom("from"),
+                    tuple(vec![binary("#0f172a"), float(0.0)]),
+                ]),
+                tuple(vec![atom("to"), tuple(vec![atom("blue"), float(1.0)])]),
+            ]),
+        ]);
+
+        assert_eq!(
+            parse_style_op(&term).unwrap(),
+            StyleOp::BgLinearGradient {
+                angle: 90.0,
+                from: LinearGradientStop {
+                    color: StyleColor::Hex("#0f172a".into()),
+                    percentage: 0.0,
+                },
+                to: LinearGradientStop {
+                    color: StyleColor::Token(super::ColorToken::Blue),
+                    percentage: 1.0,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_bg_linear_gradient_style_op() {
+        let term = tuple(vec![
+            atom("bg_linear_gradient"),
+            list(vec![
+                tuple(vec![atom("angle"), integer(90)]),
+                tuple(vec![
+                    atom("from"),
+                    tuple(vec![binary("0f172a"), float(0.0)]),
+                ]),
+                tuple(vec![atom("to"), tuple(vec![binary("#2563eb"), float(1.5)])]),
+            ]),
+        ]);
+
+        let err = parse_style_op(&term).unwrap_err();
+        assert!(err.contains("gradient"));
+    }
 
     #[test]
     fn list_row_validation_rejects_stateful_controls() {

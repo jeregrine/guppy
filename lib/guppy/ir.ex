@@ -27,6 +27,8 @@ defmodule Guppy.IR do
 
   @type node_id :: String.t()
   @type color_token :: :red | :green | :blue | :yellow | :black | :white | :gray
+  @type gradient_color :: color_token() | String.t()
+  @type linear_gradient_stop :: {gradient_color(), number()}
 
   @type style_flag ::
           :grid
@@ -167,6 +169,8 @@ defmodule Guppy.IR do
           | {:bg_hex, String.t()}
           | {:text_color_hex, String.t()}
           | {:border_color_hex, String.t()}
+          | {:bg_linear_gradient,
+             [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
           | {:opacity, number()}
           | {:grid_cols, pos_integer()}
           | {:grid_rows, pos_integer()}
@@ -1678,6 +1682,14 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_style_op({:bg_linear_gradient, options} = op) do
+    if valid_linear_gradient_options?(options) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
   defp validate_style_op({:opacity, value})
        when is_number(value) and value >= 0.0 and value <= 1.0,
        do: :ok
@@ -1699,6 +1711,39 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
+
+  defp valid_linear_gradient_options?(options) when is_list(options) do
+    if Keyword.keyword?(options) do
+      keys = Keyword.keys(options)
+
+      length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
+        Enum.sort(keys) == [:angle, :from, :to] and
+        valid_gradient_angle?(Keyword.fetch!(options, :angle)) and
+        valid_gradient_stop?(Keyword.fetch!(options, :from)) and
+        valid_gradient_stop?(Keyword.fetch!(options, :to))
+    else
+      false
+    end
+  end
+
+  defp valid_linear_gradient_options?(_options), do: false
+
+  defp valid_gradient_angle?(angle),
+    do: is_number(angle) and angle >= 0.0 and angle <= 360.0
+
+  defp valid_gradient_stop?({color, percentage}),
+    do:
+      valid_gradient_color?(color) and is_number(percentage) and percentage >= 0.0 and
+        percentage <= 1.0
+
+  defp valid_gradient_stop?(_stop), do: false
+
+  defp valid_gradient_color?(color) when color in @color_tokens, do: true
+
+  defp valid_gradient_color?(color) when is_binary(color),
+    do: Regex.match?(~r/^#[0-9a-fA-F]{6}$/, color)
+
+  defp valid_gradient_color?(_color), do: false
 
   defp validate_actions(nil), do: :ok
 

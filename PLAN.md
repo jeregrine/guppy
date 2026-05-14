@@ -34,14 +34,14 @@ Scope: [`docs/future-primitives.md`](docs/future-primitives.md#menu-apis). Statu
 
 ### 3. Gradient style primitives
 
-Scope: [`docs/future-primitives.md`](docs/future-primitives.md#gradient-style-primitives). Status: scoped, not active.
+Scope: [`docs/future-primitives.md`](docs/future-primitives.md#gradient-style-primitives). Status: first narrow pass complete.
 
-- [ ] Confirm an example or product design needs gradients.
-- [ ] Finalize the first background-only op shape, currently scoped as `{:bg_linear_gradient, [angle: ..., from: ..., to: ...]}`.
-- [ ] Add Elixir IR validation for angle, exactly two color stops, supported color formats, and stop percentages.
-- [ ] Add template/class parsing only for the chosen op shape.
-- [ ] Add native ETF decode and style mapping to GPUI `linear_gradient`.
-- [ ] Add ExUnit and Rust style tests, then update examples and compliance docs when used.
+- [x] Confirm an example or product design needs gradients (`examples/style_gallery.exs` now demonstrates static and dynamic gradient surfaces).
+- [x] Finalize the first background-only op shape: `{:bg_linear_gradient, [angle: ..., from: ..., to: ...]}`.
+- [x] Add Elixir IR validation for angle, exactly two color stops, supported color formats, and stop percentages.
+- [x] Add template/class parsing only for the chosen op shape.
+- [x] Add native ETF decode and style mapping to GPUI `linear_gradient`.
+- [x] Add ExUnit and Rust style tests, then update examples and compliance docs when used.
 
 ### 4. Data-table and tree virtualization
 
