@@ -2498,6 +2498,10 @@ fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle
     };
 
     let style_list = get_list(style_term)?;
+    if style_list.is_empty() {
+        return Ok(empty_style());
+    }
+
     collect_arc(style_list.iter().map(parse_style_op))
 }
 
