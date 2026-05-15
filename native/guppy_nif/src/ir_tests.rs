@@ -111,6 +111,24 @@ fn rejects_unknown_native_ir_fields() {
         err.contains("unsupported button field"),
         "unexpected error: {err}"
     );
+
+    let node = map(vec![
+        (atom("kind"), atom("div")),
+        (atom("children"), list(vec![])),
+        (
+            atom("animation"),
+            map(vec![
+                (atom("id"), binary("fade")),
+                (atom("typo"), bool_atom(true)),
+            ]),
+        ),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(
+        err.contains("unsupported animation field"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]

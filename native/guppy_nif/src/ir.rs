@@ -1444,6 +1444,11 @@ fn get_animation_field(map: &HashMap<Term, Term>) -> Result<Option<AnimationSpec
     };
 
     let animation = expect_map(term)?;
+    ensure_allowed_fields(
+        animation,
+        &["id", "duration_ms", "repeat", "from", "to"],
+        "animation",
+    )?;
     let duration_ms = get_optional_u64_field(animation, "duration_ms")?.unwrap_or(1_000);
     if duration_ms == 0 {
         return Err("expected positive animation duration_ms".into());
