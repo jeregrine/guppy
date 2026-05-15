@@ -446,6 +446,102 @@ fn decodes_data_table_node() {
 }
 
 #[test]
+fn decodes_static_data_table_cell_div_children() {
+    let node = map(vec![
+        (atom("kind"), atom("data_table")),
+        (
+            atom("columns"),
+            list(vec![map(vec![
+                (atom("id"), binary("task")),
+                (atom("label"), binary("Task")),
+            ])]),
+        ),
+        (
+            atom("rows"),
+            list(vec![map(vec![
+                (atom("id"), binary("row_1")),
+                (
+                    atom("cells"),
+                    list(vec![map(vec![
+                        (atom("column_id"), binary("task")),
+                        (
+                            atom("children"),
+                            list(vec![map(vec![
+                                (atom("kind"), atom("div")),
+                                (atom("id"), binary("cell_layout")),
+                                (
+                                    atom("children"),
+                                    list(vec![map(vec![
+                                        (atom("kind"), atom("text")),
+                                        (atom("content"), binary("Nested")),
+                                    ])]),
+                                ),
+                            ])]),
+                        ),
+                    ])]),
+                ),
+            ])]),
+        ),
+    ]);
+
+    match IrNode::from_term(&node).unwrap() {
+        IrNode::DataTable(table) => match &table.rows[0].cells[0].children[0] {
+            IrNode::Div(div) => {
+                assert_eq!(div.id.as_deref(), Some("cell_layout"));
+                assert!(
+                    matches!(div.children.as_ref(), [IrNode::Text { content, .. }] if content == "Nested")
+                );
+            }
+            other => panic!("expected data table cell div, got {other:?}"),
+        },
+        other => panic!("expected data table, got {other:?}"),
+    }
+}
+
+#[test]
+fn rejects_row_controls_inside_data_table_cell_divs() {
+    let node = map(vec![
+        (atom("kind"), atom("data_table")),
+        (
+            atom("columns"),
+            list(vec![map(vec![
+                (atom("id"), binary("task")),
+                (atom("label"), binary("Task")),
+            ])]),
+        ),
+        (
+            atom("rows"),
+            list(vec![map(vec![
+                (atom("id"), binary("row_1")),
+                (
+                    atom("cells"),
+                    list(vec![map(vec![
+                        (atom("column_id"), binary("task")),
+                        (
+                            atom("children"),
+                            list(vec![map(vec![
+                                (atom("kind"), atom("div")),
+                                (
+                                    atom("children"),
+                                    list(vec![map(vec![
+                                        (atom("kind"), atom("button")),
+                                        (atom("id"), binary("edit")),
+                                        (atom("label"), binary("Edit")),
+                                    ])]),
+                                ),
+                            ])]),
+                        ),
+                    ])]),
+                ),
+            ])]),
+        ),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(err.contains("unsupported data_table cell child kind: button"));
+}
+
+#[test]
 fn rejects_data_table_cell_unknown_columns() {
     let node = map(vec![
         (atom("kind"), atom("data_table")),

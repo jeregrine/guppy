@@ -1695,7 +1695,7 @@ fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
             ensure_allowed_fields(map, &["kind", "id", "style"], "data_table cell spacer")?;
             IrNode::from_term(term)
         }
-        "div" => decode_static_list_row_div(map),
+        "div" => decode_static_data_table_cell_div(map),
         _ => Err(format!("unsupported data_table cell child kind: {kind}")),
     }
 }
@@ -2013,22 +2013,44 @@ fn get_list_row_control_id(map: &HashMap<Term, Term>, kind: &str) -> Result<Stri
 }
 
 fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+    decode_static_div(
+        map,
+        "list row div",
+        "list row div events",
+        "missing required field: list row div children",
+        decode_list_row_child_term,
+    )
+}
+
+fn decode_static_data_table_cell_div(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+    decode_static_div(
+        map,
+        "data_table cell div",
+        "data_table cell div events",
+        "missing required field: data_table cell div children",
+        decode_data_table_cell_child_term,
+    )
+}
+
+fn decode_static_div(
+    map: &HashMap<Term, Term>,
+    context: &str,
+    events_context: &str,
+    missing_children_error: &str,
+    decode_child: fn(&Term) -> Result<IrNode, String>,
+) -> Result<IrNode, String> {
     ensure_allowed_fields(
         map,
         &["kind", "children", "id", "style", "disabled", "events"],
-        "list row div",
+        context,
     )?;
-    ensure_allowed_event_fields(map, &["click"], "list row div events")?;
+    ensure_allowed_event_fields(map, &["click"], events_context)?;
 
     let Some(children_term) = get_field(map, "children") else {
-        return Err("missing required field: list row div children".into());
+        return Err(missing_children_error.into());
     };
 
-    let children = collect_arc(
-        get_list(children_term)?
-            .iter()
-            .map(decode_list_row_child_term),
-    )?;
+    let children = collect_arc(get_list(children_term)?.iter().map(decode_child))?;
     let empty_style = empty_style();
 
     Ok(IrNode::Div(Box::new(DivNode {
