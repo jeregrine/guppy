@@ -111,6 +111,22 @@ fn base_payload_map<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Term<
     )
 }
 
+fn base_payload_with_one_map<'a>(
+    env: Env<'a>,
+    node_id: &str,
+    callback_id: &str,
+    extra: (Term<'a>, Term<'a>),
+) -> Term<'a> {
+    map_from_pairs(
+        env,
+        [
+            (id().encode(env), node_id.encode(env)),
+            (callback().encode(env), callback_id.encode(env)),
+            extra,
+        ],
+    )
+}
+
 fn base_payload_with_capacity<'a>(
     env: Env<'a>,
     node_id: &str,
@@ -591,9 +607,12 @@ pub extern "C" fn guppy_c_send_hover_event(
         return 0;
     };
     send_event(view_id, hover(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
-        pairs.push((hovered().encode(env), (hovered_value != 0).encode(env)));
-        map_from_pairs(env, pairs)
+        base_payload_with_one_map(
+            env,
+            &node_id,
+            &callback_id,
+            (hovered().encode(env), (hovered_value != 0).encode(env)),
+        )
     })
 }
 
@@ -652,9 +671,12 @@ pub extern "C" fn guppy_c_send_change_event(
         return 0;
     };
     send_event(view_id, change(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
-        pairs.push((value().encode(env), value_string.encode(env)));
-        map_from_pairs(env, pairs)
+        base_payload_with_one_map(
+            env,
+            &node_id,
+            &callback_id,
+            (value().encode(env), value_string.encode(env)),
+        )
     })
 }
 
@@ -673,9 +695,12 @@ pub extern "C" fn guppy_c_send_checkbox_change_event(
         return 0;
     };
     send_event(view_id, change(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
-        pairs.push((checked().encode(env), (checked_value != 0).encode(env)));
-        map_from_pairs(env, pairs)
+        base_payload_with_one_map(
+            env,
+            &node_id,
+            &callback_id,
+            (checked().encode(env), (checked_value != 0).encode(env)),
+        )
     })
 }
 
