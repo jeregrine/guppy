@@ -286,6 +286,19 @@ defmodule Guppy.IR do
           optional(:style) => style()
         }
 
+  @type button_events :: %{
+          optional(:click) => String.t(),
+          optional(:hover) => String.t(),
+          optional(:focus) => String.t(),
+          optional(:blur) => String.t(),
+          optional(:key_down) => String.t(),
+          optional(:key_up) => String.t(),
+          optional(:context_menu) => String.t(),
+          optional(:mouse_down) => String.t(),
+          optional(:mouse_up) => String.t(),
+          optional(:mouse_move) => String.t()
+        }
+
   @type button_node :: %{
           required(:kind) => :button,
           required(:label) => String.t(),
@@ -302,7 +315,7 @@ defmodule Guppy.IR do
           optional(:tab_index) => integer(),
           optional(:actions) => action_bindings(),
           optional(:shortcuts) => [shortcut_binding()],
-          optional(:events) => div_events()
+          optional(:events) => button_events()
         }
 
   @type checkbox_events :: %{
@@ -386,7 +399,8 @@ defmodule Guppy.IR do
           optional(:events) => text_events()
         }
 
-  @type list_row_div_events :: %{optional(:click) => String.t()}
+  @type list_row_click_events :: %{optional(:click) => String.t()}
+  @type list_row_change_events :: %{optional(:change) => String.t()}
 
   @type list_row_div_node :: %{
           required(:kind) => :div,
@@ -394,10 +408,68 @@ defmodule Guppy.IR do
           optional(:id) => node_id(),
           optional(:style) => style(),
           optional(:disabled) => boolean(),
-          optional(:events) => list_row_div_events()
+          optional(:events) => list_row_click_events()
         }
 
-  @type list_row_node :: text_node() | spacer_node() | list_row_div_node()
+  @type list_row_button_node :: %{
+          required(:kind) => :button,
+          required(:label) => String.t(),
+          required(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:hover_style) => style(),
+          optional(:focus_style) => style(),
+          optional(:focus_visible_style) => style(),
+          optional(:in_focus_style) => style(),
+          optional(:active_style) => style(),
+          optional(:disabled_style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => list_row_click_events()
+        }
+
+  @type list_row_checkbox_node :: %{
+          required(:kind) => :checkbox,
+          required(:label) => String.t(),
+          required(:checked) => boolean(),
+          required(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:hover_style) => style(),
+          optional(:focus_style) => style(),
+          optional(:focus_visible_style) => style(),
+          optional(:in_focus_style) => style(),
+          optional(:active_style) => style(),
+          optional(:disabled_style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => list_row_change_events()
+        }
+
+  @type list_row_radio_node :: %{
+          required(:kind) => :radio,
+          required(:label) => String.t(),
+          required(:value) => String.t(),
+          required(:checked) => boolean(),
+          required(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:hover_style) => style(),
+          optional(:focus_style) => style(),
+          optional(:focus_visible_style) => style(),
+          optional(:in_focus_style) => style(),
+          optional(:active_style) => style(),
+          optional(:disabled_style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:tab_index) => integer(),
+          optional(:events) => list_row_change_events()
+        }
+
+  @type list_row_node ::
+          text_node()
+          | spacer_node()
+          | list_row_div_node()
+          | list_row_button_node()
+          | list_row_checkbox_node()
+          | list_row_radio_node()
+
   @type list_item :: %{required(:id) => node_id(), required(:children) => [list_row_node()]}
 
   @type list_node :: %{
