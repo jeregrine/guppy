@@ -16,9 +16,9 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 
 Context: native/main-thread requests are timeout-aware, but enqueue/scheduling edge cases still need hardening.
 
-- [ ] Ensure a request that is sent to the native queue but fails drain scheduling cannot mutate state later after the caller receives `runtime_unavailable`/`native_timeout`.
-- [ ] Make native duplicate `view_id` opens return the existing `duplicate_view_id` error instead of overwriting the tracked window handle.
-- [ ] Make `RequestDeadline::after/1` robust for very large `timeout_ms` values by using checked/saturating `Instant` arithmetic instead of panic-prone addition.
+- [x] Ensure a request that is sent to the native queue but fails drain scheduling cannot mutate state later after the caller receives `runtime_unavailable`/`native_timeout`.
+- [x] Make native duplicate `view_id` opens return the existing `duplicate_view_id` error instead of overwriting the tracked window handle.
+- [x] Make `RequestDeadline::after/1` robust for very large `timeout_ms` values by using checked/saturating `Instant` arithmetic instead of panic-prone addition.
 
 ### Tighten text-input edge cases and panic surfaces
 

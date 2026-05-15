@@ -24,20 +24,28 @@ static MAIN_THREAD_DISPATCHER: OnceLock<Mutex<Option<Arc<dyn PlatformDispatcher>
     OnceLock::new();
 static REQUEST_DRAIN_SCHEDULED: AtomicBool = AtomicBool::new(false);
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub(crate) struct RequestDeadline {
-    expires_at: Instant,
+    started_at: Instant,
+    timeout: Duration,
+    canceled: Arc<AtomicBool>,
 }
 
 impl RequestDeadline {
     pub(crate) fn after(timeout: Duration) -> Self {
         Self {
-            expires_at: Instant::now() + timeout,
+            started_at: Instant::now(),
+            timeout,
+            canceled: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    fn expired(self) -> bool {
-        Instant::now() >= self.expires_at
+    fn cancel(&self) {
+        self.canceled.store(true, Ordering::Release);
+    }
+
+    fn expired(&self) -> bool {
+        self.canceled.load(Ordering::Acquire) || self.started_at.elapsed() >= self.timeout
     }
 }
 
@@ -76,6 +84,20 @@ pub(crate) enum MainThreadRequest {
     },
 }
 
+impl MainThreadRequest {
+    fn deadline(&self) -> Option<&RequestDeadline> {
+        match self {
+            MainThreadRequest::OpenWindow { deadline, .. }
+            | MainThreadRequest::SetIr { deadline, .. }
+            | MainThreadRequest::CloseWindow { deadline, .. }
+            | MainThreadRequest::CloseAll { deadline, .. }
+            | MainThreadRequest::SetMenus { deadline, .. }
+            | MainThreadRequest::ViewCount { deadline, .. } => Some(deadline),
+            MainThreadRequest::CloseAllNoReply => None,
+        }
+    }
+}
+
 pub fn run_app() {
     init_request_queue();
 
@@ -94,12 +116,26 @@ pub fn run_app() {
 }
 
 pub(crate) fn enqueue_request(request: MainThreadRequest) -> Result<(), ()> {
+    let cancel_deadline = request.deadline().cloned();
     let sender = REQUEST_TX.get().ok_or(())?;
     sender.send(request).map_err(|_| ())?;
-    schedule_request_drain()
+
+    if schedule_request_drain().is_err() {
+        if let Some(deadline) = cancel_deadline {
+            deadline.cancel();
+        }
+
+        return Err(());
+    }
+
+    Ok(())
 }
 
 pub fn open_window(view_id: u64, ir: IrNode, options: WindowOptionsConfig) -> i32 {
+    if WINDOWS.with(|windows| windows.borrow().contains_key(&view_id)) {
+        return 0;
+    }
+
     APP.with(|app| {
         let app = app.borrow().as_ref().cloned();
 

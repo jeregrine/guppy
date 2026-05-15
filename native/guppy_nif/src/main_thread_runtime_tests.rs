@@ -1,5 +1,9 @@
-use super::{MainThreadRequest, RequestDeadline, handle_request, view_count};
+use super::{
+    APP, MainThreadRequest, RequestDeadline, close_window, enqueue_request, handle_request,
+    init_request_queue, open_window, try_next_request, view_count,
+};
 use crate::ir::{CanvasCommand, CanvasNode, IrNode, StyleColor};
+use crate::window_options::WindowOptionsConfig;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -49,4 +53,70 @@ fn live_requests_still_reply() {
     });
 
     assert_eq!(rx.try_recv().unwrap(), view_count());
+}
+
+#[test]
+fn very_large_deadlines_do_not_panic_or_expire_immediately() {
+    let deadline = RequestDeadline::after(Duration::MAX);
+
+    assert!(!deadline.expired());
+}
+
+#[test]
+fn enqueue_failure_cancels_queued_request_before_later_drain() {
+    init_request_queue();
+    while try_next_request().is_some() {}
+
+    let (reply, rx) = mpsc::channel();
+    let request = MainThreadRequest::ViewCount {
+        deadline: RequestDeadline::after(Duration::from_secs(60)),
+        reply,
+    };
+
+    assert!(enqueue_request(request).is_err());
+
+    let queued = try_next_request().expect("request should remain queued after scheduling failure");
+    handle_request(queued);
+
+    assert!(rx.try_recv().is_err());
+}
+
+#[gpui::test]
+fn duplicate_open_window_returns_zero_without_overwriting_existing_handle(
+    cx: &mut gpui::TestAppContext,
+) {
+    APP.with(|app| {
+        *app.borrow_mut() = Some(cx.to_async());
+    });
+
+    let view_id = 987_654_321;
+    let before = view_count();
+    let _ = close_window(view_id);
+
+    assert_eq!(
+        open_window(
+            view_id,
+            IrNode::text("first"),
+            WindowOptionsConfig::default()
+        ),
+        1
+    );
+    assert_eq!(view_count(), before + 1);
+
+    assert_eq!(
+        open_window(
+            view_id,
+            IrNode::text("duplicate"),
+            WindowOptionsConfig::default()
+        ),
+        0
+    );
+    assert_eq!(view_count(), before + 1);
+
+    assert_eq!(close_window(view_id), 1);
+    assert_eq!(view_count(), before);
+
+    APP.with(|app| {
+        *app.borrow_mut() = None;
+    });
 }
