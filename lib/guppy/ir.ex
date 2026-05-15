@@ -11,18 +11,14 @@ end
 
 defmodule Guppy.IR do
   @moduledoc """
-  Minimal IR helpers for the Phase 1 tracer shot.
+  Helpers and validation for Guppy's Elixir-owned UI IR.
 
-  This starts with just enough structure to prove:
+  Elixir processes build full-tree IR values, Guppy validates the supported
+  schema, and the native runtime renders those trees through GPUI while routing
+  events back to the owning process.
 
-  - Elixir owns UI state
-  - Elixir sends a tree description
-  - native GPUI renders that description
-  - Elixir sends full-tree replacement updates
-  - native click events can roundtrip back to Elixir
-
-  Style tokens are represented as an ordered list.
-  That order is preserved across the bridge so later tokens can override earlier ones.
+  Style tokens are represented as ordered lists. That order is preserved across
+  the bridge so later tokens can override earlier ones.
   """
 
   @type node_id :: String.t()
