@@ -144,41 +144,47 @@ fn base_payload_with_capacity<'a>(
 }
 
 #[cfg_attr(test, allow(dead_code))]
-fn row_control_payload<'a>(
+fn row_control_payload_map<'a>(
     env: Env<'a>,
     node_id: &str,
     callback_id: &str,
     list_id_value: &str,
     row_id_value: &str,
     control_id_value: &str,
-) -> Vec<(Term<'a>, Term<'a>)> {
-    row_control_payload_with_capacity(
+) -> Term<'a> {
+    map_from_pairs(
         env,
-        node_id,
-        callback_id,
-        list_id_value,
-        row_id_value,
-        control_id_value,
-        0,
+        [
+            (id().encode(env), node_id.encode(env)),
+            (callback().encode(env), callback_id.encode(env)),
+            (list_id().encode(env), list_id_value.encode(env)),
+            (row_id().encode(env), row_id_value.encode(env)),
+            (control_id().encode(env), control_id_value.encode(env)),
+        ],
     )
 }
 
-fn row_control_payload_with_capacity<'a>(
+#[cfg_attr(test, allow(dead_code))]
+fn row_control_payload_with_one_map<'a>(
     env: Env<'a>,
     node_id: &str,
     callback_id: &str,
     list_id_value: &str,
     row_id_value: &str,
     control_id_value: &str,
-    additional_pairs: usize,
-) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 3 + additional_pairs);
-    pairs.extend([
-        (list_id().encode(env), list_id_value.encode(env)),
-        (row_id().encode(env), row_id_value.encode(env)),
-        (control_id().encode(env), control_id_value.encode(env)),
-    ]);
-    pairs
+    extra: (Term<'a>, Term<'a>),
+) -> Term<'a> {
+    map_from_pairs(
+        env,
+        [
+            (id().encode(env), node_id.encode(env)),
+            (callback().encode(env), callback_id.encode(env)),
+            (list_id().encode(env), list_id_value.encode(env)),
+            (row_id().encode(env), row_id_value.encode(env)),
+            (control_id().encode(env), control_id_value.encode(env)),
+            extra,
+        ],
+    )
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -202,19 +208,22 @@ fn data_table_payload<'a>(
 }
 
 #[cfg_attr(test, allow(dead_code))]
-fn tree_payload<'a>(
+fn tree_payload_map<'a>(
     env: Env<'a>,
     node_id: &str,
     callback_id: &str,
     tree_id_value: &str,
     item_id_value: &str,
-) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 2);
-    pairs.extend([
-        (tree_id().encode(env), tree_id_value.encode(env)),
-        (item_id().encode(env), item_id_value.encode(env)),
-    ]);
-    pairs
+) -> Term<'a> {
+    map_from_pairs(
+        env,
+        [
+            (id().encode(env), node_id.encode(env)),
+            (callback().encode(env), callback_id.encode(env)),
+            (tree_id().encode(env), tree_id_value.encode(env)),
+            (item_id().encode(env), item_id_value.encode(env)),
+        ],
+    )
 }
 
 fn modifiers_payload<'a>(
@@ -391,16 +400,13 @@ pub extern "C" fn guppy_c_send_row_control_click_event(
 
     #[cfg(not(test))]
     send_event(view_id, click(), move |env| {
-        map_from_pairs(
+        row_control_payload_map(
             env,
-            row_control_payload(
-                env,
-                &node_id,
-                &callback_id,
-                &list_id_value,
-                &row_id_value,
-                &control_id_value,
-            ),
+            &node_id,
+            &callback_id,
+            &list_id_value,
+            &row_id_value,
+            &control_id_value,
         )
     })
 }
@@ -535,10 +541,7 @@ pub extern "C" fn guppy_c_send_tree_event(
 
     #[cfg(not(test))]
     send_event(view_id, tree_event_atom(event_code), move |env| {
-        map_from_pairs(
-            env,
-            tree_payload(env, &node_id, &callback_id, &tree_id_value, &item_id_value),
-        )
+        tree_payload_map(env, &node_id, &callback_id, &tree_id_value, &item_id_value)
     })
 }
 
@@ -763,17 +766,15 @@ pub extern "C" fn guppy_c_send_row_control_change_event(
 
     #[cfg(not(test))]
     send_event(view_id, change(), move |env| {
-        let mut pairs = row_control_payload_with_capacity(
+        row_control_payload_with_one_map(
             env,
             &node_id,
             &callback_id,
             &list_id_value,
             &row_id_value,
             &control_id_value,
-            1,
-        );
-        pairs.push((value().encode(env), value_string.encode(env)));
-        map_from_pairs(env, pairs)
+            (value().encode(env), value_string.encode(env)),
+        )
     })
 }
 
@@ -828,17 +829,15 @@ pub extern "C" fn guppy_c_send_row_control_checkbox_change_event(
 
     #[cfg(not(test))]
     send_event(view_id, change(), move |env| {
-        let mut pairs = row_control_payload_with_capacity(
+        row_control_payload_with_one_map(
             env,
             &node_id,
             &callback_id,
             &list_id_value,
             &row_id_value,
             &control_id_value,
-            1,
-        );
-        pairs.push((checked().encode(env), (checked_value != 0).encode(env)));
-        map_from_pairs(env, pairs)
+            (checked().encode(env), (checked_value != 0).encode(env)),
+        )
     })
 }
 
