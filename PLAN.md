@@ -38,7 +38,7 @@ Context: the previous data-table cleanup removed per-cell scans, but rendered ro
 Context: native decode/render helpers have grown across primitives and should be de-slopped before adding more surface area.
 
 - [x] Consolidate duplicate ETF map/list/string/field helper patterns across `ir.rs`, `menu.rs`, and `window_options.rs` without weakening context-specific error messages or validation.
-- [ ] Reduce duplication between `apply_div_style` and `apply_refinement_style`; keep ordered style-op semantics and document which ops are deliberately unsupported by refinement styling.
+- [x] Reduce duplication between `apply_div_style` and `apply_refinement_style`; keep ordered style-op semantics and document which ops are deliberately unsupported by refinement styling.
 
 ### Split root render dispatch once renderer APIs settle
 
