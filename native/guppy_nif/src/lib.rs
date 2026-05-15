@@ -1,5 +1,6 @@
 mod bridge_text_input;
 mod bridge_view;
+mod etf_decode;
 mod ir;
 mod ir_allowed;
 mod main_thread_runtime;

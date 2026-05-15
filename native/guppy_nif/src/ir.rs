@@ -1,8 +1,10 @@
-use crate::ir_allowed::{allowed_node_event_fields, allowed_node_fields};
-use eetf::{Atom, Binary, ByteList, List, Map, Term, Tuple};
+use crate::{
+    etf_decode,
+    ir_allowed::{allowed_node_event_fields, allowed_node_fields},
+};
+use eetf::{Atom, Term, Tuple};
 use gpui::{KeybindingKeystroke, Keystroke};
 use std::collections::{HashMap, HashSet};
-use std::io::Cursor;
 use std::sync::{Arc, OnceLock};
 
 pub type DivStyle = Arc<[StyleOp]>;
@@ -813,7 +815,7 @@ impl IrNode {
     }
 
     pub fn decode_etf(bytes: &[u8]) -> Result<Self, String> {
-        let term = Term::decode(Cursor::new(bytes)).map_err(|error| error.to_string())?;
+        let term = etf_decode::decode_term(bytes)?;
         Self::from_term(&term)
     }
 
@@ -1163,10 +1165,7 @@ fn decode_radio_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<Ra
 }
 
 fn expect_map(term: &Term) -> Result<&HashMap<Term, Term>, String> {
-    match term {
-        Term::Map(Map { map }) => Ok(map),
-        other => Err(format!("expected map ir node, got {other}")),
-    }
+    etf_decode::expect_hash_map(term, "map ir node")
 }
 
 fn get_field<'a>(map: &'a HashMap<Term, Term>, key: &str) -> Option<&'a Term> {
@@ -3012,23 +3011,15 @@ fn get_optional_event(map: &HashMap<Term, Term>, key: &str) -> Result<Option<Str
 }
 
 fn get_list(term: &Term) -> Result<&Vec<Term>, String> {
-    match term {
-        Term::List(List { elements }) => Ok(elements),
-        other => Err(format!("expected list, got {other}")),
-    }
+    etf_decode::expect_list(term)
 }
 
 fn term_to_string(term: &Term) -> Result<String, String> {
-    term_to_str(term).map(str::to_owned)
+    etf_decode::term_to_binary_string(term)
 }
 
 fn term_to_str(term: &Term) -> Result<&str, String> {
-    match term {
-        Term::Binary(Binary { bytes }) | Term::ByteList(ByteList { bytes }) => {
-            std::str::from_utf8(bytes).map_err(|error| error.to_string())
-        }
-        other => Err(format!("expected utf8 binary/string, got {other}")),
-    }
+    etf_decode::term_to_binary_str(term)
 }
 
 #[cfg(test)]

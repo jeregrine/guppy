@@ -1,9 +1,9 @@
-use eetf::{Atom, Binary, ByteList, Map, Term};
+use crate::etf_decode;
+use eetf::{Map, Term};
 use gpui::{
     App, Bounds, DisplayId, Point, SharedString, TitlebarOptions, WindowBackgroundAppearance,
     WindowBounds, WindowDecorations, WindowKind, WindowOptions, point, px, size,
 };
-use std::io::Cursor;
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct WindowOptionsConfig {
@@ -86,7 +86,7 @@ pub(crate) enum WindowDecorationsConfig {
 
 impl WindowOptionsConfig {
     pub(crate) fn decode_etf(bytes: &[u8]) -> Result<Self, String> {
-        let term = Term::decode(Cursor::new(bytes)).map_err(|error| error.to_string())?;
+        let term = etf_decode::decode_term(bytes)?;
         Self::from_term(&term)
     }
 
@@ -472,31 +472,15 @@ fn get_optional_i32_field(map: &Map, key: &str) -> Result<Option<i32>, String> {
 }
 
 fn expect_map(term: &Term) -> Result<&Map, String> {
-    match term {
-        Term::Map(map) => Ok(map),
-        _ => Err("expected map".into()),
-    }
+    etf_decode::expect_eetf_map(term, "expected map")
 }
 
 fn expect_string(term: &Term) -> Result<String, String> {
-    match term {
-        Term::Binary(Binary { bytes }) | Term::ByteList(ByteList { bytes }) => {
-            std::str::from_utf8(bytes)
-                .map(str::to_owned)
-                .map_err(|error| error.to_string())
-        }
-        Term::Atom(Atom { name }) => Ok(name.clone()),
-        _ => Err("expected string".into()),
-    }
+    etf_decode::term_to_string_or_atom(term, "expected string")
 }
 
 fn key_matches(term: &Term, expected: &str) -> bool {
-    match term {
-        Term::Atom(atom) => atom.name == expected,
-        Term::Binary(Binary { bytes }) => bytes.as_slice() == expected.as_bytes(),
-        Term::ByteList(ByteList { bytes }) => bytes.as_slice() == expected.as_bytes(),
-        _ => false,
-    }
+    etf_decode::term_key_matches(term, expected)
 }
 
 #[cfg(test)]

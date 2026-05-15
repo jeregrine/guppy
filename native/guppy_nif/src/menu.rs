@@ -1,10 +1,12 @@
-use crate::bridge_text_input::{
-    Copy as TextCopy, Cut as TextCut, Paste as TextPaste, SelectAll as TextSelectAll,
+use crate::{
+    bridge_text_input::{
+        Copy as TextCopy, Cut as TextCut, Paste as TextPaste, SelectAll as TextSelectAll,
+    },
+    etf_decode,
 };
-use eetf::{Atom, Binary, ByteList, List, Map, Term};
+use eetf::Term;
 use gpui::{Action, App, KeyBinding, Keystroke, Menu, MenuItem, OsAction, SharedString};
 use std::collections::HashMap;
-use std::io::Cursor;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct MenuSpec {
@@ -53,7 +55,7 @@ struct GuppyDisabledMenuAction {
 
 impl MenuSpec {
     pub fn decode_etf(bytes: &[u8]) -> Result<Vec<Self>, String> {
-        let term = Term::decode(Cursor::new(bytes)).map_err(|error| error.to_string())?;
+        let term = etf_decode::decode_term(bytes)?;
         decode_menus(&term)
     }
 }
@@ -387,12 +389,12 @@ fn ensure_allowed_fields(
     context: &str,
 ) -> Result<(), String> {
     for key in map.keys() {
-        let Term::Atom(atom) = key else {
+        let Some(key_name) = etf_decode::atom_name(key) else {
             return Err(format!("{context} has non-atom key: {key}"));
         };
 
-        if !allowed.contains(&atom.name.as_str()) {
-            return Err(format!("unknown {context} key: {}", atom.name));
+        if !allowed.contains(&key_name) {
+            return Err(format!("unknown {context} key: {key_name}"));
         }
     }
 
@@ -430,32 +432,19 @@ fn get_optional_boolean_field(
 }
 
 fn get_field<'a>(map: &'a HashMap<Term, Term>, key: &str) -> Option<&'a Term> {
-    map.get(&Term::Atom(Atom::from(key)))
+    etf_decode::get_atom_keyed_field(map, key)
 }
 
 fn expect_map(term: &Term) -> Result<&HashMap<Term, Term>, String> {
-    match term {
-        Term::Map(Map { map }) => Ok(map),
-        other => Err(format!("expected map, got {other}")),
-    }
+    etf_decode::expect_hash_map(term, "map")
 }
 
 fn get_list(term: &Term) -> Result<&Vec<Term>, String> {
-    match term {
-        Term::List(List { elements }) => Ok(elements),
-        other => Err(format!("expected list, got {other}")),
-    }
+    etf_decode::expect_list(term)
 }
 
 fn term_to_string(term: &Term) -> Result<String, String> {
-    match term {
-        Term::Binary(Binary { bytes }) | Term::ByteList(ByteList { bytes }) => {
-            std::str::from_utf8(bytes)
-                .map(str::to_owned)
-                .map_err(|error| error.to_string())
-        }
-        other => Err(format!("expected utf8 binary/string, got {other}")),
-    }
+    etf_decode::term_to_binary_string(term)
 }
 
 #[cfg(test)]
