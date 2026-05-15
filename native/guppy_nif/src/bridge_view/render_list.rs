@@ -16,6 +16,12 @@ use gpui::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct RowControlLookupKey {
+    row_id: String,
+    control_id: String,
+}
+
 #[derive(Clone)]
 struct RowControlRenderState {
     context: RowControlEventContext,
@@ -83,7 +89,7 @@ fn prepare_row_control_states(
     list_key: &str,
     items: &[ListItem],
     cx: &mut Context<BridgeView>,
-) -> HashMap<String, RowControlRenderState> {
+) -> HashMap<RowControlLookupKey, RowControlRenderState> {
     let mut states = HashMap::new();
 
     for item in items {
@@ -99,7 +105,7 @@ fn collect_row_control_states(
     row_id: &str,
     children: &[IrNode],
     cx: &mut Context<BridgeView>,
-    states: &mut HashMap<String, RowControlRenderState>,
+    states: &mut HashMap<RowControlLookupKey, RowControlRenderState>,
 ) {
     for child in children {
         match child {
@@ -162,7 +168,7 @@ fn insert_row_control_state(
     disabled: bool,
     tab_index: Option<isize>,
     cx: &mut Context<BridgeView>,
-    states: &mut HashMap<String, RowControlRenderState>,
+    states: &mut HashMap<RowControlLookupKey, RowControlRenderState>,
 ) {
     let key = RowControlKey::new(pass.view_id(), list_key, row_id, control_id).to_string();
     let focus_handle = if disabled {
@@ -192,7 +198,7 @@ fn render_item(
     item: &ListItem,
     item_style: &DivStyle,
     click: Option<&str>,
-    row_controls: &HashMap<String, RowControlRenderState>,
+    row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
     focus_visible: bool,
     window: &mut Window,
 ) -> AnyElement {
@@ -235,7 +241,7 @@ fn render_static_node(
     row_id: &str,
     path: &str,
     ir: &IrNode,
-    row_controls: &HashMap<String, RowControlRenderState>,
+    row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
     focus_visible: bool,
     window: &mut Window,
 ) -> AnyElement {
@@ -300,7 +306,7 @@ fn render_static_div(
     row_id: &str,
     path: &str,
     node: &DivNode,
-    row_controls: &HashMap<String, RowControlRenderState>,
+    row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
     focus_visible: bool,
     window: &mut Window,
 ) -> AnyElement {
@@ -341,7 +347,7 @@ fn render_row_button(
     row_id: &str,
     path: &str,
     node: &DivNode,
-    row_controls: &HashMap<String, RowControlRenderState>,
+    row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
     focus_visible: bool,
     window: &mut Window,
 ) -> AnyElement {
@@ -420,7 +426,7 @@ fn render_row_checkbox(
     view_id: u64,
     row_id: &str,
     node: &CheckboxNode,
-    row_controls: &HashMap<String, RowControlRenderState>,
+    row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
     focus_visible: bool,
     window: &mut Window,
 ) -> AnyElement {
@@ -500,7 +506,7 @@ fn render_row_radio(
     view_id: u64,
     row_id: &str,
     node: &RadioNode,
-    row_controls: &HashMap<String, RowControlRenderState>,
+    row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
     focus_visible: bool,
     window: &mut Window,
 ) -> AnyElement {
@@ -653,8 +659,11 @@ fn unsupported_row_control(view_id: u64, path: &str, message: &str) -> AnyElemen
         .into_any_element()
 }
 
-fn row_control_lookup_key(row_id: &str, control_id: &str) -> String {
-    format!("{row_id}\u{0}{control_id}")
+fn row_control_lookup_key(row_id: &str, control_id: &str) -> RowControlLookupKey {
+    RowControlLookupKey {
+        row_id: row_id.to_owned(),
+        control_id: control_id.to_owned(),
+    }
 }
 
 #[cfg(test)]
@@ -666,6 +675,14 @@ mod tests {
         assert_ne!(
             row_control_lookup_key("row_1", "done"),
             row_control_lookup_key("row_2", "done")
+        );
+    }
+
+    #[test]
+    fn row_control_lookup_keys_do_not_collide_on_delimiter_chars() {
+        assert_ne!(
+            row_control_lookup_key("row\0nested", "done"),
+            row_control_lookup_key("row", "nested\0done")
         );
     }
 }

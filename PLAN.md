@@ -16,10 +16,10 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 
 Context: row-control lookup/focus identity currently uses delimiter-joined strings while row/control ids are arbitrary binaries. Different valid `(row_id, control_id)` pairs can collide and reuse the wrong focus handle or event context.
 
-- [ ] Add a Rust regression covering distinct row/control id pairs that collide under the current delimiter/string formatting.
-- [ ] Replace row-control lookup state with a typed tuple/struct key instead of delimiter-joined strings.
-- [ ] Replace retained row-control focus ids with collision-safe encoding or a typed retained-key conversion at the map boundary.
-- [ ] Decide whether Elixir IR should reject control characters in ids for GPUI/debug-output hygiene; do not rely on such validation for correctness.
+- [x] Add a Rust regression covering distinct row/control id pairs that collide under the current delimiter/string formatting.
+- [x] Replace row-control lookup state with a typed tuple/struct key instead of delimiter-joined strings.
+- [x] Replace retained row-control focus ids with collision-safe encoding or a typed retained-key conversion at the map boundary.
+- [x] Decide whether Elixir IR should reject control characters in ids for GPUI/debug-output hygiene; do not rely on such validation for correctness. (Decision: do not add an id-character restriction for correctness; use typed/encoded native keys.)
 
 ### Native numeric decode must reject pathological and non-finite values
 

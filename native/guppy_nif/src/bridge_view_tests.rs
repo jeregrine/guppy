@@ -124,7 +124,7 @@ fn render_prunes_dead_list_row_control_focus_handles(cx: &mut gpui::TestAppConte
         assert!(
             view.retained
                 .focus_handles
-                .contains_key("guppy-row-control:43:todo_list:row_1:open")
+                .contains_key("guppy-row-control:v1:43:746f646f5f6c697374:726f775f31:6f70656e")
         );
 
         view.ir = IrNode::text("no list anymore");
@@ -156,7 +156,10 @@ fn simulated_list_row_button_click_reaches_native_event_bridge(cx: &mut gpui::Te
     assert_eq!(event.list_id, "todo_list");
     assert_eq!(event.row_id, "row_1");
     assert_eq!(event.control_id, "open");
-    assert_eq!(event.node_id, "guppy-row-control:43:todo_list:row_1:open");
+    assert_eq!(
+        event.node_id,
+        "guppy-row-control:v1:43:746f646f5f6c697374:726f775f31:6f70656e"
+    );
 }
 
 #[gpui::test]
