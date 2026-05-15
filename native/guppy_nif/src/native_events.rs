@@ -128,7 +128,27 @@ fn row_control_payload<'a>(
     row_id_value: &str,
     control_id_value: &str,
 ) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 3);
+    row_control_payload_with_capacity(
+        env,
+        node_id,
+        callback_id,
+        list_id_value,
+        row_id_value,
+        control_id_value,
+        0,
+    )
+}
+
+fn row_control_payload_with_capacity<'a>(
+    env: Env<'a>,
+    node_id: &str,
+    callback_id: &str,
+    list_id_value: &str,
+    row_id_value: &str,
+    control_id_value: &str,
+    additional_pairs: usize,
+) -> Vec<(Term<'a>, Term<'a>)> {
+    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 3 + additional_pairs);
     pairs.extend([
         (list_id().encode(env), list_id_value.encode(env)),
         (row_id().encode(env), row_id_value.encode(env)),
@@ -710,13 +730,14 @@ pub extern "C" fn guppy_c_send_row_control_change_event(
 
     #[cfg(not(test))]
     send_event(view_id, change(), move |env| {
-        let mut pairs = row_control_payload(
+        let mut pairs = row_control_payload_with_capacity(
             env,
             &node_id,
             &callback_id,
             &list_id_value,
             &row_id_value,
             &control_id_value,
+            1,
         );
         pairs.push((value().encode(env), value_string.encode(env)));
         map_from_pairs(env, pairs)
@@ -774,13 +795,14 @@ pub extern "C" fn guppy_c_send_row_control_checkbox_change_event(
 
     #[cfg(not(test))]
     send_event(view_id, change(), move |env| {
-        let mut pairs = row_control_payload(
+        let mut pairs = row_control_payload_with_capacity(
             env,
             &node_id,
             &callback_id,
             &list_id_value,
             &row_id_value,
             &control_id_value,
+            1,
         );
         pairs.push((checked().encode(env), (checked_value != 0).encode(env)));
         map_from_pairs(env, pairs)
