@@ -1,6 +1,6 @@
 # GPUI Compliance Matrix
 
-Source of truth: `../zed/crates/gpui` at upstream reference `78c889c21d`.
+Source of truth: Guppy's active native dependency is `gpui = "0.2.2"` from crates.io (`native/guppy_nif/Cargo.toml`). The local `../zed/crates/gpui` checkout is reference-only for discovering upstream examples and API direction; do not treat newer local APIs as supported unless they exist in `gpui = 0.2.2`.
 
 Statuses:
 
@@ -90,7 +90,7 @@ Intentionally narrow parity areas:
 
 ## Refresh process
 
-1. Update `../zed`.
-2. Record `git -C ../zed rev-parse --short HEAD` at the top of this file.
-3. Run `find ../zed/crates/gpui -maxdepth 3 -type f \( -path '*examples*' -o -path '*tests*' \) | sort`.
+1. Verify the active crate version in `native/guppy_nif/Cargo.toml` and `native/guppy_nif/Cargo.lock`.
+2. If using `../zed` to discover upstream examples/tests, record the checked reference separately and confirm every claimed API exists in the active crates.io `gpui` version.
+3. Run `find ../zed/crates/gpui -maxdepth 3 -type f \( -path '*examples*' -o -path '*tests*' \) | sort` when refreshing the upstream example inventory.
 4. Add any new examples/tests to the matrix before claiming GPUI compatibility improvements.
