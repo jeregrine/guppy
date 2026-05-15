@@ -23,6 +23,18 @@ defmodule Guppy.ComponentTest do
     assert {:bg_linear_gradient, [angle: 90, from: {"#0f172a", 0}, to: {"#2563eb", 1}]} in ir.style
   end
 
+  test "Guppy.Component normalizes dynamic list-valued class attributes" do
+    ir =
+      Guppy.DynamicClassTemplateExample.render(%{
+        classes: ["p-2", nil, false, "text-white", "bg-[#0f172a]"],
+        style: [{:w_px, 10}]
+      })
+
+    assert ir.style == [:p_2, {:text_color, :white}, {:bg_hex, "#0f172a"}, {:w_px, 10}]
+    assert :ok = Guppy.IR.validate(ir)
+    assert Guppy.Component.merge_styles(nil, "p-2 text-white") == [:p_2, {:text_color, :white}]
+  end
+
   test "Guppy.Component compiles ~GUI templates into valid IR" do
     ir =
       Guppy.TemplateExample.render(%{

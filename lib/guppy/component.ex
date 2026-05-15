@@ -253,7 +253,7 @@ defmodule Guppy.Component do
   end
 
   def merge_styles(class_value, style_value) do
-    merged = normalize_style_value(class_value) ++ normalize_style_value(style_value)
+    merged = normalize_class_value(class_value) ++ normalize_style_value(style_value)
     if merged == [], do: nil, else: merged
   end
 
@@ -305,6 +305,8 @@ defmodule Guppy.Component do
     raise ArgumentError,
           "expected class to be a string or list of strings, got: #{inspect(other)}"
   end
+
+  defp normalize_class_value(value), do: class_to_style!(value)
 
   defp normalize_style_value(nil), do: []
   defp normalize_style_value(false), do: []

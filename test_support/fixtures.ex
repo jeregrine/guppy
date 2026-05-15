@@ -169,6 +169,18 @@ defmodule Guppy.GradientTemplateExample do
   end
 end
 
+defmodule Guppy.DynamicClassTemplateExample do
+  use Guppy.Component
+
+  def render(assigns) do
+    ~GUI"""
+    <div id="dynamic_class_root" class={@classes} style={@style}>
+      <text id="dynamic_class_label">Dynamic classes</text>
+    </div>
+    """
+  end
+end
+
 defmodule Guppy.RemoteBadgeComponent do
   use Guppy.Component
 
