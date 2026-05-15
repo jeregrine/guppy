@@ -323,7 +323,7 @@ Run tests:
 mix test
 ```
 
-Run the full local check suite:
+Run the full local check suite, including bounded stress-test IR validation:
 
 ```bash
 scripts/check

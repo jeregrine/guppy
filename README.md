@@ -69,7 +69,7 @@ Run tests:
 mix test
 ```
 
-Full local check suite:
+Full local check suite, including a bounded stress-test IR validation smoke:
 
 ```bash
 scripts/check

@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$repo_root"
 mix test
+mix run --no-start examples/stress_test.exs -- --validate-only
 mix format --check-formatted
 mix credo
 
