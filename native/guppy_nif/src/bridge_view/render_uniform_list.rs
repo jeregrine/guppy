@@ -1,20 +1,13 @@
 use super::{identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
-use crate::ir::{DivStyle, UniformListItem};
+use crate::{
+    ir::{DivStyle, UniformListItem},
+    native_events,
+};
 use gpui::{
     AnyElement, InteractiveElement, IntoElement, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, div, uniform_list,
 };
 use std::sync::Arc;
-
-unsafe extern "C" {
-    fn guppy_c_send_click_event(
-        view_id: u64,
-        node_id_ptr: *const u8,
-        node_id_len: usize,
-        callback_id_ptr: *const u8,
-        callback_id_len: usize,
-    ) -> i32;
-}
 
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
@@ -80,17 +73,7 @@ fn render_item(
 }
 
 fn emit_item_click(view_id: u64, node_id: &str, callback_id: &str) {
-    // SAFETY: the FFI call copies the provided string bytes before returning; node_id and
-    // callback_id are valid Rust string slices for the duration of the call.
-    unsafe {
-        let _ = guppy_c_send_click_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-        );
-    }
+    let _ = native_events::send_click_event(view_id, node_id, callback_id);
 }
 
 #[cfg(test)]

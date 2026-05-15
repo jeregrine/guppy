@@ -4,22 +4,11 @@ use super::{
     render_pass::RenderPass,
     style::{apply_div_style, apply_refinement_style},
 };
-use crate::ir::CheckboxNode;
+use crate::{ir::CheckboxNode, native_events};
 use gpui::{
     AnyElement, Context, InteractiveElement, IntoElement, KeyDownEvent, ParentElement,
     StatefulInteractiveElement, Styled, Window, div, px, rgb,
 };
-
-unsafe extern "C" {
-    fn guppy_c_send_checkbox_change_event(
-        view_id: u64,
-        node_id_ptr: *const u8,
-        node_id_len: usize,
-        callback_id_ptr: *const u8,
-        callback_id_len: usize,
-        checked: i32,
-    ) -> i32;
-}
 
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
@@ -169,18 +158,7 @@ pub(crate) fn checkbox_label(node: &CheckboxNode) -> AnyElement {
 }
 
 fn emit_checkbox_change(view_id: u64, node_id: &str, callback_id: &str, checked: bool) {
-    // SAFETY: the FFI call copies the provided string bytes before returning; node_id and
-    // callback_id are valid Rust string slices for the duration of the call.
-    unsafe {
-        let _ = guppy_c_send_checkbox_change_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            if checked { 1 } else { 0 },
-        );
-    }
+    let _ = native_events::send_checkbox_change_event(view_id, node_id, callback_id, checked);
 }
 
 pub(crate) fn is_checkbox_toggle_key(event: &KeyDownEvent) -> bool {

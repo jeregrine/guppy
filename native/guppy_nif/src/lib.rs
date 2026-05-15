@@ -600,14 +600,15 @@ mod native_event_test_support;
 
 #[cfg(test)]
 use native_event_test_support::{
-    record_menu_event_snapshot_for_test, record_row_control_event_snapshot_for_test,
-    record_semantic_event_snapshot_for_test,
+    record_basic_event_snapshot_for_test, record_menu_event_snapshot_for_test,
+    record_row_control_event_snapshot_for_test, record_semantic_event_snapshot_for_test,
 };
 
 #[cfg(test)]
 pub(crate) use native_event_test_support::{
-    native_event_send_snapshot_for_test, take_menu_event_snapshot_for_test,
-    take_row_control_event_snapshot_for_test, take_semantic_event_snapshot_for_test,
+    native_event_send_snapshot_for_test, take_basic_event_snapshot_for_test,
+    take_menu_event_snapshot_for_test, take_row_control_event_snapshot_for_test,
+    take_semantic_event_snapshot_for_test,
 };
 
 rustler::init!("Elixir.Guppy.Native.Nif", load = load);

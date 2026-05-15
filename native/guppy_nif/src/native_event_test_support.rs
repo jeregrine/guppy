@@ -3,6 +3,16 @@ use std::sync::Mutex;
 use std::sync::atomic::Ordering;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct BasicEventSnapshot {
+    pub event: &'static str,
+    pub view_id: u64,
+    pub node_id: Option<String>,
+    pub callback_id: Option<String>,
+    pub value: Option<String>,
+    pub checked: Option<bool>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct RowControlEventSnapshot {
     pub event: &'static str,
     pub view_id: u64,
@@ -34,6 +44,7 @@ pub(crate) struct SemanticEventSnapshot {
     pub item_id: Option<String>,
 }
 
+static BASIC_EVENT_SNAPSHOT: Mutex<Option<BasicEventSnapshot>> = Mutex::new(None);
 static ROW_CONTROL_EVENT_SNAPSHOT: Mutex<Option<RowControlEventSnapshot>> = Mutex::new(None);
 static MENU_EVENT_SNAPSHOT: Mutex<Option<MenuEventSnapshot>> = Mutex::new(None);
 static SEMANTIC_EVENT_SNAPSHOT: Mutex<Option<SemanticEventSnapshot>> = Mutex::new(None);
@@ -43,6 +54,10 @@ pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
         NATIVE_EVENT_SEND_COUNT.load(Ordering::Relaxed),
         NATIVE_EVENT_SEND_FAILURE_COUNT.load(Ordering::Relaxed),
     )
+}
+
+pub(crate) fn take_basic_event_snapshot_for_test() -> Option<BasicEventSnapshot> {
+    BASIC_EVENT_SNAPSHOT.lock().ok()?.take()
 }
 
 pub(crate) fn take_row_control_event_snapshot_for_test() -> Option<RowControlEventSnapshot> {
@@ -55,6 +70,26 @@ pub(crate) fn take_menu_event_snapshot_for_test() -> Option<MenuEventSnapshot> {
 
 pub(crate) fn take_semantic_event_snapshot_for_test() -> Option<SemanticEventSnapshot> {
     SEMANTIC_EVENT_SNAPSHOT.lock().ok()?.take()
+}
+
+pub(super) fn record_basic_event_snapshot_for_test(
+    event: &'static str,
+    view_id: u64,
+    node_id: Option<String>,
+    callback_id: Option<String>,
+    value: Option<String>,
+    checked: Option<bool>,
+) {
+    if let Ok(mut snapshot) = BASIC_EVENT_SNAPSHOT.lock() {
+        *snapshot = Some(BasicEventSnapshot {
+            event,
+            view_id,
+            node_id,
+            callback_id,
+            value,
+            checked,
+        });
+    }
 }
 
 pub(super) fn record_menu_event_snapshot_for_test(action_id: String, callback_id: String) {

@@ -1,3 +1,4 @@
+use crate::native_events;
 use gpui::{
     App, Bounds, Context, CursorStyle, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, IntoElement, KeyBinding, LayoutId,
@@ -7,18 +8,6 @@ use gpui::{
 };
 use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
-
-unsafe extern "C" {
-    fn guppy_c_send_change_event(
-        view_id: u64,
-        node_id_ptr: *const u8,
-        node_id_len: usize,
-        callback_id_ptr: *const u8,
-        callback_id_len: usize,
-        value_ptr: *const u8,
-        value_len: usize,
-    ) -> i32;
-}
 
 actions!(
     guppy_text_input,
@@ -157,17 +146,12 @@ impl BridgeTextInput {
             return;
         };
 
-        unsafe {
-            let _ = guppy_c_send_change_event(
-                self.view_id,
-                self.node_id.as_ptr(),
-                self.node_id.len(),
-                callback_id.as_ptr(),
-                callback_id.len(),
-                self.value.as_bytes().as_ptr(),
-                self.value.len(),
-            );
-        }
+        let _ = native_events::send_change_event(
+            self.view_id,
+            &self.node_id,
+            callback_id,
+            self.value.as_ref(),
+        );
     }
 
     fn left(&mut self, _: &Left, _: &mut Window, cx: &mut Context<Self>) {

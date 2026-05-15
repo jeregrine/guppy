@@ -2,36 +2,685 @@ use crate::*;
 use rustler::{Atom, Encoder, Env, Term};
 use std::time::Instant;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct EventModifiers {
+    pub control: bool,
+    pub alt: bool,
+    pub shift: bool,
+    pub platform: bool,
+    pub function: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct KeyEventPayload<'a> {
+    pub key: &'a str,
+    pub key_char: Option<&'a str>,
+    pub is_held: bool,
+    pub modifiers: EventModifiers,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ActionEventPayload<'a> {
+    pub action: &'a str,
+    pub shortcut: &'a str,
+    pub key: &'a str,
+    pub key_char: Option<&'a str>,
+    pub modifiers: EventModifiers,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct ContextMenuEventPayload {
+    pub x: f64,
+    pub y: f64,
+    pub modifiers: EventModifiers,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct DragMoveEventPayload<'a> {
+    pub source_id: &'a str,
+    pub pressed_button_code: i32,
+    pub x: f64,
+    pub y: f64,
+    pub modifiers: EventModifiers,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct MouseDownEventPayload {
+    pub button_code: i32,
+    pub x: f64,
+    pub y: f64,
+    pub click_count: u64,
+    pub modifiers: EventModifiers,
+    pub first_mouse: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct MouseUpEventPayload {
+    pub button_code: i32,
+    pub x: f64,
+    pub y: f64,
+    pub click_count: u64,
+    pub modifiers: EventModifiers,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct MouseMoveEventPayload {
+    pub pressed_button_code: i32,
+    pub x: f64,
+    pub y: f64,
+    pub modifiers: EventModifiers,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct ScrollWheelEventPayload {
+    pub x: f64,
+    pub y: f64,
+    pub delta_kind_code: i32,
+    pub delta_x: f64,
+    pub delta_y: f64,
+    pub modifiers: EventModifiers,
+}
+
 pub(crate) fn send_window_close_requested_event(view_id: u64) -> i32 {
-    send_event(view_id, window_close_requested(), |env| {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("window_close_requested", view_id, None, None, None, None);
+
+    send_event(view_id, window_close_requested, |env| {
         rustler::types::atom::undefined().encode(env)
     })
 }
 
 pub(crate) fn send_window_closed_event(view_id: u64) -> i32 {
-    send_event(view_id, window_closed(), |env| {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("window_closed", view_id, None, None, None, None);
+
+    send_event(view_id, window_closed, |env| {
         rustler::types::atom::undefined().encode(env)
     })
 }
 
 pub(crate) fn send_menu_action_event(action_id: &str, callback_id: &str) -> i32 {
-    let action_id = action_id.to_owned();
-    let callback_id = callback_id.to_owned();
-
     #[cfg(test)]
     {
-        record_menu_event_snapshot_for_test(action_id, callback_id);
+        record_menu_event_snapshot_for_test(action_id.to_owned(), callback_id.to_owned());
         record_event_send(Instant::now(), false);
         0
     }
 
     #[cfg(not(test))]
-    send_event(0, menu_action(), move |env| {
-        base_payload_map(env, &action_id, &callback_id)
+    send_event(0, menu_action, move |env| {
+        base_payload_map(env, action_id, callback_id)
     })
 }
 
-fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -> Term<'a>) -> i32 {
+pub(crate) fn send_click_event(view_id: u64, node_id: &str, callback_id: &str) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "click",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        None,
+        None,
+    );
+
+    send_id_callback_event(view_id, click, node_id, callback_id)
+}
+
+pub(crate) fn send_close_event(view_id: u64, node_id: &str, callback_id: &str) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "close",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        None,
+        None,
+    );
+
+    send_id_callback_event(view_id, close, node_id, callback_id)
+}
+
+pub(crate) fn send_focus_event(view_id: u64, node_id: &str, callback_id: &str) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "focus",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        None,
+        None,
+    );
+
+    send_id_callback_event(view_id, focus, node_id, callback_id)
+}
+
+pub(crate) fn send_blur_event(view_id: u64, node_id: &str, callback_id: &str) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "blur",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        None,
+        None,
+    );
+
+    send_id_callback_event(view_id, blur, node_id, callback_id)
+}
+
+pub(crate) fn send_hover_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    hovered_value: bool,
+) -> i32 {
+    send_event(view_id, hover, move |env| {
+        base_payload_with_one_map(
+            env,
+            node_id,
+            callback_id,
+            (hovered().encode(env), hovered_value.encode(env)),
+        )
+    })
+}
+
+pub(crate) fn send_change_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    value_string: &str,
+) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "change",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        Some(value_string.to_owned()),
+        None,
+    );
+
+    send_event(view_id, change, move |env| {
+        base_payload_with_one_map(
+            env,
+            node_id,
+            callback_id,
+            (value().encode(env), value_string.encode(env)),
+        )
+    })
+}
+
+pub(crate) fn send_checkbox_change_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    checked_value: bool,
+) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "change",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        None,
+        Some(checked_value),
+    );
+
+    send_event(view_id, change, move |env| {
+        base_payload_with_one_map(
+            env,
+            node_id,
+            callback_id,
+            (checked().encode(env), checked_value.encode(env)),
+        )
+    })
+}
+
+pub(crate) fn send_row_control_click_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    list_id_value: &str,
+    row_id_value: &str,
+    control_id_value: &str,
+) -> i32 {
+    #[cfg(test)]
+    {
+        record_row_control_event_snapshot_for_test(
+            "click",
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            list_id_value.to_owned(),
+            row_id_value.to_owned(),
+            control_id_value.to_owned(),
+            None,
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, click, move |env| {
+        row_control_payload_map(
+            env,
+            node_id,
+            callback_id,
+            list_id_value,
+            row_id_value,
+            control_id_value,
+        )
+    })
+}
+
+pub(crate) fn send_row_control_change_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    list_id_value: &str,
+    row_id_value: &str,
+    control_id_value: &str,
+    value_string: &str,
+) -> i32 {
+    #[cfg(test)]
+    {
+        record_row_control_event_snapshot_for_test(
+            "change",
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            list_id_value.to_owned(),
+            row_id_value.to_owned(),
+            control_id_value.to_owned(),
+            Some(value_string.to_owned()),
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, change, move |env| {
+        row_control_payload_with_one_map(
+            env,
+            node_id,
+            callback_id,
+            list_id_value,
+            row_id_value,
+            control_id_value,
+            (value().encode(env), value_string.encode(env)),
+        )
+    })
+}
+
+pub(crate) fn send_row_control_checkbox_change_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    list_id_value: &str,
+    row_id_value: &str,
+    control_id_value: &str,
+    checked_value: bool,
+) -> i32 {
+    #[cfg(test)]
+    {
+        record_row_control_event_snapshot_for_test(
+            "change",
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            list_id_value.to_owned(),
+            row_id_value.to_owned(),
+            control_id_value.to_owned(),
+            None,
+            Some(checked_value),
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, change, move |env| {
+        row_control_payload_with_one_map(
+            env,
+            node_id,
+            callback_id,
+            list_id_value,
+            row_id_value,
+            control_id_value,
+            (checked().encode(env), checked_value.encode(env)),
+        )
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn send_data_table_event(
+    view_id: u64,
+    event_code: i32,
+    node_id: &str,
+    callback_id: &str,
+    table_id_value: &str,
+    row_id_value: Option<&str>,
+    column_id_value: Option<&str>,
+) -> i32 {
+    let Some(event_name) = data_table_event_name(event_code) else {
+        return 0;
+    };
+
+    #[cfg(test)]
+    {
+        record_semantic_event_snapshot_for_test(
+            event_name,
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            Some(table_id_value.to_owned()),
+            row_id_value.map(str::to_owned),
+            column_id_value.map(str::to_owned),
+            None,
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    {
+        let _ = event_name;
+        send_event(
+            view_id,
+            || data_table_event_atom(event_code),
+            move |env| {
+                data_table_payload_map(
+                    env,
+                    node_id,
+                    callback_id,
+                    table_id_value,
+                    row_id_value,
+                    column_id_value,
+                )
+            },
+        )
+    }
+}
+
+pub(crate) fn send_tree_event(
+    view_id: u64,
+    event_code: i32,
+    node_id: &str,
+    callback_id: &str,
+    tree_id_value: &str,
+    item_id_value: &str,
+) -> i32 {
+    let Some(event_name) = tree_event_name(event_code) else {
+        return 0;
+    };
+
+    #[cfg(test)]
+    {
+        record_semantic_event_snapshot_for_test(
+            event_name,
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            None,
+            None,
+            None,
+            Some(tree_id_value.to_owned()),
+            Some(item_id_value.to_owned()),
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    {
+        let _ = event_name;
+        send_event(
+            view_id,
+            || tree_event_atom(event_code),
+            move |env| tree_payload_map(env, node_id, callback_id, tree_id_value, item_id_value),
+        )
+    }
+}
+
+pub(crate) fn send_key_down_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: KeyEventPayload<'_>,
+) -> i32 {
+    send_event(view_id, key_down, move |env| {
+        let key_char_term = optional_str_term(env, payload.key_char);
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (key().encode(env), payload.key.encode(env)),
+                (key_char().encode(env), key_char_term),
+                (is_held().encode(env), payload.is_held.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_key_up_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: KeyEventPayload<'_>,
+) -> i32 {
+    send_event(view_id, key_up, move |env| {
+        let key_char_term = optional_str_term(env, payload.key_char);
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (key().encode(env), payload.key.encode(env)),
+                (key_char().encode(env), key_char_term),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_action_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: ActionEventPayload<'_>,
+) -> i32 {
+    send_event(view_id, action, move |env| {
+        let key_char_term = optional_str_term(env, payload.key_char);
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (action().encode(env), payload.action.encode(env)),
+                (shortcut().encode(env), payload.shortcut.encode(env)),
+                (key().encode(env), payload.key.encode(env)),
+                (key_char().encode(env), key_char_term),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_context_menu_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: ContextMenuEventPayload,
+) -> i32 {
+    send_event(view_id, context_menu, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_drag_start_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    source: &str,
+) -> i32 {
+    source_event(view_id, drag_start, node_id, callback_id, source)
+}
+
+pub(crate) fn send_drop_event(view_id: u64, node_id: &str, callback_id: &str, source: &str) -> i32 {
+    source_event(view_id, drop, node_id, callback_id, source)
+}
+
+pub(crate) fn send_drag_move_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: DragMoveEventPayload<'_>,
+) -> i32 {
+    send_event(view_id, drag_move, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (source_id().encode(env), payload.source_id.encode(env)),
+                (
+                    pressed_button().encode(env),
+                    mouse_button_atom(payload.pressed_button_code).encode(env),
+                ),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_mouse_down_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: MouseDownEventPayload,
+) -> i32 {
+    send_event(view_id, mouse_down, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (
+                    button().encode(env),
+                    mouse_button_atom(payload.button_code).encode(env),
+                ),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                (click_count().encode(env), payload.click_count.encode(env)),
+                (first_mouse().encode(env), payload.first_mouse.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_mouse_up_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: MouseUpEventPayload,
+) -> i32 {
+    send_event(view_id, mouse_up, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (
+                    button().encode(env),
+                    mouse_button_atom(payload.button_code).encode(env),
+                ),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                (click_count().encode(env), payload.click_count.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_mouse_move_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: MouseMoveEventPayload,
+) -> i32 {
+    send_event(view_id, mouse_move, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (
+                    pressed_button().encode(env),
+                    mouse_button_atom(payload.pressed_button_code).encode(env),
+                ),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+pub(crate) fn send_scroll_wheel_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    payload: ScrollWheelEventPayload,
+) -> i32 {
+    send_event(view_id, scroll_wheel, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                (
+                    delta_kind().encode(env),
+                    if payload.delta_kind_code == 1 {
+                        pixels()
+                    } else {
+                        lines()
+                    }
+                    .encode(env),
+                ),
+                (delta_x().encode(env), payload.delta_x.encode(env)),
+                (delta_y().encode(env), payload.delta_y.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
+fn send_event(
+    view_id: u64,
+    event: impl FnOnce() -> Atom,
+    payload: impl for<'a> FnOnce(Env<'a>) -> Term<'a>,
+) -> i32 {
     let started_at = Instant::now();
 
     #[cfg(test)]
@@ -59,7 +708,7 @@ fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -
 
         let mut msg_env = rustler::OwnedEnv::new();
         match msg_env.send_and_clear(&target, |env| {
-            (guppy_native_event(), view_id, event, payload(env)).encode(env)
+            (guppy_native_event(), view_id, event(), payload(env)).encode(env)
         }) {
             Ok(()) => {
                 record_event_send(started_at, true);
@@ -71,33 +720,6 @@ fn send_event(view_id: u64, event: Atom, payload: impl for<'a> FnOnce(Env<'a>) -
             }
         }
     }
-}
-
-fn binary_str(ptr: *const u8, len: usize) -> Option<String> {
-    if ptr.is_null() {
-        return None;
-    }
-
-    // SAFETY: native event shims pass a non-null pointer and byte length for data that remains
-    // valid for this call; this function checks for null before constructing the borrowed slice.
-    let bytes = unsafe { std::slice::from_raw_parts(ptr, len) };
-    std::str::from_utf8(bytes).map(str::to_owned).ok()
-}
-
-fn id_callback_strings(
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-) -> Option<(String, String)> {
-    Some((
-        binary_str(node_id_ptr, node_id_len)?,
-        binary_str(callback_id_ptr, callback_id_len)?,
-    ))
-}
-
-fn optional_binary_str(has_value: i32, ptr: *const u8, len: usize) -> Option<String> {
-    (has_value != 0).then(|| binary_str(ptr, len)).flatten()
 }
 
 fn optional_str_term<'a>(env: Env<'a>, value: Option<&str>) -> Term<'a> {
@@ -115,6 +737,7 @@ fn base_payload_map<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Term<
     )
 }
 
+#[cfg_attr(test, allow(dead_code))]
 fn base_payload_with_one_map<'a>(
     env: Env<'a>,
     node_id: &str,
@@ -243,44 +866,23 @@ fn tree_payload_map<'a>(
     )
 }
 
-fn modifiers_payload<'a>(
-    env: Env<'a>,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> Term<'a> {
+fn modifiers_payload<'a>(env: Env<'a>, modifiers_value: EventModifiers) -> Term<'a> {
     map_from_pairs(
         env,
         [
-            (control().encode(env), (control_value != 0).encode(env)),
-            (alt().encode(env), (alt_value != 0).encode(env)),
-            (shift().encode(env), (shift_value != 0).encode(env)),
-            (platform().encode(env), (platform_value != 0).encode(env)),
-            (function().encode(env), (function_value != 0).encode(env)),
+            (control().encode(env), modifiers_value.control.encode(env)),
+            (alt().encode(env), modifiers_value.alt.encode(env)),
+            (shift().encode(env), modifiers_value.shift.encode(env)),
+            (platform().encode(env), modifiers_value.platform.encode(env)),
+            (function().encode(env), modifiers_value.function.encode(env)),
         ],
     )
 }
 
-fn modifiers_pair<'a>(
-    env: Env<'a>,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> (Term<'a>, Term<'a>) {
+fn modifiers_pair<'a>(env: Env<'a>, modifiers_value: EventModifiers) -> (Term<'a>, Term<'a>) {
     (
         modifiers().encode(env),
-        modifiers_payload(
-            env,
-            control_value,
-            alt_value,
-            shift_value,
-            platform_value,
-            function_value,
-        ),
+        modifiers_payload(env, modifiers_value),
     )
 }
 
@@ -295,267 +897,31 @@ fn mouse_button_atom(code: i32) -> Atom {
     }
 }
 
-#[cfg_attr(test, allow(dead_code))]
-fn send_id_callback_event(view_id: u64, event: Atom, node_id: String, callback_id: String) -> i32 {
-    send_event(view_id, event, move |env| {
-        base_payload_map(env, &node_id, &callback_id)
-    })
-}
-
-fn send_id_callback_pointer_event(
+fn send_id_callback_event(
     view_id: u64,
     event: impl FnOnce() -> Atom,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
+    node_id: &str,
+    callback_id: &str,
 ) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-
-    #[cfg(test)]
-    {
-        let _ = (view_id, event, node_id, callback_id);
-        record_event_send(Instant::now(), false);
-        0
-    }
-
-    #[cfg(not(test))]
-    send_id_callback_event(view_id, event(), node_id, callback_id)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_click_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-) -> i32 {
-    send_id_callback_pointer_event(
-        view_id,
-        click,
-        node_id_ptr,
-        node_id_len,
-        callback_id_ptr,
-        callback_id_len,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn row_control_strings(
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    list_id_ptr: *const u8,
-    list_id_len: usize,
-    row_id_ptr: *const u8,
-    row_id_len: usize,
-    control_id_ptr: *const u8,
-    control_id_len: usize,
-) -> Option<(String, String, String, String, String)> {
-    Some((
-        binary_str(node_id_ptr, node_id_len)?,
-        binary_str(callback_id_ptr, callback_id_len)?,
-        binary_str(list_id_ptr, list_id_len)?,
-        binary_str(row_id_ptr, row_id_len)?,
-        binary_str(control_id_ptr, control_id_len)?,
-    ))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_row_control_click_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    list_id_ptr: *const u8,
-    list_id_len: usize,
-    row_id_ptr: *const u8,
-    row_id_len: usize,
-    control_id_ptr: *const u8,
-    control_id_len: usize,
-) -> i32 {
-    let Some((node_id, callback_id, list_id_value, row_id_value, control_id_value)) =
-        row_control_strings(
-            node_id_ptr,
-            node_id_len,
-            callback_id_ptr,
-            callback_id_len,
-            list_id_ptr,
-            list_id_len,
-            row_id_ptr,
-            row_id_len,
-            control_id_ptr,
-            control_id_len,
-        )
-    else {
-        return 0;
-    };
-
-    #[cfg(test)]
-    {
-        record_row_control_event_snapshot_for_test(
-            "click",
-            view_id,
-            node_id,
-            callback_id,
-            list_id_value,
-            row_id_value,
-            control_id_value,
-            None,
-            None,
-        );
-        record_event_send(Instant::now(), false);
-        0
-    }
-
-    #[cfg(not(test))]
-    send_event(view_id, click(), move |env| {
-        row_control_payload_map(
-            env,
-            &node_id,
-            &callback_id,
-            &list_id_value,
-            &row_id_value,
-            &control_id_value,
-        )
+    send_event(view_id, event, move |env| {
+        base_payload_map(env, node_id, callback_id)
     })
 }
 
-#[allow(clippy::too_many_arguments)]
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_data_table_event(
+fn source_event(
     view_id: u64,
-    event_code: i32,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    table_id_ptr: *const u8,
-    table_id_len: usize,
-    row_id_ptr: *const u8,
-    row_id_len: usize,
-    column_id_ptr: *const u8,
-    column_id_len: usize,
+    event: impl FnOnce() -> Atom,
+    node_id: &str,
+    callback_id: &str,
+    source: &str,
 ) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(table_id_value) = binary_str(table_id_ptr, table_id_len) else {
-        return 0;
-    };
-    let Some(row_id_value) = binary_str(row_id_ptr, row_id_len) else {
-        return 0;
-    };
-    let Some(column_id_value) = binary_str(column_id_ptr, column_id_len) else {
-        return 0;
-    };
-    let Some(event_name) = data_table_event_name(event_code) else {
-        return 0;
-    };
-    #[cfg(not(test))]
-    let _ = event_name;
-
-    let row_id_option = if row_id_value.is_empty() {
-        None
-    } else {
-        Some(row_id_value.as_str())
-    };
-    let column_id_option = if column_id_value.is_empty() {
-        None
-    } else {
-        Some(column_id_value.as_str())
-    };
-
-    #[cfg(test)]
-    {
-        record_semantic_event_snapshot_for_test(
-            event_name,
-            view_id,
-            node_id,
-            callback_id,
-            Some(table_id_value),
-            row_id_option.map(str::to_owned),
-            column_id_option.map(str::to_owned),
-            None,
-            None,
-        );
-        record_event_send(Instant::now(), false);
-        0
-    }
-
-    #[cfg(not(test))]
-    send_event(view_id, data_table_event_atom(event_code), move |env| {
-        data_table_payload_map(
+    send_event(view_id, event, move |env| {
+        base_payload_with_one_map(
             env,
-            &node_id,
-            &callback_id,
-            &table_id_value,
-            row_id_option,
-            column_id_option,
-        )
-    })
-}
-
-#[allow(clippy::too_many_arguments)]
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_tree_event(
-    view_id: u64,
-    event_code: i32,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    tree_id_ptr: *const u8,
-    tree_id_len: usize,
-    item_id_ptr: *const u8,
-    item_id_len: usize,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(tree_id_value) = binary_str(tree_id_ptr, tree_id_len) else {
-        return 0;
-    };
-    let Some(item_id_value) = binary_str(item_id_ptr, item_id_len) else {
-        return 0;
-    };
-    let Some(event_name) = tree_event_name(event_code) else {
-        return 0;
-    };
-    #[cfg(not(test))]
-    let _ = event_name;
-
-    #[cfg(test)]
-    {
-        record_semantic_event_snapshot_for_test(
-            event_name,
-            view_id,
             node_id,
             callback_id,
-            None,
-            None,
-            None,
-            Some(tree_id_value),
-            Some(item_id_value),
-        );
-        record_event_send(Instant::now(), false);
-        0
-    }
-
-    #[cfg(not(test))]
-    send_event(view_id, tree_event_atom(event_code), move |env| {
-        tree_payload_map(env, &node_id, &callback_id, &tree_id_value, &item_id_value)
+            (source_id().encode(env), source.encode(env)),
+        )
     })
 }
 
@@ -595,777 +961,50 @@ fn tree_event_atom(code: i32) -> Atom {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_close_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-) -> i32 {
-    send_id_callback_pointer_event(
-        view_id,
-        close,
-        node_id_ptr,
-        node_id_len,
-        callback_id_ptr,
-        callback_id_len,
-    )
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_hover_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    hovered_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_event(view_id, hover(), move |env| {
-        base_payload_with_one_map(
-            env,
-            &node_id,
-            &callback_id,
-            (hovered().encode(env), (hovered_value != 0).encode(env)),
-        )
-    })
-}
+    #[test]
+    fn basic_event_snapshots_cover_click_change_and_window_lifecycle_payloads() {
+        let _ = send_click_event(7, "button", "clicked");
+        let click = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(click.event, "click");
+        assert_eq!(click.view_id, 7);
+        assert_eq!(click.node_id.as_deref(), Some("button"));
+        assert_eq!(click.callback_id.as_deref(), Some("clicked"));
+        assert_eq!(click.value, None);
+        assert_eq!(click.checked, None);
 
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_focus_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-) -> i32 {
-    send_id_callback_pointer_event(
-        view_id,
-        focus,
-        node_id_ptr,
-        node_id_len,
-        callback_id_ptr,
-        callback_id_len,
-    )
-}
+        let _ = send_checkbox_change_event(8, "done", "toggle_done", true);
+        let checkbox = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(checkbox.event, "change");
+        assert_eq!(checkbox.view_id, 8);
+        assert_eq!(checkbox.node_id.as_deref(), Some("done"));
+        assert_eq!(checkbox.callback_id.as_deref(), Some("toggle_done"));
+        assert_eq!(checkbox.checked, Some(true));
 
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_blur_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-) -> i32 {
-    send_id_callback_pointer_event(
-        view_id,
-        blur,
-        node_id_ptr,
-        node_id_len,
-        callback_id_ptr,
-        callback_id_len,
-    )
-}
+        let _ = send_change_event(9, "name", "name_changed", "Jason");
+        let change = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(change.event, "change");
+        assert_eq!(change.view_id, 9);
+        assert_eq!(change.node_id.as_deref(), Some("name"));
+        assert_eq!(change.callback_id.as_deref(), Some("name_changed"));
+        assert_eq!(change.value.as_deref(), Some("Jason"));
+        assert_eq!(change.checked, None);
 
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_change_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    value_ptr: *const u8,
-    value_len: usize,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(value_string) = binary_str(value_ptr, value_len) else {
-        return 0;
-    };
-    send_event(view_id, change(), move |env| {
-        base_payload_with_one_map(
-            env,
-            &node_id,
-            &callback_id,
-            (value().encode(env), value_string.encode(env)),
-        )
-    })
-}
+        let _ = send_window_close_requested_event(10);
+        let requested = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(requested.event, "window_close_requested");
+        assert_eq!(requested.view_id, 10);
+        assert_eq!(requested.node_id, None);
+        assert_eq!(requested.callback_id, None);
 
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_checkbox_change_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    checked_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_event(view_id, change(), move |env| {
-        base_payload_with_one_map(
-            env,
-            &node_id,
-            &callback_id,
-            (checked().encode(env), (checked_value != 0).encode(env)),
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_row_control_change_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    list_id_ptr: *const u8,
-    list_id_len: usize,
-    row_id_ptr: *const u8,
-    row_id_len: usize,
-    control_id_ptr: *const u8,
-    control_id_len: usize,
-    value_ptr: *const u8,
-    value_len: usize,
-) -> i32 {
-    let Some((node_id, callback_id, list_id_value, row_id_value, control_id_value)) =
-        row_control_strings(
-            node_id_ptr,
-            node_id_len,
-            callback_id_ptr,
-            callback_id_len,
-            list_id_ptr,
-            list_id_len,
-            row_id_ptr,
-            row_id_len,
-            control_id_ptr,
-            control_id_len,
-        )
-    else {
-        return 0;
-    };
-    let Some(value_string) = binary_str(value_ptr, value_len) else {
-        return 0;
-    };
-
-    #[cfg(test)]
-    {
-        record_row_control_event_snapshot_for_test(
-            "change",
-            view_id,
-            node_id,
-            callback_id,
-            list_id_value,
-            row_id_value,
-            control_id_value,
-            Some(value_string),
-            None,
-        );
-        record_event_send(Instant::now(), false);
-        0
+        let _ = send_window_closed_event(11);
+        let closed = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(closed.event, "window_closed");
+        assert_eq!(closed.view_id, 11);
+        assert_eq!(closed.node_id, None);
+        assert_eq!(closed.callback_id, None);
     }
-
-    #[cfg(not(test))]
-    send_event(view_id, change(), move |env| {
-        row_control_payload_with_one_map(
-            env,
-            &node_id,
-            &callback_id,
-            &list_id_value,
-            &row_id_value,
-            &control_id_value,
-            (value().encode(env), value_string.encode(env)),
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_row_control_checkbox_change_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    list_id_ptr: *const u8,
-    list_id_len: usize,
-    row_id_ptr: *const u8,
-    row_id_len: usize,
-    control_id_ptr: *const u8,
-    control_id_len: usize,
-    checked_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id, list_id_value, row_id_value, control_id_value)) =
-        row_control_strings(
-            node_id_ptr,
-            node_id_len,
-            callback_id_ptr,
-            callback_id_len,
-            list_id_ptr,
-            list_id_len,
-            row_id_ptr,
-            row_id_len,
-            control_id_ptr,
-            control_id_len,
-        )
-    else {
-        return 0;
-    };
-
-    #[cfg(test)]
-    {
-        record_row_control_event_snapshot_for_test(
-            "change",
-            view_id,
-            node_id,
-            callback_id,
-            list_id_value,
-            row_id_value,
-            control_id_value,
-            None,
-            Some(checked_value != 0),
-        );
-        record_event_send(Instant::now(), false);
-        0
-    }
-
-    #[cfg(not(test))]
-    send_event(view_id, change(), move |env| {
-        row_control_payload_with_one_map(
-            env,
-            &node_id,
-            &callback_id,
-            &list_id_value,
-            &row_id_value,
-            &control_id_value,
-            (checked().encode(env), (checked_value != 0).encode(env)),
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_key_down_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    key_ptr: *const u8,
-    key_len: usize,
-    key_char_ptr: *const u8,
-    key_char_len: usize,
-    has_key_char: i32,
-    is_held_value: i32,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(key_string) = binary_str(key_ptr, key_len) else {
-        return 0;
-    };
-    let key_char_string = optional_binary_str(has_key_char, key_char_ptr, key_char_len);
-    send_event(view_id, key_down(), move |env| {
-        let key_char_term = optional_str_term(env, key_char_string.as_deref());
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (key().encode(env), key_string.encode(env)),
-                (key_char().encode(env), key_char_term),
-                (is_held().encode(env), (is_held_value != 0).encode(env)),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_key_up_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    key_ptr: *const u8,
-    key_len: usize,
-    key_char_ptr: *const u8,
-    key_char_len: usize,
-    has_key_char: i32,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(key_string) = binary_str(key_ptr, key_len) else {
-        return 0;
-    };
-    let key_char_string = optional_binary_str(has_key_char, key_char_ptr, key_char_len);
-    send_event(view_id, key_up(), move |env| {
-        let key_char_term = optional_str_term(env, key_char_string.as_deref());
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (key().encode(env), key_string.encode(env)),
-                (key_char().encode(env), key_char_term),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_action_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    action_ptr: *const u8,
-    action_len: usize,
-    shortcut_ptr: *const u8,
-    shortcut_len: usize,
-    key_ptr: *const u8,
-    key_len: usize,
-    key_char_ptr: *const u8,
-    key_char_len: usize,
-    has_key_char: i32,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(action_string) = binary_str(action_ptr, action_len) else {
-        return 0;
-    };
-    let Some(shortcut_string) = binary_str(shortcut_ptr, shortcut_len) else {
-        return 0;
-    };
-    let Some(key_string) = binary_str(key_ptr, key_len) else {
-        return 0;
-    };
-    let key_char_string = optional_binary_str(has_key_char, key_char_ptr, key_char_len);
-    send_event(view_id, action(), move |env| {
-        let key_char_term = optional_str_term(env, key_char_string.as_deref());
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (action().encode(env), action_string.encode(env)),
-                (shortcut().encode(env), shortcut_string.encode(env)),
-                (key().encode(env), key_string.encode(env)),
-                (key_char().encode(env), key_char_term),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_context_menu_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    event_x: f64,
-    event_y: f64,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_event(view_id, context_menu(), move |env| {
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (x().encode(env), event_x.encode(env)),
-                (y().encode(env), event_y.encode(env)),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-fn source_event(
-    view_id: u64,
-    event: Atom,
-    node_id: String,
-    callback_id: String,
-    source: String,
-) -> i32 {
-    send_event(view_id, event, move |env| {
-        base_payload_with_one_map(
-            env,
-            &node_id,
-            &callback_id,
-            (source_id().encode(env), source.encode(env)),
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_drag_start_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    source_id_ptr: *const u8,
-    source_id_len: usize,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(source) = binary_str(source_id_ptr, source_id_len) else {
-        return 0;
-    };
-    source_event(view_id, drag_start(), node_id, callback_id, source)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_drop_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    source_id_ptr: *const u8,
-    source_id_len: usize,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(source) = binary_str(source_id_ptr, source_id_len) else {
-        return 0;
-    };
-    source_event(view_id, drop(), node_id, callback_id, source)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_drag_move_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    source_id_ptr: *const u8,
-    source_id_len: usize,
-    pressed_button_code: i32,
-    event_x: f64,
-    event_y: f64,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    let Some(source) = binary_str(source_id_ptr, source_id_len) else {
-        return 0;
-    };
-    send_event(view_id, drag_move(), move |env| {
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (source_id().encode(env), source.encode(env)),
-                (
-                    pressed_button().encode(env),
-                    mouse_button_atom(pressed_button_code).encode(env),
-                ),
-                (x().encode(env), event_x.encode(env)),
-                (y().encode(env), event_y.encode(env)),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_mouse_down_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    button_code: i32,
-    event_x: f64,
-    event_y: f64,
-    click_count_value: u64,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-    first_mouse_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_event(view_id, mouse_down(), move |env| {
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (
-                    button().encode(env),
-                    mouse_button_atom(button_code).encode(env),
-                ),
-                (x().encode(env), event_x.encode(env)),
-                (y().encode(env), event_y.encode(env)),
-                (click_count().encode(env), click_count_value.encode(env)),
-                (
-                    first_mouse().encode(env),
-                    (first_mouse_value != 0).encode(env),
-                ),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_mouse_up_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    button_code: i32,
-    event_x: f64,
-    event_y: f64,
-    click_count_value: u64,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_event(view_id, mouse_up(), move |env| {
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (
-                    button().encode(env),
-                    mouse_button_atom(button_code).encode(env),
-                ),
-                (x().encode(env), event_x.encode(env)),
-                (y().encode(env), event_y.encode(env)),
-                (click_count().encode(env), click_count_value.encode(env)),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_mouse_move_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    pressed_button_code: i32,
-    event_x: f64,
-    event_y: f64,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_event(view_id, mouse_move(), move |env| {
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (
-                    pressed_button().encode(env),
-                    mouse_button_atom(pressed_button_code).encode(env),
-                ),
-                (x().encode(env), event_x.encode(env)),
-                (y().encode(env), event_y.encode(env)),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_scroll_wheel_event(
-    view_id: u64,
-    node_id_ptr: *const u8,
-    node_id_len: usize,
-    callback_id_ptr: *const u8,
-    callback_id_len: usize,
-    event_x: f64,
-    event_y: f64,
-    delta_kind_code: i32,
-    delta_x_value: f64,
-    delta_y_value: f64,
-    control_value: i32,
-    alt_value: i32,
-    shift_value: i32,
-    platform_value: i32,
-    function_value: i32,
-) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_event(view_id, scroll_wheel(), move |env| {
-        map_from_pairs(
-            env,
-            [
-                (id().encode(env), node_id.encode(env)),
-                (callback().encode(env), callback_id.encode(env)),
-                (x().encode(env), event_x.encode(env)),
-                (y().encode(env), event_y.encode(env)),
-                (
-                    delta_kind().encode(env),
-                    if delta_kind_code == 1 {
-                        pixels()
-                    } else {
-                        lines()
-                    }
-                    .encode(env),
-                ),
-                (delta_x().encode(env), delta_x_value.encode(env)),
-                (delta_y().encode(env), delta_y_value.encode(env)),
-                modifiers_pair(
-                    env,
-                    control_value,
-                    alt_value,
-                    shift_value,
-                    platform_value,
-                    function_value,
-                ),
-            ],
-        )
-    })
 }

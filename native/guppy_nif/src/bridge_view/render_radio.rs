@@ -4,23 +4,11 @@ use super::{
     render_pass::RenderPass,
     style::{apply_div_style, apply_refinement_style},
 };
-use crate::ir::RadioNode;
+use crate::{ir::RadioNode, native_events};
 use gpui::{
     AnyElement, Context, InteractiveElement, IntoElement, KeyDownEvent, ParentElement,
     StatefulInteractiveElement, Styled, Window, div, px, rgb,
 };
-
-unsafe extern "C" {
-    fn guppy_c_send_change_event(
-        view_id: u64,
-        node_id_ptr: *const u8,
-        node_id_len: usize,
-        callback_id_ptr: *const u8,
-        callback_id_len: usize,
-        value_ptr: *const u8,
-        value_len: usize,
-    ) -> i32;
-}
 
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
@@ -167,19 +155,7 @@ pub(crate) fn radio_label(node: &RadioNode) -> AnyElement {
 }
 
 fn emit_radio_change(view_id: u64, node_id: &str, callback_id: &str, value: &str) {
-    // SAFETY: the FFI call copies the provided string bytes before returning; node_id,
-    // callback_id, and value are valid Rust string slices for the duration of the call.
-    unsafe {
-        let _ = guppy_c_send_change_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            value.as_ptr(),
-            value.len(),
-        );
-    }
+    let _ = native_events::send_change_event(view_id, node_id, callback_id, value);
 }
 
 pub(crate) fn is_radio_toggle_key(event: &KeyDownEvent) -> bool {

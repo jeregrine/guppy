@@ -1,4 +1,11 @@
-use crate::ir::ShortcutBinding;
+use crate::{
+    ir::ShortcutBinding,
+    native_events::{
+        self, ActionEventPayload, ContextMenuEventPayload, DragMoveEventPayload, EventModifiers,
+        KeyEventPayload, MouseDownEventPayload, MouseMoveEventPayload, MouseUpEventPayload,
+        ScrollWheelEventPayload,
+    },
+};
 use gpui::{
     KeyDownEvent, KeyUpEvent, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     Pixels, ScrollDelta, ScrollWheelEvent,
@@ -17,328 +24,8 @@ pub(crate) struct RowControlEventContext {
     pub control_id: String,
 }
 
-mod ffi {
-    // SAFETY: these declarations match the Rust NIF event bridge functions exported from
-    // native/guppy_nif/src/lib.rs. Callers pass borrowed Rust string bytes that are copied by
-    // the callee during the call.
-    unsafe extern "C" {
-        pub(super) fn guppy_c_send_click_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_row_control_click_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            list_id_ptr: *const u8,
-            list_id_len: usize,
-            row_id_ptr: *const u8,
-            row_id_len: usize,
-            control_id_ptr: *const u8,
-            control_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_data_table_event(
-            view_id: u64,
-            event_code: i32,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            table_id_ptr: *const u8,
-            table_id_len: usize,
-            row_id_ptr: *const u8,
-            row_id_len: usize,
-            column_id_ptr: *const u8,
-            column_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_tree_event(
-            view_id: u64,
-            event_code: i32,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            tree_id_ptr: *const u8,
-            tree_id_len: usize,
-            item_id_ptr: *const u8,
-            item_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_close_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_hover_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            hovered: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_focus_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_blur_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_change_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            value_ptr: *const u8,
-            value_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_row_control_change_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            list_id_ptr: *const u8,
-            list_id_len: usize,
-            row_id_ptr: *const u8,
-            row_id_len: usize,
-            control_id_ptr: *const u8,
-            control_id_len: usize,
-            value_ptr: *const u8,
-            value_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_row_control_checkbox_change_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            list_id_ptr: *const u8,
-            list_id_len: usize,
-            row_id_ptr: *const u8,
-            row_id_len: usize,
-            control_id_ptr: *const u8,
-            control_id_len: usize,
-            checked: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_key_down_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            key_ptr: *const u8,
-            key_len: usize,
-            key_char_ptr: *const u8,
-            key_char_len: usize,
-            has_key_char: i32,
-            is_held: i32,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_key_up_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            key_ptr: *const u8,
-            key_len: usize,
-            key_char_ptr: *const u8,
-            key_char_len: usize,
-            has_key_char: i32,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_action_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            action_ptr: *const u8,
-            action_len: usize,
-            shortcut_ptr: *const u8,
-            shortcut_len: usize,
-            key_ptr: *const u8,
-            key_len: usize,
-            key_char_ptr: *const u8,
-            key_char_len: usize,
-            has_key_char: i32,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_context_menu_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            x: f64,
-            y: f64,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_drag_start_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            source_id_ptr: *const u8,
-            source_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_drag_move_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            source_id_ptr: *const u8,
-            source_id_len: usize,
-            pressed_button_code: i32,
-            x: f64,
-            y: f64,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_drop_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            source_id_ptr: *const u8,
-            source_id_len: usize,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_mouse_down_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            button_code: i32,
-            x: f64,
-            y: f64,
-            click_count: u64,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-            first_mouse: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_mouse_up_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            button_code: i32,
-            x: f64,
-            y: f64,
-            click_count: u64,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_mouse_move_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            pressed_button_code: i32,
-            x: f64,
-            y: f64,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-
-        pub(super) fn guppy_c_send_scroll_wheel_event(
-            view_id: u64,
-            node_id_ptr: *const u8,
-            node_id_len: usize,
-            callback_id_ptr: *const u8,
-            callback_id_len: usize,
-            x: f64,
-            y: f64,
-            delta_kind_code: i32,
-            delta_x: f64,
-            delta_y: f64,
-            control: i32,
-            alt: i32,
-            shift: i32,
-            platform: i32,
-            function: i32,
-        ) -> i32;
-    }
-}
-
 pub(crate) fn emit_click(view_id: u64, node_id: &str, callback_id: &str) {
-    unsafe {
-        let _ = ffi::guppy_c_send_click_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-        );
-    }
+    let _ = native_events::send_click_event(view_id, node_id, callback_id);
 }
 
 pub(crate) fn emit_row_control_click(
@@ -346,21 +33,14 @@ pub(crate) fn emit_row_control_click(
     context: &RowControlEventContext,
     callback_id: &str,
 ) {
-    unsafe {
-        let _ = ffi::guppy_c_send_row_control_click_event(
-            view_id,
-            context.node_id.as_ptr(),
-            context.node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            context.list_id.as_ptr(),
-            context.list_id.len(),
-            context.row_id.as_ptr(),
-            context.row_id.len(),
-            context.control_id.as_ptr(),
-            context.control_id.len(),
-        );
-    }
+    let _ = native_events::send_row_control_click_event(
+        view_id,
+        &context.node_id,
+        callback_id,
+        &context.list_id,
+        &context.row_id,
+        &context.control_id,
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -373,25 +53,15 @@ pub(crate) fn emit_data_table_event(
     row_id: Option<&str>,
     column_id: Option<&str>,
 ) {
-    let row_id = row_id.unwrap_or("");
-    let column_id = column_id.unwrap_or("");
-
-    unsafe {
-        let _ = ffi::guppy_c_send_data_table_event(
-            view_id,
-            event_code,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            table_id.as_ptr(),
-            table_id.len(),
-            row_id.as_ptr(),
-            row_id.len(),
-            column_id.as_ptr(),
-            column_id.len(),
-        );
-    }
+    let _ = native_events::send_data_table_event(
+        view_id,
+        event_code,
+        node_id,
+        callback_id,
+        table_id,
+        row_id,
+        column_id,
+    );
 }
 
 pub(crate) fn emit_tree_event(
@@ -402,20 +72,8 @@ pub(crate) fn emit_tree_event(
     tree_id: &str,
     item_id: &str,
 ) {
-    unsafe {
-        let _ = ffi::guppy_c_send_tree_event(
-            view_id,
-            event_code,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            tree_id.as_ptr(),
-            tree_id.len(),
-            item_id.as_ptr(),
-            item_id.len(),
-        );
-    }
+    let _ =
+        native_events::send_tree_event(view_id, event_code, node_id, callback_id, tree_id, item_id);
 }
 
 pub(crate) fn emit_row_control_change(
@@ -424,23 +82,15 @@ pub(crate) fn emit_row_control_change(
     callback_id: &str,
     value: &str,
 ) {
-    unsafe {
-        let _ = ffi::guppy_c_send_row_control_change_event(
-            view_id,
-            context.node_id.as_ptr(),
-            context.node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            context.list_id.as_ptr(),
-            context.list_id.len(),
-            context.row_id.as_ptr(),
-            context.row_id.len(),
-            context.control_id.as_ptr(),
-            context.control_id.len(),
-            value.as_ptr(),
-            value.len(),
-        );
-    }
+    let _ = native_events::send_row_control_change_event(
+        view_id,
+        &context.node_id,
+        callback_id,
+        &context.list_id,
+        &context.row_id,
+        &context.control_id,
+        value,
+    );
 }
 
 pub(crate) fn emit_row_control_checkbox_change(
@@ -449,140 +99,63 @@ pub(crate) fn emit_row_control_checkbox_change(
     callback_id: &str,
     checked: bool,
 ) {
-    unsafe {
-        let _ = ffi::guppy_c_send_row_control_checkbox_change_event(
-            view_id,
-            context.node_id.as_ptr(),
-            context.node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            context.list_id.as_ptr(),
-            context.list_id.len(),
-            context.row_id.as_ptr(),
-            context.row_id.len(),
-            context.control_id.as_ptr(),
-            context.control_id.len(),
-            if checked { 1 } else { 0 },
-        );
-    }
+    let _ = native_events::send_row_control_checkbox_change_event(
+        view_id,
+        &context.node_id,
+        callback_id,
+        &context.list_id,
+        &context.row_id,
+        &context.control_id,
+        checked,
+    );
 }
 
 pub(crate) fn emit_close(view_id: u64, node_id: &str, callback_id: &str) {
-    unsafe {
-        let _ = ffi::guppy_c_send_close_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-        );
-    }
+    let _ = native_events::send_close_event(view_id, node_id, callback_id);
 }
 
 pub(crate) fn emit_hover(view_id: u64, node_id: &str, callback_id: &str, hovered: bool) {
-    unsafe {
-        let _ = ffi::guppy_c_send_hover_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            if hovered { 1 } else { 0 },
-        );
-    }
+    let _ = native_events::send_hover_event(view_id, node_id, callback_id, hovered);
 }
 
 pub(crate) fn emit_focus(view_id: u64, node_id: &str, callback_id: &str) {
-    unsafe {
-        let _ = ffi::guppy_c_send_focus_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-        );
-    }
+    let _ = native_events::send_focus_event(view_id, node_id, callback_id);
 }
 
 pub(crate) fn emit_blur(view_id: u64, node_id: &str, callback_id: &str) {
-    unsafe {
-        let _ = ffi::guppy_c_send_blur_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-        );
-    }
+    let _ = native_events::send_blur_event(view_id, node_id, callback_id);
 }
 
 pub(crate) fn emit_change(view_id: u64, node_id: &str, callback_id: &str, value: &str) {
-    unsafe {
-        let _ = ffi::guppy_c_send_change_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            value.as_ptr(),
-            value.len(),
-        );
-    }
+    let _ = native_events::send_change_event(view_id, node_id, callback_id, value);
 }
 
 pub(crate) fn emit_key_down(view_id: u64, node_id: &str, callback_id: &str, event: &KeyDownEvent) {
-    let key = event.keystroke.key.as_bytes();
-    let (key_char_ptr, key_char_len, has_key_char) =
-        key_char_parts(event.keystroke.key_char.as_ref());
-    let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_key_down_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            key.as_ptr(),
-            key.len(),
-            key_char_ptr,
-            key_char_len,
-            has_key_char,
-            if event.is_held { 1 } else { 0 },
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+    let _ = native_events::send_key_down_event(
+        view_id,
+        node_id,
+        callback_id,
+        KeyEventPayload {
+            key: event.keystroke.key.as_str(),
+            key_char: key_char(event.keystroke.key_char.as_ref()),
+            is_held: event.is_held,
+            modifiers: modifier_flags(&event.keystroke.modifiers),
+        },
+    );
 }
 
 pub(crate) fn emit_key_up(view_id: u64, node_id: &str, callback_id: &str, event: &KeyUpEvent) {
-    let key = event.keystroke.key.as_bytes();
-    let (key_char_ptr, key_char_len, has_key_char) =
-        key_char_parts(event.keystroke.key_char.as_ref());
-    let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_key_up_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            key.as_ptr(),
-            key.len(),
-            key_char_ptr,
-            key_char_len,
-            has_key_char,
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+    let _ = native_events::send_key_up_event(
+        view_id,
+        node_id,
+        callback_id,
+        KeyEventPayload {
+            key: event.keystroke.key.as_str(),
+            key_char: key_char(event.keystroke.key_char.as_ref()),
+            is_held: false,
+            modifiers: modifier_flags(&event.keystroke.modifiers),
+        },
+    );
 }
 
 pub(crate) fn emit_action(
@@ -591,34 +164,18 @@ pub(crate) fn emit_action(
     shortcut: &ShortcutBinding,
     event: &KeyDownEvent,
 ) {
-    let key = event.keystroke.key.as_bytes();
-    let (key_char_ptr, key_char_len, has_key_char) =
-        key_char_parts(event.keystroke.key_char.as_ref());
-    let (control, alt, shift, platform, function) = modifier_flags(&event.keystroke.modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_action_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            shortcut.callback.as_ptr(),
-            shortcut.callback.len(),
-            shortcut.action.as_ptr(),
-            shortcut.action.len(),
-            shortcut.shortcut.as_ptr(),
-            shortcut.shortcut.len(),
-            key.as_ptr(),
-            key.len(),
-            key_char_ptr,
-            key_char_len,
-            has_key_char,
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+    let _ = native_events::send_action_event(
+        view_id,
+        node_id,
+        &shortcut.callback,
+        ActionEventPayload {
+            action: &shortcut.action,
+            shortcut: &shortcut.shortcut,
+            key: event.keystroke.key.as_str(),
+            key_char: key_char(event.keystroke.key_char.as_ref()),
+            modifiers: modifier_flags(&event.keystroke.modifiers),
+        },
+    );
 }
 
 pub(crate) fn emit_context_menu(
@@ -627,38 +184,20 @@ pub(crate) fn emit_context_menu(
     callback_id: &str,
     event: &MouseDownEvent,
 ) {
-    let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_context_menu_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            pixel_to_f64(event.position.x),
-            pixel_to_f64(event.position.y),
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+    let _ = native_events::send_context_menu_event(
+        view_id,
+        node_id,
+        callback_id,
+        ContextMenuEventPayload {
+            x: pixel_to_f64(event.position.x),
+            y: pixel_to_f64(event.position.y),
+            modifiers: modifier_flags(&event.modifiers),
+        },
+    );
 }
 
 pub(crate) fn emit_drag_start(view_id: u64, node_id: &str, callback_id: &str, source_id: &str) {
-    unsafe {
-        let _ = ffi::guppy_c_send_drag_start_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            source_id.as_ptr(),
-            source_id.len(),
-        );
-    }
+    let _ = native_events::send_drag_start_event(view_id, node_id, callback_id, source_id);
 }
 
 pub(crate) fn emit_drag_move(
@@ -670,41 +209,22 @@ pub(crate) fn emit_drag_move(
     position: gpui::Point<Pixels>,
     modifiers: &Modifiers,
 ) {
-    let (control, alt, shift, platform, function) = modifier_flags(modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_drag_move_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            source_id.as_ptr(),
-            source_id.len(),
-            optional_mouse_button_code(pressed_button),
-            pixel_to_f64(position.x),
-            pixel_to_f64(position.y),
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+    let _ = native_events::send_drag_move_event(
+        view_id,
+        node_id,
+        callback_id,
+        DragMoveEventPayload {
+            source_id,
+            pressed_button_code: optional_mouse_button_code(pressed_button),
+            x: pixel_to_f64(position.x),
+            y: pixel_to_f64(position.y),
+            modifiers: modifier_flags(modifiers),
+        },
+    );
 }
 
 pub(crate) fn emit_drop(view_id: u64, node_id: &str, callback_id: &str, source_id: &str) {
-    unsafe {
-        let _ = ffi::guppy_c_send_drop_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            source_id.as_ptr(),
-            source_id.len(),
-        );
-    }
+    let _ = native_events::send_drop_event(view_id, node_id, callback_id, source_id);
 }
 
 pub(crate) fn emit_mouse_down(
@@ -713,50 +233,34 @@ pub(crate) fn emit_mouse_down(
     callback_id: &str,
     event: &MouseDownEvent,
 ) {
-    let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_mouse_down_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            mouse_button_code(event.button),
-            pixel_to_f64(event.position.x),
-            pixel_to_f64(event.position.y),
-            event.click_count as u64,
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-            if event.first_mouse { 1 } else { 0 },
-        );
-    }
+    let _ = native_events::send_mouse_down_event(
+        view_id,
+        node_id,
+        callback_id,
+        MouseDownEventPayload {
+            button_code: mouse_button_code(event.button),
+            x: pixel_to_f64(event.position.x),
+            y: pixel_to_f64(event.position.y),
+            click_count: event.click_count as u64,
+            modifiers: modifier_flags(&event.modifiers),
+            first_mouse: event.first_mouse,
+        },
+    );
 }
 
 pub(crate) fn emit_mouse_up(view_id: u64, node_id: &str, callback_id: &str, event: &MouseUpEvent) {
-    let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_mouse_up_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            mouse_button_code(event.button),
-            pixel_to_f64(event.position.x),
-            pixel_to_f64(event.position.y),
-            event.click_count as u64,
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+    let _ = native_events::send_mouse_up_event(
+        view_id,
+        node_id,
+        callback_id,
+        MouseUpEventPayload {
+            button_code: mouse_button_code(event.button),
+            x: pixel_to_f64(event.position.x),
+            y: pixel_to_f64(event.position.y),
+            click_count: event.click_count as u64,
+            modifiers: modifier_flags(&event.modifiers),
+        },
+    );
 }
 
 pub(crate) fn emit_mouse_move(
@@ -765,25 +269,17 @@ pub(crate) fn emit_mouse_move(
     callback_id: &str,
     event: &MouseMoveEvent,
 ) {
-    let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
-
-    unsafe {
-        let _ = ffi::guppy_c_send_mouse_move_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            optional_mouse_button_code(event.pressed_button),
-            pixel_to_f64(event.position.x),
-            pixel_to_f64(event.position.y),
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+    let _ = native_events::send_mouse_move_event(
+        view_id,
+        node_id,
+        callback_id,
+        MouseMoveEventPayload {
+            pressed_button_code: optional_mouse_button_code(event.pressed_button),
+            x: pixel_to_f64(event.position.x),
+            y: pixel_to_f64(event.position.y),
+            modifiers: modifier_flags(&event.modifiers),
+        },
+    );
 }
 
 pub(crate) fn emit_scroll_wheel(
@@ -793,27 +289,20 @@ pub(crate) fn emit_scroll_wheel(
     event: &ScrollWheelEvent,
 ) {
     let (delta_kind_code, delta_x, delta_y) = scroll_delta_parts(event.delta);
-    let (control, alt, shift, platform, function) = modifier_flags(&event.modifiers);
 
-    unsafe {
-        let _ = ffi::guppy_c_send_scroll_wheel_event(
-            view_id,
-            node_id.as_ptr(),
-            node_id.len(),
-            callback_id.as_ptr(),
-            callback_id.len(),
-            pixel_to_f64(event.position.x),
-            pixel_to_f64(event.position.y),
+    let _ = native_events::send_scroll_wheel_event(
+        view_id,
+        node_id,
+        callback_id,
+        ScrollWheelEventPayload {
+            x: pixel_to_f64(event.position.x),
+            y: pixel_to_f64(event.position.y),
             delta_kind_code,
             delta_x,
             delta_y,
-            control,
-            alt,
-            shift,
-            platform,
-            function,
-        );
-    }
+            modifiers: modifier_flags(&event.modifiers),
+        },
+    );
 }
 
 pub(crate) fn matching_shortcut<'a>(
@@ -829,21 +318,18 @@ pub(crate) fn matching_shortcut<'a>(
         .find(|shortcut| event.keystroke.should_match(&shortcut.parsed))
 }
 
-fn modifier_flags(modifiers: &Modifiers) -> (i32, i32, i32, i32, i32) {
-    (
-        if modifiers.control { 1 } else { 0 },
-        if modifiers.alt { 1 } else { 0 },
-        if modifiers.shift { 1 } else { 0 },
-        if modifiers.platform { 1 } else { 0 },
-        if modifiers.function { 1 } else { 0 },
-    )
+fn modifier_flags(modifiers: &Modifiers) -> EventModifiers {
+    EventModifiers {
+        control: modifiers.control,
+        alt: modifiers.alt,
+        shift: modifiers.shift,
+        platform: modifiers.platform,
+        function: modifiers.function,
+    }
 }
 
-fn key_char_parts(key_char: Option<&String>) -> (*const u8, usize, i32) {
-    match key_char {
-        Some(key_char) => (key_char.as_ptr(), key_char.len(), 1),
-        None => (std::ptr::null(), 0, 0),
-    }
+fn key_char(key_char: Option<&String>) -> Option<&str> {
+    key_char.map(String::as_str)
 }
 
 fn pixel_to_f64(value: Pixels) -> f64 {
