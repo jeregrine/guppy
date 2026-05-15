@@ -551,18 +551,40 @@ defmodule Guppy.IR do
 
   @type canvas_color :: gradient_color()
 
-  @type canvas_command :: %{
-          required(:op) => :rect | :rounded_rect | :pattern_rect,
+  @type canvas_rect_command :: %{
+          required(:op) => :rect,
           required(:x) => number(),
           required(:y) => number(),
           required(:width) => number(),
           required(:height) => number(),
-          optional(:fill) => canvas_color(),
-          optional(:color) => canvas_color(),
-          optional(:line_width) => number(),
-          optional(:interval) => number(),
+          required(:fill) => canvas_color(),
           optional(:radius) => number()
         }
+
+  @type canvas_rounded_rect_command :: %{
+          required(:op) => :rounded_rect,
+          required(:x) => number(),
+          required(:y) => number(),
+          required(:width) => number(),
+          required(:height) => number(),
+          required(:fill) => canvas_color(),
+          required(:radius) => number()
+        }
+
+  @type canvas_pattern_rect_command :: %{
+          required(:op) => :pattern_rect,
+          required(:x) => number(),
+          required(:y) => number(),
+          required(:width) => number(),
+          required(:height) => number(),
+          required(:color) => canvas_color(),
+          required(:line_width) => number(),
+          required(:interval) => number(),
+          optional(:radius) => number()
+        }
+
+  @type canvas_command ::
+          canvas_rect_command() | canvas_rounded_rect_command() | canvas_pattern_rect_command()
 
   @type canvas_events :: %{optional(:click) => String.t()}
 
