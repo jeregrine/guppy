@@ -616,6 +616,17 @@ fn rejects_canvas_command_shape_mismatches() {
         (atom("kind"), atom("canvas")),
         (
             atom("commands"),
+            list(vec![map(vec![(atom("op"), atom("path"))])]),
+        ),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(err.contains("unsupported canvas command op: path"));
+
+    let node = map(vec![
+        (atom("kind"), atom("canvas")),
+        (
+            atom("commands"),
             list(vec![map(vec![
                 (atom("op"), atom("pattern_rect")),
                 (atom("x"), integer(0)),

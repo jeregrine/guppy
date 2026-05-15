@@ -1799,10 +1799,6 @@ fn get_canvas_commands_field(map: &HashMap<Term, Term>) -> Result<Arc<[CanvasCom
 fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
     let command = expect_map(term)?;
     let op = get_atom_field(command, "op")?;
-    let x = get_f32_field(command, "x")?;
-    let y = get_f32_field(command, "y")?;
-    let width = get_positive_f32_field(command, "width")?;
-    let height = get_positive_f32_field(command, "height")?;
 
     match op {
         "rect" => {
@@ -1811,6 +1807,7 @@ fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
                 &["op", "x", "y", "width", "height", "fill", "radius"],
                 "canvas rect command",
             )?;
+            let (x, y, width, height) = get_canvas_bounds(command)?;
             Ok(CanvasCommand::Rect {
                 x,
                 y,
@@ -1829,6 +1826,7 @@ fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
             if get_field(command, "radius").is_none() {
                 return Err("missing required field: radius".into());
             }
+            let (x, y, width, height) = get_canvas_bounds(command)?;
             Ok(CanvasCommand::Rect {
                 x,
                 y,
@@ -1854,6 +1852,7 @@ fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
                 ],
                 "canvas pattern_rect command",
             )?;
+            let (x, y, width, height) = get_canvas_bounds(command)?;
             Ok(CanvasCommand::PatternRect {
                 x,
                 y,
@@ -1867,6 +1866,15 @@ fn decode_canvas_command(term: &Term) -> Result<CanvasCommand, String> {
         }
         other => Err(format!("unsupported canvas command op: {other}")),
     }
+}
+
+fn get_canvas_bounds(map: &HashMap<Term, Term>) -> Result<(f32, f32, f32, f32), String> {
+    Ok((
+        get_f32_field(map, "x")?,
+        get_f32_field(map, "y")?,
+        get_positive_f32_field(map, "width")?,
+        get_positive_f32_field(map, "height")?,
+    ))
 }
 
 fn get_canvas_color_field(map: &HashMap<Term, Term>, key: &str) -> Result<StyleColor, String> {
