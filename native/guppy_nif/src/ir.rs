@@ -922,15 +922,26 @@ impl IrNode {
                     sort_callback: get_optional_event(map, "sort")?,
                 })))
             }
-            "tree" => Ok(Self::Tree(Box::new(TreeNode {
-                id,
-                nodes: get_tree_nodes_field(map)?,
-                style: get_div_style(map)?,
-                row_style: get_style_list_field(map, "row_style")?,
-                selected_id: get_optional_string_field(map, "selected_id")?,
-                select: get_optional_event(map, "select")?,
-                toggle: get_optional_event(map, "toggle")?,
-            }))),
+            "tree" => {
+                let (nodes, tree_ids) = get_tree_nodes_field(map)?;
+                let tree_id_refs = tree_ids.iter().map(|id| id.as_str()).collect::<HashSet<_>>();
+                let selected_id = get_optional_string_field(map, "selected_id")?;
+                ensure_optional_id_known(
+                    selected_id.as_deref(),
+                    &tree_id_refs,
+                    "unknown tree selected item",
+                )?;
+
+                Ok(Self::Tree(Box::new(TreeNode {
+                    id,
+                    nodes,
+                    style: get_div_style(map)?,
+                    row_style: get_style_list_field(map, "row_style")?,
+                    selected_id,
+                    select: get_optional_event(map, "select")?,
+                    toggle: get_optional_event(map, "toggle")?,
+                })))
+            }
             "canvas" => Ok(Self::Canvas(Box::new(CanvasNode {
                 id,
                 commands: get_canvas_commands_field(map)?,
@@ -1729,13 +1740,14 @@ fn get_data_table_sort_field(
     }))
 }
 
-fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[TreeItem]>, String> {
+fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<(Arc<[TreeItem]>, HashSet<String>), String> {
     let Some(nodes_term) = get_field(map, "nodes") else {
         return Err("missing required field: nodes".into());
     };
 
     let mut seen = HashSet::new();
-    get_tree_nodes(nodes_term, &mut seen)
+    let nodes = get_tree_nodes(nodes_term, &mut seen)?;
+    Ok((nodes, seen))
 }
 
 fn get_tree_nodes(term: &Term, seen: &mut HashSet<String>) -> Result<Arc<[TreeItem]>, String> {

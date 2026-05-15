@@ -1,7 +1,7 @@
 use super::{events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
 use crate::{
     bridge_view::BridgeView,
-    ir::{TreeItem, TreeNode},
+    ir::{DivStyle, TreeItem, TreeNode},
 };
 use gpui::{
     AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
@@ -12,13 +12,14 @@ use std::sync::Arc;
 const SELECT_EVENT: i32 = 1;
 const TOGGLE_EVENT: i32 = 2;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 struct VisibleTreeItem {
     id: String,
     label: String,
     depth: usize,
     expanded: bool,
     has_children: bool,
+    style: DivStyle,
 }
 
 pub(crate) fn render(
@@ -86,6 +87,7 @@ fn collect_visible_tree_items(
             depth,
             expanded: item.expanded,
             has_children,
+            style: item.style.clone(),
         });
 
         if item.expanded {
@@ -157,21 +159,57 @@ fn render_row(
         });
     }
 
-    apply_div_style(
+    apply_tree_row_styles(
         div()
             .id(SharedString::from(row_id))
             .flex()
             .flex_row()
             .children([disclosure.into_any_element(), label.into_any_element()]),
         row_style,
+        &item.style,
     )
     .into_any_element()
 }
 
+fn apply_tree_row_styles<E>(element: E, row_style: &DivStyle, item_style: &DivStyle) -> E
+where
+    E: Styled + StatefulInteractiveElement,
+{
+    let element = apply_div_style(element, row_style);
+    apply_div_style(element, item_style)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{SELECT_EVENT, TOGGLE_EVENT, flatten_visible_tree_items};
-    use crate::{bridge_view::events, ir::TreeItem};
+    use super::{SELECT_EVENT, TOGGLE_EVENT, apply_tree_row_styles, flatten_visible_tree_items};
+    use crate::{bridge_view::events, ir::{StyleOp, TreeItem}};
+    use gpui::{InteractiveElement, SharedString, Styled, div};
+
+    #[test]
+    fn flatten_visible_tree_items_carries_item_style_for_row_rendering() {
+        let visible = flatten_visible_tree_items(&[TreeItem {
+            id: "styled".into(),
+            label: "Styled".into(),
+            expanded: false,
+            style: vec![StyleOp::Opacity(0.75)].into(),
+            children: Vec::new().into(),
+        }]);
+
+        assert_eq!(visible[0].style.as_ref(), [StyleOp::Opacity(0.75)]);
+    }
+
+    #[test]
+    fn tree_row_styles_apply_row_style_then_item_style() {
+        let row_style = vec![StyleOp::Opacity(0.25)].into();
+        let item_style = vec![StyleOp::Opacity(0.75)].into();
+        let mut row = apply_tree_row_styles(
+            div().id(SharedString::from("tree.row.styled")),
+            &row_style,
+            &item_style,
+        );
+
+        assert_eq!(row.style().opacity, Some(0.75));
+    }
 
     #[test]
     fn flatten_visible_tree_items_only_includes_expanded_descendants() {

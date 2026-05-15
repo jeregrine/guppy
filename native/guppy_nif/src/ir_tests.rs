@@ -649,6 +649,21 @@ fn decodes_tree_node() {
 }
 
 #[test]
+fn rejects_tree_selected_id_that_is_not_in_decoded_nodes() {
+    let node = map(vec![
+        (atom("kind"), atom("tree")),
+        (
+            atom("nodes"),
+            list(vec![map(vec![(atom("id"), binary("root")), (atom("label"), binary("Root"))])]),
+        ),
+        (atom("selected_id"), binary("missing")),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(err.contains("unknown tree selected item: missing"));
+}
+
+#[test]
 fn decodes_canvas_commands() {
     let node = map(vec![
         (atom("kind"), atom("canvas")),
