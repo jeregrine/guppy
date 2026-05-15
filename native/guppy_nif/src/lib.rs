@@ -562,8 +562,8 @@ pub(crate) use native_events::{
     send_menu_action_event, send_window_close_requested_event, send_window_closed_event,
 };
 
-fn map_from_pairs<'a>(env: Env<'a>, pairs: Vec<(Term<'a>, Term<'a>)>) -> Term<'a> {
-    match Term::map_from_pairs(env, &pairs) {
+fn map_from_pairs<'a>(env: Env<'a>, pairs: impl AsRef<[(Term<'a>, Term<'a>)]>) -> Term<'a> {
+    match Term::map_from_pairs(env, pairs.as_ref()) {
         Ok(term) => term,
         Err(_) => rustler::types::atom::undefined().encode(env),
     }

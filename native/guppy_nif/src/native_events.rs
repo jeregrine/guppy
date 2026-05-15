@@ -176,7 +176,7 @@ fn modifiers_payload<'a>(
 ) -> Term<'a> {
     map_from_pairs(
         env,
-        vec![
+        [
             (control().encode(env), (control_value != 0).encode(env)),
             (alt().encode(env), (alt_value != 0).encode(env)),
             (shift().encode(env), (shift_value != 0).encode(env)),
