@@ -30,7 +30,7 @@ pub(crate) fn render(
     let list_id = format!("{table_id}.rows");
     let state = pass.retain_list_state(&list_id, table.rows.len());
     let columns = table.columns.clone();
-    let rows = table.rows.clone();
+    let rows = prepare_rows(table.columns.as_ref(), table.rows.as_ref());
     let row_style = table.row_style.clone();
     let cell_style = table.cell_style.clone();
     let row_click = table.row_click.clone();
@@ -133,7 +133,7 @@ fn render_header(
 fn render_row(
     view_id: u64,
     table_id: &str,
-    row: &DataTableRow,
+    row: &PreparedDataTableRow,
     columns: &[DataTableColumn],
     row_style: &DivStyle,
     cell_style: &DivStyle,
@@ -141,10 +141,15 @@ fn render_row(
     cell_click: Option<&str>,
 ) -> AnyElement {
     let row_id = format!("{table_id}.row.{}", row.id);
-    let ordered_cells = ordered_row_cells(columns, row);
-    let cells = columns.iter().zip(ordered_cells).map(|(column, cell)| {
+    let cells = columns.iter().zip(row.cells.iter()).map(|(column, cell)| {
         render_cell(
-            view_id, table_id, &row.id, column, cell, cell_style, cell_click,
+            view_id,
+            table_id,
+            &row.id,
+            column,
+            cell.as_ref(),
+            cell_style,
+            cell_click,
         )
     });
 
@@ -178,20 +183,43 @@ fn render_row(
     element.into_any_element()
 }
 
-fn ordered_row_cells<'a>(
-    columns: &[DataTableColumn],
-    row: &'a DataTableRow,
-) -> Vec<Option<&'a DataTableCell>> {
-    let cells_by_column = row
-        .cells
+#[derive(Debug)]
+struct PreparedDataTableRow {
+    id: String,
+    cells: Vec<Option<DataTableCell>>,
+    style: DivStyle,
+}
+
+fn prepare_rows(columns: &[DataTableColumn], rows: &[DataTableRow]) -> Vec<PreparedDataTableRow> {
+    let column_indices = columns
         .iter()
-        .map(|cell| (cell.column_id.as_str(), cell))
+        .enumerate()
+        .map(|(index, column)| (column.id.as_str(), index))
         .collect::<HashMap<_, _>>();
 
-    columns
-        .iter()
-        .map(|column| cells_by_column.get(column.id.as_str()).copied())
+    rows.iter()
+        .map(|row| PreparedDataTableRow {
+            id: row.id.clone(),
+            cells: ordered_row_cells(columns.len(), &column_indices, row),
+            style: row.style.clone(),
+        })
         .collect()
+}
+
+fn ordered_row_cells(
+    column_count: usize,
+    column_indices: &HashMap<&str, usize>,
+    row: &DataTableRow,
+) -> Vec<Option<DataTableCell>> {
+    let mut ordered_cells = vec![None; column_count];
+
+    for cell in row.cells.iter() {
+        if let Some(index) = column_indices.get(cell.column_id.as_str()) {
+            ordered_cells[*index] = Some(cell.clone());
+        }
+    }
+
+    ordered_cells
 }
 
 fn render_cell(
@@ -294,9 +322,7 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width, ordered_row_cells,
-    };
+    use super::{CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width, prepare_rows};
     use crate::{
         bridge_view::events,
         ir::{DataTableCell, DataTableColumn, DataTableColumnWidth, DataTableRow},
@@ -323,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn ordered_row_cells_follow_column_order_and_preserve_missing_cells() {
+    fn prepared_rows_follow_column_order_and_preserve_missing_cells() {
         let columns = vec![
             DataTableColumn {
                 id: "task".into(),
@@ -347,7 +373,7 @@ mod tests {
                 style: Vec::new().into(),
             },
         ];
-        let row = DataTableRow {
+        let rows = vec![DataTableRow {
             id: "row_1".into(),
             cells: vec![
                 DataTableCell {
@@ -363,14 +389,16 @@ mod tests {
             ]
             .into(),
             style: Vec::new().into(),
-        };
+        }];
 
-        let ordered = ordered_row_cells(&columns, &row);
+        let prepared = prepare_rows(&columns, &rows);
 
+        assert_eq!(prepared[0].id, "row_1");
         assert_eq!(
-            ordered
+            prepared[0]
+                .cells
                 .iter()
-                .map(|cell| cell.map(|cell| cell.column_id.as_str()))
+                .map(|cell| cell.as_ref().map(|cell| cell.column_id.as_str()))
                 .collect::<Vec<_>>(),
             [Some("task"), None, Some("status")]
         );

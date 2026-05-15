@@ -31,7 +31,7 @@ Context: retained text input is intentionally first-pass editor behavior, but co
 
 Context: the previous data-table cleanup removed per-cell scans, but rendered rows still build per-row lookup state.
 
-- [ ] Avoid allocating a `HashMap` for every visible data-table row render; decode or precompute cells in column order while preserving missing-cell behavior.
+- [x] Avoid allocating a `HashMap` for every visible data-table row render; decode or precompute cells in column order while preserving missing-cell behavior.
 
 ### Consolidate duplicated native decode/style code
 
