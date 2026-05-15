@@ -2820,22 +2820,20 @@ fn parse_style_color(term: &Term) -> Result<StyleColor, String> {
 }
 
 fn parse_hex_style_color(term: &Term) -> Result<u32, String> {
-    let value = term_to_string(term)?;
-
-    if is_hex_color(&value, false) {
-        Ok(hex_color_u24(&value))
-    } else {
-        Err(format!("invalid style hex color: {value}"))
-    }
+    parse_hex_color(term, false, "style hex color")
 }
 
 fn parse_strict_hex_color(term: &Term) -> Result<u32, String> {
+    parse_hex_color(term, true, "strict hex color")
+}
+
+fn parse_hex_color(term: &Term, require_hash: bool, context: &str) -> Result<u32, String> {
     let value = term_to_string(term)?;
 
-    if is_hex_color(&value, true) {
+    if is_hex_color(&value, require_hash) {
         Ok(hex_color_u24(&value))
     } else {
-        Err(format!("invalid strict hex color: {value}"))
+        Err(format!("invalid {context}: {value}"))
     }
 }
 
