@@ -350,6 +350,24 @@ defmodule Guppy.ComponentTest do
     end
   end
 
+  test "Guppy.Component rejects unsupported button event attributes" do
+    source = """
+    defmodule Guppy.BadButtonEventTemplate do
+      use Guppy.Component
+
+      def render(assigns) do
+        ~GUI\"\"\"
+        <button drag_start=\"start_drag\">Save</button>
+        \"\"\"
+      end
+    end
+    """
+
+    assert_raise CompileError, ~r/unsupported attribute \"drag_start\" on <button>/, fn ->
+      Code.compile_string(source)
+    end
+  end
+
   test "Guppy.Component prop declarations apply defaults and validate required and typed props" do
     assigns =
       Guppy.Component.validate_props!(Guppy.ComponentPropsExample, :render, %{

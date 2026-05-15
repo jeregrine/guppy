@@ -54,6 +54,18 @@ defmodule Guppy.Component.Compiler do
     "scroll_wheel"
   ]
   @text_events ["click"]
+  @button_events [
+    "click",
+    "hover",
+    "focus",
+    "blur",
+    "key_down",
+    "key_up",
+    "context_menu",
+    "mouse_down",
+    "mouse_up",
+    "mouse_move"
+  ]
   @checkbox_events ["change", "focus", "blur"]
   @radio_events ["change", "focus", "blur"]
   @select_events ["click", "change", "close", "focus", "blur"]
@@ -340,7 +352,7 @@ defmodule Guppy.Component.Compiler do
   defp compile_button(attrs, content, caller) do
     assert_allowed_attrs!(attrs, button_allowed_attrs(), "button", caller)
     label = build_string_content_ast(content, caller)
-    opts = build_div_like_opts(attrs, @div_events, @common_node_attrs, caller)
+    opts = build_div_like_opts(attrs, @button_events, @common_node_attrs, caller)
 
     quote do
       Guppy.IR.button(unquote(label), unquote(opts))
@@ -1429,7 +1441,7 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp button_allowed_attrs do
-    base_allowed_attrs() ++ Enum.map(@common_node_attrs, &elem(&1, 0)) ++ @div_events
+    base_allowed_attrs() ++ Enum.map(@common_node_attrs, &elem(&1, 0)) ++ @button_events
   end
 
   defp text_allowed_attrs do
