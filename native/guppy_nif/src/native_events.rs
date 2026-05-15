@@ -96,6 +96,7 @@ fn id_callback_strings(
     ))
 }
 
+#[cfg_attr(test, allow(dead_code))]
 fn base_payload_map<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Term<'a> {
     map_from_pairs(
         env,
@@ -224,15 +225,16 @@ fn mouse_button_atom(code: i32) -> Atom {
     }
 }
 
+#[cfg_attr(test, allow(dead_code))]
 fn send_id_callback_event(view_id: u64, event: Atom, node_id: String, callback_id: String) -> i32 {
     send_event(view_id, event, move |env| {
         base_payload_map(env, &node_id, &callback_id)
     })
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn guppy_c_send_click_event(
+fn send_id_callback_pointer_event(
     view_id: u64,
+    event: impl FnOnce() -> Atom,
     node_id_ptr: *const u8,
     node_id_len: usize,
     callback_id_ptr: *const u8,
@@ -246,13 +248,31 @@ pub extern "C" fn guppy_c_send_click_event(
 
     #[cfg(test)]
     {
-        let _ = (view_id, node_id, callback_id);
+        let _ = (view_id, event, node_id, callback_id);
         record_event_send(Instant::now(), false);
         0
     }
 
     #[cfg(not(test))]
-    send_id_callback_event(view_id, click(), node_id, callback_id)
+    send_id_callback_event(view_id, event(), node_id, callback_id)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn guppy_c_send_click_event(
+    view_id: u64,
+    node_id_ptr: *const u8,
+    node_id_len: usize,
+    callback_id_ptr: *const u8,
+    callback_id_len: usize,
+) -> i32 {
+    send_id_callback_pointer_event(
+        view_id,
+        click,
+        node_id_ptr,
+        node_id_len,
+        callback_id_ptr,
+        callback_id_len,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -522,12 +542,14 @@ pub extern "C" fn guppy_c_send_close_event(
     callback_id_ptr: *const u8,
     callback_id_len: usize,
 ) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_id_callback_event(view_id, close(), node_id, callback_id)
+    send_id_callback_pointer_event(
+        view_id,
+        close,
+        node_id_ptr,
+        node_id_len,
+        callback_id_ptr,
+        callback_id_len,
+    )
 }
 
 #[unsafe(no_mangle)]
@@ -559,12 +581,14 @@ pub extern "C" fn guppy_c_send_focus_event(
     callback_id_ptr: *const u8,
     callback_id_len: usize,
 ) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_id_callback_event(view_id, focus(), node_id, callback_id)
+    send_id_callback_pointer_event(
+        view_id,
+        focus,
+        node_id_ptr,
+        node_id_len,
+        callback_id_ptr,
+        callback_id_len,
+    )
 }
 
 #[unsafe(no_mangle)]
@@ -575,12 +599,14 @@ pub extern "C" fn guppy_c_send_blur_event(
     callback_id_ptr: *const u8,
     callback_id_len: usize,
 ) -> i32 {
-    let Some((node_id, callback_id)) =
-        id_callback_strings(node_id_ptr, node_id_len, callback_id_ptr, callback_id_len)
-    else {
-        return 0;
-    };
-    send_id_callback_event(view_id, blur(), node_id, callback_id)
+    send_id_callback_pointer_event(
+        view_id,
+        blur,
+        node_id_ptr,
+        node_id_len,
+        callback_id_ptr,
+        callback_id_len,
+    )
 }
 
 #[unsafe(no_mangle)]
