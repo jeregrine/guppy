@@ -27,7 +27,7 @@ pub(crate) fn send_menu_action_event(action_id: &str, callback_id: &str) -> i32 
 
     #[cfg(not(test))]
     send_event(0, menu_action(), move |env| {
-        map_from_pairs(env, base_payload(env, &action_id, &callback_id))
+        base_payload_map(env, &action_id, &callback_id)
     })
 }
 
@@ -96,8 +96,14 @@ fn id_callback_strings(
     ))
 }
 
-fn base_payload<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Vec<(Term<'a>, Term<'a>)> {
-    base_payload_with_capacity(env, node_id, callback_id, 0)
+fn base_payload_map<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Term<'a> {
+    map_from_pairs(
+        env,
+        [
+            (id().encode(env), node_id.encode(env)),
+            (callback().encode(env), callback_id.encode(env)),
+        ],
+    )
 }
 
 fn base_payload_with_capacity<'a>(
@@ -220,7 +226,7 @@ fn mouse_button_atom(code: i32) -> Atom {
 
 fn send_id_callback_event(view_id: u64, event: Atom, node_id: String, callback_id: String) -> i32 {
     send_event(view_id, event, move |env| {
-        map_from_pairs(env, base_payload(env, &node_id, &callback_id))
+        base_payload_map(env, &node_id, &callback_id)
     })
 }
 
