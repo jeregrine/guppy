@@ -827,6 +827,27 @@ defmodule Guppy.IR do
   @scrollbar_value_tokens [:scrollbar_width_px, :scrollbar_width_rem]
   @grid_value_tokens [:grid_cols, :grid_rows, :col_span, :row_span]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
+  @native_f32_integer_min -9_223_372_036_854_775_808
+  @native_f32_integer_max 9_223_372_036_854_775_807
+  @native_f32_max 3.4028234663852886e38
+
+  defguardp is_native_f32_number(value)
+            when (is_float(value) and value >= -@native_f32_max and value <= @native_f32_max) or
+                   (is_integer(value) and value >= @native_f32_integer_min and
+                      value <= @native_f32_integer_max)
+
+  defguardp is_positive_native_f32_number(value)
+            when is_native_f32_number(value) and value > 0
+
+  defguardp is_non_neg_native_f32_number(value)
+            when is_native_f32_number(value) and value >= 0
+
+  defguardp is_unit_native_f32_number(value)
+            when is_native_f32_number(value) and value >= 0 and value <= 1
+
+  defguardp is_positive_unit_native_f32_number(value)
+            when is_native_f32_number(value) and value > 0 and value <= 1
+
   @uniform_list_item_keys [:id, :label]
   @list_item_keys [:id, :children]
   @data_table_column_keys [:id, :label, :width, :sortable, :style]
@@ -1694,10 +1715,10 @@ defmodule Guppy.IR do
       not is_boolean(repeat) ->
         {:error, {:invalid_animation, animation}}
 
-      not (is_number(from) and from >= 0.0 and from <= 1.0) ->
+      not unit_native_f32_number?(from) ->
         {:error, {:invalid_animation, animation}}
 
-      not (is_number(to) and to >= 0.0 and to <= 1.0) ->
+      not unit_native_f32_number?(to) ->
         {:error, {:invalid_animation, animation}}
 
       true ->
@@ -1937,7 +1958,10 @@ defmodule Guppy.IR do
 
   defp validate_data_table_column_width(nil), do: :ok
   defp validate_data_table_column_width(:auto), do: :ok
-  defp validate_data_table_column_width({:px, value}) when is_number(value) and value > 0, do: :ok
+
+  defp validate_data_table_column_width({:px, value})
+       when is_positive_native_f32_number(value),
+       do: :ok
 
   defp validate_data_table_column_width({:fr, value}) when is_integer(value) and value > 0,
     do: :ok
@@ -2138,8 +2162,9 @@ defmodule Guppy.IR do
   end
 
   defp validate_canvas_command(%{op: op, x: x, y: y, width: width, height: height} = command)
-       when op in [:rect, :rounded_rect, :pattern_rect] and is_number(x) and is_number(y) and
-              is_number(width) and is_number(height) and width > 0 and height > 0 do
+       when op in [:rect, :rounded_rect, :pattern_rect] and is_native_f32_number(x) and
+              is_native_f32_number(y) and is_positive_native_f32_number(width) and
+              is_positive_native_f32_number(height) do
     with :ok <- validate_known_keys(command, @canvas_command_keys, :canvas_command),
          :ok <- validate_canvas_command_fields(op, command),
          :ok <- validate_canvas_radius(op, Map.get(command, :radius)) do
@@ -2192,7 +2217,7 @@ defmodule Guppy.IR do
   end
 
   defp validate_unit_canvas_number(_field, value)
-       when is_number(value) and value > 0 and value <= 1,
+       when is_positive_unit_native_f32_number(value),
        do: :ok
 
   defp validate_unit_canvas_number(field, value),
@@ -2211,15 +2236,15 @@ defmodule Guppy.IR do
   defp validate_canvas_color(color), do: {:error, {:invalid_canvas_color, color}}
 
   defp validate_canvas_radius(:rect, nil), do: :ok
-  defp validate_canvas_radius(:rect, radius) when is_number(radius) and radius >= 0, do: :ok
+  defp validate_canvas_radius(:rect, radius) when is_non_neg_native_f32_number(radius), do: :ok
 
-  defp validate_canvas_radius(:rounded_rect, radius) when is_number(radius) and radius >= 0,
+  defp validate_canvas_radius(:rounded_rect, radius) when is_non_neg_native_f32_number(radius),
     do: :ok
 
   defp validate_canvas_radius(:rounded_rect, nil), do: {:error, {:invalid_canvas_radius, nil}}
   defp validate_canvas_radius(:pattern_rect, nil), do: :ok
 
-  defp validate_canvas_radius(:pattern_rect, radius) when is_number(radius) and radius >= 0,
+  defp validate_canvas_radius(:pattern_rect, radius) when is_non_neg_native_f32_number(radius),
     do: :ok
 
   defp validate_canvas_radius(_op, radius), do: {:error, {:invalid_canvas_radius, radius}}
@@ -2408,10 +2433,16 @@ defmodule Guppy.IR do
 
   defp validate_optional_non_neg_number(nil, _field), do: :ok
 
-  defp validate_optional_non_neg_number(value, _field) when is_number(value) and value >= 0,
+  defp validate_optional_non_neg_number(value, _field) when is_non_neg_native_f32_number(value),
     do: :ok
 
   defp validate_optional_non_neg_number(value, field), do: {:error, {field, value}}
+
+  defp native_f32_number?(value) when is_native_f32_number(value), do: true
+  defp native_f32_number?(_value), do: false
+
+  defp unit_native_f32_number?(value) when is_unit_native_f32_number(value), do: true
+  defp unit_native_f32_number?(_value), do: false
 
   defp validate_scroll_axis(nil), do: :ok
   defp validate_scroll_axis(axis) when axis in [:x, :y, :both], do: :ok
@@ -2441,7 +2472,9 @@ defmodule Guppy.IR do
 
   defp validate_optional_point(nil, _field), do: :ok
 
-  defp validate_optional_point({x, y}, _field) when is_number(x) and is_number(y), do: :ok
+  defp validate_optional_point({x, y}, _field)
+       when is_native_f32_number(x) and is_native_f32_number(y),
+       do: :ok
 
   defp validate_optional_point(value, field), do: {:error, {:invalid_point, field, value}}
 
@@ -2495,24 +2528,22 @@ defmodule Guppy.IR do
     end
   end
 
-  defp validate_style_op({:opacity, value})
-       when is_number(value) and value >= 0.0 and value <= 1.0,
-       do: :ok
+  defp validate_style_op({:opacity, value}) when is_unit_native_f32_number(value), do: :ok
 
   defp validate_style_op({key, value})
        when key in @grid_value_tokens and is_integer(value) and value >= 1 and value <= 65_535,
        do: :ok
 
   defp validate_style_op({key, value})
-       when key in @size_value_tokens and is_number(value) and value >= 0.0,
+       when key in @size_value_tokens and is_non_neg_native_f32_number(value),
        do: :ok
 
   defp validate_style_op({key, value})
-       when key in @fraction_value_tokens and is_number(value) and value >= 0.0 and value <= 1.0,
+       when key in @fraction_value_tokens and is_unit_native_f32_number(value),
        do: :ok
 
   defp validate_style_op({key, value})
-       when key in @scrollbar_value_tokens and is_number(value) and value >= 0.0,
+       when key in @scrollbar_value_tokens and is_non_neg_native_f32_number(value),
        do: :ok
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
@@ -2534,12 +2565,10 @@ defmodule Guppy.IR do
   defp valid_linear_gradient_options?(_options), do: false
 
   defp valid_gradient_angle?(angle),
-    do: is_number(angle) and angle >= 0.0 and angle <= 360.0
+    do: native_f32_number?(angle) and angle >= 0.0 and angle <= 360.0
 
   defp valid_gradient_stop?({color, percentage}),
-    do:
-      valid_gradient_color?(color) and is_number(percentage) and percentage >= 0.0 and
-        percentage <= 1.0
+    do: valid_gradient_color?(color) and unit_native_f32_number?(percentage)
 
   defp valid_gradient_stop?(_stop), do: false
 

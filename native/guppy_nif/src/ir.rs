@@ -2900,14 +2900,24 @@ fn parse_grid_u16(term: &Term) -> Result<u16, String> {
 }
 
 fn parse_f32(term: &Term) -> Result<f32, String> {
-    match term {
-        Term::FixInteger(value) => Ok(value.value as f32),
-        Term::BigInteger(value) => value
-            .to_string()
-            .parse::<f32>()
-            .map_err(|error| format!("invalid numeric style value {value}: {error}")),
-        Term::Float(value) => Ok(value.value as f32),
-        other => Err(format!("expected numeric style tuple value, got {other}")),
+    let value = match term {
+        Term::FixInteger(value) => value.value as f32,
+        Term::BigInteger(value) => {
+            let value: i64 = value
+                .value
+                .clone()
+                .try_into()
+                .map_err(|_| format!("expected bounded integer numeric value, got {term}"))?;
+            value as f32
+        }
+        Term::Float(value) => value.value as f32,
+        other => return Err(format!("expected numeric value, got {other}")),
+    };
+
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(format!("expected finite numeric value, got {term}"))
     }
 }
 

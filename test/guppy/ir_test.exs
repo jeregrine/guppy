@@ -188,6 +188,28 @@ defmodule Guppy.IRTest do
              Guppy.IR.validate(Guppy.IR.div([], style: [invalid_options]))
   end
 
+  test "ir validation rejects numeric values outside native f32 integer bounds" do
+    huge = 9_223_372_036_854_775_808
+
+    assert {:error, {:invalid_data_table_column_width, {:px, ^huge}}} =
+             Guppy.IR.validate(
+               Guppy.IR.data_table([%{id: "task", label: "Task", width: {:px, huge}}], [])
+             )
+
+    assert {:error, {:invalid_canvas_command, _command}} =
+             Guppy.IR.validate(
+               Guppy.IR.canvas([
+                 %{op: :rect, x: huge, y: 0, width: 10, height: 10, fill: :blue}
+               ])
+             )
+
+    assert {:error, {:snap_margin, ^huge}} =
+             Guppy.IR.validate(Guppy.IR.popover("Open", false, [], snap_margin: huge))
+
+    assert {:error, {:invalid_style_op, {:w_px, ^huge}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:w_px, huge}]))
+  end
+
   test "canvas validates ordered data-only drawing commands" do
     ir =
       Guppy.IR.canvas(

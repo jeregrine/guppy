@@ -29,6 +29,10 @@ fn bigint_u32(value: u32) -> Term {
     Term::BigInteger(BigInteger::from(value))
 }
 
+fn bigint_u64(value: u64) -> Term {
+    Term::BigInteger(BigInteger::from(value))
+}
+
 fn float(value: f64) -> Term {
     Term::Float(Float { value })
 }
@@ -777,6 +781,116 @@ fn rejects_canvas_command_shape_mismatches() {
 
     let err = IrNode::from_term(&node).unwrap_err();
     assert!(err.contains("expected unit numeric field interval"));
+}
+
+#[test]
+fn rejects_pathological_numeric_ir_values() {
+    let cases = [
+        map(vec![
+            (atom("kind"), atom("canvas")),
+            (
+                atom("commands"),
+                list(vec![map(vec![
+                    (atom("op"), atom("rect")),
+                    (atom("x"), bigint_u64(u64::MAX)),
+                    (atom("y"), integer(0)),
+                    (atom("width"), integer(20)),
+                    (atom("height"), integer(20)),
+                    (atom("fill"), atom("blue")),
+                ])]),
+            ),
+        ]),
+        map(vec![
+            (atom("kind"), atom("canvas")),
+            (
+                atom("commands"),
+                list(vec![map(vec![
+                    (atom("op"), atom("rect")),
+                    (atom("x"), float(f64::INFINITY)),
+                    (atom("y"), integer(0)),
+                    (atom("width"), integer(20)),
+                    (atom("height"), integer(20)),
+                    (atom("fill"), atom("blue")),
+                ])]),
+            ),
+        ]),
+        map(vec![
+            (atom("kind"), atom("canvas")),
+            (
+                atom("commands"),
+                list(vec![map(vec![
+                    (atom("op"), atom("rect")),
+                    (atom("x"), integer(0)),
+                    (atom("y"), integer(0)),
+                    (atom("width"), integer(20)),
+                    (atom("height"), integer(20)),
+                    (atom("radius"), float(f64::INFINITY)),
+                    (atom("fill"), atom("blue")),
+                ])]),
+            ),
+        ]),
+        map(vec![
+            (atom("kind"), atom("canvas")),
+            (
+                atom("commands"),
+                list(vec![map(vec![
+                    (atom("op"), atom("pattern_rect")),
+                    (atom("x"), integer(0)),
+                    (atom("y"), integer(0)),
+                    (atom("width"), integer(20)),
+                    (atom("height"), integer(20)),
+                    (atom("color"), atom("yellow")),
+                    (atom("line_width"), float(f64::INFINITY)),
+                    (atom("interval"), float(0.12)),
+                ])]),
+            ),
+        ]),
+        map(vec![
+            (atom("kind"), atom("popover")),
+            (atom("label"), binary("Open")),
+            (atom("open"), bool_atom(false)),
+            (
+                atom("anchor_position"),
+                tuple(vec![float(f64::INFINITY), integer(0)]),
+            ),
+        ]),
+        map(vec![
+            (atom("kind"), atom("popover")),
+            (atom("label"), binary("Open")),
+            (atom("open"), bool_atom(false)),
+            (atom("snap_margin"), float(f64::INFINITY)),
+        ]),
+        map(vec![
+            (atom("kind"), atom("div")),
+            (
+                atom("animation"),
+                map(vec![
+                    (atom("id"), binary("fade")),
+                    (atom("from"), float(f64::INFINITY)),
+                ]),
+            ),
+        ]),
+        map(vec![
+            (atom("kind"), atom("data_table")),
+            (
+                atom("columns"),
+                list(vec![map(vec![
+                    (atom("id"), binary("task")),
+                    (atom("label"), binary("Task")),
+                    (atom("width"), tuple(vec![atom("px"), float(f64::INFINITY)])),
+                ])]),
+            ),
+            (atom("rows"), list(vec![])),
+        ]),
+    ];
+
+    for node in cases {
+        let err = IrNode::from_term(&node).unwrap_err();
+        assert!(
+            err.contains("finite") || err.contains("numeric"),
+            "unexpected error: {err}"
+        );
+    }
 }
 
 #[test]

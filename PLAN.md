@@ -25,10 +25,10 @@ Context: row-control lookup/focus identity currently uses delimiter-joined strin
 
 Context: native f32 decode still formats BigInteger values through decimal strings, and some geometry/table/canvas validators check ranges without first requiring finite values.
 
-- [ ] Add native decode regressions for huge BigInteger f32 fields and non-finite float values across canvas geometry, canvas line/interval/radius, popover/animation values, and data-table `{:px, value}` widths.
-- [ ] Remove BigInteger decimal string formatting from f32 decode; accept only safely bounded numeric conversions or reject oversized integer terms.
-- [ ] Require `value.is_finite()` for every native f32 input before range checks.
-- [ ] Mirror any semantic change in Elixir validation/docs if public IR accepts a value that native now rejects.
+- [x] Add native decode regressions for huge BigInteger f32 fields and non-finite float values across canvas geometry, canvas line/interval/radius, popover/animation values, and data-table `{:px, value}` widths.
+- [x] Remove BigInteger decimal string formatting from f32 decode; accept only safely bounded numeric conversions or reject oversized integer terms.
+- [x] Require `value.is_finite()` for every native f32 input before range checks.
+- [x] Mirror any semantic change in Elixir validation/docs if public IR accepts a value that native now rejects. (Elixir validation now rejects numeric values outside the native f32-safe integer/float bounds before native decode.)
 
 ### Prefer owned render-closure state before Arc
 
