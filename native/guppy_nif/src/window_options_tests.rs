@@ -2,7 +2,7 @@ use super::{
     TitlebarConfig, WindowBackgroundConfig, WindowBoundsState, WindowDecorationsConfig,
     WindowKindConfig, WindowOptionsConfig,
 };
-use eetf::{Atom, Binary, FixInteger, Map, Term};
+use eetf::{Atom, BigInteger, Binary, FixInteger, Map, Term};
 
 fn atom(name: &str) -> Term {
     Term::Atom(Atom::from(name))
@@ -16,6 +16,14 @@ fn binary(value: &str) -> Term {
 
 fn integer(value: i32) -> Term {
     Term::FixInteger(FixInteger { value })
+}
+
+fn bigint_i32(value: i32) -> Term {
+    Term::BigInteger(BigInteger::from(value))
+}
+
+fn bigint_u32(value: u32) -> Term {
+    Term::BigInteger(BigInteger::from(value))
 }
 
 fn map(entries: Vec<(&str, Term)>) -> Term {
@@ -111,6 +119,30 @@ fn decodes_supported_window_options() {
         Some(WindowDecorationsConfig::Client)
     ));
     assert_eq!(options.tabbing_identifier.as_deref(), Some("guppy-test"));
+}
+
+#[test]
+fn decodes_big_integer_window_option_numbers() {
+    let options = WindowOptionsConfig::decode_etf(&encode(map(vec![
+        (
+            "window_bounds",
+            map(vec![
+                ("x", bigint_i32(-12)),
+                ("y", bigint_i32(24)),
+                ("width", bigint_u32(1024)),
+                ("height", bigint_u32(768)),
+            ]),
+        ),
+        ("display_id", bigint_u32(3)),
+    ])))
+    .unwrap();
+
+    let bounds = options.window_bounds.unwrap();
+    assert_eq!(bounds.x, Some(-12));
+    assert_eq!(bounds.y, Some(24));
+    assert_eq!(bounds.width, 1024);
+    assert_eq!(bounds.height, 768);
+    assert_eq!(options.display_id, Some(3));
 }
 
 #[test]

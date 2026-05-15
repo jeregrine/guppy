@@ -1,9 +1,10 @@
 use super::{
     CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode, ImageObjectFit, ImageSource,
     IrNode, LinearGradientStop, StyleColor, StyleOp, decode_list_row_child_term,
-    ensure_unique_list_row_control_ids, parse_style_op, validate_list_row_child,
+    ensure_unique_list_row_control_ids, get_optional_integer_field, get_optional_usize_field,
+    parse_positive_u32, parse_style_op, validate_list_row_child,
 };
-use eetf::{Atom, Binary, FixInteger, Float, List, Map, Term, Tuple};
+use eetf::{Atom, BigInteger, Binary, FixInteger, Float, List, Map, Term, Tuple};
 
 fn atom(name: &str) -> Term {
     Term::Atom(Atom::from(name))
@@ -17,6 +18,14 @@ fn binary(value: &str) -> Term {
 
 fn integer(value: i32) -> Term {
     Term::FixInteger(FixInteger { value })
+}
+
+fn bigint_i32(value: i32) -> Term {
+    Term::BigInteger(BigInteger::from(value))
+}
+
+fn bigint_u32(value: u32) -> Term {
+    Term::BigInteger(BigInteger::from(value))
 }
 
 fn float(value: f64) -> Term {
@@ -46,6 +55,28 @@ fn events(entries: Vec<(&str, &str)>) -> Term {
         .into_iter()
         .map(|(key, value)| (atom(key), binary(value)))
         .collect())
+}
+
+#[test]
+fn decodes_big_integer_fields() {
+    let fields = match map(vec![
+        (atom("tab_index"), bigint_i32(-2)),
+        (atom("stack_priority"), bigint_u32(7)),
+    ]) {
+        Term::Map(map) => map.map,
+        _ => unreachable!(),
+    };
+
+    assert_eq!(
+        get_optional_integer_field(&fields, "tab_index").unwrap(),
+        Some(-2)
+    );
+    assert_eq!(
+        get_optional_usize_field(&fields, "stack_priority").unwrap(),
+        Some(7)
+    );
+    assert_eq!(parse_positive_u32(&bigint_u32(4)).unwrap(), 4);
+    assert!(parse_positive_u32(&bigint_i32(-1)).is_err());
 }
 
 #[test]

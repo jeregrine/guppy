@@ -396,8 +396,8 @@ fn get_optional_u32_field(map: &Map, key: &str) -> Result<Option<u32>, String> {
             .map_err(|_| format!("invalid integer for {key}")),
         Some(Term::BigInteger(value)) => value
             .value
-            .to_string()
-            .parse::<u32>()
+            .clone()
+            .try_into()
             .map(Some)
             .map_err(|_| format!("invalid integer for {key}")),
         Some(_) => Err(format!("expected positive integer for {key}")),
@@ -410,8 +410,8 @@ fn get_optional_i32_field(map: &Map, key: &str) -> Result<Option<i32>, String> {
         Some(Term::FixInteger(value)) => Ok(Some(value.value)),
         Some(Term::BigInteger(value)) => value
             .value
-            .to_string()
-            .parse::<i32>()
+            .clone()
+            .try_into()
             .map(Some)
             .map_err(|_| format!("invalid integer for {key}")),
         Some(_) => Err(format!("expected integer for {key}")),

@@ -2294,10 +2294,11 @@ fn get_optional_integer_field(
     match get_field(map, key) {
         Some(Term::FixInteger(value)) => Ok(Some(value.value as isize)),
         Some(Term::BigInteger(value)) => value
-            .to_string()
-            .parse::<isize>()
+            .value
+            .clone()
+            .try_into()
             .map(Some)
-            .map_err(|error| format!("invalid integer field {key}: {error}")),
+            .map_err(|_| format!("invalid integer field {key}: {value}")),
         Some(other) => Err(format!(
             "expected optional integer field {key}, got {other}"
         )),
@@ -2341,10 +2342,11 @@ fn parse_positive_u32(term: &Term) -> Result<u32, String> {
             .filter(|value| *value > 0)
             .ok_or_else(|| format!("expected positive u32, got {term}")),
         Term::BigInteger(value) => value
-            .to_string()
-            .parse::<u32>()
+            .value
+            .clone()
+            .try_into()
             .ok()
-            .filter(|value| *value > 0)
+            .filter(|value: &u32| *value > 0)
             .ok_or_else(|| format!("expected positive u32, got {term}")),
         other => Err(format!("expected positive u32, got {other}")),
     }
@@ -2356,10 +2358,11 @@ fn get_optional_usize_field(map: &HashMap<Term, Term>, key: &str) -> Result<Opti
             .map(Some)
             .map_err(|error| format!("invalid usize field {key}: {error}")),
         Some(Term::BigInteger(value)) => value
-            .to_string()
-            .parse::<usize>()
+            .value
+            .clone()
+            .try_into()
             .map(Some)
-            .map_err(|error| format!("invalid usize field {key}: {error}")),
+            .map_err(|_| format!("invalid usize field {key}: {value}")),
         Some(other) => Err(format!("expected optional usize field {key}, got {other}")),
         None => Ok(None),
     }
