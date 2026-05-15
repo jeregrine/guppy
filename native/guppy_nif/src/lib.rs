@@ -1,6 +1,7 @@
 mod bridge_text_input;
 mod bridge_view;
 mod ir;
+mod ir_allowed;
 mod main_thread_runtime;
 mod menu;
 mod native_events;

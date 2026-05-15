@@ -276,6 +276,7 @@ Files you will most often need:
 - `native/guppy_nif/src/bridge_view/render_canvas.rs` — canvas/custom painting renderer
 - `native/guppy_nif/src/bridge_text_input.rs` — retained text input/textarea implementation
 - `native/guppy_nif/src/ir.rs` — native IR and ETF decoding
+- `native/guppy_nif/src/ir_allowed.rs` — native IR allowed field/event schema
 - `native/guppy_nif/src/ir_tests.rs` — focused native IR decode/validation tests
 - `native/guppy_nif/src/menu.rs` — native app-menu decode/mapping/action dispatch
 - `native/guppy_nif/src/menu_tests.rs` — focused native menu decode/mapping/action tests
