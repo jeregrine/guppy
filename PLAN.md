@@ -44,7 +44,7 @@ Context: native decode/render helpers have grown across primitives and should be
 
 Context: `RenderPass::render_node` is a large central dispatch that now knows every renderer's spec shape.
 
-- [ ] Refactor `RenderPass::render_node` toward smaller per-kind dispatch helpers or renderer-owned spec builders without changing behavior.
+- [x] Refactor `RenderPass::render_node` toward smaller per-kind dispatch helpers or renderer-owned spec builders without changing behavior.
 
 ## Priority 4: harden existing primitives only when a real gap appears
 

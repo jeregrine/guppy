@@ -56,6 +56,37 @@ impl<'a> RenderPass<'a> {
         cx: &mut Context<BridgeView>,
     ) -> AnyElement {
         match ir {
+            IrNode::Text { .. } | IrNode::TextInput { .. } | IrNode::Textarea { .. } => {
+                self.render_text_node(path, ir, window, cx)
+            }
+            IrNode::Scroll { .. }
+            | IrNode::Popover { .. }
+            | IrNode::UniformList { .. }
+            | IrNode::List { .. }
+            | IrNode::DataTable(_)
+            | IrNode::Tree(_)
+            | IrNode::Button(_)
+            | IrNode::Div(_) => {
+                self.render_container_node(path, ir, parent_scroll_handle, window, cx)
+            }
+            IrNode::Select(_) | IrNode::Checkbox(_) | IrNode::Radio(_) => {
+                self.render_control_node(path, ir, window, cx)
+            }
+            IrNode::Canvas(_)
+            | IrNode::Image { .. }
+            | IrNode::Icon { .. }
+            | IrNode::Spacer { .. } => self.render_leaf_node(path, ir, window, cx),
+        }
+    }
+
+    fn render_text_node(
+        &mut self,
+        path: &str,
+        ir: &IrNode,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        match ir {
             IrNode::Text {
                 id,
                 content,
@@ -81,21 +112,18 @@ impl<'a> RenderPass<'a> {
                 change,
                 focus,
                 blur,
-            } => render_text_input::render(
-                self,
-                render_text_input::TextInputSpec {
-                    path,
-                    id: id.as_deref(),
-                    value,
-                    placeholder,
-                    style,
-                    disabled: *disabled,
-                    tab_index: *tab_index,
-                    change: change.as_deref(),
-                    focus: focus.as_deref(),
-                    blur: blur.as_deref(),
-                    multiline: false,
-                },
+            } => self.render_text_entry(
+                path,
+                id.as_deref(),
+                value,
+                placeholder,
+                style,
+                *disabled,
+                *tab_index,
+                change.as_deref(),
+                focus.as_deref(),
+                blur.as_deref(),
+                false,
                 window,
                 cx,
             ),
@@ -109,24 +137,71 @@ impl<'a> RenderPass<'a> {
                 change,
                 focus,
                 blur,
-            } => render_text_input::render(
-                self,
-                render_text_input::TextInputSpec {
-                    path,
-                    id: id.as_deref(),
-                    value,
-                    placeholder,
-                    style,
-                    disabled: *disabled,
-                    tab_index: *tab_index,
-                    change: change.as_deref(),
-                    focus: focus.as_deref(),
-                    blur: blur.as_deref(),
-                    multiline: true,
-                },
+            } => self.render_text_entry(
+                path,
+                id.as_deref(),
+                value,
+                placeholder,
+                style,
+                *disabled,
+                *tab_index,
+                change.as_deref(),
+                focus.as_deref(),
+                blur.as_deref(),
+                true,
                 window,
                 cx,
             ),
+            _ => unreachable!("render_text_node called with non-text IR node"),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn render_text_entry(
+        &mut self,
+        path: &str,
+        id: Option<&str>,
+        value: &str,
+        placeholder: &str,
+        style: &crate::ir::DivStyle,
+        disabled: bool,
+        tab_index: Option<isize>,
+        change: Option<&str>,
+        focus: Option<&str>,
+        blur: Option<&str>,
+        multiline: bool,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        render_text_input::render(
+            self,
+            render_text_input::TextInputSpec {
+                path,
+                id,
+                value,
+                placeholder,
+                style,
+                disabled,
+                tab_index,
+                change,
+                focus,
+                blur,
+                multiline,
+            },
+            window,
+            cx,
+        )
+    }
+
+    fn render_container_node(
+        &mut self,
+        path: &str,
+        ir: &IrNode,
+        parent_scroll_handle: Option<ScrollHandle>,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        match ir {
             IrNode::Scroll {
                 id,
                 axis,
@@ -221,8 +296,37 @@ impl<'a> RenderPass<'a> {
             ),
             IrNode::DataTable(node) => render_data_table::render(self, path, node, window, cx),
             IrNode::Tree(node) => render_tree::render(self, path, node, window, cx),
-            IrNode::Canvas(node) => render_canvas::render(self.view_id, path, node, window, cx),
+            IrNode::Button(div) | IrNode::Div(div) => {
+                render_div::render(self, path, div, parent_scroll_handle, window, cx)
+            }
+            _ => unreachable!("render_container_node called with non-container IR node"),
+        }
+    }
+
+    fn render_control_node(
+        &mut self,
+        path: &str,
+        ir: &IrNode,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        match ir {
             IrNode::Select(node) => render_select::render(self, path, node, window, cx),
+            IrNode::Checkbox(node) => render_checkbox::render(self, path, node, window, cx),
+            IrNode::Radio(node) => render_radio::render(self, path, node, window, cx),
+            _ => unreachable!("render_control_node called with non-control IR node"),
+        }
+    }
+
+    fn render_leaf_node(
+        &mut self,
+        path: &str,
+        ir: &IrNode,
+        window: &mut Window,
+        cx: &mut Context<BridgeView>,
+    ) -> AnyElement {
+        match ir {
+            IrNode::Canvas(node) => render_canvas::render(self.view_id, path, node, window, cx),
             IrNode::Image {
                 id,
                 source,
@@ -241,12 +345,8 @@ impl<'a> RenderPass<'a> {
             IrNode::Icon { id, source, style } => {
                 render_icon::render(self, path, id.as_deref(), source, style)
             }
-            IrNode::Checkbox(node) => render_checkbox::render(self, path, node, window, cx),
-            IrNode::Radio(node) => render_radio::render(self, path, node, window, cx),
             IrNode::Spacer { id, style } => render_spacer::render(self, path, id.as_deref(), style),
-            IrNode::Button(div) | IrNode::Div(div) => {
-                render_div::render(self, path, div, parent_scroll_handle, window, cx)
-            }
+            _ => unreachable!("render_leaf_node called with non-leaf IR node"),
         }
     }
 
