@@ -7,7 +7,11 @@ use std::sync::{Arc, OnceLock};
 pub type DivStyle = Arc<[StyleOp]>;
 
 static IR_FIELD_KEYS: OnceLock<IrFieldKeys> = OnceLock::new();
+static EMPTY_IR_NODES: OnceLock<Arc<[IrNode]>> = OnceLock::new();
+static EMPTY_SHORTCUTS: OnceLock<Arc<[ShortcutBinding]>> = OnceLock::new();
 static EMPTY_STYLE: OnceLock<DivStyle> = OnceLock::new();
+static EMPTY_TEXT_RUNS: OnceLock<Arc<[TextRunSegment]>> = OnceLock::new();
+static EMPTY_TREE_ITEMS: OnceLock<Arc<[TreeItem]>> = OnceLock::new();
 static DEFAULT_BUTTON_STYLE: OnceLock<DivStyle> = OnceLock::new();
 static DEFAULT_BUTTON_FOCUS_STYLE: OnceLock<DivStyle> = OnceLock::new();
 static DEFAULT_BUTTON_ACTIVE_STYLE: OnceLock<DivStyle> = OnceLock::new();
@@ -801,7 +805,7 @@ impl IrNode {
         Self::Text {
             id: None,
             content: content.into(),
-            runs: Arc::new([]),
+            runs: empty_text_runs(),
             style: empty_style(),
             click: None,
         }
@@ -1032,7 +1036,7 @@ impl IrNode {
 
 fn get_child_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, String> {
     let Some(children_term) = get_field(map, "children") else {
-        return Ok(Arc::new([]));
+        return Ok(empty_ir_nodes());
     };
 
     collect_arc(get_list(children_term)?.iter().map(IrNode::from_term))
@@ -1453,7 +1457,7 @@ fn get_text_runs_field(
     content: &str,
 ) -> Result<Arc<[TextRunSegment]>, String> {
     let Some(runs_term) = get_field(map, "runs") else {
-        return Ok(Arc::new([]));
+        return Ok(empty_text_runs());
     };
 
     let runs = get_list(runs_term)?
@@ -1740,7 +1744,7 @@ fn get_tree_item(term: &Term, seen: &mut HashSet<String>) -> Result<TreeItem, St
 
     let children = match get_field(item, "children") {
         Some(children) => get_tree_nodes(children, seen)?,
-        None => Arc::new([]),
+        None => empty_tree_items(),
     };
 
     Ok(TreeItem {
@@ -2026,7 +2030,7 @@ fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, Strin
         track_scroll: false,
         anchor_scroll: false,
         tooltip: None,
-        shortcuts: Arc::new([]),
+        shortcuts: empty_shortcuts(),
         children,
         click: get_click_event(map)?,
         hover: None,
@@ -2079,8 +2083,24 @@ fn track_list_row_control_id(id: Option<&str>, seen: &mut HashSet<String>) -> Re
     }
 }
 
+fn empty_ir_nodes() -> Arc<[IrNode]> {
+    EMPTY_IR_NODES.get_or_init(|| Arc::new([])).clone()
+}
+
+fn empty_shortcuts() -> Arc<[ShortcutBinding]> {
+    EMPTY_SHORTCUTS.get_or_init(|| Arc::new([])).clone()
+}
+
 fn empty_style() -> DivStyle {
     EMPTY_STYLE.get_or_init(|| Arc::new([])).clone()
+}
+
+fn empty_text_runs() -> Arc<[TextRunSegment]> {
+    EMPTY_TEXT_RUNS.get_or_init(|| Arc::new([])).clone()
+}
+
+fn empty_tree_items() -> Arc<[TreeItem]> {
+    EMPTY_TREE_ITEMS.get_or_init(|| Arc::new([])).clone()
 }
 
 fn ensure_allowed_fields(
@@ -2451,7 +2471,7 @@ fn get_div_shortcuts(
     actions: &HashMap<String, String>,
 ) -> Result<Arc<[ShortcutBinding]>, String> {
     let Some(shortcuts_term) = get_field(map, "shortcuts") else {
-        return Ok(Arc::new([]));
+        return Ok(empty_shortcuts());
     };
 
     let shortcuts = get_list(shortcuts_term)?;
