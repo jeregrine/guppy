@@ -2802,10 +2802,10 @@ fn parse_strict_hex_color(term: &Term) -> Result<u32, String> {
 }
 
 fn parse_hex_color(term: &Term, require_hash: bool, context: &str) -> Result<u32, String> {
-    let value = term_to_string(term)?;
+    let value = term_to_str(term)?;
 
-    if is_hex_color(&value, require_hash) {
-        Ok(hex_color_u24(&value))
+    if is_hex_color(value, require_hash) {
+        Ok(hex_color_u24(value))
     } else {
         Err(format!("invalid {context}: {value}"))
     }
@@ -2970,11 +2970,13 @@ fn get_list(term: &Term) -> Result<&Vec<Term>, String> {
 }
 
 fn term_to_string(term: &Term) -> Result<String, String> {
+    term_to_str(term).map(str::to_owned)
+}
+
+fn term_to_str(term: &Term) -> Result<&str, String> {
     match term {
         Term::Binary(Binary { bytes }) | Term::ByteList(ByteList { bytes }) => {
-            std::str::from_utf8(bytes)
-                .map(str::to_owned)
-                .map_err(|error| error.to_string())
+            std::str::from_utf8(bytes).map_err(|error| error.to_string())
         }
         other => Err(format!("expected utf8 binary/string, got {other}")),
     }
