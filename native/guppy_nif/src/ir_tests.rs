@@ -1,9 +1,10 @@
 use super::{
     CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode, ImageObjectFit, ImageSource,
     IrNode, LinearGradientStop, StyleColor, StyleOp, decode_list_row_child_term,
-    ensure_unique_list_row_control_ids, get_optional_integer_field, get_optional_usize_field,
-    parse_positive_u32, parse_style_op,
+    ensure_unique_list_row_control_ids, field_key, get_optional_integer_field,
+    get_optional_usize_field, parse_positive_u32, parse_style_op,
 };
+use crate::ir_allowed::{allowed_node_event_fields, allowed_node_fields};
 use eetf::{Atom, BigInteger, Binary, FixInteger, Float, List, Map, Term, Tuple};
 
 fn atom(name: &str) -> Term {
@@ -130,6 +131,54 @@ fn ir_node_kind(node: &IrNode) -> &'static str {
         IrNode::Spacer { .. } => "spacer",
         IrNode::Div(_) => "div",
     }
+}
+
+const NODE_KINDS: &[&str] = &[
+    "text",
+    "div",
+    "scroll",
+    "popover",
+    "uniform_list",
+    "list",
+    "data_table",
+    "tree",
+    "canvas",
+    "select",
+    "image",
+    "icon",
+    "spacer",
+    "checkbox",
+    "radio",
+    "button",
+    "text_input",
+    "textarea",
+];
+
+#[test]
+fn cached_ir_field_keys_cover_allowed_schema() {
+    let mut missing = Vec::new();
+
+    for kind in NODE_KINDS {
+        for field in allowed_node_fields(kind).expect("known node kind") {
+            if field_key(field).is_none() {
+                missing.push(format!("{kind}.{field}"));
+            }
+        }
+
+        if let Some((event_fields, _context)) = allowed_node_event_fields(kind) {
+            for field in event_fields {
+                if field_key(field).is_none() {
+                    missing.push(format!("{kind}.events.{field}"));
+                }
+            }
+        }
+    }
+
+    assert!(
+        missing.is_empty(),
+        "missing cached IR field keys: {}",
+        missing.join(", ")
+    );
 }
 
 #[test]
