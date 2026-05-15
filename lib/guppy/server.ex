@@ -2,8 +2,8 @@ defmodule Guppy.Server do
   @moduledoc """
   Central Guppy runtime server.
 
-  Phase 1 starts with ownership, native request routing, and cleanup scaffolding
-  before the real GPUI runtime is attached.
+  Owns view ids, window ownership, native request dispatch, event routing, menu
+  ownership, and cleanup when owners or the native event target exit.
   """
 
   use GenServer
