@@ -182,7 +182,7 @@ Popovers support optional anchor corner, anchor position/offset, local/window an
 
 `list` rows support static/layout children (`text`, `spacer`, and nested static `div`) plus row-local `button`, `checkbox`, and `radio` controls with explicit control ids. Row-control events include `list_id`, `row_id`, and `control_id`; Elixir remains the source of truth for checked/selected values.
 
-`data_table` and `tree` are semantic virtualized primitives for Elixir-owned table selection/sort state and tree selection/expansion state. Data-table events include `table_id`, `row_id`, and/or `column_id`; tree events include `tree_id` and `item_id`. First-pass table cells intentionally support static `text`, `spacer`, and nested static `div` content.
+`data_table` and `tree` are semantic virtualized primitives for Elixir-owned table selection/sort state and tree selection/expansion state. Data-table columns support `:auto`, `{:px, value}`, and weighted `{:fr, positive_integer}` widths. Data-table events include `table_id`, `row_id`, and/or `column_id`; tree events include `tree_id` and `item_id`. `selected_row_id`, `selected_cell`, and `selected_id` are semantic state only; native rendering does not add default selection highlights, so apply explicit row/cell/item styles from Elixir when visual selection is needed. First-pass table cells intentionally support static `text`, `spacer`, and nested static `div` content.
 
 `canvas` is a data-only drawing primitive for bounded custom painting. It supports ordered `:rect`, `:rounded_rect`, and `:pattern_rect` commands with existing named/hex color validation, unit slash-pattern parameters, wrapper style/viewport sizing, and a coarse optional `:click` callback. Elixir code does not run during native paint; path/text/image canvas commands and per-command hit testing remain deferred.
 
@@ -314,7 +314,7 @@ Supported options match the `gpui = 0.2.2` surface Guppy uses:
 - `is_movable: boolean`
 - `is_resizable: boolean`
 - `is_minimizable: boolean`
-- `display_id: non_neg_integer`
+- `display_id: non_neg_integer` (matched against active GPUI displays; unknown ids are ignored)
 - `window_background: :opaque | :transparent | :blurred`
 - `app_id: String.t()`
 - `window_min_size: [width: integer, height: integer]`
@@ -329,7 +329,7 @@ Styles are ordered lists of style ops:
 style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
 ```
 
-Later ops win over earlier ones, and order is preserved through the bridge.
+Later ops win over earlier ones, and order is preserved through the bridge. In `~GUI` templates, `class` may be a string or a dynamic list of strings; `nil` and `false` list entries are ignored. Raw `style` lists remain style ops, while `style={"p-2 text-white"}` is intentionally accepted as the same class-token shorthand used by `class`.
 
 Stateful style lists are explicit:
 
