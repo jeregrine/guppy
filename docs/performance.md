@@ -44,20 +44,23 @@ Selected results from `mix run bench/guppy_bench.exs`:
 
 ## 2026-05-14 native cleanup spot-check
 
-After the native IR/style cleanup pass that tightened native style validation, moved retained native payloads toward `Arc<[T]>`, decoded native hex colors to parsed values, shared child decode helpers, and reduced list render clones, `mix run bench/guppy_bench.exs` on the same local M1 Pro/macOS class machine reported these selected non-native scenarios. These numbers are a spot-check for regressions, not a release baseline.
+After the native IR/style and event-payload cleanup pass that tightened native style validation, moved retained native payloads toward `Arc<[T]>`, decoded native hex colors to parsed values, shared child decode helpers, reduced list render clones, and avoided several small native event payload allocations, `mix run bench/guppy_bench.exs` on the same local M1 Pro/macOS class machine reported these selected non-native scenarios. These numbers are a spot-check for regressions, not a release baseline.
 
 | Scenario | Average | 99th percentile |
 | --- | ---: | ---: |
-| ETF encode/decode proxy 100 nodes | 77.55 μs | 99.32 μs |
-| ETF encode/decode proxy 1,000 nodes | 777.02 μs | 897.25 μs |
-| IR validation 100 nodes | 70.19 μs | 78.62 μs |
-| IR validation 1,000 nodes | 716.15 μs | 989.07 μs |
-| Canvas command encode/decode proxy 100 commands | 50.05 μs | 56.42 μs |
-| Canvas command validation 100 commands | 68.97 μs | 83.38 μs |
-| Data-table/tree build 100 rows | 26.08 μs | 29.67 μs |
-| Data-table/tree validation 100 rows | 128.57 μs | 145.22 μs |
-| List row controls tree build 100 rows | 93.30 μs | 144.15 μs |
-| List row controls validation 100 rows | 136.25 μs | 151.95 μs |
+| ETF encode/decode proxy 100 nodes | 77.79 μs | 98.66 μs |
+| ETF encode/decode proxy 1,000 nodes | 784.43 μs | 902.56 μs |
+| IR validation 100 nodes | 73.15 μs | 99.39 μs |
+| IR validation 1,000 nodes | 743.95 μs | 1028.24 μs |
+| Canvas command encode/decode proxy 100 commands | 51.40 μs | 67.83 μs |
+| Canvas command validation 100 commands | 66.63 μs | 91.88 μs |
+| Data-table/tree build 100 rows | 28.44 μs | 36.53 μs |
+| Data-table/tree validation 100 rows | 136.74 μs | 178.25 μs |
+| List row controls tree build 100 rows | 99.43 μs | 161.29 μs |
+| List row controls validation 100 rows | 143.33 μs | 180.36 μs |
+| High-frequency drag move payload encode | 0.48 μs | 0.50 μs |
+| High-frequency mouse move payload encode | 0.48 μs | 0.50 μs |
+| High-frequency scroll wheel payload encode | 0.49 μs | 0.54 μs |
 
 ## Release native snapshot
 
