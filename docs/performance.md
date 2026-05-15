@@ -64,14 +64,14 @@ After the native IR/style and event-payload cleanup pass that tightened native s
 
 ## Release native snapshot
 
-With an optimized native build, selected `GUPPY_NATIVE_RELEASE=1 mix run bench/guppy_bench.exs --native` results:
+With an optimized native build, selected `GUPPY_NATIVE_RELEASE=1 mix run bench/guppy_bench.exs --native` results after native IR schema hardening:
 
 | Scenario | Average | 99th percentile |
 | --- | ---: | ---: |
-| `Guppy.Window` routed event-to-rerender latency | 0.150 ms | 4.32 ms |
-| `Guppy.Window` repeated routed event pressure (10 events) | 12.19 ms | 88.19 ms |
-| `Guppy.render/2` native request latency | 5.99 ms | 6.98 ms |
-| `Guppy.render/2` validated native request latency | 5.76 ms | 7.70 ms |
+| `Guppy.Window` routed event-to-rerender latency | 0.034 ms | 0.109 ms |
+| `Guppy.Window` repeated routed event pressure (10 events) | 0.676 ms | 5.09 ms |
+| `Guppy.render/2` native request latency | 2.93 ms | 6.50 ms |
+| `Guppy.render/2` validated native request latency | 2.49 ms | 6.37 ms |
 
 ## IR bridge stress-test snapshot
 
