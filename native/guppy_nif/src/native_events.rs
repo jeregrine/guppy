@@ -100,6 +100,10 @@ fn optional_binary_str(has_value: i32, ptr: *const u8, len: usize) -> Option<Str
     (has_value != 0).then(|| binary_str(ptr, len)).flatten()
 }
 
+fn optional_str_term<'a>(env: Env<'a>, value: Option<&str>) -> Term<'a> {
+    value.map_or_else(|| nil().encode(env), |value| value.encode(env))
+}
+
 #[cfg_attr(test, allow(dead_code))]
 fn base_payload_map<'a>(env: Env<'a>, node_id: &str, callback_id: &str) -> Term<'a> {
     map_from_pairs(
@@ -867,24 +871,25 @@ pub extern "C" fn guppy_c_send_key_down_event(
     };
     let key_char_string = optional_binary_str(has_key_char, key_char_ptr, key_char_len);
     send_event(view_id, key_down(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 4);
-        let key_char_term = key_char_string
-            .as_ref()
-            .map_or_else(|| nil().encode(env), |value| value.encode(env));
-        pairs.extend([
-            (key().encode(env), key_string.encode(env)),
-            (key_char().encode(env), key_char_term),
-            (is_held().encode(env), (is_held_value != 0).encode(env)),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        let key_char_term = optional_str_term(env, key_char_string.as_deref());
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (key().encode(env), key_string.encode(env)),
+                (key_char().encode(env), key_char_term),
+                (is_held().encode(env), (is_held_value != 0).encode(env)),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
@@ -916,23 +921,24 @@ pub extern "C" fn guppy_c_send_key_up_event(
     };
     let key_char_string = optional_binary_str(has_key_char, key_char_ptr, key_char_len);
     send_event(view_id, key_up(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 3);
-        let key_char_term = key_char_string
-            .as_ref()
-            .map_or_else(|| nil().encode(env), |value| value.encode(env));
-        pairs.extend([
-            (key().encode(env), key_string.encode(env)),
-            (key_char().encode(env), key_char_term),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        let key_char_term = optional_str_term(env, key_char_string.as_deref());
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (key().encode(env), key_string.encode(env)),
+                (key_char().encode(env), key_char_term),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
@@ -974,25 +980,26 @@ pub extern "C" fn guppy_c_send_action_event(
     };
     let key_char_string = optional_binary_str(has_key_char, key_char_ptr, key_char_len);
     send_event(view_id, action(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 5);
-        let key_char_term = key_char_string
-            .as_ref()
-            .map_or_else(|| nil().encode(env), |value| value.encode(env));
-        pairs.extend([
-            (action().encode(env), action_string.encode(env)),
-            (shortcut().encode(env), shortcut_string.encode(env)),
-            (key().encode(env), key_string.encode(env)),
-            (key_char().encode(env), key_char_term),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        let key_char_term = optional_str_term(env, key_char_string.as_deref());
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (action().encode(env), action_string.encode(env)),
+                (shortcut().encode(env), shortcut_string.encode(env)),
+                (key().encode(env), key_string.encode(env)),
+                (key_char().encode(env), key_char_term),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
