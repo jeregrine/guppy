@@ -472,6 +472,17 @@ defmodule Guppy.IR do
 
   @type list_item :: %{required(:id) => node_id(), required(:children) => [list_row_node()]}
 
+  @type data_table_cell_div_node :: %{
+          required(:kind) => :div,
+          required(:children) => [data_table_cell_node()],
+          optional(:id) => node_id(),
+          optional(:style) => style(),
+          optional(:disabled) => boolean(),
+          optional(:events) => list_row_click_events()
+        }
+
+  @type data_table_cell_node :: text_node() | spacer_node() | data_table_cell_div_node()
+
   @type list_node :: %{
           required(:kind) => :list,
           required(:items) => [list_item()],
@@ -493,7 +504,7 @@ defmodule Guppy.IR do
 
   @type data_table_cell :: %{
           required(:column_id) => node_id(),
-          required(:children) => [ir_node()],
+          required(:children) => [data_table_cell_node()],
           optional(:style) => style()
         }
 
