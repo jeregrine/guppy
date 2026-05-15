@@ -1024,20 +1024,23 @@ pub extern "C" fn guppy_c_send_context_menu_event(
         return 0;
     };
     send_event(view_id, context_menu(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 3);
-        pairs.extend([
-            (x().encode(env), event_x.encode(env)),
-            (y().encode(env), event_y.encode(env)),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (x().encode(env), event_x.encode(env)),
+                (y().encode(env), event_y.encode(env)),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
@@ -1127,25 +1130,28 @@ pub extern "C" fn guppy_c_send_drag_move_event(
         return 0;
     };
     send_event(view_id, drag_move(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 5);
-        pairs.extend([
-            (source_id().encode(env), source.encode(env)),
-            (
-                pressed_button().encode(env),
-                mouse_button_atom(pressed_button_code).encode(env),
-            ),
-            (x().encode(env), event_x.encode(env)),
-            (y().encode(env), event_y.encode(env)),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (source_id().encode(env), source.encode(env)),
+                (
+                    pressed_button().encode(env),
+                    mouse_button_atom(pressed_button_code).encode(env),
+                ),
+                (x().encode(env), event_x.encode(env)),
+                (y().encode(env), event_y.encode(env)),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
@@ -1173,29 +1179,32 @@ pub extern "C" fn guppy_c_send_mouse_down_event(
         return 0;
     };
     send_event(view_id, mouse_down(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 6);
-        pairs.extend([
-            (
-                button().encode(env),
-                mouse_button_atom(button_code).encode(env),
-            ),
-            (x().encode(env), event_x.encode(env)),
-            (y().encode(env), event_y.encode(env)),
-            (click_count().encode(env), click_count_value.encode(env)),
-            (
-                first_mouse().encode(env),
-                (first_mouse_value != 0).encode(env),
-            ),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (
+                    button().encode(env),
+                    mouse_button_atom(button_code).encode(env),
+                ),
+                (x().encode(env), event_x.encode(env)),
+                (y().encode(env), event_y.encode(env)),
+                (click_count().encode(env), click_count_value.encode(env)),
+                (
+                    first_mouse().encode(env),
+                    (first_mouse_value != 0).encode(env),
+                ),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
@@ -1222,25 +1231,28 @@ pub extern "C" fn guppy_c_send_mouse_up_event(
         return 0;
     };
     send_event(view_id, mouse_up(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 5);
-        pairs.extend([
-            (
-                button().encode(env),
-                mouse_button_atom(button_code).encode(env),
-            ),
-            (x().encode(env), event_x.encode(env)),
-            (y().encode(env), event_y.encode(env)),
-            (click_count().encode(env), click_count_value.encode(env)),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (
+                    button().encode(env),
+                    mouse_button_atom(button_code).encode(env),
+                ),
+                (x().encode(env), event_x.encode(env)),
+                (y().encode(env), event_y.encode(env)),
+                (click_count().encode(env), click_count_value.encode(env)),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
@@ -1266,24 +1278,27 @@ pub extern "C" fn guppy_c_send_mouse_move_event(
         return 0;
     };
     send_event(view_id, mouse_move(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 4);
-        pairs.extend([
-            (
-                pressed_button().encode(env),
-                mouse_button_atom(pressed_button_code).encode(env),
-            ),
-            (x().encode(env), event_x.encode(env)),
-            (y().encode(env), event_y.encode(env)),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (
+                    pressed_button().encode(env),
+                    mouse_button_atom(pressed_button_code).encode(env),
+                ),
+                (x().encode(env), event_x.encode(env)),
+                (y().encode(env), event_y.encode(env)),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
 
@@ -1311,30 +1326,33 @@ pub extern "C" fn guppy_c_send_scroll_wheel_event(
         return 0;
     };
     send_event(view_id, scroll_wheel(), move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 6);
-        pairs.extend([
-            (x().encode(env), event_x.encode(env)),
-            (y().encode(env), event_y.encode(env)),
-            (
-                delta_kind().encode(env),
-                if delta_kind_code == 1 {
-                    pixels()
-                } else {
-                    lines()
-                }
-                .encode(env),
-            ),
-            (delta_x().encode(env), delta_x_value.encode(env)),
-            (delta_y().encode(env), delta_y_value.encode(env)),
-            modifiers_pair(
-                env,
-                control_value,
-                alt_value,
-                shift_value,
-                platform_value,
-                function_value,
-            ),
-        ]);
-        map_from_pairs(env, pairs)
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (x().encode(env), event_x.encode(env)),
+                (y().encode(env), event_y.encode(env)),
+                (
+                    delta_kind().encode(env),
+                    if delta_kind_code == 1 {
+                        pixels()
+                    } else {
+                        lines()
+                    }
+                    .encode(env),
+                ),
+                (delta_x().encode(env), delta_x_value.encode(env)),
+                (delta_y().encode(env), delta_y_value.encode(env)),
+                modifiers_pair(
+                    env,
+                    control_value,
+                    alt_value,
+                    shift_value,
+                    platform_value,
+                    function_value,
+                ),
+            ],
+        )
     })
 }
