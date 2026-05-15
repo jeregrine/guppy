@@ -92,7 +92,7 @@ impl WindowOptionsConfig {
 
     pub(crate) fn to_gpui(&self, cx: &mut App) -> WindowOptions {
         let mut options = WindowOptions::default();
-        let display_id = self.display_id.map(display_id_from_raw);
+        let display_id = self.display_id.and_then(|id| display_id_from_raw(id, cx));
 
         if let Some(window_bounds) = self.window_bounds.as_ref() {
             options.window_bounds = Some(window_bounds.to_gpui(display_id, cx));
@@ -369,8 +369,11 @@ fn parse_window_background(value: &str) -> Result<WindowBackgroundConfig, String
     }
 }
 
-fn display_id_from_raw(id: u32) -> DisplayId {
-    unsafe { std::mem::transmute::<u32, DisplayId>(id) }
+fn display_id_from_raw(id: u32, cx: &mut App) -> Option<DisplayId> {
+    cx.displays()
+        .iter()
+        .map(|display| display.id())
+        .find(|display_id| u32::from(*display_id) == id)
 }
 
 fn parse_window_decorations(value: &str) -> Result<WindowDecorationsConfig, String> {

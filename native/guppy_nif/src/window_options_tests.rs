@@ -145,6 +145,46 @@ fn decodes_big_integer_window_option_numbers() {
     assert_eq!(options.display_id, Some(3));
 }
 
+#[gpui::test]
+fn maps_display_ids_through_active_gpui_displays(cx: &mut gpui::TestAppContext) {
+    cx.update(|cx| {
+        let displays = cx.displays();
+        let display = displays
+            .first()
+            .expect("test app should expose a display")
+            .id();
+        let active_ids = displays
+            .iter()
+            .map(|display| u32::from(display.id()))
+            .collect::<std::collections::HashSet<_>>();
+        let valid_id = u32::from(display);
+        let missing_id = (0..=10)
+            .find(|candidate| !active_ids.contains(candidate))
+            .unwrap_or(u32::MAX - 1);
+
+        let valid = WindowOptionsConfig {
+            display_id: Some(valid_id),
+            ..Default::default()
+        }
+        .to_gpui(cx);
+        assert_eq!(valid.display_id, Some(display));
+
+        let missing = WindowOptionsConfig {
+            display_id: Some(missing_id),
+            ..Default::default()
+        }
+        .to_gpui(cx);
+        assert_eq!(missing.display_id, None);
+
+        let out_of_range = WindowOptionsConfig {
+            display_id: Some(u32::MAX),
+            ..Default::default()
+        }
+        .to_gpui(cx);
+        assert_eq!(out_of_range.display_id, None);
+    });
+}
+
 #[test]
 fn rejects_unknown_window_option_keys() {
     let top_err =

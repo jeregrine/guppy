@@ -21,6 +21,8 @@ use std::time::{Duration, Instant};
 type ErlNifTid = *mut c_void;
 
 #[cfg(target_os = "macos")]
+// SAFETY: This declaration binds OTP's main-thread bootstrap hook. The only call site is the
+// narrow, documented unsafe block in maybe_start_main_thread_runtime.
 unsafe extern "C" {
     fn erl_drv_steal_main_thread(
         name: *mut c_char,
@@ -506,9 +508,10 @@ fn maybe_start_main_thread_runtime() -> bool {
 
         let mut thread_id: ErlNifTid = std::ptr::null_mut();
         let name = CString::new("guppy_gpui").expect("static thread name has no nul");
-        // SAFETY: OTP exposes erl_drv_steal_main_thread for NIF/bootstrap code. The thread name
-        // is a live CString for the duration of the call, dtid points to valid stack storage, and
-        // the callback has the required extern "C" ABI.
+        // SAFETY: OTP exposes erl_drv_steal_main_thread for NIF/bootstrap code, and Rustler does
+        // not provide an equivalent safe abstraction for this macOS main-thread handoff. Keep this
+        // block narrow: the thread name is a live CString for the duration of the call, dtid points
+        // to valid stack storage, and the callback has the required extern "C" ABI.
         let result = unsafe {
             erl_drv_steal_main_thread(
                 name.as_ptr().cast_mut(),
