@@ -146,6 +146,30 @@ fn decodes_big_integer_window_option_numbers() {
 }
 
 #[test]
+fn rejects_unknown_window_option_keys() {
+    let top_err =
+        WindowOptionsConfig::decode_etf(&encode(map(vec![("unknown", atom("true"))]))).unwrap_err();
+    assert!(
+        top_err.contains("unsupported window options field"),
+        "unexpected error: {top_err}"
+    );
+
+    let nested_err = WindowOptionsConfig::decode_etf(&encode(map(vec![(
+        "window_bounds",
+        map(vec![
+            ("width", integer(800)),
+            ("height", integer(600)),
+            ("unknown", atom("true")),
+        ]),
+    )])))
+    .unwrap_err();
+    assert!(
+        nested_err.contains("unsupported window_bounds field"),
+        "unexpected error: {nested_err}"
+    );
+}
+
+#[test]
 fn rejects_invalid_window_option_atoms() {
     let err =
         WindowOptionsConfig::decode_etf(&encode(map(vec![("kind", atom("tooltip"))]))).unwrap_err();

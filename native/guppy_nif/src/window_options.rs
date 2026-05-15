@@ -156,6 +156,26 @@ impl WindowOptionsConfig {
 
     fn from_term(term: &Term) -> Result<Self, String> {
         let map = expect_map(term)?;
+        ensure_allowed_fields(
+            map,
+            &[
+                "window_bounds",
+                "titlebar",
+                "focus",
+                "show",
+                "kind",
+                "is_movable",
+                "is_resizable",
+                "is_minimizable",
+                "display_id",
+                "window_background",
+                "app_id",
+                "window_min_size",
+                "window_decorations",
+                "tabbing_identifier",
+            ],
+            "window options",
+        )?;
 
         Ok(Self {
             window_bounds: get_optional_map_field(map, "window_bounds")?
@@ -194,6 +214,12 @@ impl WindowOptionsConfig {
 
 impl WindowBoundsConfig {
     fn from_map(map: &Map) -> Result<Self, String> {
+        ensure_allowed_fields(
+            map,
+            &["x", "y", "width", "height", "state"],
+            "window_bounds",
+        )?;
+
         Ok(Self {
             x: get_optional_i32_field(map, "x")?,
             y: get_optional_i32_field(map, "y")?,
@@ -230,6 +256,12 @@ impl WindowBoundsConfig {
 
 impl TitlebarConfigOptions {
     fn from_map(map: &Map) -> Result<Self, String> {
+        ensure_allowed_fields(
+            map,
+            &["title", "appears_transparent", "traffic_light_position"],
+            "titlebar",
+        )?;
+
         Ok(Self {
             title: get_optional_string_field(map, "title")?,
             appears_transparent: get_optional_bool_field(map, "appears_transparent")?,
@@ -253,6 +285,8 @@ impl TitlebarConfigOptions {
 
 impl PointConfig {
     fn from_map(map: &Map) -> Result<Self, String> {
+        ensure_allowed_fields(map, &["x", "y"], "point")?;
+
         Ok(Self {
             x: get_u32_field(map, "x")?,
             y: get_u32_field(map, "y")?,
@@ -266,6 +300,8 @@ impl PointConfig {
 
 impl SizeConfig {
     fn from_map(map: &Map) -> Result<Self, String> {
+        ensure_allowed_fields(map, &["width", "height"], "size")?;
+
         Ok(Self {
             width: get_u32_field(map, "width")?,
             height: get_u32_field(map, "height")?,
@@ -349,6 +385,19 @@ fn get_field<'a>(map: &'a Map, key: &str) -> Option<&'a Term> {
     map.map
         .iter()
         .find_map(|(current_key, value)| key_matches(current_key, key).then_some(value))
+}
+
+fn ensure_allowed_fields(map: &Map, allowed: &[&str], context: &str) -> Result<(), String> {
+    for key in map.map.keys() {
+        if !allowed
+            .iter()
+            .any(|allowed_key| key_matches(key, allowed_key))
+        {
+            return Err(format!("unsupported {context} field: {key}"));
+        }
+    }
+
+    Ok(())
 }
 
 fn get_optional_map_field<'a>(map: &'a Map, key: &str) -> Result<Option<&'a Map>, String> {
