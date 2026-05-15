@@ -117,14 +117,18 @@ After the recent primitive expansion, prioritize a measured native cleanup/de-sl
 Useful top-level API:
 
 - `Guppy.ping/0`
+- `Guppy.ping/1`
 - `Guppy.open_window/1`
 - `Guppy.open_window/2` (`Guppy.open_window(ir, opts)`)
 - `Guppy.open_window/3` (`Guppy.open_window(ir, opts, timeout)`)
 - `Guppy.render/2`
+- `Guppy.render/3`
 - `Guppy.close_window/1`
+- `Guppy.close_window/2`
 - `Guppy.set_menus/1`
 - `Guppy.set_menus/2`
 - `Guppy.native_view_count/0`
+- `Guppy.native_view_count/1`
 - `Guppy.native_build_info/0`
 - `Guppy.native_runtime_status/0`
 - `Guppy.native_gui_status/0`
