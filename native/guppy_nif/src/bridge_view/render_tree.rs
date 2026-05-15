@@ -7,8 +7,6 @@ use gpui::{
     AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, Window, div, list,
 };
-use std::sync::Arc;
-
 const SELECT_EVENT: i32 = 1;
 const TOGGLE_EVENT: i32 = 2;
 
@@ -32,7 +30,7 @@ pub(crate) fn render(
     let view_id = pass.view_id();
     let node_id = NodeIdentity::new(view_id, path, tree.id.as_deref());
     let tree_id = node_id.to_string();
-    let visible_items: Arc<[VisibleTreeItem]> = flatten_visible_tree_items(&tree.nodes).into();
+    let visible_items = flatten_visible_tree_items(&tree.nodes);
     let state = pass.retain_list_state(&format!("{tree_id}.rows"), visible_items.len());
     let row_style = tree.row_style.clone();
     let select = tree.select.clone();

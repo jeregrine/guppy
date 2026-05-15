@@ -34,9 +34,9 @@ Context: native f32 decode still formats BigInteger values through decimal strin
 
 Context: some renderers create fresh `Arc` values only to move data into a single GPUI `list` render closure. Own those values directly unless sharing or retained native state actually requires reference counting.
 
-- [ ] Replace `Arc<[VisibleTreeItem]>` in tree rendering with a closure-owned `Vec<VisibleTreeItem>` unless GPUI lifetime constraints prove otherwise.
-- [ ] Replace row-control render-state `Arc<HashMap<...>>` with a closure-owned `HashMap` unless sharing becomes necessary.
-- [ ] Audit similar fresh-per-render `Arc` uses and keep only the ones needed for retained/shared IR ownership.
+- [x] Replace `Arc<[VisibleTreeItem]>` in tree rendering with a closure-owned `Vec<VisibleTreeItem>` unless GPUI lifetime constraints prove otherwise.
+- [x] Replace row-control render-state `Arc<HashMap<...>>` with a closure-owned `HashMap` unless sharing becomes necessary.
+- [x] Audit similar fresh-per-render `Arc` uses and keep only the ones needed for retained/shared IR ownership. (`rg` now only finds retained/shared IR Arcs plus a test-local empty shortcut slice.)
 
 ### Data-table row rendering should avoid avoidable per-cell scans
 

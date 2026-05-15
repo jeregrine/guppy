@@ -44,12 +44,7 @@ pub(crate) fn render(
     let node_id = NodeIdentity::new(view_id, path, id);
     let list_key = node_id.to_string();
     let state = pass.retain_list_state(&list_key, items.len());
-    let row_controls = Arc::new(prepare_row_control_states(
-        pass,
-        &list_key,
-        items.as_ref(),
-        cx,
-    ));
+    let row_controls = prepare_row_control_states(pass, &list_key, items.as_ref(), cx);
     let focus_visible = pass.focus_visible();
     let items = items.clone();
     let item_style = item_style.clone();
