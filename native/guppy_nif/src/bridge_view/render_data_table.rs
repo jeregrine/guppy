@@ -229,7 +229,11 @@ where
     match width {
         DataTableColumnWidth::Auto => element.flex_1(),
         DataTableColumnWidth::Px(value) => element.w(px(*value)),
-        DataTableColumnWidth::Fr(_value) => element.flex_1(),
+        DataTableColumnWidth::Fr(value) => {
+            let mut element = element.flex_1();
+            element.style().flex_grow = Some(*value as f32);
+            element
+        }
     }
 }
 
@@ -273,8 +277,28 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
 
 #[cfg(test)]
 mod tests {
-    use super::{CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT};
-    use crate::bridge_view::events;
+    use super::{CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width};
+    use crate::{bridge_view::events, ir::DataTableColumnWidth};
+    use gpui::{InteractiveElement, SharedString, Styled, div, relative};
+
+    #[test]
+    fn fractional_column_widths_apply_weighted_flex_grow() {
+        let mut one_fr = apply_column_width(
+            div().id(SharedString::from("one_fr")),
+            &DataTableColumnWidth::Fr(1),
+        );
+        let mut two_fr = apply_column_width(
+            div().id(SharedString::from("two_fr")),
+            &DataTableColumnWidth::Fr(2),
+        );
+
+        assert_eq!(one_fr.style().flex_grow, Some(1.0));
+        assert_eq!(two_fr.style().flex_grow, Some(2.0));
+        assert_eq!(one_fr.style().flex_shrink, Some(1.0));
+        assert_eq!(two_fr.style().flex_shrink, Some(1.0));
+        assert_eq!(one_fr.style().flex_basis, Some(relative(0.).into()));
+        assert_eq!(two_fr.style().flex_basis, Some(relative(0.).into()));
+    }
 
     #[test]
     fn data_table_events_include_semantic_identity() {
