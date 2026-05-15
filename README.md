@@ -3,6 +3,7 @@
 Guppy is an Elixir UI framework for native desktop windows built on [GPUI](https://www.gpui.rs/). Your Elixir process owns state, renders it to a small IR tree, and a Rustler NIF renders that tree through GPUI.
 
 ```elixir
+
 defmodule CounterWindow do
   use Guppy.Window
 
@@ -32,22 +33,28 @@ defmodule CounterWindow do
   end
 end
 
-{:ok, _pid} = CounterWindow.start_link(:ok)
+{:ok, pid} = CounterWindow.start_link(:ok)
+
+receive do
+  {:DOWN, _ref, :process, ^pid, _reason} ->
+    :ok
+end
+
 ```
 
 ## Status
 
 Guppy is unreleased and macOS-first today. It can open native GPUI windows, render full trees, keep retained native state such as focus/scroll/text-input state by stable node identity, and route native events back to BEAM processes.
 
-The preferred authoring model is:
+## What is this? (Human Authored Section)
 
-- `use Guppy.Window`
-- assign helpers (`update/3` remains available for HEEx-style compatibility)
-- `~GUI` templates
-- local function components
-- full-tree rerendering from Elixir-owned state
+The goal of guppy was to see if I could use an LLM (codex 5.3->5.5 specifically) to create this complex nif for GPUI. I wondered if given the OTP source code, the zed/gpui source code and specific direction to follow the architectue of the OTP Wx modules would an LLM be able to take on this sort of large, monotonous task.
 
-Guppy is not trying to expose all of GPUI. It currently targets a documented subset; see [`docs/gpui-compliance.md`](docs/gpui-compliance.md) for the compatibility matrix.
+To my surprise it was able to, kinda, the history of this project is almost 100% AI commits and it actually kind of nicely documents my experices using these tools in a sort of "hands off, let the ai code" way. The first version of this code strictly worked, but it was kinda sloppy and slow and hand-rolled its own rustler(lol). Over time we've gotten closer and closer thanks to some free tokens from friends.
+
+To be clear the AI left to its own devices would have gotten trapped in a slop-pit and never recovered. Multiple iterations of my course correcting and specificying a better api were absolutely required. Its still got some slop but I believe with enough time, patience, and tokens I will be able to get us really close to where I want to be. This is totally usable for local applications with native rendering, if you find issues please submit a PR or issues, very open to AI changes so long as its within reason.
+
+I am not a rust expert by any means and it shows, I am slowly building up the correct understanding and vocabulary to get us closer, but any rust help would be greatly appreciated!
 
 ## Quick start
 
@@ -60,7 +67,7 @@ mix run examples/hello_world.exs
 For interactive demos, especially scroll-heavy examples, use an optimized native build:
 
 ```bash
-GUPPY_NATIVE_RELEASE=1 mix run examples/super_demo.exs
+MIX_ENV=prod mix run examples/super_demo.exs
 ```
 
 Run tests:
@@ -69,28 +76,16 @@ Run tests:
 mix test
 ```
 
-Full local check suite, including a bounded stress-test IR validation smoke:
-
-```bash
-scripts/check
-```
-
-Generated package smoke:
-
-```bash
-scripts/package_smoke
-```
-
 ## Examples
 
 ```bash
-GUPPY_NATIVE_RELEASE=1 mix run examples/super_demo.exs
+MIX_ENV=prod mix run examples/super_demo.exs
 ```
 
 Broad tour of the bridge: multiple node kinds, multiple windows, scrolling, focus, pointer/keyboard events, actions, shortcuts, drag/drop, and owner cleanup.
 
 ```bash
-GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
+MIX_ENV=prod mix run examples/kanban_todo.exs
 ```
 
 Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render/1`, `~GUI`, and local function components.
@@ -99,7 +94,7 @@ Best app-style example of `use Guppy.Window`, assigns, `handle_event/3`, `render
 MIX_ENV=prod mix run examples/stress_test.exs
 ```
 
-Stress test for full-tree IR replacement, native decode, retained scrolling, and virtual-list churn. `MIX_ENV=prod` selects an optimized native build; `GUPPY_NATIVE_RELEASE=1 mix run examples/stress_test.exs` does the same while keeping Mix in dev. This probe runs until the window is closed or the process is interrupted; use `mix run --no-start examples/stress_test.exs -- --validate-only` for a bounded IR validation check. Tune it with `GUPPY_STRESS_*` environment variables; run `mix run examples/stress_test.exs -- --help` for knobs.
+To show a very high-churn stress test of the UI.
 
 ```bash
 mix run examples/list_row_controls.exs
@@ -123,7 +118,7 @@ Semantic data-table/tree example with Elixir-owned expansion, selection, and sor
 mix run examples/canvas_pattern.exs
 ```
 
-Data-only canvas example with ordered rect/rounded-rect draw commands, GPUI slash-pattern painting, and a coarse canvas click callback.
+Data-only canvas example with ordered rect/rounded-rect draw commands, GPUI slash-pattern painting, and a coarse canvas click callback. This will likely be added to Easel
 
 ```bash
 mix run examples/hello_world.exs
@@ -190,50 +185,6 @@ Popovers support optional anchor corner, anchor position/offset, local/window an
 
 `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 
-## Public API
-
-Top-level API:
-
-- `Guppy.open_window/1`
-- `Guppy.open_window/2` (`Guppy.open_window(ir, opts)`)
-- `Guppy.open_window/3` (`Guppy.open_window(ir, opts, timeout)`)
-- `Guppy.render/2` / `Guppy.render/3`
-- `Guppy.close_window/1` / `Guppy.close_window/2`
-- `Guppy.set_menus/1` / `Guppy.set_menus/2`
-- `Guppy.ping/0` / `Guppy.ping/1`
-- `Guppy.native_view_count/0` / `Guppy.native_view_count/1`
-- `Guppy.native_build_info/0`
-- `Guppy.native_runtime_status/0`
-- `Guppy.native_gui_status/0`
-- `Guppy.native_performance_counters/0`
-
-Preferred window abstraction:
-
-- `use Guppy.Window`
-- `Guppy.Markdown.render/1` for a small Elixir-side Markdown viewer component
-
-IR helpers:
-
-- `Guppy.IR.text/2`
-- `Guppy.IR.rich_text/2`
-- `Guppy.IR.div/2`
-- `Guppy.IR.scroll/2`
-- `Guppy.IR.uniform_list/2`
-- `Guppy.IR.list/2`
-- `Guppy.IR.data_table/3`
-- `Guppy.IR.tree/2`
-- `Guppy.IR.canvas/2`
-- `Guppy.IR.popover/4`
-- `Guppy.IR.select/2`
-- `Guppy.IR.button/2`
-- `Guppy.IR.checkbox/3`
-- `Guppy.IR.radio/4`
-- `Guppy.IR.text_input/2`
-- `Guppy.IR.textarea/2`
-- `Guppy.IR.image/2`
-- `Guppy.IR.icon/2`
-- `Guppy.IR.spacer/1`
-
 ## Window processes
 
 `Guppy.Window` modules can be supervised directly via their generated `child_spec/1` and use these callbacks:
@@ -250,7 +201,7 @@ Helpers imported by `use Guppy.Window` include:
 
 - `assign/2`
 - `assign/3`
-- `update/3` (available for HEEx-style compatibility; prefer explicit `assign` when clearer)
+- `update/3`
 - `put_private/3`
 - `put_window_opts/2`
 
@@ -278,7 +229,9 @@ Nested content is passed as `@children`.
 
 Components can declare props with `prop/3` and `prop/4` for required props, defaults, unknown prop rejection, and simple type validation.
 
-`Guppy.Markdown` is a remote component for a small Markdown subset (headings, paragraphs, unordered/ordered lists, bold/italic/code runs, and link-ish inline runs). It intentionally renders to Guppy IR in Elixir instead of depending on Zed's markdown crates, which are not part of Guppy's active `gpui = 0.2.2` dependency surface.
+## Markdown
+
+`Guppy.Markdown` is a remote component for a small Markdown subset (headings, paragraphs, unordered/ordered lists, bold/italic/code runs, and link-ish inline runs). It is also a fun example of how this can work! It intentionally renders to Guppy IR in Elixir instead of depending on Zed's markdown crates, which are not part of Guppy's active `gpui = 0.2.2` dependency surface.
 
 ## Window options
 
@@ -323,7 +276,7 @@ Supported options match the `gpui = 0.2.2` surface Guppy uses:
 
 ## Styling
 
-Styles are ordered lists of style ops:
+Styles are ordered lists of style ops, these follow the tailwind inspired styles of gpui-rs!
 
 ```elixir
 style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
@@ -360,47 +313,12 @@ Guppy is source-build first. Rustler builds and copies the NIF into `priv/native
 
 Current source-build support:
 
-| Target | Status |
-| --- | --- |
-| `aarch64-apple-darwin` | supported / primary development target |
-| `x86_64-apple-darwin` | planned, needs CI confirmation |
+| Target                      | Status                                 |
+| --------------------------- | -------------------------------------- |
+| `aarch64-apple-darwin`      | supported / primary development target |
+| `x86_64-apple-darwin`       | planned, needs CI confirmation         |
 | `aarch64-unknown-linux-gnu` | planned, needs GPUI runtime validation |
-| `x86_64-unknown-linux-gnu` | planned, needs GPUI runtime validation |
-| `x86_64-pc-windows-msvc` | planned, needs GPUI/runtime validation |
+| `x86_64-unknown-linux-gnu`  | planned, needs GPUI runtime validation |
+| `x86_64-pc-windows-msvc`    | planned, needs GPUI/runtime validation |
 
 `rustler_precompiled` is wired only for the currently supported `aarch64-apple-darwin` target today; broader targets stay out of the precompiled matrix until they are validated. Source builds remain the default until release artifacts and checksums are published. `GUPPY_NATIVE_PRECOMPILED=1` is only an explicit artifact-path probe until then. See [`docs/distribution.md`](docs/distribution.md).
-
-## Known limits
-
-Still missing or intentionally narrow unless explicitly scoped:
-
-- full editor parity and advanced text layout beyond current rich text runs
-- richer select/dropdown menu semantics beyond the current Elixir-owned select
-- text/overlay controls inside generic virtualized list rows or data-table cells and custom scrollbar parity
-- exact focus-visible and traversal edge-case parity beyond current Tab/Shift-Tab semantics
-- full popover parity, including nested/deferred layer edge cases
-- advanced animation effects beyond current opacity animation, multi-stop/radial gradients, path/text/image canvas commands, per-command canvas hit testing, dock menus, and element-local/context menu primitives
-- published precompiled native artifacts
-
-## Hacking on Guppy
-
-For meaningful changes:
-
-```bash
-scripts/check
-```
-
-If you touch native code:
-
-```bash
-mix compile --force
-mix test
-```
-
-If you care about interactive feel:
-
-```bash
-GUPPY_NATIVE_RELEASE=1 mix run examples/kanban_todo.exs
-```
-
-The active GPUI dependency is currently `gpui = "0.2.2"` from crates.io.

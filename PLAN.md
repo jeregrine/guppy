@@ -10,79 +10,41 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 - Keep commits small and update docs/examples/benchmarks in the same change that alters behavior.
 - Do not preserve old internal shapes for compatibility; this project is unreleased. DO NOT deprecate.
 
-## Priority 0: fix code-review regressions
+## Priority 0: native hardening follow-ups from code review
 
-### Template `class` / `style` normalization
+### Row-control identity keys must be collision-safe
 
-Context: `Guppy.Component.class_to_style!/1` supports list-valued class inputs, but `Guppy.Component.merge_styles/2` currently treats any list as already-normalized style ops. Dynamic templates such as `class={["p-2", false, "text-white"]}` can therefore produce raw string style ops and fail IR validation.
+Context: row-control lookup/focus identity currently uses delimiter-joined strings while row/control ids are arbitrary binaries. Different valid `(row_id, control_id)` pairs can collide and reuse the wrong focus handle or event context.
 
-- [x] Add an ExUnit regression for dynamic list-valued `class` attributes in `~GUI`, including `nil` / `false` filtering.
-- [x] Split class normalization from raw `style` normalization so class strings/lists always go through `class_to_style!/1`, while `style` lists remain raw style ops.
-- [x] Keep `style={"p-2 text-white"}` behavior intentional: convert it as class-like input; covered by `Guppy.Component.merge_styles/2` regression.
-- [x] Run `mix test test/guppy/component_test.exs` and a full `mix test` after the fix. (`mix test test/guppy/component_test.exs` and full `mix test` passed.)
+- [ ] Add a Rust regression covering distinct row/control id pairs that collide under the current delimiter/string formatting.
+- [ ] Replace row-control lookup state with a typed tuple/struct key instead of delimiter-joined strings.
+- [ ] Replace retained row-control focus ids with collision-safe encoding or a typed retained-key conversion at the map boundary.
+- [ ] Decide whether Elixir IR should reject control characters in ids for GPUI/debug-output hygiene; do not rely on such validation for correctness.
 
-### Data-table fractional column widths
+### Native numeric decode must reject pathological and non-finite values
 
-Context: `DataTableColumnWidth::Fr(value)` is decoded, but native render maps every `{:fr, value}` to `flex_1()`, making `{:fr, 2}` behave the same as `{:fr, 1}`.
+Context: native f32 decode still formats BigInteger values through decimal strings, and some geometry/table/canvas validators check ranges without first requiring finite values.
 
-- [x] Add a Rust renderer/style-focused regression showing `{:fr, 2}` and `{:fr, 1}` produce distinct flex-grow behavior, or decide that weighted fractions are not supported.
-- [x] If weighted fractions are supported, render `DataTableColumnWidth::Fr(value)` with proportional flex grow and a zero/auto basis matching intended semantics.
-- [x] If weighted fractions are not supported, simplify the IR/docs to `:auto` plus fixed `{:px, value}` instead of accepting an ignored value. (Not chosen; weighted fractions are supported.)
-- [x] Re-run the data-table/tree example smoke after the chosen behavior lands.
+- [ ] Add native decode regressions for huge BigInteger f32 fields and non-finite float values across canvas geometry, canvas line/interval/radius, popover/animation values, and data-table `{:px, value}` widths.
+- [ ] Remove BigInteger decimal string formatting from f32 decode; accept only safely bounded numeric conversions or reject oversized integer terms.
+- [ ] Require `value.is_finite()` for every native f32 input before range checks.
+- [ ] Mirror any semantic change in Elixir validation/docs if public IR accepts a value that native now rejects.
 
-### Tree native invariants and rendering follow-through
+### Prefer owned render-closure state before Arc
 
-Context: native decode accepts `selected_id` without proving it exists in the tree, while Elixir validation rejects unknown selected ids. `TreeItem.style` is validated/decoded but dropped during `VisibleTreeItem` flattening, so item-level style never renders.
+Context: some renderers create fresh `Arc` values only to move data into a single GPUI `list` render closure. Own those values directly unless sharing or retained native state actually requires reference counting.
 
-- [x] Add a native IR decode regression rejecting a `tree.selected_id` that is absent from decoded nodes, including the `%Guppy.IR.Validated{}` bypass path assumption.
-- [x] Preserve the decoded tree-id set long enough to validate `selected_id` natively.
-- [x] Add a renderer/unit regression for `TreeItem.style` flowing through `flatten_visible_tree_items/1` into row rendering.
-- [x] Carry `TreeItem.style` into `VisibleTreeItem` and apply it in row render without overriding ordered `row_style` semantics unexpectedly.
-- [x] Audit whether `selected_id` should have any default native visual treatment today; either implement a narrow selected-row style hook or document that selection is semantic-only until a selected-style primitive exists. (Decision: semantic-only; documented in README/compliance docs.)
+- [ ] Replace `Arc<[VisibleTreeItem]>` in tree rendering with a closure-owned `Vec<VisibleTreeItem>` unless GPUI lifetime constraints prove otherwise.
+- [ ] Replace row-control render-state `Arc<HashMap<...>>` with a closure-owned `HashMap` unless sharing becomes necessary.
+- [ ] Audit similar fresh-per-render `Arc` uses and keep only the ones needed for retained/shared IR ownership.
 
-### Data-table selected-state rendering/documentation
+### Data-table row rendering should avoid avoidable per-cell scans
 
-Context: `selected_row_id` and `selected_cell` are validated and decoded, but native table rendering currently does not visibly distinguish selected rows/cells. This may be acceptable as semantic state, but the docs/examples imply selection state is part of the primitive.
+Context: row rendering currently scans `row.cells` for each column, making rendered rows `O(columns * cells)`.
 
-- [x] Decide whether first-pass `data_table` selection is semantic-only or should have default/highlight styling. (Decision: semantic-only.)
-- [x] If semantic-only, clarify README / compliance docs and keep examples from implying native selection highlighting.
-- [x] If visual, add a narrow selected row/cell style path with tests before changing examples. (Not chosen.)
-
-## Priority 1: simplify unsafe/Rustler boundaries
-
-### Replace same-crate C event shims with safe Rust calls
-
-Context: many GPUI render/event modules declare `extern "C"` functions exported by `native_events.rs` in the same crate, pass raw string pointers, then reconstruct Rust strings with `from_raw_parts`. Rustler does not require this: `OwnedEnv::send_and_clear` can stay inside a normal Rust module callable through safe `pub(crate)` functions.
-
-- [x] Move event send entrypoints in `native_events.rs` behind safe Rust functions that accept `&str`, `Option<&str>`, booleans, numeric payloads, and small payload structs where useful.
-- [x] Update `bridge_view/events.rs`, `bridge_text_input.rs`, `render_checkbox.rs`, `render_radio.rs`, and `render_uniform_list.rs` to call those safe functions directly instead of local `extern "C"` declarations.
-- [x] Remove now-unneeded `#[unsafe(no_mangle)]` exports and raw pointer decode helpers for internal event paths.
-- [x] Keep `rustler::OwnedEnv::send_and_clear` for cross-thread BEAM delivery; it remains the right Rustler mechanism for GPUI/native event emission.
-- [x] Add focused tests/snapshots proving click, checkbox/radio change, text input change, row-control, data-table/tree, menu, and window lifecycle events still encode the same payloads.
-
-### Keep and document unavoidable unsafe narrowly
-
-Context: macOS GPUI bootstrap still needs OTP main-thread stealing, and GPUI `DisplayId` is opaque.
-
-- [x] Keep the `erl_drv_steal_main_thread` unsafe block narrow and documented; Rustler does not provide an equivalent safe abstraction for this OTP/macOS bootstrap path.
-- [x] Replace `std::mem::transmute::<u32, DisplayId>` with a lookup through `cx.displays()` / `u32::from(display.id())`, returning a real GPUI `DisplayId` when present.
-- [x] Add tests for valid, missing, and out-of-range display ids at the decode/mapping boundary where practical.
-- [x] Run `rg "unsafe" native/guppy_nif/src` after the refactor and add/update `SAFETY:` comments only for remaining unavoidable unsafe blocks.
-
-## Priority 2: verification gates for the current surface
-
-- [x] Run `mix compile --force` after the review-fix batch.
-- [x] Run `mix test` after the review-fix batch.
-- [x] Run `scripts/check` before declaring the stabilization pass green.
-- [x] Smoke the changed examples: `examples/data_table_tree.exs`, `examples/list_row_controls.exs`, `examples/canvas_pattern.exs`, and `examples/menu_demo.exs`.
-- [x] If native hot paths change meaningfully, refresh the relevant `docs/performance.md` benchmark/stress snapshot instead of assuming cleanup helped. (No meaningful native hot-path performance claim changed; no benchmark snapshot refreshed.)
-
-## Priority 3: docs and compliance cleanup after fixes
-
-- [x] Recheck `README.md` claims for template class inputs, data-table/tree selection semantics, canvas commands, menus, and event payloads after the fixes above.
-- [x] Recheck `docs/gpui-compliance.md` against actual `gpui = 0.2.2` APIs used in the current native code.
-- [x] Keep `docs/future-primitives.md` focused on scoped/deferred ideas; move any current-behavior details that users need into README/compliance docs.
-- [x] Update examples only when behavior changes, not just to paper over implementation gaps.
+- [ ] Add a small renderer/helper regression or benchmark fixture for wide rows to lock intended column ordering/lookup behavior.
+- [ ] Decode or precompute data-table cells in column order, or build a per-row lookup once when rendering wide rows.
+- [ ] Keep missing-cell behavior unchanged and covered.
 
 ## Priority 4: harden existing primitives only when a real gap appears
 
