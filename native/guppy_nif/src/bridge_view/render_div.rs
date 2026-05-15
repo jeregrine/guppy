@@ -5,7 +5,7 @@ use super::{
     style::{apply_div_style, apply_refinement_style},
 };
 use crate::bridge_view::BridgeView;
-use crate::ir::{AnimationSpec, DivNode, ShortcutBinding};
+use crate::ir::{AnimationSpec, DivNode, ShortcutBinding, empty_shortcuts};
 use gpui::{
     Animation, AnimationExt, AnyElement, AppContext, Context, Div, Empty, FocusHandle,
     InteractiveElement, IntoElement, KeyDownEvent, KeyUpEvent, MouseButton, MouseDownEvent,
@@ -29,7 +29,7 @@ impl DisabledEventFilter {
 
     fn shortcuts(&self, shortcuts: &Arc<[ShortcutBinding]>) -> Arc<[ShortcutBinding]> {
         if self.disabled {
-            Arc::new([])
+            empty_shortcuts()
         } else {
             shortcuts.clone()
         }
@@ -618,7 +618,20 @@ fn animated_opacity_value(from: f32, to: f32, delta: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::animated_opacity_value;
+    use super::{DisabledEventFilter, animated_opacity_value};
+    use crate::ir::ShortcutBinding;
+    use std::sync::Arc;
+
+    #[test]
+    fn disabled_shortcuts_reuse_empty_slice() {
+        let filter = DisabledEventFilter::new(true);
+        let shortcuts: Arc<[ShortcutBinding]> = Arc::new([]);
+
+        let first = filter.shortcuts(&shortcuts);
+        let second = filter.shortcuts(&shortcuts);
+
+        assert!(Arc::ptr_eq(&first, &second));
+    }
 
     #[test]
     fn animated_opacity_interpolates_between_bounds() {

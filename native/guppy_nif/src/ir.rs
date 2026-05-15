@@ -2087,7 +2087,7 @@ fn empty_ir_nodes() -> Arc<[IrNode]> {
     EMPTY_IR_NODES.get_or_init(|| Arc::new([])).clone()
 }
 
-fn empty_shortcuts() -> Arc<[ShortcutBinding]> {
+pub(crate) fn empty_shortcuts() -> Arc<[ShortcutBinding]> {
     EMPTY_SHORTCUTS.get_or_init(|| Arc::new([])).clone()
 }
 
