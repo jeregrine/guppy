@@ -829,7 +829,7 @@ defmodule Guppy.IR do
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
   @native_f32_integer_min -9_223_372_036_854_775_808
   @native_f32_integer_max 9_223_372_036_854_775_807
-  @native_f32_max 3.4028234663852886e38
+  @native_f32_max 3.402_823_466_385_288_6e38
 
   defguardp is_native_f32_number(value)
             when (is_float(value) and value >= -@native_f32_max and value <= @native_f32_max) or
