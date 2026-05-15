@@ -24,8 +24,8 @@ Goal: keep the current feature surface boring, repeatable, and shippable.
 
 Goal: reduce accidental complexity from the recent primitive push without changing public behavior.
 
-- Establish a before snapshot with `scripts/check`, `mix run bench/guppy_bench.exs`, `MIX_ENV=prod mix run examples/stress_test.exs`, and `Guppy.native_performance_counters/0` where relevant.
-- Audit exceptionally large files and split them only where logical boundaries are clear and behavior stays easy to trace. Likely candidates: native IR decode/types/tests (`native/guppy_nif/src/ir.rs`), NIF entrypoints/event encoding (`native/guppy_nif/src/lib.rs`), Elixir IR helpers/validation (`lib/guppy/ir.ex`), template parsing/compilation (`lib/guppy/component/compiler.ex`), and oversized native/test modules.
+- Use the existing benchmark/stress snapshots in `docs/performance.md` when judging cleanup impact; refresh them after meaningful hot-path changes.
+- Audit exceptionally large files and split them only where logical boundaries are clear and behavior stays easy to trace. Likely candidates: native IR decode/types/tests (`native/guppy_nif/src/ir.rs`), Elixir IR helpers/validation (`lib/guppy/ir.ex`), template parsing/compilation (`lib/guppy/component/compiler.ex`), and oversized native/test modules.
 - Audit `native/guppy_nif/src/ir.rs` for duplicated decode/validation helpers, op-specific field checks, avoidable string conversions, and places that can share stricter helper functions; consider splitting by IR type families only if it reduces coupling.
 - Audit `native/guppy_nif/src/bridge_view/` for needless clones/allocations in render paths, especially command vectors, style lists, callback ids, node identities, semantic event payloads, and row/canvas/list state handoff.
 - Consolidate duplicated color/style conversion paths across gradients, canvas, and regular style ops without weakening validation.
@@ -38,7 +38,6 @@ Goal: make the current API understandable and keep support claims honest.
 
 - Trim duplicated or stale prose between `README.md`, `docs/future-primitives.md`, `docs/gpui-compliance.md`, and examples.
 - Keep `docs/gpui-compliance.md` aligned with the actual `gpui = 0.2.2` surface, not newer local upstream APIs.
-- Make example launch behavior and timeout expectations obvious for automated/manual smoke runs.
 - Keep `docs/performance.md` updated with stress-test interpretation, native counter notes, and benchmark snapshots after meaningful changes.
 
 ## Priority 4: harden existing primitives only when a real gap appears
