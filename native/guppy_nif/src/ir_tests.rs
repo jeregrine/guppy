@@ -58,6 +58,50 @@ fn events(entries: Vec<(&str, &str)>) -> Term {
 }
 
 #[test]
+fn rejects_unknown_native_ir_fields() {
+    let node = map(vec![
+        (atom("kind"), atom("text")),
+        (atom("content"), binary("hello")),
+        (atom("typo"), bool_atom(true)),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(
+        err.contains("unsupported text field"),
+        "unexpected error: {err}"
+    );
+
+    let text_run = map(vec![
+        (atom("text"), binary("hello")),
+        (atom("style"), list(vec![])),
+        (atom("typo"), bool_atom(true)),
+    ]);
+    let node = map(vec![
+        (atom("kind"), atom("text")),
+        (atom("content"), binary("hello")),
+        (atom("runs"), list(vec![text_run])),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(
+        err.contains("unsupported text run field"),
+        "unexpected error: {err}"
+    );
+
+    let node = map(vec![
+        (atom("kind"), atom("text")),
+        (atom("content"), binary("hello")),
+        (atom("events"), events(vec![("typo", "cb")])),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(
+        err.contains("unsupported text events field"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
 fn decodes_big_integer_fields() {
     let fields = match map(vec![
         (atom("tab_index"), bigint_i32(-2)),

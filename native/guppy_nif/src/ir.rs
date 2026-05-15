@@ -819,6 +819,11 @@ impl IrNode {
     fn from_term(term: &Term) -> Result<Self, String> {
         let map = expect_map(term)?;
         let kind = get_atom_field(map, "kind")?;
+        let Some(allowed_fields) = allowed_node_fields(kind) else {
+            return Err(format!("unsupported ir kind: {kind}"));
+        };
+        ensure_allowed_fields(map, allowed_fields, kind)?;
+        ensure_allowed_node_events(kind, map)?;
         let id = get_optional_string_field(map, "id")?;
 
         match kind {
@@ -1464,6 +1469,7 @@ fn get_text_runs_field(
         .iter()
         .map(|term| {
             let run = expect_map(term)?;
+            ensure_allowed_fields(run, &["text", "style"], "text run")?;
             Ok(TextRunSegment {
                 text: get_string_field(run, "text")?,
                 style: get_style_list_field(run, "style")?,
@@ -2101,6 +2107,235 @@ fn empty_text_runs() -> Arc<[TextRunSegment]> {
 
 fn empty_tree_items() -> Arc<[TreeItem]> {
     EMPTY_TREE_ITEMS.get_or_init(|| Arc::new([])).clone()
+}
+
+fn allowed_node_fields(kind: &str) -> Option<&'static [&'static str]> {
+    Some(match kind {
+        "text" => &["kind", "content", "id", "style", "runs", "events"],
+        "div" => &[
+            "kind",
+            "children",
+            "id",
+            "style",
+            "hover_style",
+            "focus_style",
+            "focus_visible_style",
+            "in_focus_style",
+            "active_style",
+            "disabled_style",
+            "animation",
+            "disabled",
+            "stack_priority",
+            "occlude",
+            "focusable",
+            "tab_stop",
+            "tab_index",
+            "track_scroll",
+            "anchor_scroll",
+            "tooltip",
+            "actions",
+            "shortcuts",
+            "events",
+        ],
+        "scroll" => &["kind", "children", "id", "axis", "style"],
+        "popover" => &[
+            "kind",
+            "label",
+            "open",
+            "children",
+            "id",
+            "style",
+            "popover_style",
+            "anchor",
+            "anchor_position",
+            "anchor_offset",
+            "anchor_position_mode",
+            "anchor_fit",
+            "snap_margin",
+            "close_on_click_outside",
+            "stack_priority",
+            "disabled",
+            "events",
+        ],
+        "uniform_list" => &["kind", "items", "id", "style", "item_style", "events"],
+        "list" => &["kind", "items", "id", "style", "item_style", "events"],
+        "data_table" => &[
+            "kind",
+            "columns",
+            "rows",
+            "id",
+            "style",
+            "header_style",
+            "row_style",
+            "cell_style",
+            "selected_row_id",
+            "selected_cell",
+            "sort",
+            "events",
+        ],
+        "tree" => &[
+            "kind",
+            "nodes",
+            "id",
+            "style",
+            "row_style",
+            "selected_id",
+            "events",
+        ],
+        "canvas" => &["kind", "commands", "id", "style", "events"],
+        "select" => &[
+            "kind",
+            "options",
+            "id",
+            "value",
+            "open",
+            "placeholder",
+            "style",
+            "list_style",
+            "option_style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        "image" => &["kind", "source", "id", "style", "object_fit", "grayscale"],
+        "icon" => &["kind", "source", "id", "style"],
+        "spacer" => &["kind", "id", "style"],
+        "checkbox" => &[
+            "kind",
+            "label",
+            "checked",
+            "id",
+            "style",
+            "hover_style",
+            "focus_style",
+            "focus_visible_style",
+            "in_focus_style",
+            "active_style",
+            "disabled_style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        "radio" => &[
+            "kind",
+            "label",
+            "value",
+            "checked",
+            "id",
+            "style",
+            "hover_style",
+            "focus_style",
+            "focus_visible_style",
+            "in_focus_style",
+            "active_style",
+            "disabled_style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        "button" => &[
+            "kind",
+            "label",
+            "id",
+            "style",
+            "hover_style",
+            "focus_style",
+            "focus_visible_style",
+            "in_focus_style",
+            "active_style",
+            "disabled_style",
+            "animation",
+            "disabled",
+            "tab_index",
+            "actions",
+            "shortcuts",
+            "events",
+        ],
+        "text_input" => &[
+            "kind",
+            "value",
+            "id",
+            "placeholder",
+            "style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        "textarea" => &[
+            "kind",
+            "value",
+            "id",
+            "placeholder",
+            "style",
+            "disabled",
+            "tab_index",
+            "events",
+        ],
+        _ => return None,
+    })
+}
+
+fn ensure_allowed_node_events(kind: &str, map: &HashMap<Term, Term>) -> Result<(), String> {
+    let Some((allowed, context)) = allowed_node_event_fields(kind) else {
+        return Ok(());
+    };
+
+    ensure_allowed_event_fields(map, allowed, context)
+}
+
+fn allowed_node_event_fields(kind: &str) -> Option<(&'static [&'static str], &'static str)> {
+    Some(match kind {
+        "text" => (&["click"], "text events"),
+        "div" => (
+            &[
+                "click",
+                "hover",
+                "focus",
+                "blur",
+                "key_down",
+                "key_up",
+                "context_menu",
+                "drag_start",
+                "drag_move",
+                "drop",
+                "mouse_down",
+                "mouse_up",
+                "mouse_move",
+                "scroll_wheel",
+            ],
+            "div events",
+        ),
+        "popover" => (&["click", "close"], "popover events"),
+        "uniform_list" => (&["click"], "uniform_list events"),
+        "list" => (&["click"], "list events"),
+        "data_table" => (&["row_click", "cell_click", "sort"], "data_table events"),
+        "tree" => (&["select", "toggle"], "tree events"),
+        "canvas" => (&["click"], "canvas events"),
+        "select" => (
+            &["click", "change", "close", "focus", "blur"],
+            "select events",
+        ),
+        "checkbox" => (&["change", "focus", "blur"], "checkbox events"),
+        "radio" => (&["change", "focus", "blur"], "radio events"),
+        "button" => (
+            &[
+                "click",
+                "hover",
+                "focus",
+                "blur",
+                "key_down",
+                "key_up",
+                "context_menu",
+                "mouse_down",
+                "mouse_up",
+                "mouse_move",
+            ],
+            "button events",
+        ),
+        "text_input" => (&["change", "focus", "blur"], "text_input events"),
+        "textarea" => (&["change", "focus", "blur"], "textarea events"),
+        _ => return None,
+    })
 }
 
 fn ensure_allowed_fields(
