@@ -1042,9 +1042,12 @@ fn source_event(
     source: String,
 ) -> i32 {
     send_event(view_id, event, move |env| {
-        let mut pairs = base_payload_with_capacity(env, &node_id, &callback_id, 1);
-        pairs.push((source_id().encode(env), source.encode(env)));
-        map_from_pairs(env, pairs)
+        base_payload_with_one_map(
+            env,
+            &node_id,
+            &callback_id,
+            (source_id().encode(env), source.encode(env)),
+        )
     })
 }
 
