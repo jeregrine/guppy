@@ -1518,15 +1518,16 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, St
         let Some(children_term) = get_field(item, "children") else {
             return Err("missing required field: list item children".into());
         };
-        let children = get_list(children_term)?
-            .iter()
-            .map(decode_list_row_child_term)
-            .collect::<Result<Vec<_>, _>>()?;
+        let children = collect_arc(
+            get_list(children_term)?
+                .iter()
+                .map(decode_list_row_child_term),
+        )?;
         ensure_unique_list_row_control_ids(&children)?;
 
         Ok(ListItem {
             id: get_string_field(item, "id")?,
-            children: children.into(),
+            children,
         })
     }))
 }
@@ -1999,10 +2000,11 @@ fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, Strin
         return Err("missing required field: list row div children".into());
     };
 
-    let children = get_list(children_term)?
-        .iter()
-        .map(decode_list_row_child_term)
-        .collect::<Result<Vec<_>, _>>()?;
+    let children = collect_arc(
+        get_list(children_term)?
+            .iter()
+            .map(decode_list_row_child_term),
+    )?;
     let empty_style = empty_style();
 
     Ok(IrNode::Div(Box::new(DivNode {
@@ -2025,7 +2027,7 @@ fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, Strin
         anchor_scroll: false,
         tooltip: None,
         shortcuts: Arc::new([]),
-        children: children.into(),
+        children,
         click: get_click_event(map)?,
         hover: None,
         focus: None,
