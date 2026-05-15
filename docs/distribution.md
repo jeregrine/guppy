@@ -61,8 +61,9 @@ On 2026-05-14, local macOS/aarch64 source-build verification passed:
 - `scripts/clean_install_load_test`
 - `scripts/package_smoke`
 - `mix hex.build --unpack --output /tmp/guppy-hex-unpack`
+- `GUPPY_NATIVE_RELEASE=1 mix compile --force && GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs`
 
-This is a source-build/package smoke result, not a precompiled-artifact release claim. The interactive `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs` release smoke remains a manual release-gate step.
+This is a source-build/package smoke result, not a precompiled-artifact release claim.
 
 ## Release process draft
 
