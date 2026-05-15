@@ -10,41 +10,41 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 - Keep commits small and update docs/examples/benchmarks in the same change that alters behavior.
 - Do not preserve old internal shapes for compatibility; this project is unreleased. DO NOT deprecate.
 
-## Priority 0: native hardening follow-ups from code review
+## Priority 1: native code-review cleanup follow-ups
 
-### Row-control identity keys must be collision-safe
+### Keep timeout/failure semantics mutation-safe
 
-Context: row-control lookup/focus identity currently uses delimiter-joined strings while row/control ids are arbitrary binaries. Different valid `(row_id, control_id)` pairs can collide and reuse the wrong focus handle or event context.
+Context: native/main-thread requests are timeout-aware, but enqueue/scheduling edge cases still need hardening.
 
-- [x] Add a Rust regression covering distinct row/control id pairs that collide under the current delimiter/string formatting.
-- [x] Replace row-control lookup state with a typed tuple/struct key instead of delimiter-joined strings.
-- [x] Replace retained row-control focus ids with collision-safe encoding or a typed retained-key conversion at the map boundary.
-- [x] Decide whether Elixir IR should reject control characters in ids for GPUI/debug-output hygiene; do not rely on such validation for correctness. (Decision: do not add an id-character restriction for correctness; use typed/encoded native keys.)
+- [ ] Ensure a request that is sent to the native queue but fails drain scheduling cannot mutate state later after the caller receives `runtime_unavailable`/`native_timeout`.
+- [ ] Make native duplicate `view_id` opens return the existing `duplicate_view_id` error instead of overwriting the tracked window handle.
+- [ ] Make `RequestDeadline::after/1` robust for very large `timeout_ms` values by using checked/saturating `Instant` arithmetic instead of panic-prone addition.
 
-### Native numeric decode must reject pathological and non-finite values
+### Tighten text-input edge cases and panic surfaces
 
-Context: native f32 decode still formats BigInteger values through decimal strings, and some geometry/table/canvas validators check ranges without first requiring finite values.
+Context: retained text input is intentionally first-pass editor behavior, but correctness bugs and production panics should be removed before expanding editor parity.
 
-- [x] Add native decode regressions for huge BigInteger f32 fields and non-finite float values across canvas geometry, canvas line/interval/radius, popover/animation values, and data-table `{:px, value}` widths.
-- [x] Remove BigInteger decimal string formatting from f32 decode; accept only safely bounded numeric conversions or reject oversized integer terms.
-- [x] Require `value.is_finite()` for every native f32 input before range checks.
-- [x] Mirror any semantic change in Elixir validation/docs if public IR accepts a value that native now rejects. (Elixir validation now rejects numeric values outside the native f32-safe integer/float bounds before native decode.)
+- [ ] Fix IME `replace_and_mark_text_in_range` selection conversion for non-ASCII text before the replacement range; selected ranges are UTF-16-relative to marked text and must not be converted against the whole buffer before offsetting.
+- [ ] Replace the production `line.layout.paint(...).unwrap()` in text-input painting with non-panicking error handling unless GPUI guarantees infallibility.
 
-### Prefer owned render-closure state before Arc
+### Reduce remaining hot-path render allocations
 
-Context: some renderers create fresh `Arc` values only to move data into a single GPUI `list` render closure. Own those values directly unless sharing or retained native state actually requires reference counting.
+Context: the previous data-table cleanup removed per-cell scans, but rendered rows still build per-row lookup state.
 
-- [x] Replace `Arc<[VisibleTreeItem]>` in tree rendering with a closure-owned `Vec<VisibleTreeItem>` unless GPUI lifetime constraints prove otherwise.
-- [x] Replace row-control render-state `Arc<HashMap<...>>` with a closure-owned `HashMap` unless sharing becomes necessary.
-- [x] Audit similar fresh-per-render `Arc` uses and keep only the ones needed for retained/shared IR ownership. (`rg` now only finds retained/shared IR Arcs plus a test-local empty shortcut slice.)
+- [ ] Avoid allocating a `HashMap` for every visible data-table row render; decode or precompute cells in column order while preserving missing-cell behavior.
 
-### Data-table row rendering should avoid avoidable per-cell scans
+### Consolidate duplicated native decode/style code
 
-Context: row rendering currently scans `row.cells` for each column, making rendered rows `O(columns * cells)`.
+Context: native decode/render helpers have grown across primitives and should be de-slopped before adding more surface area.
 
-- [x] Add a small renderer/helper regression or benchmark fixture for wide rows to lock intended column ordering/lookup behavior.
-- [x] Decode or precompute data-table cells in column order, or build a per-row lookup once when rendering wide rows.
-- [x] Keep missing-cell behavior unchanged and covered.
+- [ ] Consolidate duplicate ETF map/list/string/field helper patterns across `ir.rs`, `menu.rs`, and `window_options.rs` without weakening context-specific error messages or validation.
+- [ ] Reduce duplication between `apply_div_style` and `apply_refinement_style`; keep ordered style-op semantics and document which ops are deliberately unsupported by refinement styling.
+
+### Split root render dispatch once renderer APIs settle
+
+Context: `RenderPass::render_node` is a large central dispatch that now knows every renderer's spec shape.
+
+- [ ] Refactor `RenderPass::render_node` toward smaller per-kind dispatch helpers or renderer-owned spec builders without changing behavior.
 
 ## Priority 4: harden existing primitives only when a real gap appears
 
