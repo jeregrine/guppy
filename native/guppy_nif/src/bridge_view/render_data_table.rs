@@ -12,6 +12,7 @@ use gpui::{
     AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, Window, div, list, px,
 };
+use std::collections::HashMap;
 const ROW_CLICK_EVENT: i32 = 1;
 const CELL_CLICK_EVENT: i32 = 2;
 const SORT_EVENT: i32 = 3;
@@ -140,8 +141,8 @@ fn render_row(
     cell_click: Option<&str>,
 ) -> AnyElement {
     let row_id = format!("{table_id}.row.{}", row.id);
-    let cells = columns.iter().map(|column| {
-        let cell = row.cells.iter().find(|cell| cell.column_id == column.id);
+    let ordered_cells = ordered_row_cells(columns, row);
+    let cells = columns.iter().zip(ordered_cells).map(|(column, cell)| {
         render_cell(
             view_id, table_id, &row.id, column, cell, cell_style, cell_click,
         )
@@ -175,6 +176,22 @@ fn render_row(
     }
 
     element.into_any_element()
+}
+
+fn ordered_row_cells<'a>(
+    columns: &[DataTableColumn],
+    row: &'a DataTableRow,
+) -> Vec<Option<&'a DataTableCell>> {
+    let cells_by_column = row
+        .cells
+        .iter()
+        .map(|cell| (cell.column_id.as_str(), cell))
+        .collect::<HashMap<_, _>>();
+
+    columns
+        .iter()
+        .map(|column| cells_by_column.get(column.id.as_str()).copied())
+        .collect()
 }
 
 fn render_cell(
@@ -277,8 +294,13 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
 
 #[cfg(test)]
 mod tests {
-    use super::{CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width};
-    use crate::{bridge_view::events, ir::DataTableColumnWidth};
+    use super::{
+        CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width, ordered_row_cells,
+    };
+    use crate::{
+        bridge_view::events,
+        ir::{DataTableCell, DataTableColumn, DataTableColumnWidth, DataTableRow},
+    };
     use gpui::{InteractiveElement, SharedString, Styled, div, relative};
 
     #[test]
@@ -298,6 +320,60 @@ mod tests {
         assert_eq!(two_fr.style().flex_shrink, Some(1.0));
         assert_eq!(one_fr.style().flex_basis, Some(relative(0.).into()));
         assert_eq!(two_fr.style().flex_basis, Some(relative(0.).into()));
+    }
+
+    #[test]
+    fn ordered_row_cells_follow_column_order_and_preserve_missing_cells() {
+        let columns = vec![
+            DataTableColumn {
+                id: "task".into(),
+                label: "Task".into(),
+                width: DataTableColumnWidth::Auto,
+                sortable: false,
+                style: Vec::new().into(),
+            },
+            DataTableColumn {
+                id: "owner".into(),
+                label: "Owner".into(),
+                width: DataTableColumnWidth::Auto,
+                sortable: false,
+                style: Vec::new().into(),
+            },
+            DataTableColumn {
+                id: "status".into(),
+                label: "Status".into(),
+                width: DataTableColumnWidth::Auto,
+                sortable: false,
+                style: Vec::new().into(),
+            },
+        ];
+        let row = DataTableRow {
+            id: "row_1".into(),
+            cells: vec![
+                DataTableCell {
+                    column_id: "status".into(),
+                    children: Vec::new().into(),
+                    style: Vec::new().into(),
+                },
+                DataTableCell {
+                    column_id: "task".into(),
+                    children: Vec::new().into(),
+                    style: Vec::new().into(),
+                },
+            ]
+            .into(),
+            style: Vec::new().into(),
+        };
+
+        let ordered = ordered_row_cells(&columns, &row);
+
+        assert_eq!(
+            ordered
+                .iter()
+                .map(|cell| cell.map(|cell| cell.column_id.as_str()))
+                .collect::<Vec<_>>(),
+            [Some("task"), None, Some("status")]
+        );
     }
 
     #[test]

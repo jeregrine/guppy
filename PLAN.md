@@ -42,9 +42,9 @@ Context: some renderers create fresh `Arc` values only to move data into a singl
 
 Context: row rendering currently scans `row.cells` for each column, making rendered rows `O(columns * cells)`.
 
-- [ ] Add a small renderer/helper regression or benchmark fixture for wide rows to lock intended column ordering/lookup behavior.
-- [ ] Decode or precompute data-table cells in column order, or build a per-row lookup once when rendering wide rows.
-- [ ] Keep missing-cell behavior unchanged and covered.
+- [x] Add a small renderer/helper regression or benchmark fixture for wide rows to lock intended column ordering/lookup behavior.
+- [x] Decode or precompute data-table cells in column order, or build a per-row lookup once when rendering wide rows.
+- [x] Keep missing-cell behavior unchanged and covered.
 
 ## Priority 4: harden existing primitives only when a real gap appears
 
