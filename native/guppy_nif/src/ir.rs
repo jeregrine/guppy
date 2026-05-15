@@ -1083,7 +1083,7 @@ fn decode_button_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<D
         tab_index: get_optional_integer_field(map, "tab_index")?,
         track_scroll: false,
         anchor_scroll: false,
-        tooltip: get_optional_string_field(map, "tooltip")?,
+        tooltip: None,
         shortcuts: get_div_shortcuts(map, &actions)?,
         children: vec![IrNode::text(label)].into(),
         click: get_click_event(map)?,

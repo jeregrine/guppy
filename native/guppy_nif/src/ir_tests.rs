@@ -99,6 +99,18 @@ fn rejects_unknown_native_ir_fields() {
         err.contains("unsupported text events field"),
         "unexpected error: {err}"
     );
+
+    let node = map(vec![
+        (atom("kind"), atom("button")),
+        (atom("label"), binary("Save")),
+        (atom("tooltip"), binary("unsupported")),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(
+        err.contains("unsupported button field"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
