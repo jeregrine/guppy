@@ -124,6 +124,9 @@ pub(crate) fn render(
         &prepared,
         &retained,
         parent_scroll_handle.as_ref(),
+        pass,
+        window,
+        cx,
     );
     let styled_div = attach_pointer_and_keyboard_interactions(styled_div, &prepared, &retained);
     let styled_div = attach_tooltip(styled_div, node);
@@ -286,6 +289,9 @@ fn attach_scroll_and_focus(
     prepared: &DivPrepared<'_>,
     retained: &DivRetainedState,
     parent_scroll_handle: Option<&ScrollHandle>,
+    pass: &mut RenderPass<'_>,
+    window: &mut Window,
+    cx: &mut Context<BridgeView>,
 ) -> Stateful<Div> {
     let styled_div = match retained.tracked_scroll_handle.as_ref() {
         Some(handle) => styled_div.track_scroll(handle),
@@ -295,7 +301,14 @@ fn attach_scroll_and_focus(
     let styled_div = if node.anchor_scroll {
         match parent_scroll_handle {
             Some(handle) => {
-                styled_div.anchor_scroll(Some(ScrollAnchor::for_handle(handle.clone())))
+                let (anchor, should_scroll) =
+                    pass.retain_scroll_anchor(&prepared.identity.node_key, handle, node.scroll_to);
+
+                if should_scroll {
+                    schedule_scroll_to_anchor(anchor.clone(), window, cx);
+                }
+
+                styled_div.anchor_scroll(Some(anchor))
             }
             None => styled_div,
         }
@@ -314,6 +327,15 @@ fn attach_scroll_and_focus(
         }
         None => styled_div,
     }
+}
+
+fn schedule_scroll_to_anchor(
+    anchor: ScrollAnchor,
+    window: &mut Window,
+    cx: &mut Context<BridgeView>,
+) {
+    anchor.scroll_to(window, cx);
+    cx.notify();
 }
 
 fn attach_pointer_and_keyboard_interactions(

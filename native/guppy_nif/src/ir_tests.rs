@@ -999,6 +999,7 @@ fn list_row_control_ids_are_unique_within_a_row() {
             tab_index: None,
             track_scroll: false,
             anchor_scroll: false,
+            scroll_to: false,
             tooltip: None,
             shortcuts: Vec::new().into(),
             children: vec![IrNode::text("Done")].into(),

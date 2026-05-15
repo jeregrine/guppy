@@ -22,10 +22,10 @@ mod style;
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
 use gpui::{
-    App, Context, Entity, FocusHandle, KeyBinding, ListState, MouseDownEvent, Render, ScrollHandle,
-    Subscription, Window, actions, div, prelude::*,
+    App, Context, Entity, FocusHandle, KeyBinding, ListState, MouseDownEvent, Render, ScrollAnchor,
+    ScrollHandle, Subscription, Window, actions, div, prelude::*,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 actions!(guppy, [FocusNext, FocusPrev]);
 
@@ -41,6 +41,8 @@ pub(crate) struct BridgeRetainedState {
     pub root_focus_handle: Option<FocusHandle>,
     pub focus_visible: bool,
     pub scroll_handles: HashMap<String, ScrollHandle>,
+    pub scroll_anchors: HashMap<String, ScrollAnchor>,
+    pub requested_scroll_anchor_ids: HashSet<String>,
     pub list_states: HashMap<String, ListState>,
     pub focus_handles: HashMap<String, FocusHandle>,
     pub focus_subscriptions: Vec<Subscription>,
@@ -104,6 +106,12 @@ impl BridgeView {
         self.retained
             .scroll_handles
             .retain(|node_id, _| state.live_scroll_ids.contains(node_id));
+        self.retained
+            .scroll_anchors
+            .retain(|node_id, _| state.live_scroll_anchor_ids.contains(node_id));
+        self.retained
+            .requested_scroll_anchor_ids
+            .retain(|node_id| state.live_scroll_anchor_ids.contains(node_id));
         self.retained
             .list_states
             .retain(|node_id, _| state.live_list_ids.contains(node_id));

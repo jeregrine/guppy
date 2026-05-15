@@ -13,6 +13,11 @@ defmodule Guppy.Markdown do
   prop(:render, :source, :string, required: true)
   prop(:render, :id, :string)
   prop(:render, :style, :list, default: [:flex, :flex_col, :gap_2])
+  prop(:render, :selected_heading_id, :string)
+  prop(:render, :scroll_target_id, :string)
+  prop(:render, :heading_id_prefix, :string)
+
+  @heading_tags [:h1, :h2, :h3, :h4, :h5, :h6]
 
   @doc """
   Renders Markdown source to a Guppy IR tree.
@@ -23,40 +28,116 @@ defmodule Guppy.Markdown do
       |> maybe_put(:id, Map.get(assigns, :id))
       |> Keyword.put(:style, Map.get(assigns, :style, [:flex, :flex_col, :gap_2]))
 
-    Guppy.IR.div(parse_blocks(source), opts)
+    heading_id_prefix =
+      Map.get(assigns, :heading_id_prefix) || Map.get(assigns, :id) || "markdown_heading"
+
+    scroll_target_id =
+      Map.get(assigns, :scroll_target_id) || Map.get(assigns, :selected_heading_id)
+
+    Guppy.IR.div(
+      parse_blocks(source, scroll_target_id, heading_id_prefix),
+      opts
+    )
   end
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 
-  defp parse_blocks(source) do
-    source
-    |> :shell_docs_markdown.parse_md()
-    |> Enum.flat_map(&block_to_nodes/1)
+  defp parse_blocks(source, selected_heading_id, heading_id_prefix) do
+    {nodes, _heading_index} =
+      source
+      |> :shell_docs_markdown.parse_md()
+      |> blocks_to_nodes(0, selected_heading_id, heading_id_prefix)
+
+    nodes
   end
 
-  defp block_to_nodes({:h1, _attrs, children}),
-    do: [inline_text(children, [:text_2xl, :font_bold])]
+  defp blocks_to_nodes(blocks, heading_index, selected_heading_id, heading_id_prefix) do
+    {nested_nodes, next_heading_index} =
+      Enum.map_reduce(blocks, heading_index, fn block, index ->
+        block_to_nodes(block, index, selected_heading_id, heading_id_prefix)
+      end)
 
-  defp block_to_nodes({:h2, _attrs, children}),
-    do: [inline_text(children, [:text_xl, :font_bold])]
+    {List.flatten(nested_nodes), next_heading_index}
+  end
 
-  defp block_to_nodes({:h3, _attrs, children}),
-    do: [inline_text(children, [:text_lg, :font_bold])]
+  defp block_to_nodes(
+         {tag, _attrs, children},
+         heading_index,
+         selected_heading_id,
+         heading_id_prefix
+       )
+       when tag in @heading_tags do
+    next_heading_index = heading_index + 1
+    heading_id = "#{heading_id_prefix}_#{next_heading_index}"
 
-  defp block_to_nodes({:h4, _attrs, children}),
-    do: [inline_text(children, [:text_base, :font_bold])]
+    nodes =
+      heading_anchor(heading_id, selected_heading_id) ++
+        [inline_text(children, heading_style(tag))]
 
-  defp block_to_nodes({:p, _attrs, children}), do: [inline_text(children, [:text_base])]
-  defp block_to_nodes({:ul, _attrs, items}), do: [list_block(items, :unordered)]
-  defp block_to_nodes({:ol, _attrs, items}), do: [list_block(items, :ordered)]
-  defp block_to_nodes({:pre, _attrs, children}), do: [inline_text(children, [{:bg, :gray}, :p_2])]
-  defp block_to_nodes(text) when is_binary(text), do: [Guppy.IR.text(text)]
+    {nodes, next_heading_index}
+  end
 
-  defp block_to_nodes({_tag, _attrs, children}) when is_list(children),
-    do: Enum.flat_map(children, &block_to_nodes/1)
+  defp block_to_nodes({:p, _attrs, children}, heading_index, _selected_heading_id, _prefix),
+    do: {[inline_text(children, [:text_base])], heading_index}
 
-  defp block_to_nodes(_other), do: []
+  defp block_to_nodes({:ul, _attrs, items}, heading_index, _selected_heading_id, _prefix),
+    do: {[list_block(items, :unordered)], heading_index}
+
+  defp block_to_nodes({:ol, _attrs, items}, heading_index, _selected_heading_id, _prefix),
+    do: {[list_block(items, :ordered)], heading_index}
+
+  defp block_to_nodes({:pre, _attrs, children}, heading_index, _selected_heading_id, _prefix) do
+    nodes = [
+      inline_text(children, [
+        :text_sm,
+        :p_2,
+        :rounded_md,
+        :border_1,
+        {:bg_hex, "#F2F0E5"},
+        {:border_color_hex, "#DAD8CE"},
+        {:text_color_hex, "#403E3C"}
+      ])
+    ]
+
+    {nodes, heading_index}
+  end
+
+  defp block_to_nodes(text, heading_index, _selected_heading_id, _prefix) when is_binary(text),
+    do: {[Guppy.IR.text(text)], heading_index}
+
+  defp block_to_nodes(
+         {_tag, _attrs, children},
+         heading_index,
+         selected_heading_id,
+         heading_id_prefix
+       )
+       when is_list(children),
+       do: blocks_to_nodes(children, heading_index, selected_heading_id, heading_id_prefix)
+
+  defp block_to_nodes(_other, heading_index, _selected_heading_id, _prefix),
+    do: {[], heading_index}
+
+  defp block_to_nodes(block),
+    do: block |> block_to_nodes(0, nil, "markdown_heading") |> elem(0)
+
+  defp heading_anchor(heading_id, selected_heading_id) do
+    [
+      Guppy.IR.div([],
+        id: "#{heading_id}_anchor",
+        style: [:w_full, {:h_px, 1}],
+        anchor_scroll: true,
+        scroll_to: heading_id == selected_heading_id
+      )
+    ]
+  end
+
+  defp heading_style(:h1), do: [:text_2xl, :font_bold]
+  defp heading_style(:h2), do: [:text_xl, :font_bold]
+  defp heading_style(:h3), do: [:text_lg, :font_bold]
+  defp heading_style(:h4), do: [:text_base, :font_bold]
+  defp heading_style(:h5), do: [:text_sm, :font_bold]
+  defp heading_style(:h6), do: [:text_xs, :font_bold]
 
   defp list_block(items, kind) do
     rows =
@@ -121,7 +202,10 @@ defmodule Guppy.Markdown do
 
   defp inline_style(tag, _attrs) when tag in [:em, :strong, :b], do: [:font_bold]
   defp inline_style(tag, _attrs) when tag in [:i], do: [:italic]
-  defp inline_style(:code, _attrs), do: [{:bg, :gray}, :font_semibold]
+
+  defp inline_style(:code, _attrs),
+    do: [{:bg_hex, "#F2F0E5"}, {:text_color_hex, "#403E3C"}, :font_semibold]
+
   defp inline_style(:a, _attrs), do: [:underline, {:text_color, :blue}]
   defp inline_style(_tag, _attrs), do: []
 

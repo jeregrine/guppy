@@ -21,6 +21,7 @@ pub(crate) fn allowed_node_fields(kind: &str) -> Option<&'static [&'static str]>
             "tab_index",
             "track_scroll",
             "anchor_scroll",
+            "scroll_to",
             "tooltip",
             "actions",
             "shortcuts",

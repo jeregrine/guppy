@@ -7,13 +7,15 @@ use super::{
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
 use gpui::{
-    AnyElement, Context, Entity, FocusHandle, ListAlignment, ListState, ScrollHandle, Window, px,
+    AnyElement, Context, Entity, FocusHandle, ListAlignment, ListState, ScrollAnchor, ScrollHandle,
+    Window, px,
 };
 use std::collections::HashSet;
 
 #[derive(Default)]
 pub(crate) struct RenderPassState {
     pub live_scroll_ids: HashSet<String>,
+    pub live_scroll_anchor_ids: HashSet<String>,
     pub live_list_ids: HashSet<String>,
     pub live_focus_ids: HashSet<String>,
     pub live_text_input_ids: HashSet<String>,
@@ -380,6 +382,33 @@ impl<'a> RenderPass<'a> {
             .entry(node_id.to_owned())
             .or_default()
             .clone()
+    }
+
+    pub fn retain_scroll_anchor(
+        &mut self,
+        node_id: &str,
+        scroll_handle: &ScrollHandle,
+        request_scroll: bool,
+    ) -> (ScrollAnchor, bool) {
+        self.state.live_scroll_anchor_ids.insert(node_id.to_owned());
+
+        let anchor = self
+            .retained
+            .scroll_anchors
+            .entry(node_id.to_owned())
+            .or_insert_with(|| ScrollAnchor::for_handle(scroll_handle.clone()))
+            .clone();
+
+        let should_scroll = if request_scroll {
+            self.retained
+                .requested_scroll_anchor_ids
+                .insert(node_id.to_owned())
+        } else {
+            self.retained.requested_scroll_anchor_ids.remove(node_id);
+            false
+        };
+
+        (anchor, should_scroll)
     }
 
     pub fn retain_list_state(&mut self, node_id: &str, item_count: usize) -> ListState {

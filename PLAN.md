@@ -1,6 +1,6 @@
 # Guppy Forward Plan
 
-Operational rules, checks, architecture notes, and maintenance reminders live in `AGENTS.md`. This file tracks prospective work only. Current behavior is documented in `README.md`, `docs/gpui-compliance.md`, examples, and commit history; deferred primitive ideas live in `docs/future-primitives.md`. Do not keep large done-task checklists here.
+Operational rules, checks, architecture notes, and maintenance reminders live in `AGENTS.md`. This file tracks prospective work only. Current behavior is documented in `README.md`, `docs/gpui-compliance.md`, examples, and commit history.
 
 ## Planning rules
 
@@ -10,41 +10,18 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 - Keep commits small and update docs/examples/benchmarks in the same change that alters behavior.
 - Do not preserve old internal shapes for compatibility; this project is unreleased. DO NOT deprecate.
 
-## Priority 1: native code-review cleanup follow-ups
+## Priority 1: GPUI style-surface compatibility
 
-### Keep timeout/failure semantics mutation-safe
+Concrete gap found while building `examples/markdownview.exs`: GPUI supports generated spacing/style helpers such as `py_1`, but Guppy only exposes a hand-picked subset, so template class tokens like `py-1` fail.
 
-Context: native/main-thread requests are timeout-aware, but enqueue/scheduling edge cases still need hardening.
-
-- [x] Ensure a request that is sent to the native queue but fails drain scheduling cannot mutate state later after the caller receives `runtime_unavailable`/`native_timeout`.
-- [x] Make native duplicate `view_id` opens return the existing `duplicate_view_id` error instead of overwriting the tracked window handle.
-- [x] Make `RequestDeadline::after/1` robust for very large `timeout_ms` values by using checked/saturating `Instant` arithmetic instead of panic-prone addition.
-
-### Tighten text-input edge cases and panic surfaces
-
-Context: retained text input is intentionally first-pass editor behavior, but correctness bugs and production panics should be removed before expanding editor parity.
-
-- [x] Fix IME `replace_and_mark_text_in_range` selection conversion for non-ASCII text before the replacement range; selected ranges are UTF-16-relative to marked text and must not be converted against the whole buffer before offsetting.
-- [x] Replace the production `line.layout.paint(...).unwrap()` in text-input painting with non-panicking error handling unless GPUI guarantees infallibility.
-
-### Reduce remaining hot-path render allocations
-
-Context: the previous data-table cleanup removed per-cell scans, but rendered rows still build per-row lookup state.
-
-- [x] Avoid allocating a `HashMap` for every visible data-table row render; decode or precompute cells in column order while preserving missing-cell behavior.
-
-### Consolidate duplicated native decode/style code
-
-Context: native decode/render helpers have grown across primitives and should be de-slopped before adding more surface area.
-
-- [x] Consolidate duplicate ETF map/list/string/field helper patterns across `ir.rs`, `menu.rs`, and `window_options.rs` without weakening context-specific error messages or validation.
-- [x] Reduce duplication between `apply_div_style` and `apply_refinement_style`; keep ordered style-op semantics and document which ops are deliberately unsupported by refinement styling.
-
-### Split root render dispatch once renderer APIs settle
-
-Context: `RenderPass::render_node` is a large central dispatch that now knows every renderer's spec shape.
-
-- [x] Refactor `RenderPass::render_node` toward smaller per-kind dispatch helpers or renderer-owned spec builders without changing behavior.
+- [ ] Audit GPUI 0.2.2 `Styled` helpers and generated macro surfaces (`style_helpers`, padding/margin/position/overflow/cursor/border/radius/shadow helpers). Possibly bring this or similar into our codebase for simplicity.
+- [ ] Add matching Elixir IR style flags/value tuples for supported GPUI style attributes where they fit Guppy's data-only IR model. Possibly make a macro helper.
+- [ ] Possibly share data if possible (ie make a csv or json file of source mappings idk reduce duplication and oopsie style errors)
+- [ ] Extend the `~GUI` class parser to accept the corresponding Tailwind-ish tokens, including decimal-ish GPUI suffixes like `0p5` via `0.5`/`0p5` class spellings where appropriate.
+- [ ] Extend native `StyleOp` decode and renderer mapping to call the corresponding GPUI methods or set equivalent `StyleRefinement` fields.
+- [ ] Keep refinement/hover/focus style support correct: layout/scroll/positioning ops should remain element-only unless GPUI supports them safely in refinements.
+- [ ] Add tests for representative GPUI-compatible tokens (`py-1`, `px-1`, `p-0.5`, `gap-x-*`, `border-x-*`, `rounded-t-*`, etc.) at component, Elixir IR, and native decode/render-mapping levels.
+- [ ] Update `README.md` and `docs/gpui-compliance.md` with the supported style-token surface and any deliberate exclusions.
 
 ## Priority 4: harden existing primitives only when a real gap appears
 

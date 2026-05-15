@@ -107,6 +107,7 @@ defmodule Guppy.Component.Compiler do
     {"tab_stop", :boolean},
     {"track_scroll", :boolean},
     {"anchor_scroll", :boolean},
+    {"scroll_to", :boolean},
     {"tooltip", :string_or_expr}
   ]
 
