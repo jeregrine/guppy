@@ -53,6 +53,17 @@ Important assumptions:
 
 This validates the fallback source-build path while precompiled artifacts are not yet published. `.github/workflows/precompiled-nif.yml` follows RustlerPrecompiled's GitHub Actions guidance for artifact builds, but its matrix is intentionally limited to currently supported precompiled targets.
 
+## Latest local source-build verification
+
+On 2026-05-14, local macOS/aarch64 source-build verification passed:
+
+- `scripts/check` (including bounded stress-test IR validation)
+- `scripts/clean_install_load_test`
+- `scripts/package_smoke`
+- `mix hex.build --unpack --output /tmp/guppy-hex-unpack`
+
+This is a source-build/package smoke result, not a precompiled-artifact release claim. The interactive `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs` release smoke remains a manual release-gate step.
+
 ## Release process draft
 
 Until precompiled artifacts exist, a release is source-only:
