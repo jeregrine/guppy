@@ -924,7 +924,10 @@ impl IrNode {
             }
             "tree" => {
                 let (nodes, tree_ids) = get_tree_nodes_field(map)?;
-                let tree_id_refs = tree_ids.iter().map(|id| id.as_str()).collect::<HashSet<_>>();
+                let tree_id_refs = tree_ids
+                    .iter()
+                    .map(|id| id.as_str())
+                    .collect::<HashSet<_>>();
                 let selected_id = get_optional_string_field(map, "selected_id")?;
                 ensure_optional_id_known(
                     selected_id.as_deref(),
@@ -1740,7 +1743,9 @@ fn get_data_table_sort_field(
     }))
 }
 
-fn get_tree_nodes_field(map: &HashMap<Term, Term>) -> Result<(Arc<[TreeItem]>, HashSet<String>), String> {
+fn get_tree_nodes_field(
+    map: &HashMap<Term, Term>,
+) -> Result<(Arc<[TreeItem]>, HashSet<String>), String> {
     let Some(nodes_term) = get_field(map, "nodes") else {
         return Err("missing required field: nodes".into());
     };

@@ -182,7 +182,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::{SELECT_EVENT, TOGGLE_EVENT, apply_tree_row_styles, flatten_visible_tree_items};
-    use crate::{bridge_view::events, ir::{StyleOp, TreeItem}};
+    use crate::{
+        bridge_view::events,
+        ir::{StyleOp, TreeItem},
+    };
     use gpui::{InteractiveElement, SharedString, Styled, div};
 
     #[test]

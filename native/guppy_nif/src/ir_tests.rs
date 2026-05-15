@@ -654,7 +654,10 @@ fn rejects_tree_selected_id_that_is_not_in_decoded_nodes() {
         (atom("kind"), atom("tree")),
         (
             atom("nodes"),
-            list(vec![map(vec![(atom("id"), binary("root")), (atom("label"), binary("Root"))])]),
+            list(vec![map(vec![
+                (atom("id"), binary("root")),
+                (atom("label"), binary("Root")),
+            ])]),
         ),
         (atom("selected_id"), binary("missing")),
     ]);
