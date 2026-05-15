@@ -74,7 +74,7 @@ Until precompiled artifacts exist, a release is source-only:
 3. Run `scripts/package_smoke`.
 4. Audit package contents with `mix hex.build --unpack --output /tmp/guppy-hex-unpack`.
 5. Run `GUPPY_NATIVE_RELEASE=1 mix run examples/hello_world.exs` on macOS.
-6. Confirm `docs/gpui-compliance.md` still records the current `../zed/crates/gpui` reference.
+6. Confirm `docs/gpui-compliance.md` still matches the active crates.io `gpui = "0.2.2"` dependency and only uses `../zed/crates/gpui` as reference material.
 7. Update `CHANGELOG.md` and the package version for the release.
 8. Do not attach native artifacts unless they were built by CI and load-tested. Use `scripts/package_smoke` as the minimum local package load smoke before expanding to artifact-specific CI jobs.
 
