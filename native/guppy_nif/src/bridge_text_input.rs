@@ -386,42 +386,16 @@ impl BridgeTextInput {
         cx.notify()
     }
 
-    fn offset_from_utf16(&self, offset: usize) -> usize {
-        let mut utf8_offset = 0;
-        let mut utf16_count = 0;
-
-        for ch in self.value.chars() {
-            if utf16_count >= offset {
-                break;
-            }
-            utf16_count += ch.len_utf16();
-            utf8_offset += ch.len_utf8();
-        }
-
-        utf8_offset
-    }
-
     fn offset_to_utf16(&self, offset: usize) -> usize {
-        let mut utf16_offset = 0;
-        let mut utf8_count = 0;
-
-        for ch in self.value.chars() {
-            if utf8_count >= offset {
-                break;
-            }
-            utf8_count += ch.len_utf8();
-            utf16_offset += ch.len_utf16();
-        }
-
-        utf16_offset
+        offset_to_utf16_in_text(self.value.as_ref(), offset)
     }
 
     fn range_to_utf16(&self, range: &Range<usize>) -> Range<usize> {
-        self.offset_to_utf16(range.start)..self.offset_to_utf16(range.end)
+        range_to_utf16_in_text(self.value.as_ref(), range)
     }
 
     fn range_from_utf16(&self, range_utf16: &Range<usize>) -> Range<usize> {
-        self.offset_from_utf16(range_utf16.start)..self.offset_from_utf16(range_utf16.end)
+        range_from_utf16_in_text(self.value.as_ref(), range_utf16)
     }
 
     fn previous_boundary(&self, offset: usize) -> usize {
@@ -538,8 +512,7 @@ impl EntityInputHandler for BridgeTextInput {
         }
         self.selected_range = new_selected_range_utf16
             .as_ref()
-            .map(|range_utf16| self.range_from_utf16(range_utf16))
-            .map(|new_range| new_range.start + range.start..new_range.end + range.start)
+            .map(|range_utf16| marked_selection_from_utf16(range.start, new_text, range_utf16))
             .unwrap_or_else(|| range.start + new_text.len()..range.start + new_text.len());
 
         self.send_change_event();
@@ -761,14 +734,12 @@ impl Element for TextElement {
         }
 
         for line in &prepaint.lines {
-            line.layout
-                .paint(
-                    point(bounds.left(), bounds.top() + line.top),
-                    window.line_height(),
-                    window,
-                    cx,
-                )
-                .unwrap();
+            let _ = line.layout.paint(
+                point(bounds.left(), bounds.top() + line.top),
+                window.line_height(),
+                window,
+                cx,
+            );
         }
 
         if focus_handle.is_focused(window)
@@ -784,6 +755,54 @@ impl Element for TextElement {
             input.last_bounds = Some(bounds);
         });
     }
+}
+
+fn offset_from_utf16_in_text(text: &str, offset: usize) -> usize {
+    let mut utf8_offset = 0;
+    let mut utf16_count = 0;
+
+    for ch in text.chars() {
+        if utf16_count >= offset {
+            break;
+        }
+        utf16_count += ch.len_utf16();
+        utf8_offset += ch.len_utf8();
+    }
+
+    utf8_offset
+}
+
+fn offset_to_utf16_in_text(text: &str, offset: usize) -> usize {
+    let mut utf16_offset = 0;
+    let mut utf8_count = 0;
+
+    for ch in text.chars() {
+        if utf8_count >= offset {
+            break;
+        }
+        utf8_count += ch.len_utf8();
+        utf16_offset += ch.len_utf16();
+    }
+
+    utf16_offset
+}
+
+fn range_to_utf16_in_text(text: &str, range: &Range<usize>) -> Range<usize> {
+    offset_to_utf16_in_text(text, range.start)..offset_to_utf16_in_text(text, range.end)
+}
+
+fn range_from_utf16_in_text(text: &str, range_utf16: &Range<usize>) -> Range<usize> {
+    offset_from_utf16_in_text(text, range_utf16.start)
+        ..offset_from_utf16_in_text(text, range_utf16.end)
+}
+
+fn marked_selection_from_utf16(
+    range_start: usize,
+    new_text: &str,
+    range_utf16: &Range<usize>,
+) -> Range<usize> {
+    let relative = range_from_utf16_in_text(new_text, range_utf16);
+    range_start + relative.start..range_start + relative.end
 }
 
 fn line_ranges(text: &str) -> Vec<(usize, usize)> {
@@ -893,7 +912,8 @@ fn configure_focus_handle(
 
 #[cfg(test)]
 mod tests {
-    use super::line_ranges;
+    use super::{BridgeTextInput, focus_handle_for, line_ranges, marked_selection_from_utf16};
+    use gpui::EntityInputHandler;
 
     #[test]
     fn line_ranges_preserve_empty_multiline_segments() {
@@ -901,5 +921,54 @@ mod tests {
         assert_eq!(line_ranges("one\ntwo"), vec![(0, 3), (4, 7)]);
         assert_eq!(line_ranges("one\n"), vec![(0, 3), (4, 4)]);
         assert_eq!(line_ranges("one\n\nthree"), vec![(0, 3), (4, 4), (5, 10)]);
+    }
+
+    #[test]
+    fn marked_selection_utf16_range_is_relative_to_replacement_text() {
+        let prefix_len = "é".len();
+        let replacement = "あ🙂b";
+
+        assert_eq!(
+            marked_selection_from_utf16(prefix_len, replacement, &(1..3)),
+            prefix_len + "あ".len()..prefix_len + "あ🙂".len()
+        );
+    }
+
+    #[gpui::test]
+    fn replace_and_mark_selection_is_relative_to_new_marked_text(cx: &mut gpui::TestAppContext) {
+        let (input, cx) = cx.add_window_view(|_, cx| BridgeTextInput {
+            view_id: 1,
+            node_id: "ime_input".to_string(),
+            value: "é".into(),
+            placeholder: "".into(),
+            change: None,
+            disabled: false,
+            tab_index: None,
+            multiline: false,
+            focus_handle: focus_handle_for(cx, None, false),
+            selected_range: "é".len().."é".len(),
+            selection_reversed: false,
+            marked_range: None,
+            last_lines: Vec::new(),
+            last_bounds: None,
+            is_selecting: false,
+        });
+
+        input.update_in(cx, |input, window, cx| {
+            let prefix_len = "é".len();
+            let replacement = "あ🙂b";
+
+            input.replace_and_mark_text_in_range(None, replacement, Some(1..3), window, cx);
+
+            assert_eq!(input.value.as_ref(), "éあ🙂b");
+            assert_eq!(
+                input.marked_range,
+                Some(prefix_len..prefix_len + replacement.len())
+            );
+            assert_eq!(
+                input.selected_range,
+                prefix_len + "あ".len()..prefix_len + "あ🙂".len()
+            );
+        });
     }
 }

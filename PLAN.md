@@ -24,8 +24,8 @@ Context: native/main-thread requests are timeout-aware, but enqueue/scheduling e
 
 Context: retained text input is intentionally first-pass editor behavior, but correctness bugs and production panics should be removed before expanding editor parity.
 
-- [ ] Fix IME `replace_and_mark_text_in_range` selection conversion for non-ASCII text before the replacement range; selected ranges are UTF-16-relative to marked text and must not be converted against the whole buffer before offsetting.
-- [ ] Replace the production `line.layout.paint(...).unwrap()` in text-input painting with non-panicking error handling unless GPUI guarantees infallibility.
+- [x] Fix IME `replace_and_mark_text_in_range` selection conversion for non-ASCII text before the replacement range; selected ranges are UTF-16-relative to marked text and must not be converted against the whole buffer before offsetting.
+- [x] Replace the production `line.layout.paint(...).unwrap()` in text-input painting with non-panicking error handling unless GPUI guarantees infallibility.
 
 ### Reduce remaining hot-path render allocations
 
