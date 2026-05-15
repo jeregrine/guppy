@@ -265,7 +265,8 @@ Files you will most often need:
 - `lib/guppy/component/compiler.ex` — template compiler
 - `lib/guppy/native/nif.ex` — direct Elixir NIF wrapper
 - `lib/guppy/ir.ex` — Elixir IR validation/helpers
-- `native/guppy_nif/src/lib.rs` — Rustler NIF entrypoints, event encoding, and request path
+- `native/guppy_nif/src/lib.rs` — Rustler NIF bootstrap, public NIF entrypoints, and request path
+- `native/guppy_nif/src/native_events.rs` — native event C shims and event payload encoding
 - `native/guppy_nif/src/native_event_test_support.rs` — native event snapshot helpers for tests
 - `native/guppy_nif/src/main_thread_runtime.rs` — GPUI app bootstrap, request drain, window registry
 - `native/guppy_nif/src/main_thread_runtime_tests.rs` — focused main-thread request/deadline tests
@@ -381,6 +382,7 @@ mix run bench/native_event_probe.exs --events=20
 Especially if you change:
 
 - `native/guppy_nif/src/lib.rs`
+- `native/guppy_nif/src/native_events.rs`
 - `native/guppy_nif/src/main_thread_runtime.rs`
 - `native/guppy_nif/src/bridge_view.rs`
 - anything under `native/guppy_nif/src/bridge_view/`
