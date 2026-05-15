@@ -131,18 +131,6 @@ fn base_payload_with_one_map<'a>(
     )
 }
 
-fn base_payload_with_capacity<'a>(
-    env: Env<'a>,
-    node_id: &str,
-    callback_id: &str,
-    additional_pairs: usize,
-) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = Vec::with_capacity(2 + additional_pairs);
-    pairs.push((id().encode(env), node_id.encode(env)));
-    pairs.push((callback().encode(env), callback_id.encode(env)));
-    pairs
-}
-
 #[cfg_attr(test, allow(dead_code))]
 fn row_control_payload_map<'a>(
     env: Env<'a>,
@@ -188,23 +176,52 @@ fn row_control_payload_with_one_map<'a>(
 }
 
 #[cfg_attr(test, allow(dead_code))]
-fn data_table_payload<'a>(
+fn data_table_payload_map<'a>(
     env: Env<'a>,
     node_id: &str,
     callback_id: &str,
     table_id_value: &str,
     row_id_value: Option<&str>,
     column_id_value: Option<&str>,
-) -> Vec<(Term<'a>, Term<'a>)> {
-    let mut pairs = base_payload_with_capacity(env, node_id, callback_id, 3);
-    pairs.push((table_id().encode(env), table_id_value.encode(env)));
-    if let Some(row_id_value) = row_id_value {
-        pairs.push((row_id().encode(env), row_id_value.encode(env)));
+) -> Term<'a> {
+    match (row_id_value, column_id_value) {
+        (Some(row_id_value), Some(column_id_value)) => map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (table_id().encode(env), table_id_value.encode(env)),
+                (row_id().encode(env), row_id_value.encode(env)),
+                (column_id().encode(env), column_id_value.encode(env)),
+            ],
+        ),
+        (Some(row_id_value), None) => map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (table_id().encode(env), table_id_value.encode(env)),
+                (row_id().encode(env), row_id_value.encode(env)),
+            ],
+        ),
+        (None, Some(column_id_value)) => map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (table_id().encode(env), table_id_value.encode(env)),
+                (column_id().encode(env), column_id_value.encode(env)),
+            ],
+        ),
+        (None, None) => map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (table_id().encode(env), table_id_value.encode(env)),
+            ],
+        ),
     }
-    if let Some(column_id_value) = column_id_value {
-        pairs.push((column_id().encode(env), column_id_value.encode(env)));
-    }
-    pairs
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -477,16 +494,13 @@ pub extern "C" fn guppy_c_send_data_table_event(
 
     #[cfg(not(test))]
     send_event(view_id, data_table_event_atom(event_code), move |env| {
-        map_from_pairs(
+        data_table_payload_map(
             env,
-            data_table_payload(
-                env,
-                &node_id,
-                &callback_id,
-                &table_id_value,
-                row_id_option,
-                column_id_option,
-            ),
+            &node_id,
+            &callback_id,
+            &table_id_value,
+            row_id_option,
+            column_id_option,
         )
     })
 }
