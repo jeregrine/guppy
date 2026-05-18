@@ -20,6 +20,9 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "visibility"))
     assert Enum.any?(operations, &(&1["name"] == "overflow"))
     assert Enum.any?(operations, &(&1["name"] == "cursor"))
+    assert Enum.any?(operations, &(&1["name"] == "border_width"))
+    assert Enum.any?(operations, &(&1["name"] == "border_radius"))
+    assert Enum.any?(operations, &(&1["name"] == "border_style"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -68,5 +71,20 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.cursor(:pointer) == {:cursor, :pointer}
     assert Guppy.Style.cursor_pointer() == {:cursor, :pointer}
     assert Guppy.Style.cursor_not_allowed() == {:cursor, :not_allowed}
+
+    assert Guppy.Style.border_width(:x, {:px, 1}) == {:border_width, :x, {:px, 1}}
+    assert Guppy.Style.border(2) == {:border_width, :all, {:px, 2}}
+    assert Guppy.Style.border_x(4) == {:border_width, :x, {:px, 4}}
+    assert Guppy.Style.border_t("px") == {:border_width, :top, {:px, 1}}
+    assert Guppy.Style.border_style(:dashed) == {:border_style, :dashed}
+    assert Guppy.Style.border_dashed() == {:border_style, :dashed}
+    assert Guppy.Style.border_solid() == {:border_style, :solid}
+
+    assert Guppy.Style.border_radius(:top_left, {:px, 3}) ==
+             {:border_radius, :top_left, {:px, 3}}
+
+    assert Guppy.Style.rounded("sm") == {:border_radius, :all, {:rem, 0.25}}
+    assert Guppy.Style.rounded_t("lg") == {:border_radius, :top, {:rem, 0.5}}
+    assert Guppy.Style.rounded_br("full") == {:border_radius, :bottom_right, {:px, 9999}}
   end
 end

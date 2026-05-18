@@ -11,11 +11,24 @@ defmodule Guppy.Style do
   @catalog @catalog_path |> File.read!() |> JSON.decode!()
 
   @axis_operations Enum.filter(@catalog["operations"], fn operation ->
-                     operation["name"] in ["padding", "margin", "gap", "inset"]
+                     operation["name"] in [
+                       "padding",
+                       "margin",
+                       "gap",
+                       "inset",
+                       "border_width",
+                       "border_radius"
+                     ]
                    end)
 
   @enum_operations Enum.filter(@catalog["operations"], fn operation ->
-                     operation["name"] in ["position", "display", "visibility", "cursor"]
+                     operation["name"] in [
+                       "position",
+                       "display",
+                       "visibility",
+                       "cursor",
+                       "border_style"
+                     ]
                    end)
 
   @overflow_operation Enum.find(@catalog["operations"], &(&1["name"] == "overflow"))
@@ -82,7 +95,8 @@ defmodule Guppy.Style do
                        %{
                          axes: axes,
                          allow_auto: length["auto"],
-                         allow_negative: length["negative"]
+                         allow_negative: length["negative"],
+                         length_units: length["allowed_units"] |> Enum.map(&String.to_atom/1)
                        }}
                     end)
 
@@ -100,7 +114,8 @@ defmodule Guppy.Style do
                        function: String.to_atom(helper["name"]),
                        axis: helper["axis"] && String.to_atom(helper["axis"]),
                        allow_auto: config.allow_auto,
-                       allow_negative: config.allow_negative
+                       allow_negative: config.allow_negative,
+                       length_units: config.length_units
                      }
                    end)
                  end)
@@ -115,33 +130,43 @@ defmodule Guppy.Style do
                             operation: String.to_atom(operation["name"]),
                             axis: axis && String.to_atom(axis),
                             allow_auto: config.allow_auto,
-                            allow_negative: config.allow_negative
+                            allow_negative: config.allow_negative,
+                            length_units: config.length_units
                           }
                         end)
                       end)
                       |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
-  @spacing_lengths @catalog["spacing_scale"]
-                   |> Enum.flat_map(fn entry ->
-                     length =
-                       case entry["length"] do
-                         %{"unit" => "px", "value" => value} ->
-                           {:px, value}
+  @operation_scales Map.new(@style_operations, fn operation ->
+                      scale_name = Map.get(operation, "scale", "spacing_scale")
+                      scale_entries = Map.fetch!(@catalog, scale_name)
 
-                         %{"unit" => "rem", "value" => value} ->
-                           {:rem, value}
+                      scale_lengths =
+                        scale_entries
+                        |> Enum.flat_map(fn entry ->
+                          length =
+                            case entry["length"] do
+                              %{"unit" => "px", "value" => value} ->
+                                {:px, value}
 
-                         %{"unit" => "fraction", "value" => value} ->
-                           {:fraction, value}
+                              %{"unit" => "rem", "value" => value} ->
+                                {:rem, value}
 
-                         other ->
-                           raise ArgumentError, "unsupported catalog length: #{inspect(other)}"
-                       end
+                              %{"unit" => "fraction", "value" => value} ->
+                                {:fraction, value}
 
-                     tokens = [entry["token"] | Map.get(entry, "aliases", [])]
-                     Enum.map(tokens, &{&1, length})
-                   end)
-                   |> Map.new()
+                              other ->
+                                raise ArgumentError,
+                                      "unsupported catalog length: #{inspect(other)}"
+                            end
+
+                          tokens = [entry["token"] | Map.get(entry, "aliases", [])]
+                          Enum.map(tokens, &{&1, length})
+                        end)
+                        |> Map.new()
+
+                      {String.to_atom(operation["name"]), scale_lengths}
+                    end)
 
   @doc "Returns the decoded style catalog used to generate this module."
   def catalog, do: @catalog
@@ -186,7 +211,12 @@ defmodule Guppy.Style do
     @doc "Returns a canonical #{operation} tuple for a concrete axis and length."
     def unquote(operation)(axis, length) when axis in unquote(axes) do
       {unquote(operation), axis,
-       normalize_length!(length, unquote(allow_auto), unquote(allow_negative))}
+       normalize_length!(
+         length,
+         unquote(allow_auto),
+         unquote(allow_negative),
+         unquote(config.length_units)
+       )}
     end
 
     def unquote(operation)(axis, _length) do
@@ -201,7 +231,13 @@ defmodule Guppy.Style do
     @doc "Returns a canonical #{operation} tuple for a concrete length."
     def unquote(operation)(length) do
       {unquote(operation),
-       normalize_length_or_scale!(length, unquote(allow_auto), unquote(allow_negative))}
+       normalize_length_or_scale!(
+         unquote(operation),
+         length,
+         unquote(allow_auto),
+         unquote(allow_negative),
+         unquote(config.length_units)
+       )}
     end
   end
 
@@ -210,9 +246,11 @@ defmodule Guppy.Style do
     def unquote(helper.function)(scale) do
       length =
         spacing_scale_length!(
+          unquote(helper.operation),
           scale,
           unquote(helper.allow_auto),
-          unquote(helper.allow_negative)
+          unquote(helper.allow_negative),
+          unquote(helper.length_units)
         )
 
       style_tuple(unquote(helper.operation), unquote(helper.axis), length)
@@ -268,14 +306,20 @@ defmodule Guppy.Style do
   defp split_negative_class_token(token), do: {false, token}
 
   defp scale_token_to_style(scale_token, spec, negated) do
-    case spacing_scale_length(scale_token, spec.allow_auto, spec.allow_negative) do
+    case catalog_scale_length(
+           spec.operation,
+           scale_token,
+           spec.allow_auto,
+           spec.allow_negative,
+           spec.length_units
+         ) do
       {:ok, length} -> class_style_tuple(spec, maybe_negate_length!(length, negated, spec))
       :error -> false
     end
   end
 
   defp arbitrary_length_to_style(payload, spec, negated) do
-    case parse_arbitrary_length(payload, spec.allow_auto, spec.allow_negative) do
+    case parse_arbitrary_length(payload, spec.allow_auto, spec.allow_negative, spec.length_units) do
       {:ok, length} -> class_style_tuple(spec, maybe_negate_length!(length, negated, spec))
       :error -> false
     end
@@ -286,14 +330,14 @@ defmodule Guppy.Style do
   defp style_tuple(operation, nil, length), do: {operation, length}
   defp style_tuple(operation, axis, length), do: {operation, axis, length}
 
-  defp spacing_scale_length!(scale, allow_auto, allow_negative) do
-    case spacing_scale_length(scale, allow_auto, allow_negative) do
+  defp spacing_scale_length!(operation, scale, allow_auto, allow_negative, length_units) do
+    case catalog_scale_length(operation, scale, allow_auto, allow_negative, length_units) do
       {:ok, length} -> length
       :error -> raise ArgumentError, "unknown GPUI spacing scale token: #{inspect(scale)}"
     end
   end
 
-  defp spacing_scale_length(scale, allow_auto, allow_negative) do
+  defp catalog_scale_length(operation, scale, allow_auto, allow_negative, length_units) do
     {key, negated} = spacing_scale_key_and_sign(scale)
 
     cond do
@@ -304,9 +348,14 @@ defmodule Guppy.Style do
         :error
 
       true ->
-        case Map.fetch(@spacing_lengths, key) do
-          {:ok, length} -> {:ok, maybe_negate_length!(length, negated, allow_negative)}
-          :error -> :error
+        case @operation_scales |> Map.fetch!(operation) |> Map.fetch(key) do
+          {:ok, length} ->
+            length
+            |> validate_length_units!(length_units)
+            |> then(&{:ok, maybe_negate_length!(&1, negated, allow_negative)})
+
+          :error ->
+            :error
         end
     end
   end
@@ -343,56 +392,85 @@ defmodule Guppy.Style do
     raise ArgumentError, "invalid GPUI spacing scale token: #{inspect(value)}"
   end
 
-  defp normalize_length_or_scale!({unit, _value} = length, allow_auto, allow_negative)
+  defp normalize_length_or_scale!(
+         _operation,
+         {unit, _value} = length,
+         allow_auto,
+         allow_negative,
+         length_units
+       )
        when unit in [:px, :rem, :fraction],
-       do: normalize_length!(length, allow_auto, allow_negative)
+       do: normalize_length!(length, allow_auto, allow_negative, length_units)
 
-  defp normalize_length_or_scale!(:auto, allow_auto, allow_negative),
-    do: normalize_length!(:auto, allow_auto, allow_negative)
+  defp normalize_length_or_scale!(_operation, :auto, allow_auto, allow_negative, length_units),
+    do: normalize_length!(:auto, allow_auto, allow_negative, length_units)
 
-  defp normalize_length_or_scale!(scale, allow_auto, allow_negative),
-    do: spacing_scale_length!(scale, allow_auto, allow_negative)
+  defp normalize_length_or_scale!(operation, scale, allow_auto, allow_negative, length_units),
+    do: spacing_scale_length!(operation, scale, allow_auto, allow_negative, length_units)
 
-  defp normalize_length!(:auto, true, _allow_negative), do: :auto
+  defp normalize_length!(:auto, true, _allow_negative, _length_units), do: :auto
 
-  defp normalize_length!({unit, value}, _allow_auto, allow_negative)
+  defp normalize_length!({unit, value} = length, _allow_auto, allow_negative, length_units)
        when unit in [:px, :rem, :fraction] and is_number(value) do
-    if allow_negative or value >= 0 do
-      {unit, value}
-    else
-      raise ArgumentError, "invalid non-negative style length: #{inspect({unit, value})}"
+    cond do
+      unit not in length_units ->
+        raise ArgumentError, "style length unit is not allowed here: #{inspect(length)}"
+
+      allow_negative or value >= 0 ->
+        {unit, value}
+
+      true ->
+        raise ArgumentError, "invalid non-negative style length: #{inspect(length)}"
     end
   end
 
-  defp normalize_length!(other, allow_auto, _allow_negative) do
+  defp normalize_length!(other, allow_auto, _allow_negative, _length_units) do
     auto_message = if allow_auto, do: ", :auto", else: ""
 
     raise ArgumentError,
           "invalid style length #{inspect(other)}; expected {:px, n}, {:rem, n}, {:fraction, n}#{auto_message}"
   end
 
-  defp parse_arbitrary_length("auto", true, _allow_negative), do: {:ok, :auto}
-  defp parse_arbitrary_length("auto", false, _allow_negative), do: :error
+  defp parse_arbitrary_length("auto", true, _allow_negative, _length_units), do: {:ok, :auto}
+  defp parse_arbitrary_length("auto", false, _allow_negative, _length_units), do: :error
 
-  defp parse_arbitrary_length(payload, _allow_auto, allow_negative) do
+  defp parse_arbitrary_length(payload, _allow_auto, allow_negative, length_units) do
     case Regex.run(~r/^(-?[0-9]+(?:\.[0-9]+)?)(px|rem|%)$/, payload, capture: :all_but_first) do
       [number, "px"] ->
-        validate_arbitrary_length({:px, parse_number!(number)}, allow_negative)
+        validate_arbitrary_length({:px, parse_number!(number)}, allow_negative, length_units)
 
       [number, "rem"] ->
-        validate_arbitrary_length({:rem, parse_number!(number)}, allow_negative)
+        validate_arbitrary_length({:rem, parse_number!(number)}, allow_negative, length_units)
 
       [number, "%"] ->
-        validate_arbitrary_length({:fraction, parse_number!(number) / 100}, allow_negative)
+        validate_arbitrary_length(
+          {:fraction, parse_number!(number) / 100},
+          allow_negative,
+          length_units
+        )
 
       _ ->
         :error
     end
   end
 
-  defp validate_arbitrary_length({unit, value} = length, allow_negative)
+  defp validate_arbitrary_length({unit, value} = length, allow_negative, length_units)
        when unit in [:px, :rem, :fraction] do
-    if allow_negative or value >= 0, do: {:ok, length}, else: :error
+    cond do
+      unit not in length_units -> :error
+      allow_negative or value >= 0 -> {:ok, length}
+      true -> :error
+    end
+  end
+
+  defp validate_length_units!(:auto, _length_units), do: :auto
+
+  defp validate_length_units!({unit, _value} = length, length_units) do
+    if unit in length_units do
+      length
+    else
+      raise ArgumentError, "style length unit is not allowed here: #{inspect(length)}"
+    end
   end
 
   defp maybe_negate_length!(length, false, _spec_or_allow_negative), do: length

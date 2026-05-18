@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, size, position/inset, display, visibility, overflow, and cursor helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, and border radius helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1506,6 +1506,485 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled cursor_style_methods! cursor_*"
+    },
+    {
+      "name": "border_width",
+      "tuple_schema": [
+        "border_width",
+        "axis",
+        "absolute_length"
+      ],
+      "canonical_examples": [
+        [
+          "border_width",
+          "all",
+          [
+            "px",
+            1
+          ]
+        ],
+        [
+          "border_width",
+          "x",
+          [
+            "px",
+            4
+          ]
+        ]
+      ],
+      "axes": {
+        "all": [
+          "top",
+          "right",
+          "bottom",
+          "left"
+        ],
+        "x": [
+          "left",
+          "right"
+        ],
+        "y": [
+          "top",
+          "bottom"
+        ],
+        "top": [
+          "top"
+        ],
+        "right": [
+          "right"
+        ],
+        "bottom": [
+          "bottom"
+        ],
+        "left": [
+          "left"
+        ]
+      },
+      "class_prefixes": {
+        "border": "all",
+        "border-x": "x",
+        "border-y": "y",
+        "border-t": "top",
+        "border-r": "right",
+        "border-b": "bottom",
+        "border-l": "left"
+      },
+      "helpers": [
+        {
+          "name": "border_width",
+          "kind": "exact"
+        },
+        {
+          "name": "border",
+          "kind": "scale",
+          "axis": "all"
+        },
+        {
+          "name": "border_x",
+          "kind": "scale",
+          "axis": "x"
+        },
+        {
+          "name": "border_y",
+          "kind": "scale",
+          "axis": "y"
+        },
+        {
+          "name": "border_t",
+          "kind": "scale",
+          "axis": "top"
+        },
+        {
+          "name": "border_r",
+          "kind": "scale",
+          "axis": "right"
+        },
+        {
+          "name": "border_b",
+          "kind": "scale",
+          "axis": "bottom"
+        },
+        {
+          "name": "border_l",
+          "kind": "scale",
+          "axis": "left"
+        }
+      ],
+      "scale": "border_width_scale",
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem"
+        ],
+        "negative": false,
+        "auto": false
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled border_style_methods! border/border_x/border_y/border_t/border_r/border_b/border_l"
+    },
+    {
+      "name": "border_style",
+      "tuple_schema": [
+        "border_style",
+        "value"
+      ],
+      "values": [
+        "solid",
+        "dashed"
+      ],
+      "class_tokens": {
+        "border-solid": "solid",
+        "border-dashed": "dashed"
+      },
+      "helpers": [
+        {
+          "name": "border_style",
+          "kind": "exact"
+        },
+        {
+          "name": "border_solid",
+          "kind": "value",
+          "value": "solid"
+        },
+        {
+          "name": "border_dashed",
+          "kind": "value",
+          "value": "dashed"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled border_dashed and default BorderStyle::Solid"
+    },
+    {
+      "name": "border_radius",
+      "tuple_schema": [
+        "border_radius",
+        "corner",
+        "absolute_length"
+      ],
+      "canonical_examples": [
+        [
+          "border_radius",
+          "all",
+          [
+            "rem",
+            0.25
+          ]
+        ],
+        [
+          "border_radius",
+          "bottom_right",
+          [
+            "px",
+            9999
+          ]
+        ]
+      ],
+      "axes": {
+        "all": [
+          "top_left",
+          "top_right",
+          "bottom_right",
+          "bottom_left"
+        ],
+        "top": [
+          "top_left",
+          "top_right"
+        ],
+        "right": [
+          "top_right",
+          "bottom_right"
+        ],
+        "bottom": [
+          "bottom_left",
+          "bottom_right"
+        ],
+        "left": [
+          "top_left",
+          "bottom_left"
+        ],
+        "top_left": [
+          "top_left"
+        ],
+        "top_right": [
+          "top_right"
+        ],
+        "bottom_left": [
+          "bottom_left"
+        ],
+        "bottom_right": [
+          "bottom_right"
+        ]
+      },
+      "class_prefixes": {
+        "rounded": "all",
+        "rounded-t": "top",
+        "rounded-r": "right",
+        "rounded-b": "bottom",
+        "rounded-l": "left",
+        "rounded-tl": "top_left",
+        "rounded-tr": "top_right",
+        "rounded-bl": "bottom_left",
+        "rounded-br": "bottom_right"
+      },
+      "helpers": [
+        {
+          "name": "border_radius",
+          "kind": "exact"
+        },
+        {
+          "name": "rounded",
+          "kind": "scale",
+          "axis": "all"
+        },
+        {
+          "name": "rounded_t",
+          "kind": "scale",
+          "axis": "top"
+        },
+        {
+          "name": "rounded_r",
+          "kind": "scale",
+          "axis": "right"
+        },
+        {
+          "name": "rounded_b",
+          "kind": "scale",
+          "axis": "bottom"
+        },
+        {
+          "name": "rounded_l",
+          "kind": "scale",
+          "axis": "left"
+        },
+        {
+          "name": "rounded_tl",
+          "kind": "scale",
+          "axis": "top_left"
+        },
+        {
+          "name": "rounded_tr",
+          "kind": "scale",
+          "axis": "top_right"
+        },
+        {
+          "name": "rounded_bl",
+          "kind": "scale",
+          "axis": "bottom_left"
+        },
+        {
+          "name": "rounded_br",
+          "kind": "scale",
+          "axis": "bottom_right"
+        }
+      ],
+      "scale": "radius_scale",
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem"
+        ],
+        "negative": false,
+        "auto": false
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled style_helpers! rounded/rounded_t/rounded_r/rounded_b/rounded_l/rounded_tl/rounded_tr/rounded_bl/rounded_br"
+    }
+  ],
+  "border_width_scale": [
+    {
+      "token": "0",
+      "length": {
+        "unit": "px",
+        "value": 0
+      }
+    },
+    {
+      "token": "px",
+      "length": {
+        "unit": "px",
+        "value": 1
+      }
+    },
+    {
+      "token": "1",
+      "length": {
+        "unit": "px",
+        "value": 1
+      }
+    },
+    {
+      "token": "2",
+      "length": {
+        "unit": "px",
+        "value": 2
+      }
+    },
+    {
+      "token": "3",
+      "length": {
+        "unit": "px",
+        "value": 3
+      }
+    },
+    {
+      "token": "4",
+      "length": {
+        "unit": "px",
+        "value": 4
+      }
+    },
+    {
+      "token": "5",
+      "length": {
+        "unit": "px",
+        "value": 5
+      }
+    },
+    {
+      "token": "6",
+      "length": {
+        "unit": "px",
+        "value": 6
+      }
+    },
+    {
+      "token": "7",
+      "length": {
+        "unit": "px",
+        "value": 7
+      }
+    },
+    {
+      "token": "8",
+      "length": {
+        "unit": "px",
+        "value": 8
+      }
+    },
+    {
+      "token": "9",
+      "length": {
+        "unit": "px",
+        "value": 9
+      }
+    },
+    {
+      "token": "10",
+      "length": {
+        "unit": "px",
+        "value": 10
+      }
+    },
+    {
+      "token": "11",
+      "length": {
+        "unit": "px",
+        "value": 11
+      }
+    },
+    {
+      "token": "12",
+      "length": {
+        "unit": "px",
+        "value": 12
+      }
+    },
+    {
+      "token": "16",
+      "length": {
+        "unit": "px",
+        "value": 16
+      }
+    },
+    {
+      "token": "20",
+      "length": {
+        "unit": "px",
+        "value": 20
+      }
+    },
+    {
+      "token": "24",
+      "length": {
+        "unit": "px",
+        "value": 24
+      }
+    },
+    {
+      "token": "32",
+      "length": {
+        "unit": "px",
+        "value": 32
+      }
+    }
+  ],
+  "radius_scale": [
+    {
+      "token": "none",
+      "length": {
+        "unit": "px",
+        "value": 0
+      }
+    },
+    {
+      "token": "xs",
+      "length": {
+        "unit": "rem",
+        "value": 0.125
+      }
+    },
+    {
+      "token": "sm",
+      "length": {
+        "unit": "rem",
+        "value": 0.25
+      }
+    },
+    {
+      "token": "md",
+      "length": {
+        "unit": "rem",
+        "value": 0.375
+      }
+    },
+    {
+      "token": "lg",
+      "length": {
+        "unit": "rem",
+        "value": 0.5
+      }
+    },
+    {
+      "token": "xl",
+      "length": {
+        "unit": "rem",
+        "value": 0.75
+      }
+    },
+    {
+      "token": "2xl",
+      "length": {
+        "unit": "rem",
+        "value": 1
+      }
+    },
+    {
+      "token": "3xl",
+      "length": {
+        "unit": "rem",
+        "value": 1.5
+      }
+    },
+    {
+      "token": "full",
+      "length": {
+        "unit": "px",
+        "value": 9999
+      }
     }
   ]
 }

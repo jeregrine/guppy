@@ -160,6 +160,16 @@ defmodule Guppy.IR do
 
   @type style_length :: {:px, number()} | {:rem, number()} | {:fraction, number()}
   @type style_axis :: :all | :x | :y | :top | :right | :bottom | :left
+  @type border_radius_axis ::
+          :all
+          | :top
+          | :right
+          | :bottom
+          | :left
+          | :top_left
+          | :top_right
+          | :bottom_left
+          | :bottom_right
 
   @type style_value ::
           {:padding, style_axis(), style_length()}
@@ -178,6 +188,9 @@ defmodule Guppy.IR do
           | {:visibility, :visible | :hidden}
           | {:overflow, :all | :x | :y, :hidden | :scroll}
           | {:cursor, atom()}
+          | {:border_width, style_axis(), {:px | :rem, number()}}
+          | {:border_radius, border_radius_axis(), {:px | :rem, number()}}
+          | {:border_style, :solid | :dashed}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -843,10 +856,22 @@ defmodule Guppy.IR do
   @style_axis_tokens [:all, :x, :y, :top, :right, :bottom, :left]
   @gap_axis_tokens [:all, :x, :y]
   @inset_axis_tokens [:all, :top, :right, :bottom, :left]
+  @border_radius_axis_tokens [
+    :all,
+    :top,
+    :right,
+    :bottom,
+    :left,
+    :top_left,
+    :top_right,
+    :bottom_left,
+    :bottom_right
+  ]
   @position_value_tokens [:relative, :absolute]
   @display_value_tokens [:block, :flex, :grid, :none]
   @visibility_value_tokens [:visible, :hidden]
   @overflow_value_tokens [:hidden, :scroll]
+  @border_style_value_tokens [:solid, :dashed]
 
   @cursor_value_tokens [
     :default,
@@ -2625,6 +2650,25 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:cursor, value}) when value in @cursor_value_tokens, do: :ok
 
+  defp validate_style_op({:border_width, axis, length} = op) when axis in @style_axis_tokens do
+    if valid_absolute_length?(length) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
+  defp validate_style_op({:border_radius, axis, length} = op)
+       when axis in @border_radius_axis_tokens do
+    if valid_absolute_length?(length) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
+  defp validate_style_op({:border_style, value}) when value in @border_style_value_tokens, do: :ok
+
   defp validate_style_op({key, value})
        when key in @color_style_value_tokens and value in @color_tokens,
        do: :ok
@@ -2678,6 +2722,12 @@ defmodule Guppy.IR do
        do: true
 
   defp valid_definite_length?(_length, _allow_negative), do: false
+
+  defp valid_absolute_length?({unit, value})
+       when unit in [:px, :rem] and is_non_neg_native_f32_number(value),
+       do: true
+
+  defp valid_absolute_length?(_length), do: false
 
   defp valid_linear_gradient_options?(options) when is_list(options) do
     if Keyword.keyword?(options) do

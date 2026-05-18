@@ -317,6 +317,25 @@ pub enum MouseCursorStyle {
     None,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BorderLineStyle {
+    Solid,
+    Dashed,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BorderRadiusAxis {
+    All,
+    Top,
+    Right,
+    Bottom,
+    Left,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -480,6 +499,15 @@ pub enum StyleOp {
         behavior: OverflowStyle,
     },
     Cursor(MouseCursorStyle),
+    BorderWidth {
+        axis: StyleAxis,
+        length: StyleLength,
+    },
+    BorderRadius {
+        axis: BorderRadiusAxis,
+        length: StyleLength,
+    },
+    BorderStyle(BorderLineStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2654,6 +2682,14 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     axis: parse_gap_axis(&elements[1])?,
                     behavior: parse_overflow_style(&elements[2])?,
                 }),
+                "border_width" => Ok(StyleOp::BorderWidth {
+                    axis: parse_style_axis(&elements[1], "border_width")?,
+                    length: parse_absolute_style_length(&elements[2], "border_width")?,
+                }),
+                "border_radius" => Ok(StyleOp::BorderRadius {
+                    axis: parse_border_radius_axis(&elements[1])?,
+                    length: parse_absolute_style_length(&elements[2], "border_radius")?,
+                }),
                 other => Err(format!("unsupported style tuple key: {other}")),
             }
         }
@@ -2710,6 +2746,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "display" => Ok(StyleOp::Display(parse_display_style(&elements[1])?)),
                 "visibility" => Ok(StyleOp::Visibility(parse_visibility_style(&elements[1])?)),
                 "cursor" => Ok(StyleOp::Cursor(parse_mouse_cursor_style(&elements[1])?)),
+                "border_style" => Ok(StyleOp::BorderStyle(parse_border_line_style(&elements[1])?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
@@ -3117,6 +3154,33 @@ fn parse_overflow_style(term: &Term) -> Result<OverflowStyle, String> {
     }
 }
 
+fn parse_border_radius_axis(term: &Term) -> Result<BorderRadiusAxis, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid border_radius axis: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "all" => Ok(BorderRadiusAxis::All),
+        "top" => Ok(BorderRadiusAxis::Top),
+        "right" => Ok(BorderRadiusAxis::Right),
+        "bottom" => Ok(BorderRadiusAxis::Bottom),
+        "left" => Ok(BorderRadiusAxis::Left),
+        "top_left" => Ok(BorderRadiusAxis::TopLeft),
+        "top_right" => Ok(BorderRadiusAxis::TopRight),
+        "bottom_left" => Ok(BorderRadiusAxis::BottomLeft),
+        "bottom_right" => Ok(BorderRadiusAxis::BottomRight),
+        other => Err(format!("invalid border_radius axis: {other}")),
+    }
+}
+
+fn parse_border_line_style(term: &Term) -> Result<BorderLineStyle, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "solid" => Ok(BorderLineStyle::Solid),
+        Term::Atom(atom) if atom.name == "dashed" => Ok(BorderLineStyle::Dashed),
+        other => Err(format!("invalid border_style: {other}")),
+    }
+}
+
 fn parse_mouse_cursor_style(term: &Term) -> Result<MouseCursorStyle, String> {
     let Term::Atom(atom) = term else {
         return Err(format!("invalid cursor style: {term}"));
@@ -3176,6 +3240,31 @@ fn parse_style_length(
             }
         }
         other => Err(format!("expected {key} length tuple, got {other}")),
+    }
+}
+
+fn parse_absolute_style_length(term: &Term, key: &str) -> Result<StyleLength, String> {
+    let Term::Tuple(Tuple { elements }) = term else {
+        return Err(format!("expected {key} length tuple, got {term}"));
+    };
+
+    if elements.len() != 2 {
+        return Err(format!(
+            "expected {key} length tuple with 2 elements, got {term}"
+        ));
+    }
+
+    let unit = match &elements[0] {
+        Term::Atom(atom) => atom.name.as_str(),
+        other => return Err(format!("expected {key} length unit atom, got {other}")),
+    };
+
+    let value = parse_non_negative_style_f32(&elements[1], key)?;
+
+    match unit {
+        "px" => Ok(StyleLength::Px(value)),
+        "rem" => Ok(StyleLength::Rem(value)),
+        other => Err(format!("invalid {key} length unit: {other}")),
     }
 }
 

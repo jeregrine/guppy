@@ -1,6 +1,7 @@
 use crate::ir::{
-    ColorToken, DisplayStyle, DivStyle, LinearGradientStop, MouseCursorStyle, OverflowStyle,
-    PositionStyle, StyleAxis, StyleColor, StyleLength, StyleOp, VisibilityStyle,
+    BorderLineStyle, BorderRadiusAxis, ColorToken, DisplayStyle, DivStyle, LinearGradientStop,
+    MouseCursorStyle, OverflowStyle, PositionStyle, StyleAxis, StyleColor, StyleLength, StyleOp,
+    VisibilityStyle,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -201,6 +202,9 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::ShadowLg
         | StyleOp::Visibility(_)
         | StyleOp::Cursor(_)
+        | StyleOp::BorderWidth { .. }
+        | StyleOp::BorderRadius { .. }
+        | StyleOp::BorderStyle(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::BorderColor(_)
@@ -301,6 +305,9 @@ where
         StyleOp::Opacity(value) => style.opacity(*value),
         StyleOp::Visibility(visibility) => apply_visibility(style, *visibility),
         StyleOp::Cursor(cursor) => apply_cursor(style, *cursor),
+        StyleOp::BorderWidth { axis, length } => apply_border_width(style, *axis, *length),
+        StyleOp::BorderRadius { axis, length } => apply_border_radius(style, *axis, *length),
+        StyleOp::BorderStyle(border_style) => apply_border_style(style, *border_style),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -420,6 +427,9 @@ where
         StyleOp::Visibility(visibility) => apply_visibility(element, *visibility),
         StyleOp::Overflow { axis, behavior } => apply_overflow(element, *axis, *behavior),
         StyleOp::Cursor(cursor) => apply_cursor(element, *cursor),
+        StyleOp::BorderWidth { axis, length } => apply_border_width(element, *axis, *length),
+        StyleOp::BorderRadius { axis, length } => apply_border_radius(element, *axis, *length),
+        StyleOp::BorderStyle(border_style) => apply_border_style(element, *border_style),
         _ => element,
     }
 }
@@ -595,12 +605,102 @@ fn mouse_cursor_to_gpui(cursor: MouseCursorStyle) -> gpui::CursorStyle {
     }
 }
 
+fn apply_border_width<E>(mut element: E, axis: StyleAxis, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    let length = style_length_to_absolute(length);
+    let border_widths = &mut element.style().border_widths;
+
+    match axis {
+        StyleAxis::All => {
+            border_widths.top = Some(length);
+            border_widths.right = Some(length);
+            border_widths.bottom = Some(length);
+            border_widths.left = Some(length);
+        }
+        StyleAxis::X => {
+            border_widths.left = Some(length);
+            border_widths.right = Some(length);
+        }
+        StyleAxis::Y => {
+            border_widths.top = Some(length);
+            border_widths.bottom = Some(length);
+        }
+        StyleAxis::Top => border_widths.top = Some(length),
+        StyleAxis::Right => border_widths.right = Some(length),
+        StyleAxis::Bottom => border_widths.bottom = Some(length),
+        StyleAxis::Left => border_widths.left = Some(length),
+    }
+
+    element
+}
+
+fn apply_border_radius<E>(mut element: E, axis: BorderRadiusAxis, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    let length = style_length_to_absolute(length);
+    let corner_radii = &mut element.style().corner_radii;
+
+    match axis {
+        BorderRadiusAxis::All => {
+            corner_radii.top_left = Some(length);
+            corner_radii.top_right = Some(length);
+            corner_radii.bottom_right = Some(length);
+            corner_radii.bottom_left = Some(length);
+        }
+        BorderRadiusAxis::Top => {
+            corner_radii.top_left = Some(length);
+            corner_radii.top_right = Some(length);
+        }
+        BorderRadiusAxis::Right => {
+            corner_radii.top_right = Some(length);
+            corner_radii.bottom_right = Some(length);
+        }
+        BorderRadiusAxis::Bottom => {
+            corner_radii.bottom_left = Some(length);
+            corner_radii.bottom_right = Some(length);
+        }
+        BorderRadiusAxis::Left => {
+            corner_radii.top_left = Some(length);
+            corner_radii.bottom_left = Some(length);
+        }
+        BorderRadiusAxis::TopLeft => corner_radii.top_left = Some(length),
+        BorderRadiusAxis::TopRight => corner_radii.top_right = Some(length),
+        BorderRadiusAxis::BottomLeft => corner_radii.bottom_left = Some(length),
+        BorderRadiusAxis::BottomRight => corner_radii.bottom_right = Some(length),
+    }
+
+    element
+}
+
+fn apply_border_style<E>(mut element: E, border_style: BorderLineStyle) -> E
+where
+    E: Styled,
+{
+    element.style().border_style = Some(match border_style {
+        BorderLineStyle::Solid => gpui::BorderStyle::Solid,
+        BorderLineStyle::Dashed => gpui::BorderStyle::Dashed,
+    });
+
+    element
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
         StyleLength::Rem(value) => rems(value).into(),
         StyleLength::Fraction(value) => relative(value),
         StyleLength::Auto => px(0.0).into(),
+    }
+}
+
+fn style_length_to_absolute(length: StyleLength) -> gpui::AbsoluteLength {
+    match length {
+        StyleLength::Px(value) => px(value).into(),
+        StyleLength::Rem(value) => rems(value).into(),
+        StyleLength::Fraction(_) | StyleLength::Auto => px(0.0).into(),
     }
 }
 
@@ -771,6 +871,26 @@ mod tests {
             style.mouse_cursor,
             Some(gpui::CursorStyle::OperationNotAllowed)
         );
+
+        let style = apply_border_width(
+            StyleRefinement::default(),
+            StyleAxis::X,
+            StyleLength::Px(4.0),
+        );
+        assert_eq!(style.border_widths.left, Some(px(4.0).into()));
+        assert_eq!(style.border_widths.right, Some(px(4.0).into()));
+        assert_eq!(style.border_widths.top, None);
+
+        let style = apply_border_radius(
+            StyleRefinement::default(),
+            BorderRadiusAxis::BottomRight,
+            StyleLength::Rem(0.25),
+        );
+        assert_eq!(style.corner_radii.bottom_right, Some(rems(0.25).into()));
+        assert_eq!(style.corner_radii.top_left, None);
+
+        let style = apply_border_style(StyleRefinement::default(), BorderLineStyle::Dashed);
+        assert_eq!(style.border_style, Some(gpui::BorderStyle::Dashed));
     }
 
     #[test]

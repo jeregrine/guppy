@@ -1114,6 +1114,37 @@ fn parses_canonical_box_spacing_style_ops() {
         parse_style_op(&tuple(vec![atom("cursor"), atom("not_allowed")])).unwrap(),
         StyleOp::Cursor(super::MouseCursorStyle::NotAllowed)
     );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("border_width"),
+            atom("x"),
+            tuple(vec![atom("px"), integer(4)]),
+        ]))
+        .unwrap(),
+        StyleOp::BorderWidth {
+            axis: StyleAxis::X,
+            length: StyleLength::Px(4.0),
+        }
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("border_radius"),
+            atom("top_left"),
+            tuple(vec![atom("rem"), float(0.25)]),
+        ]))
+        .unwrap(),
+        StyleOp::BorderRadius {
+            axis: super::BorderRadiusAxis::TopLeft,
+            length: StyleLength::Rem(0.25),
+        }
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("border_style"), atom("dashed")])).unwrap(),
+        StyleOp::BorderStyle(super::BorderLineStyle::Dashed)
+    );
 }
 
 #[test]
@@ -1145,6 +1176,22 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("visibility"), atom("collapsed")]),
         tuple(vec![atom("overflow"), atom("x"), atom("clip")]),
         tuple(vec![atom("cursor"), atom("bad")]),
+        tuple(vec![
+            atom("border_width"),
+            atom("center"),
+            tuple(vec![atom("px"), integer(1)]),
+        ]),
+        tuple(vec![
+            atom("border_width"),
+            atom("all"),
+            tuple(vec![atom("fraction"), integer(1)]),
+        ]),
+        tuple(vec![
+            atom("border_radius"),
+            atom("x"),
+            tuple(vec![atom("px"), integer(1)]),
+        ]),
+        tuple(vec![atom("border_style"), atom("double")]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
@@ -1156,6 +1203,7 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("visibility")
                 || err.contains("overflow")
                 || err.contains("cursor")
+                || err.contains("border")
                 || err.contains("length"),
             "unexpected error: {err}"
         );
@@ -1198,6 +1246,16 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "cursor")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "border_width")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "border_radius")
     );
 }
 
