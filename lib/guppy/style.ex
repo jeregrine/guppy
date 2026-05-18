@@ -11,7 +11,11 @@ defmodule Guppy.Style do
   @catalog @catalog_path |> File.read!() |> JSON.decode!()
 
   @axis_operations Enum.filter(@catalog["operations"], fn operation ->
-                     operation["name"] in ["padding", "margin", "gap"]
+                     operation["name"] in ["padding", "margin", "gap", "inset"]
+                   end)
+
+  @enum_operations Enum.filter(@catalog["operations"], fn operation ->
+                     operation["name"] in ["position"]
                    end)
 
   @length_operations Enum.filter(@catalog["operations"], fn operation ->
@@ -27,6 +31,12 @@ defmodule Guppy.Style do
                      end)
 
   @style_operations @axis_operations ++ @length_operations
+
+  @position_operation Enum.find(@enum_operations, &(&1["name"] == "position"))
+  @position_values @position_operation["values"] |> Enum.map(&String.to_atom/1)
+  @position_class_tokens Map.new(@position_operation["class_tokens"], fn {token, value} ->
+                           {token, String.to_atom(value)}
+                         end)
 
   @operation_config Map.new(@style_operations, fn operation ->
                       length = operation["length"]
@@ -105,6 +115,16 @@ defmodule Guppy.Style do
   @doc "Returns the decoded style catalog used to generate this module."
   def catalog, do: @catalog
 
+  @doc "Returns a canonical position tuple."
+  def position(value) when value in @position_values, do: {:position, value}
+
+  def position(value), do: raise(ArgumentError, "invalid position value: #{inspect(value)}")
+
+  for value <- @position_values do
+    @doc "Returns canonical #{value} position style."
+    def unquote(value)(), do: {:position, unquote(value)}
+  end
+
   for {operation, config} <- @operation_config, is_list(config.axes) do
     axes = config.axes
     allow_auto = config.allow_auto
@@ -148,10 +168,20 @@ defmodule Guppy.Style do
 
   @doc false
   def class_token_to_style(token) when is_binary(token) do
-    parse_box_class(token)
+    case parse_position_class(token) do
+      {:ok, style} -> {:ok, style}
+      :error -> parse_box_class(token)
+    end
   end
 
   def class_token_to_style(_token), do: :error
+
+  defp parse_position_class(token) do
+    case Map.fetch(@position_class_tokens, token) do
+      {:ok, value} -> {:ok, {:position, value}}
+      :error -> :error
+    end
+  end
 
   defp parse_box_class(token) do
     {negated, token} = split_negative_class_token(token)

@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-spacing-and-size-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, and size helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, size, and position/inset helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1005,6 +1005,142 @@
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Styled style_helpers! max_h"
+    },
+    {
+      "name": "position",
+      "tuple_schema": [
+        "position",
+        "value"
+      ],
+      "values": [
+        "relative",
+        "absolute"
+      ],
+      "class_tokens": {
+        "relative": "relative",
+        "absolute": "absolute"
+      },
+      "helpers": [
+        {
+          "name": "position",
+          "kind": "exact"
+        },
+        {
+          "name": "relative",
+          "kind": "value",
+          "value": "relative"
+        },
+        {
+          "name": "absolute",
+          "kind": "value",
+          "value": "absolute"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled position_style_methods! relative/absolute"
+    },
+    {
+      "name": "inset",
+      "tuple_schema": [
+        "inset",
+        "axis",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "inset",
+          "all",
+          [
+            "px",
+            0
+          ]
+        ],
+        [
+          "inset",
+          "top",
+          [
+            "rem",
+            -0.5
+          ]
+        ],
+        [
+          "inset",
+          "right",
+          "auto"
+        ]
+      ],
+      "axes": {
+        "all": [
+          "top",
+          "right",
+          "bottom",
+          "left"
+        ],
+        "top": [
+          "top"
+        ],
+        "right": [
+          "right"
+        ],
+        "bottom": [
+          "bottom"
+        ],
+        "left": [
+          "left"
+        ]
+      },
+      "class_prefixes": {
+        "inset": "all",
+        "top": "top",
+        "right": "right",
+        "bottom": "bottom",
+        "left": "left"
+      },
+      "helpers": [
+        {
+          "name": "inset",
+          "kind": "exact"
+        },
+        {
+          "name": "inset",
+          "kind": "scale",
+          "axis": "all"
+        },
+        {
+          "name": "top",
+          "kind": "scale",
+          "axis": "top"
+        },
+        {
+          "name": "right",
+          "kind": "scale",
+          "axis": "right"
+        },
+        {
+          "name": "bottom",
+          "kind": "scale",
+          "axis": "bottom"
+        },
+        {
+          "name": "left",
+          "kind": "scale",
+          "axis": "left"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled position_style_methods! inset/top/right/bottom/left"
     }
   ]
 }

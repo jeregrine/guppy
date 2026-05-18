@@ -263,6 +263,12 @@ pub enum StyleLength {
     Auto,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PositionStyle {
+    Relative,
+    Absolute,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -414,6 +420,11 @@ pub enum StyleOp {
     MinHeight(StyleLength),
     MaxWidth(StyleLength),
     MaxHeight(StyleLength),
+    Position(PositionStyle),
+    Inset {
+        axis: StyleAxis,
+        length: StyleLength,
+    },
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2572,6 +2583,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     axis: parse_style_axis(&elements[1], "padding")?,
                     length: parse_style_length(&elements[2], "padding", false, false)?,
                 }),
+                "inset" => Ok(StyleOp::Inset {
+                    axis: parse_inset_axis(&elements[1])?,
+                    length: parse_style_length(&elements[2], "inset", true, true)?,
+                }),
                 "margin" => Ok(StyleOp::Margin {
                     axis: parse_style_axis(&elements[1], "margin")?,
                     length: parse_style_length(&elements[2], "margin", true, true)?,
@@ -2632,6 +2647,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     true,
                     true,
                 )?)),
+                "position" => Ok(StyleOp::Position(parse_position_style(&elements[1])?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
@@ -2989,6 +3005,27 @@ fn parse_gap_axis(term: &Term) -> Result<StyleAxis, String> {
     match axis {
         StyleAxis::All | StyleAxis::X | StyleAxis::Y => Ok(axis),
         _ => Err(format!("invalid gap axis: {term}")),
+    }
+}
+
+fn parse_inset_axis(term: &Term) -> Result<StyleAxis, String> {
+    let axis = parse_style_axis(term, "inset")?;
+
+    match axis {
+        StyleAxis::All
+        | StyleAxis::Top
+        | StyleAxis::Right
+        | StyleAxis::Bottom
+        | StyleAxis::Left => Ok(axis),
+        _ => Err(format!("invalid inset axis: {term}")),
+    }
+}
+
+fn parse_position_style(term: &Term) -> Result<PositionStyle, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "relative" => Ok(PositionStyle::Relative),
+        Term::Atom(atom) if atom.name == "absolute" => Ok(PositionStyle::Absolute),
+        other => Err(format!("invalid position style: {other}")),
     }
 }
 

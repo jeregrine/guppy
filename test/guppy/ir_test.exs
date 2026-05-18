@@ -168,7 +168,11 @@ defmodule Guppy.IRTest do
       {:height, :auto},
       {:size, {:rem, 1}},
       {:min_height, {:px, 0}},
-      {:max_width, {:fraction, 0.5}}
+      {:max_width, {:fraction, 0.5}},
+      {:position, :relative},
+      {:inset, :all, {:px, 0}},
+      {:inset, :top, {:rem, -0.5}},
+      {:inset, :right, :auto}
     ]
 
     assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: style))
@@ -182,7 +186,9 @@ defmodule Guppy.IRTest do
           {:gap, :top, {:rem, 0.25}},
           {:gap, :all, :auto},
           {:width, {:bad, 1}},
-          {:size, :bad}
+          {:size, :bad},
+          {:position, :fixed},
+          {:inset, :center, {:px, 0}}
         ] do
       assert {:error, {:invalid_style_op, ^invalid}} =
                Guppy.IR.validate(Guppy.IR.div([], style: [invalid]))

@@ -172,6 +172,8 @@ defmodule Guppy.IR do
           | {:min_height, style_length() | :auto}
           | {:max_width, style_length() | :auto}
           | {:max_height, style_length() | :auto}
+          | {:position, :relative | :absolute}
+          | {:inset, :all | :top | :right | :bottom | :left, style_length() | :auto}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -836,6 +838,8 @@ defmodule Guppy.IR do
 
   @style_axis_tokens [:all, :x, :y, :top, :right, :bottom, :left]
   @gap_axis_tokens [:all, :x, :y]
+  @inset_axis_tokens [:all, :top, :right, :bottom, :left]
+  @position_value_tokens [:relative, :absolute]
   @color_style_value_tokens [:bg, :text_color, :border_color]
   @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
@@ -2561,6 +2565,16 @@ defmodule Guppy.IR do
   end
 
   defp validate_style_op({key, length} = op) when key in @length_style_value_tokens do
+    if valid_length?(length, true) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
+  defp validate_style_op({:position, value}) when value in @position_value_tokens, do: :ok
+
+  defp validate_style_op({:inset, axis, length} = op) when axis in @inset_axis_tokens do
     if valid_length?(length, true) do
       :ok
     else

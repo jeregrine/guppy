@@ -14,6 +14,8 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "gap"))
     assert Enum.any?(operations, &(&1["name"] == "width"))
     assert Enum.any?(operations, &(&1["name"] == "max_height"))
+    assert Enum.any?(operations, &(&1["name"] == "position"))
+    assert Enum.any?(operations, &(&1["name"] == "inset"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -41,5 +43,13 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.size(4) == {:size, {:rem, 1}}
     assert Guppy.Style.min_h(0) == {:min_height, {:px, 0}}
     assert Guppy.Style.max_w("1/2") == {:max_width, {:fraction, 0.5}}
+
+    assert Guppy.Style.position(:relative) == {:position, :relative}
+    assert Guppy.Style.relative() == {:position, :relative}
+    assert Guppy.Style.absolute() == {:position, :absolute}
+    assert Guppy.Style.inset(:all, {:px, 0}) == {:inset, :all, {:px, 0}}
+    assert Guppy.Style.inset(1) == {:inset, :all, {:rem, 0.25}}
+    assert Guppy.Style.top(-2) == {:inset, :top, {:rem, -0.5}}
+    assert Guppy.Style.right(:auto) == {:inset, :right, :auto}
   end
 end

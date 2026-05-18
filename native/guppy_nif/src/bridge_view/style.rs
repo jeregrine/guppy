@@ -1,5 +1,6 @@
 use crate::ir::{
-    ColorToken, DivStyle, LinearGradientStop, StyleAxis, StyleColor, StyleLength, StyleOp,
+    ColorToken, DivStyle, LinearGradientStop, PositionStyle, StyleAxis, StyleColor, StyleLength,
+    StyleOp,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -128,6 +129,8 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::MinHeight(_)
         | StyleOp::MaxWidth(_)
         | StyleOp::MaxHeight(_)
+        | StyleOp::Position(_)
+        | StyleOp::Inset { .. }
         | StyleOp::GridCols(_)
         | StyleOp::GridRows(_)
         | StyleOp::ColSpan(_)
@@ -405,6 +408,8 @@ where
         StyleOp::MaxHeight(length) => {
             apply_length_style(element, LengthStyleProperty::MaxHeight, *length)
         }
+        StyleOp::Position(position) => apply_position(element, *position),
+        StyleOp::Inset { axis, length } => apply_inset(element, *axis, *length),
         _ => element,
     }
 }
@@ -471,6 +476,32 @@ where
         LengthStyleProperty::MinHeight => element.min_h(length),
         LengthStyleProperty::MaxWidth => element.max_w(length),
         LengthStyleProperty::MaxHeight => element.max_h(length),
+    }
+}
+
+fn apply_position<E>(element: E, position: PositionStyle) -> E
+where
+    E: Styled,
+{
+    match position {
+        PositionStyle::Relative => element.relative(),
+        PositionStyle::Absolute => element.absolute(),
+    }
+}
+
+fn apply_inset<E>(element: E, axis: StyleAxis, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    let length = style_length_to_length(length);
+
+    match axis {
+        StyleAxis::All => element.inset(length),
+        StyleAxis::Top => element.top(length),
+        StyleAxis::Right => element.right(length),
+        StyleAxis::Bottom => element.bottom(length),
+        StyleAxis::Left => element.left(length),
+        _ => element,
     }
 }
 
@@ -621,6 +652,16 @@ mod tests {
             StyleLength::Auto,
         );
         assert_eq!(style.size.height, Some(Length::Auto));
+
+        let style = apply_position(StyleRefinement::default(), PositionStyle::Absolute);
+        assert_eq!(style.position, Some(gpui::Position::Absolute));
+
+        let style = apply_inset(
+            StyleRefinement::default(),
+            StyleAxis::Top,
+            StyleLength::Rem(-0.5),
+        );
+        assert_eq!(style.inset.top, Some(Length::Definite(rems(-0.5).into())));
     }
 
     #[test]

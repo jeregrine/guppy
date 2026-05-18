@@ -1073,6 +1073,24 @@ fn parses_canonical_box_spacing_style_ops() {
         parse_style_op(&tuple(vec![atom("height"), atom("auto")])).unwrap(),
         StyleOp::Height(StyleLength::Auto)
     );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("position"), atom("relative")])).unwrap(),
+        StyleOp::Position(super::PositionStyle::Relative)
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("inset"),
+            atom("top"),
+            tuple(vec![atom("rem"), float(-0.5)]),
+        ]))
+        .unwrap(),
+        StyleOp::Inset {
+            axis: StyleAxis::Top,
+            length: StyleLength::Rem(-0.5),
+        }
+    );
 }
 
 #[test]
@@ -1094,10 +1112,20 @@ fn rejects_invalid_canonical_length_style_ops() {
             tuple(vec![atom("px"), integer(1)]),
         ]),
         tuple(vec![atom("width"), tuple(vec![atom("bad"), integer(1)])]),
+        tuple(vec![atom("position"), atom("fixed")]),
+        tuple(vec![
+            atom("inset"),
+            atom("center"),
+            tuple(vec![atom("px"), integer(1)]),
+        ]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
-            err.contains("padding") || err.contains("gap") || err.contains("length"),
+            err.contains("padding")
+                || err.contains("gap")
+                || err.contains("position")
+                || err.contains("inset")
+                || err.contains("length"),
             "unexpected error: {err}"
         );
     }
@@ -1124,6 +1152,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "width")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "position")
     );
 }
 
