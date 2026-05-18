@@ -1220,6 +1220,22 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::TextDecoration(super::TextDecorationStyle::None)
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![atom("text_decoration_color"), atom("red")])).unwrap(),
+        StyleOp::TextDecorationColor(super::ColorToken::Red)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("text_decoration_color_hex"),
+            binary("abcdef"),
+        ]))
+        .unwrap(),
+        StyleOp::TextDecorationColorHex(0xabcdef)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("text_decoration_style"), atom("wavy")])).unwrap(),
+        StyleOp::TextDecorationLineStyle(super::TextDecorationLineStyle::Wavy)
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("line_clamp"), integer(4)])).unwrap(),
         StyleOp::LineClamp(4)
     );
@@ -1302,6 +1318,8 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("font_style"), atom("oblique")]),
         tuple(vec![atom("font_family"), binary("")]),
         tuple(vec![atom("text_decoration"), atom("blink")]),
+        tuple(vec![atom("text_decoration_color"), atom("purple")]),
+        tuple(vec![atom("text_decoration_style"), atom("double")]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
@@ -1320,6 +1338,7 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("justify")
                 || err.contains("text")
                 || err.contains("white")
+                || err.contains("color")
                 || err.contains("font")
                 || err.contains("line")
                 || err.contains("length"),
@@ -1440,6 +1459,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "text_decoration")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "text_decoration_color")
     );
     assert!(
         operations

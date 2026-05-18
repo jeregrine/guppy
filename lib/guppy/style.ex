@@ -47,7 +47,9 @@ defmodule Guppy.Style do
                        "line_height",
                        "font_weight",
                        "font_style",
-                       "text_decoration"
+                       "text_decoration",
+                       "text_decoration_color",
+                       "text_decoration_style"
                      ]
                    end)
 
@@ -85,7 +87,8 @@ defmodule Guppy.Style do
                             "bg_hex",
                             "text_color_hex",
                             "text_bg_hex",
-                            "border_color_hex"
+                            "border_color_hex",
+                            "text_decoration_color_hex"
                           ]
                         end)
 

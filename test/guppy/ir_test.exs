@@ -823,6 +823,9 @@ defmodule Guppy.IRTest do
           :not_italic,
           {:font_family, "Monaco"},
           :underline,
+          {:text_decoration_color, :red},
+          {:text_decoration_color_hex, "#abcdef"},
+          {:text_decoration_style, :wavy},
           :line_through,
           :items_start,
           :items_end,
@@ -987,6 +990,9 @@ defmodule Guppy.IRTest do
              :not_italic,
              {:font_family, "Monaco"},
              :underline,
+             {:text_decoration_color, :red},
+             {:text_decoration_color_hex, "#abcdef"},
+             {:text_decoration_style, :wavy},
              :line_through,
              :items_start,
              :items_end,
@@ -1075,6 +1081,12 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:font_family, ""}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:font_family, ""}]))
+
+    assert {:error, {:invalid_style_op, {:text_decoration_color, :purple}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:text_decoration_color, :purple}]))
+
+    assert {:error, {:invalid_style_op, {:text_decoration_style, :double}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:text_decoration_style, :double}]))
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))

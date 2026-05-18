@@ -469,6 +469,12 @@ pub enum TextDecorationStyle {
     None,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextDecorationLineStyle {
+    Solid,
+    Wavy,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -658,6 +664,9 @@ pub enum StyleOp {
     FontStyle(FontStyleValue),
     FontFamily(String),
     TextDecoration(TextDecorationStyle),
+    TextDecorationColor(ColorToken),
+    TextDecorationColorHex(u32),
+    TextDecorationLineStyle(TextDecorationLineStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
     TextBg(ColorToken),
@@ -2943,6 +2952,15 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "text_decoration" => Ok(StyleOp::TextDecoration(parse_text_decoration_style(
                     &elements[1],
                 )?)),
+                "text_decoration_color" => Ok(StyleOp::TextDecorationColor(parse_atom_color(
+                    &elements[1],
+                )?)),
+                "text_decoration_color_hex" => Ok(StyleOp::TextDecorationColorHex(
+                    parse_hex_style_color(&elements[1])?,
+                )),
+                "text_decoration_style" => Ok(StyleOp::TextDecorationLineStyle(
+                    parse_text_decoration_line_style(&elements[1])?,
+                )),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "text_bg" => Ok(StyleOp::TextBg(parse_atom_color(&elements[1])?)),
@@ -3637,6 +3655,18 @@ fn parse_text_decoration_style(term: &Term) -> Result<TextDecorationStyle, Strin
         "line_through" => Ok(TextDecorationStyle::LineThrough),
         "none" => Ok(TextDecorationStyle::None),
         other => Err(format!("invalid text_decoration style: {other}")),
+    }
+}
+
+fn parse_text_decoration_line_style(term: &Term) -> Result<TextDecorationLineStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid text_decoration_style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "solid" => Ok(TextDecorationLineStyle::Solid),
+        "wavy" => Ok(TextDecorationLineStyle::Wavy),
+        other => Err(format!("invalid text_decoration_style: {other}")),
     }
 }
 

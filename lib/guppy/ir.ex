@@ -209,6 +209,9 @@ defmodule Guppy.IR do
           | {:text_color_hex, String.t()}
           | {:text_bg_hex, String.t()}
           | {:border_color_hex, String.t()}
+          | {:text_decoration_color, color_token()}
+          | {:text_decoration_color_hex, String.t()}
+          | {:text_decoration_style, :solid | :wavy}
           | {:bg_linear_gradient,
              [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
           | {:opacity, number()}
@@ -923,6 +926,7 @@ defmodule Guppy.IR do
   ]
   @font_style_value_tokens [:italic, :normal]
   @text_decoration_value_tokens [:underline, :line_through, :none]
+  @text_decoration_style_value_tokens [:solid, :wavy]
 
   @cursor_value_tokens [
     :default,
@@ -950,8 +954,14 @@ defmodule Guppy.IR do
     :w_resize,
     :none
   ]
-  @color_style_value_tokens [:bg, :text_color, :text_bg, :border_color]
-  @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :text_bg_hex, :border_color_hex]
+  @color_style_value_tokens [:bg, :text_color, :text_bg, :border_color, :text_decoration_color]
+  @hex_color_style_value_tokens [
+    :bg_hex,
+    :text_color_hex,
+    :text_bg_hex,
+    :border_color_hex,
+    :text_decoration_color_hex
+  ]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
   @fraction_value_tokens [:w_frac, :h_frac]
   @scrollbar_value_tokens [:scrollbar_width_px, :scrollbar_width_rem]
@@ -2758,6 +2768,10 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:text_decoration, value})
        when value in @text_decoration_value_tokens,
+       do: :ok
+
+  defp validate_style_op({:text_decoration_style, value})
+       when value in @text_decoration_style_value_tokens,
        do: :ok
 
   defp validate_style_op({key, value})

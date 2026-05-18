@@ -51,6 +51,9 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
     assert Enum.any?(operations, &(&1["name"] == "font_family"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration"))
+    assert Enum.any?(operations, &(&1["name"] == "text_decoration_color"))
+    assert Enum.any?(operations, &(&1["name"] == "text_decoration_color_hex"))
+    assert Enum.any?(operations, &(&1["name"] == "text_decoration_style"))
     assert Enum.any?(operations, &(&1["name"] == "line_clamp"))
     assert Enum.any?(operations, &(&1["name"] == "grid_cols"))
     assert Enum.any?(operations, &(&1["name"] == "grid_rows"))
@@ -189,6 +192,14 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.text_decoration(:underline) == {:text_decoration, :underline}
     assert Guppy.Style.underline() == {:text_decoration, :underline}
     assert Guppy.Style.no_underline() == {:text_decoration, :none}
+    assert Guppy.Style.text_decoration_color(:red) == {:text_decoration_color, :red}
+    assert Guppy.Style.decoration_blue() == {:text_decoration_color, :blue}
+
+    assert Guppy.Style.text_decoration_color_hex("#abcdef") ==
+             {:text_decoration_color_hex, "#abcdef"}
+
+    assert Guppy.Style.text_decoration_style(:wavy) == {:text_decoration_style, :wavy}
+    assert Guppy.Style.decoration_wavy() == {:text_decoration_style, :wavy}
     assert Guppy.Style.line_clamp(2) == {:line_clamp, 2}
     assert_raise ArgumentError, fn -> Guppy.Style.line_clamp(0) end
 
@@ -286,5 +297,18 @@ defmodule Guppy.StyleTest do
              {:ok, {:font_family, "Monaco"}}
 
     assert Guppy.Style.class_token_to_style("font-family-[]") == :error
+  end
+
+  test "text decoration detail classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("decoration-red") ==
+             {:ok, {:text_decoration_color, :red}}
+
+    assert Guppy.Style.class_token_to_style("decoration-[#abcdef]") ==
+             {:ok, {:text_decoration_color_hex, "#abcdef"}}
+
+    assert Guppy.Style.class_token_to_style("decoration-wavy") ==
+             {:ok, {:text_decoration_style, :wavy}}
+
+    assert Guppy.Style.class_token_to_style("decoration-[bad]") == :error
   end
 end

@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-basis-text-bg-font-family-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background colors, opacity, scrollbar width, box shadows, flex/alignment/basis, core text/font family, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-basis-text-bg-font-family-decoration-detail-line-clamp-grid-placement-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex/alignment/basis, core text/font family, text decoration lines/colors/styles, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -3103,6 +3103,127 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled underline/line_through/text_decoration_none"
+    },
+    {
+      "name": "text_decoration_color",
+      "tuple_schema": [
+        "text_decoration_color",
+        "color"
+      ],
+      "values": [
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "black",
+        "white",
+        "gray"
+      ],
+      "class_tokens": {
+        "decoration-red": "red",
+        "decoration-green": "green",
+        "decoration-blue": "blue",
+        "decoration-yellow": "yellow",
+        "decoration-black": "black",
+        "decoration-white": "white",
+        "decoration-gray": "gray"
+      },
+      "helpers": [
+        {
+          "name": "text_decoration_color",
+          "kind": "exact"
+        },
+        {
+          "name": "decoration_red",
+          "kind": "value",
+          "value": "red"
+        },
+        {
+          "name": "decoration_green",
+          "kind": "value",
+          "value": "green"
+        },
+        {
+          "name": "decoration_blue",
+          "kind": "value",
+          "value": "blue"
+        },
+        {
+          "name": "decoration_yellow",
+          "kind": "value",
+          "value": "yellow"
+        },
+        {
+          "name": "decoration_black",
+          "kind": "value",
+          "value": "black"
+        },
+        {
+          "name": "decoration_white",
+          "kind": "value",
+          "value": "white"
+        },
+        {
+          "name": "decoration_gray",
+          "kind": "value",
+          "value": "gray"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_decoration_color"
+    },
+    {
+      "name": "text_decoration_color_hex",
+      "tuple_schema": [
+        "text_decoration_color_hex",
+        "hex_color"
+      ],
+      "class_pattern": "decoration-[#RRGGBB]",
+      "class_prefix": "decoration",
+      "helpers": [
+        {
+          "name": "text_decoration_color_hex",
+          "kind": "exact"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_decoration_color hex"
+    },
+    {
+      "name": "text_decoration_style",
+      "tuple_schema": [
+        "text_decoration_style",
+        "value"
+      ],
+      "values": [
+        "solid",
+        "wavy"
+      ],
+      "class_tokens": {
+        "decoration-solid": "solid",
+        "decoration-wavy": "wavy"
+      },
+      "helpers": [
+        {
+          "name": "text_decoration_style",
+          "kind": "exact"
+        },
+        {
+          "name": "decoration_solid",
+          "kind": "value",
+          "value": "solid"
+        },
+        {
+          "name": "decoration_wavy",
+          "kind": "value",
+          "value": "wavy"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_decoration_solid/text_decoration_wavy"
     },
     {
       "name": "line_clamp",

@@ -3,8 +3,8 @@ use crate::ir::{
     DisplayStyle, DivStyle, FlexDirectionStyle, FlexItemStyle, FlexWrapStyle, FontSizeStyle,
     FontStyleValue, FontWeightStyle, JustifyContentStyle, LineHeightStyle, LinearGradientStop,
     MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis, StyleColor,
-    StyleLength, StyleOp, TextAlignStyle, TextDecorationStyle, TextOverflowStyle, VisibilityStyle,
-    WhiteSpaceStyle,
+    StyleLength, StyleOp, TextAlignStyle, TextDecorationLineStyle, TextDecorationStyle,
+    TextOverflowStyle, VisibilityStyle, WhiteSpaceStyle,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -234,6 +234,9 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::FontStyle(_)
         | StyleOp::FontFamily(_)
         | StyleOp::TextDecoration(_)
+        | StyleOp::TextDecorationColor(_)
+        | StyleOp::TextDecorationColorHex(_)
+        | StyleOp::TextDecorationLineStyle(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::TextBg(_)
@@ -352,6 +355,15 @@ where
         StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
         StyleOp::FontFamily(family) => style.font_family(family.clone()),
         StyleOp::TextDecoration(decoration) => apply_text_decoration(style, *decoration),
+        StyleOp::TextDecorationColor(color) => {
+            style.text_decoration_color(color_token_to_color(*color))
+        }
+        StyleOp::TextDecorationColorHex(value) => {
+            style.text_decoration_color(hex_color_to_color(*value))
+        }
+        StyleOp::TextDecorationLineStyle(line_style) => {
+            apply_text_decoration_line_style(style, *line_style)
+        }
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -948,6 +960,16 @@ where
     }
 }
 
+fn apply_text_decoration_line_style<E>(element: E, line_style: TextDecorationLineStyle) -> E
+where
+    E: Styled,
+{
+    match line_style {
+        TextDecorationLineStyle::Solid => element.text_decoration_solid(),
+        TextDecorationLineStyle::Wavy => element.text_decoration_wavy(),
+    }
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
@@ -1036,6 +1058,24 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
             StyleOp::TextDecoration(TextDecorationStyle::None) => {
                 highlight.underline = None;
                 highlight.strikethrough = None;
+            }
+            StyleOp::TextDecorationColor(color) => {
+                highlight
+                    .underline
+                    .get_or_insert_with(Default::default)
+                    .color = Some(color_token_to_color(*color));
+            }
+            StyleOp::TextDecorationColorHex(value) => {
+                highlight
+                    .underline
+                    .get_or_insert_with(Default::default)
+                    .color = Some(hex_color_to_color(*value));
+            }
+            StyleOp::TextDecorationLineStyle(line_style) => {
+                highlight
+                    .underline
+                    .get_or_insert_with(Default::default)
+                    .wavy = *line_style == TextDecorationLineStyle::Wavy;
             }
             StyleOp::Opacity(value) => highlight.fade_out = Some(1.0 - value.clamp(0.0, 1.0)),
             _ => {}
@@ -1224,6 +1264,19 @@ mod tests {
             style.text.as_ref().and_then(|text| text.strikethrough),
             None
         );
+
+        let style = apply_refinement_style(
+            StyleRefinement::default(),
+            &vec![
+                StyleOp::TextDecoration(TextDecorationStyle::Underline),
+                StyleOp::TextDecorationColor(ColorToken::Red),
+                StyleOp::TextDecorationLineStyle(TextDecorationLineStyle::Wavy),
+            ]
+            .into(),
+        );
+        let underline = style.text.as_ref().and_then(|text| text.underline).unwrap();
+        assert_eq!(underline.color, Some(rgb(0xff0000).into()));
+        assert!(underline.wavy);
     }
 
     #[test]
