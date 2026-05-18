@@ -27,6 +27,17 @@ enum StyleApplication<T> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LengthStyleProperty {
+    Width,
+    Height,
+    Size,
+    MinWidth,
+    MinHeight,
+    MaxWidth,
+    MaxHeight,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RefinementStyleSupport {
     Supported,
     Unsupported,
@@ -110,6 +121,13 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::Padding { .. }
         | StyleOp::Margin { .. }
         | StyleOp::Gap { .. }
+        | StyleOp::Width(_)
+        | StyleOp::Height(_)
+        | StyleOp::Size(_)
+        | StyleOp::MinWidth(_)
+        | StyleOp::MinHeight(_)
+        | StyleOp::MaxWidth(_)
+        | StyleOp::MaxHeight(_)
         | StyleOp::GridCols(_)
         | StyleOp::GridRows(_)
         | StyleOp::ColSpan(_)
@@ -370,6 +388,23 @@ where
         StyleOp::Padding { axis, length } => apply_padding(element, *axis, *length),
         StyleOp::Margin { axis, length } => apply_margin(element, *axis, *length),
         StyleOp::Gap { axis, length } => apply_gap(element, *axis, *length),
+        StyleOp::Width(length) => apply_length_style(element, LengthStyleProperty::Width, *length),
+        StyleOp::Height(length) => {
+            apply_length_style(element, LengthStyleProperty::Height, *length)
+        }
+        StyleOp::Size(length) => apply_length_style(element, LengthStyleProperty::Size, *length),
+        StyleOp::MinWidth(length) => {
+            apply_length_style(element, LengthStyleProperty::MinWidth, *length)
+        }
+        StyleOp::MinHeight(length) => {
+            apply_length_style(element, LengthStyleProperty::MinHeight, *length)
+        }
+        StyleOp::MaxWidth(length) => {
+            apply_length_style(element, LengthStyleProperty::MaxWidth, *length)
+        }
+        StyleOp::MaxHeight(length) => {
+            apply_length_style(element, LengthStyleProperty::MaxHeight, *length)
+        }
         _ => element,
     }
 }
@@ -419,6 +454,23 @@ where
         StyleAxis::X => element.gap_x(length),
         StyleAxis::Y => element.gap_y(length),
         _ => element,
+    }
+}
+
+fn apply_length_style<E>(element: E, property: LengthStyleProperty, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    let length = style_length_to_length(length);
+
+    match property {
+        LengthStyleProperty::Width => element.w(length),
+        LengthStyleProperty::Height => element.h(length),
+        LengthStyleProperty::Size => element.size(length),
+        LengthStyleProperty::MinWidth => element.min_w(length),
+        LengthStyleProperty::MinHeight => element.min_h(length),
+        LengthStyleProperty::MaxWidth => element.max_w(length),
+        LengthStyleProperty::MaxHeight => element.max_h(length),
     }
 }
 
@@ -555,6 +607,20 @@ mod tests {
         );
         assert_eq!(style.gap.width, Some(DefiniteLength::from(px(-1.0))));
         assert_eq!(style.gap.height, Some(DefiniteLength::from(px(-1.0))));
+
+        let style = apply_length_style(
+            StyleRefinement::default(),
+            LengthStyleProperty::Width,
+            StyleLength::Fraction(1.0),
+        );
+        assert_eq!(style.size.width, Some(Length::Definite(relative(1.0))));
+
+        let style = apply_length_style(
+            StyleRefinement::default(),
+            LengthStyleProperty::Height,
+            StyleLength::Auto,
+        );
+        assert_eq!(style.size.height, Some(Length::Auto));
     }
 
     #[test]

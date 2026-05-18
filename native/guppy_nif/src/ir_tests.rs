@@ -1059,10 +1059,24 @@ fn parses_canonical_box_spacing_style_ops() {
             length: StyleLength::Px(-1.0),
         }
     );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("width"),
+            tuple(vec![atom("fraction"), float(1.0)]),
+        ]))
+        .unwrap(),
+        StyleOp::Width(StyleLength::Fraction(1.0))
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("height"), atom("auto")])).unwrap(),
+        StyleOp::Height(StyleLength::Auto)
+    );
 }
 
 #[test]
-fn rejects_invalid_canonical_padding_style_op() {
+fn rejects_invalid_canonical_length_style_ops() {
     for term in [
         tuple(vec![
             atom("padding"),
@@ -1074,10 +1088,16 @@ fn rejects_invalid_canonical_padding_style_op() {
             atom("all"),
             tuple(vec![atom("px"), integer(-1)]),
         ]),
+        tuple(vec![
+            atom("gap"),
+            atom("top"),
+            tuple(vec![atom("px"), integer(1)]),
+        ]),
+        tuple(vec![atom("width"), tuple(vec![atom("bad"), integer(1)])]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
-            err.contains("padding") || err.contains("length"),
+            err.contains("padding") || err.contains("gap") || err.contains("length"),
             "unexpected error: {err}"
         );
     }
@@ -1089,12 +1109,21 @@ fn native_style_catalog_loads() {
         serde_json::from_str(include_str!("../../../data/gpui_style_catalog.json")).unwrap();
 
     assert_eq!(catalog["gpui_version"], "0.2.2");
+    let operations = catalog["operations"].as_array().unwrap();
     assert!(
-        catalog["operations"]
-            .as_array()
-            .unwrap()
+        operations
             .iter()
-            .any(|operation| { operation["name"] == "padding" })
+            .any(|operation| operation["name"] == "padding")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "margin")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "width")
     );
 }
 

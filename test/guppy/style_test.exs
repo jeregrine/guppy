@@ -12,10 +12,12 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "padding"))
     assert Enum.any?(operations, &(&1["name"] == "margin"))
     assert Enum.any?(operations, &(&1["name"] == "gap"))
+    assert Enum.any?(operations, &(&1["name"] == "width"))
+    assert Enum.any?(operations, &(&1["name"] == "max_height"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
-  test "box spacing helpers are generated from the catalog as canonical tuple style ops" do
+  test "length helpers are generated from the catalog as canonical tuple style ops" do
     assert Guppy.Style.padding(:y, {:rem, 0.25}) == {:padding, :y, {:rem, 0.25}}
     assert Guppy.Style.py(1) == {:padding, :y, {:rem, 0.25}}
     assert Guppy.Style.p(0.5) == {:padding, :all, {:rem, 0.125}}
@@ -30,5 +32,14 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.gap(:x, {:rem, 0.25}) == {:gap, :x, {:rem, 0.25}}
     assert Guppy.Style.gap(1) == {:gap, :all, {:rem, 0.25}}
     assert Guppy.Style.gap_x("px") == {:gap, :x, {:px, 1}}
+
+    assert Guppy.Style.width({:px, 42}) == {:width, {:px, 42}}
+    assert Guppy.Style.w("full") == {:width, {:fraction, 1}}
+    assert Guppy.Style.w(:auto) == {:width, :auto}
+    assert Guppy.Style.height({:rem, 2}) == {:height, {:rem, 2}}
+    assert Guppy.Style.h(32) == {:height, {:rem, 8}}
+    assert Guppy.Style.size(4) == {:size, {:rem, 1}}
+    assert Guppy.Style.min_h(0) == {:min_height, {:px, 0}}
+    assert Guppy.Style.max_w("1/2") == {:max_width, {:fraction, 0.5}}
   end
 end

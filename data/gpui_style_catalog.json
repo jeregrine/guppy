@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-spacing-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, and gap helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-spacing-and-size-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, and size helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -683,6 +683,328 @@
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Styled style_helpers! gap/gap_x/gap_y"
+    },
+    {
+      "name": "width",
+      "tuple_schema": [
+        "width",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "width",
+          [
+            "px",
+            42
+          ]
+        ],
+        [
+          "width",
+          "auto"
+        ]
+      ],
+      "class_prefixes": {
+        "w": null
+      },
+      "helpers": [
+        {
+          "name": "width",
+          "kind": "exact"
+        },
+        {
+          "name": "w",
+          "kind": "scale"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! w"
+    },
+    {
+      "name": "height",
+      "tuple_schema": [
+        "height",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "height",
+          [
+            "px",
+            42
+          ]
+        ],
+        [
+          "height",
+          "auto"
+        ]
+      ],
+      "class_prefixes": {
+        "h": null
+      },
+      "helpers": [
+        {
+          "name": "height",
+          "kind": "exact"
+        },
+        {
+          "name": "h",
+          "kind": "scale"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! h"
+    },
+    {
+      "name": "size",
+      "tuple_schema": [
+        "size",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "size",
+          [
+            "px",
+            42
+          ]
+        ],
+        [
+          "size",
+          "auto"
+        ]
+      ],
+      "class_prefixes": {
+        "size": null
+      },
+      "helpers": [
+        {
+          "name": "size",
+          "kind": "exact"
+        },
+        {
+          "name": "size",
+          "kind": "scale"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! size"
+    },
+    {
+      "name": "min_width",
+      "tuple_schema": [
+        "min_width",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "min_width",
+          [
+            "px",
+            42
+          ]
+        ],
+        [
+          "min_width",
+          "auto"
+        ]
+      ],
+      "class_prefixes": {
+        "min-w": null
+      },
+      "helpers": [
+        {
+          "name": "min_width",
+          "kind": "exact"
+        },
+        {
+          "name": "min_w",
+          "kind": "scale"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! min_w"
+    },
+    {
+      "name": "min_height",
+      "tuple_schema": [
+        "min_height",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "min_height",
+          [
+            "px",
+            42
+          ]
+        ],
+        [
+          "min_height",
+          "auto"
+        ]
+      ],
+      "class_prefixes": {
+        "min-h": null
+      },
+      "helpers": [
+        {
+          "name": "min_height",
+          "kind": "exact"
+        },
+        {
+          "name": "min_h",
+          "kind": "scale"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! min_h"
+    },
+    {
+      "name": "max_width",
+      "tuple_schema": [
+        "max_width",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "max_width",
+          [
+            "px",
+            42
+          ]
+        ],
+        [
+          "max_width",
+          "auto"
+        ]
+      ],
+      "class_prefixes": {
+        "max-w": null
+      },
+      "helpers": [
+        {
+          "name": "max_width",
+          "kind": "exact"
+        },
+        {
+          "name": "max_w",
+          "kind": "scale"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! max_w"
+    },
+    {
+      "name": "max_height",
+      "tuple_schema": [
+        "max_height",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "max_height",
+          [
+            "px",
+            42
+          ]
+        ],
+        [
+          "max_height",
+          "auto"
+        ]
+      ],
+      "class_prefixes": {
+        "max-h": null
+      },
+      "helpers": [
+        {
+          "name": "max_height",
+          "kind": "exact"
+        },
+        {
+          "name": "max_h",
+          "kind": "scale"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! max_h"
     }
   ]
 }

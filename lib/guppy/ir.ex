@@ -165,6 +165,13 @@ defmodule Guppy.IR do
           {:padding, style_axis(), style_length()}
           | {:margin, style_axis(), style_length() | :auto}
           | {:gap, :all | :x | :y, style_length()}
+          | {:width, style_length() | :auto}
+          | {:height, style_length() | :auto}
+          | {:size, style_length() | :auto}
+          | {:min_width, style_length() | :auto}
+          | {:min_height, style_length() | :auto}
+          | {:max_width, style_length() | :auto}
+          | {:max_height, style_length() | :auto}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -834,6 +841,15 @@ defmodule Guppy.IR do
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
   @fraction_value_tokens [:w_frac, :h_frac]
   @scrollbar_value_tokens [:scrollbar_width_px, :scrollbar_width_rem]
+  @length_style_value_tokens [
+    :width,
+    :height,
+    :size,
+    :min_width,
+    :min_height,
+    :max_width,
+    :max_height
+  ]
   @grid_value_tokens [:grid_cols, :grid_rows, :col_span, :row_span]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
   @native_f32_integer_min -9_223_372_036_854_775_808
@@ -2538,6 +2554,14 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:gap, axis, length} = op) when axis in @gap_axis_tokens do
     if valid_definite_length?(length, true) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
+  defp validate_style_op({key, length} = op) when key in @length_style_value_tokens do
+    if valid_length?(length, true) do
       :ok
     else
       {:error, {:invalid_style_op, op}}

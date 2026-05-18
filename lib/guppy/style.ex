@@ -10,38 +10,61 @@ defmodule Guppy.Style do
   @external_resource @catalog_path
   @catalog @catalog_path |> File.read!() |> JSON.decode!()
 
-  @box_operations Enum.filter(@catalog["operations"], fn operation ->
-                    operation["name"] in ["padding", "margin", "gap"]
-                  end)
+  @axis_operations Enum.filter(@catalog["operations"], fn operation ->
+                     operation["name"] in ["padding", "margin", "gap"]
+                   end)
 
-  @operation_config Map.new(@box_operations, fn operation ->
+  @length_operations Enum.filter(@catalog["operations"], fn operation ->
+                       operation["name"] in [
+                         "width",
+                         "height",
+                         "size",
+                         "min_width",
+                         "min_height",
+                         "max_width",
+                         "max_height"
+                       ]
+                     end)
+
+  @style_operations @axis_operations ++ @length_operations
+
+  @operation_config Map.new(@style_operations, fn operation ->
                       length = operation["length"]
+
+                      axes =
+                        case operation["axes"] do
+                          nil -> nil
+                          axes -> axes |> Map.keys() |> Enum.map(&String.to_atom/1)
+                        end
 
                       {String.to_atom(operation["name"]),
                        %{
-                         axes: operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1),
+                         axes: axes,
                          allow_auto: length["auto"],
                          allow_negative: length["negative"]
                        }}
                     end)
 
-  @scale_helpers Enum.flat_map(@box_operations, fn operation ->
+  @scale_helpers Enum.flat_map(@style_operations, fn operation ->
                    config = Map.fetch!(@operation_config, String.to_atom(operation["name"]))
 
                    operation["helpers"]
                    |> Enum.filter(&(&1["kind"] == "scale"))
+                   |> Enum.reject(fn helper ->
+                     is_nil(config.axes) and helper["name"] == operation["name"]
+                   end)
                    |> Enum.map(fn helper ->
                      %{
                        operation: String.to_atom(operation["name"]),
                        function: String.to_atom(helper["name"]),
-                       axis: String.to_atom(helper["axis"]),
+                       axis: helper["axis"] && String.to_atom(helper["axis"]),
                        allow_auto: config.allow_auto,
                        allow_negative: config.allow_negative
                      }
                    end)
                  end)
 
-  @class_prefix_specs @box_operations
+  @class_prefix_specs @style_operations
                       |> Enum.flat_map(fn operation ->
                         config = Map.fetch!(@operation_config, String.to_atom(operation["name"]))
 
@@ -49,7 +72,7 @@ defmodule Guppy.Style do
                           %{
                             prefix: prefix,
                             operation: String.to_atom(operation["name"]),
-                            axis: String.to_atom(axis),
+                            axis: axis && String.to_atom(axis),
                             allow_auto: config.allow_auto,
                             allow_negative: config.allow_negative
                           }
@@ -82,7 +105,7 @@ defmodule Guppy.Style do
   @doc "Returns the decoded style catalog used to generate this module."
   def catalog, do: @catalog
 
-  for {operation, config} <- @operation_config do
+  for {operation, config} <- @operation_config, is_list(config.axes) do
     axes = config.axes
     allow_auto = config.allow_auto
     allow_negative = config.allow_negative
@@ -98,15 +121,28 @@ defmodule Guppy.Style do
     end
   end
 
+  for {operation, config} <- @operation_config, is_nil(config.axes) do
+    allow_auto = config.allow_auto
+    allow_negative = config.allow_negative
+
+    @doc "Returns a canonical #{operation} tuple for a concrete length."
+    def unquote(operation)(length) do
+      {unquote(operation),
+       normalize_length_or_scale!(length, unquote(allow_auto), unquote(allow_negative))}
+    end
+  end
+
   for helper <- @scale_helpers do
     @doc "Returns a canonical #{helper.function} #{helper.operation} tuple for a GPUI/Tailwind spacing scale token."
     def unquote(helper.function)(scale) do
-      {unquote(helper.operation), unquote(helper.axis),
-       spacing_scale_length!(
-         scale,
-         unquote(helper.allow_auto),
-         unquote(helper.allow_negative)
-       )}
+      length =
+        spacing_scale_length!(
+          scale,
+          unquote(helper.allow_auto),
+          unquote(helper.allow_negative)
+        )
+
+      style_tuple(unquote(helper.operation), unquote(helper.axis), length)
     end
   end
 
@@ -155,7 +191,10 @@ defmodule Guppy.Style do
     end
   end
 
-  defp class_style_tuple(spec, length), do: {:ok, {spec.operation, spec.axis, length}}
+  defp class_style_tuple(spec, length), do: {:ok, style_tuple(spec.operation, spec.axis, length)}
+
+  defp style_tuple(operation, nil, length), do: {operation, length}
+  defp style_tuple(operation, axis, length), do: {operation, axis, length}
 
   defp spacing_scale_length!(scale, allow_auto, allow_negative) do
     case spacing_scale_length(scale, allow_auto, allow_negative) do
@@ -213,6 +252,16 @@ defmodule Guppy.Style do
   defp spacing_scale_key_and_sign(value) do
     raise ArgumentError, "invalid GPUI spacing scale token: #{inspect(value)}"
   end
+
+  defp normalize_length_or_scale!({unit, _value} = length, allow_auto, allow_negative)
+       when unit in [:px, :rem, :fraction],
+       do: normalize_length!(length, allow_auto, allow_negative)
+
+  defp normalize_length_or_scale!(:auto, allow_auto, allow_negative),
+    do: normalize_length!(:auto, allow_auto, allow_negative)
+
+  defp normalize_length_or_scale!(scale, allow_auto, allow_negative),
+    do: spacing_scale_length!(scale, allow_auto, allow_negative)
 
   defp normalize_length!(:auto, true, _allow_negative), do: :auto
 

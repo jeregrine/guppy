@@ -68,7 +68,7 @@ defmodule Guppy.ComponentTest do
 
   test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
     assert Guppy.Component.class_to_style!(
-             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px"
+             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4"
            ) == [
              {:padding, :y, {:rem, 0.25}},
              {:padding, :x, {:rem, 0.25}},
@@ -79,13 +79,21 @@ defmodule Guppy.ComponentTest do
              {:margin, :x, {:rem, -0.5}},
              {:margin, :top, {:px, -4}},
              {:gap, :all, {:rem, 0.25}},
-             {:gap, :x, {:px, 1}}
+             {:gap, :x, {:px, 1}},
+             {:width, {:fraction, 1}},
+             {:height, {:px, 120}},
+             {:min_height, {:px, 0}},
+             {:max_width, {:fraction, 0.5}},
+             {:size, {:rem, 1}}
            ]
 
     assert :ok =
              Guppy.IR.validate(
                Guppy.IR.div([],
-                 style: Guppy.Component.class_to_style!("py-1 px-[2rem] m-[auto] gap-y-[4px]")
+                 style:
+                   Guppy.Component.class_to_style!(
+                     "py-1 px-[2rem] m-[auto] gap-y-[4px] w-[50%] h-auto"
+                   )
                )
              )
   end
@@ -223,16 +231,16 @@ defmodule Guppy.ComponentTest do
     assert icon.kind == :icon
     assert icon.id == "release_icon"
     assert icon.source == {:embedded, "icons/release.svg"}
-    assert {:w_px, 24} in icon.style
-    assert {:h_px, 24} in icon.style
+    assert {:width, {:px, 24}} in icon.style
+    assert {:height, {:px, 24}} in icon.style
 
     assert image.kind == :image
     assert image.id == "hero_image"
     assert image.source == {:uri, "https://example.com/demo.png"}
     assert image.object_fit == :cover
     assert image.grayscale == true
-    assert {:w_px, 240} in image.style
-    assert {:h_px, 120} in image.style
+    assert {:width, {:px, 240}} in image.style
+    assert {:height, {:px, 120}} in image.style
 
     assert scroll.kind == :scroll
     assert scroll.id == "items"
@@ -244,14 +252,14 @@ defmodule Guppy.ComponentTest do
     assert uniform_list.kind == :uniform_list
     assert uniform_list.id == "virtual_items"
     assert Enum.map(uniform_list.items, & &1.id) == ["uniform_1", "uniform_2"]
-    assert {:h_px, 120} in uniform_list.style
+    assert {:height, {:px, 120}} in uniform_list.style
     assert {:padding, :all, {:rem, 0.5}} in uniform_list.item_style
     assert uniform_list.events == %{click: "uniform_item_clicked"}
 
     assert list.kind == :list
     assert list.id == "generic_items"
     assert Enum.map(list.items, & &1.id) == ["generic_1", "generic_2"]
-    assert {:h_px, 140} in list.style
+    assert {:height, {:px, 140}} in list.style
     assert {:padding, :all, {:rem, 0.5}} in list.item_style
     assert list.events == %{click: "generic_item_clicked"}
 
@@ -279,8 +287,8 @@ defmodule Guppy.ComponentTest do
     assert canvas.id == "summary_canvas"
     assert length(canvas.commands) == 2
     assert canvas.events == %{click: "canvas_clicked"}
-    assert {:w_px, 120} in canvas.style
-    assert {:h_px, 80} in canvas.style
+    assert {:width, {:px, 120}} in canvas.style
+    assert {:height, {:px, 80}} in canvas.style
 
     assert popover.kind == :popover
     assert popover.id == "help_popover"
@@ -310,7 +318,7 @@ defmodule Guppy.ComponentTest do
              close: "close_status"
            }
 
-    assert {:w_px, 240} in select.style
+    assert {:width, {:px, 240}} in select.style
     assert {:padding, :all, {:rem, 0.25}} in select.list_style
     assert {:padding, :all, {:rem, 0.5}} in select.option_style
 
@@ -336,7 +344,7 @@ defmodule Guppy.ComponentTest do
              blur: "notes_blurred"
            }
 
-    assert {:h_px, 120} in textarea.style
+    assert {:height, {:px, 120}} in textarea.style
 
     assert footer == %{kind: :text, content: "Footer ready", id: "footer"}
   end

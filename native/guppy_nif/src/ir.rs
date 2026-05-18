@@ -407,6 +407,13 @@ pub enum StyleOp {
         axis: StyleAxis,
         length: StyleLength,
     },
+    Width(StyleLength),
+    Height(StyleLength),
+    Size(StyleLength),
+    MinWidth(StyleLength),
+    MinHeight(StyleLength),
+    MaxWidth(StyleLength),
+    MaxHeight(StyleLength),
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2583,6 +2590,48 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
             };
 
             match key {
+                "width" => Ok(StyleOp::Width(parse_style_length(
+                    &elements[1],
+                    "width",
+                    true,
+                    true,
+                )?)),
+                "height" => Ok(StyleOp::Height(parse_style_length(
+                    &elements[1],
+                    "height",
+                    true,
+                    true,
+                )?)),
+                "size" => Ok(StyleOp::Size(parse_style_length(
+                    &elements[1],
+                    "size",
+                    true,
+                    true,
+                )?)),
+                "min_width" => Ok(StyleOp::MinWidth(parse_style_length(
+                    &elements[1],
+                    "min_width",
+                    true,
+                    true,
+                )?)),
+                "min_height" => Ok(StyleOp::MinHeight(parse_style_length(
+                    &elements[1],
+                    "min_height",
+                    true,
+                    true,
+                )?)),
+                "max_width" => Ok(StyleOp::MaxWidth(parse_style_length(
+                    &elements[1],
+                    "max_width",
+                    true,
+                    true,
+                )?)),
+                "max_height" => Ok(StyleOp::MaxHeight(parse_style_length(
+                    &elements[1],
+                    "max_height",
+                    true,
+                    true,
+                )?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
