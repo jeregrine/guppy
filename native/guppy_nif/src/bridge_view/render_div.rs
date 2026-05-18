@@ -52,6 +52,7 @@ struct DivPrepared<'a> {
     identity: DivIdentity,
     interactions: DivInteractionSpec<'a>,
     focus: DivFocusSpec,
+    scroll: DivScrollSpec,
 }
 
 impl DivPrepared<'_> {
@@ -92,6 +93,11 @@ struct DivFocusSpec {
     needs_focus_handle: bool,
 }
 
+struct DivScrollSpec {
+    anchor_scroll: bool,
+    scroll_to: bool,
+}
+
 struct DivRetainedState {
     tracked_scroll_handle: Option<ScrollHandle>,
     focus_handle: Option<FocusHandle>,
@@ -120,7 +126,6 @@ pub(crate) fn render(
     let styled_div = build_base_div(&prepared.identity, node, child_elements);
     let styled_div = attach_scroll_and_focus(
         styled_div,
-        node,
         &prepared,
         &retained,
         parent_scroll_handle.as_ref(),
@@ -192,6 +197,10 @@ fn prepare_div<'a>(view_id: u64, path: &str, node: &'a DivNode) -> DivPrepared<'
         identity,
         interactions,
         focus,
+        scroll: DivScrollSpec {
+            anchor_scroll: node.anchor_scroll,
+            scroll_to: node.scroll_to,
+        },
     }
 }
 
@@ -285,7 +294,6 @@ fn build_base_div(
 
 fn attach_scroll_and_focus(
     styled_div: Stateful<Div>,
-    node: &DivNode,
     prepared: &DivPrepared<'_>,
     retained: &DivRetainedState,
     parent_scroll_handle: Option<&ScrollHandle>,
@@ -298,11 +306,14 @@ fn attach_scroll_and_focus(
         None => styled_div,
     };
 
-    let styled_div = if node.anchor_scroll {
+    let styled_div = if prepared.scroll.anchor_scroll {
         match parent_scroll_handle {
             Some(handle) => {
-                let (anchor, should_scroll) =
-                    pass.retain_scroll_anchor(&prepared.identity.node_key, handle, node.scroll_to);
+                let (anchor, should_scroll) = pass.retain_scroll_anchor(
+                    &prepared.identity.node_key,
+                    handle,
+                    prepared.scroll.scroll_to,
+                );
 
                 if should_scroll {
                     schedule_scroll_to_anchor(anchor.clone(), window, cx);
