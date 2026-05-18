@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, and named background/text/border colors plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, and box shadows plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1999,6 +1999,82 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled border_color"
+    },
+    {
+      "name": "shadow",
+      "tuple_schema": [
+        "shadow",
+        "value"
+      ],
+      "values": [
+        "none",
+        "2xs",
+        "xs",
+        "sm",
+        "md",
+        "lg",
+        "xl",
+        "2xl"
+      ],
+      "class_tokens": {
+        "shadow-none": "none",
+        "shadow-2xs": "2xs",
+        "shadow-xs": "xs",
+        "shadow-sm": "sm",
+        "shadow-md": "md",
+        "shadow-lg": "lg",
+        "shadow-xl": "xl",
+        "shadow-2xl": "2xl"
+      },
+      "helpers": [
+        {
+          "name": "shadow",
+          "kind": "exact"
+        },
+        {
+          "name": "shadow_none",
+          "kind": "value",
+          "value": "none"
+        },
+        {
+          "name": "shadow_2xs",
+          "kind": "value",
+          "value": "2xs"
+        },
+        {
+          "name": "shadow_xs",
+          "kind": "value",
+          "value": "xs"
+        },
+        {
+          "name": "shadow_sm",
+          "kind": "value",
+          "value": "sm"
+        },
+        {
+          "name": "shadow_md",
+          "kind": "value",
+          "value": "md"
+        },
+        {
+          "name": "shadow_lg",
+          "kind": "value",
+          "value": "lg"
+        },
+        {
+          "name": "shadow_xl",
+          "kind": "value",
+          "value": "xl"
+        },
+        {
+          "name": "shadow_2xl",
+          "kind": "value",
+          "value": "2xl"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled box_shadow_style_methods! shadow_none/shadow_2xs/shadow_xs/shadow_sm/shadow_md/shadow_lg/shadow_xl/shadow_2xl"
     }
   ],
   "border_width_scale": [

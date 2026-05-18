@@ -1,7 +1,7 @@
 use crate::ir::{
     BorderLineStyle, BorderRadiusAxis, ColorToken, DisplayStyle, DivStyle, LinearGradientStop,
-    MouseCursorStyle, OverflowStyle, PositionStyle, StyleAxis, StyleColor, StyleLength, StyleOp,
-    VisibilityStyle,
+    MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis, StyleColor,
+    StyleLength, StyleOp, VisibilityStyle,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -205,6 +205,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::BorderWidth { .. }
         | StyleOp::BorderRadius { .. }
         | StyleOp::BorderStyle(_)
+        | StyleOp::Shadow(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::BorderColor(_)
@@ -308,6 +309,7 @@ where
         StyleOp::BorderWidth { axis, length } => apply_border_width(style, *axis, *length),
         StyleOp::BorderRadius { axis, length } => apply_border_radius(style, *axis, *length),
         StyleOp::BorderStyle(border_style) => apply_border_style(style, *border_style),
+        StyleOp::Shadow(shadow) => apply_shadow(style, *shadow),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -430,6 +432,7 @@ where
         StyleOp::BorderWidth { axis, length } => apply_border_width(element, *axis, *length),
         StyleOp::BorderRadius { axis, length } => apply_border_radius(element, *axis, *length),
         StyleOp::BorderStyle(border_style) => apply_border_style(element, *border_style),
+        StyleOp::Shadow(shadow) => apply_shadow(element, *shadow),
         _ => element,
     }
 }
@@ -687,6 +690,22 @@ where
     element
 }
 
+fn apply_shadow<E>(element: E, shadow: ShadowStyle) -> E
+where
+    E: Styled,
+{
+    match shadow {
+        ShadowStyle::None => element.shadow_none(),
+        ShadowStyle::TwoXs => element.shadow_2xs(),
+        ShadowStyle::Xs => element.shadow_xs(),
+        ShadowStyle::Sm => element.shadow_sm(),
+        ShadowStyle::Md => element.shadow_md(),
+        ShadowStyle::Lg => element.shadow_lg(),
+        ShadowStyle::Xl => element.shadow_xl(),
+        ShadowStyle::TwoXl => element.shadow_2xl(),
+    }
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
@@ -891,6 +910,9 @@ mod tests {
 
         let style = apply_border_style(StyleRefinement::default(), BorderLineStyle::Dashed);
         assert_eq!(style.border_style, Some(gpui::BorderStyle::Dashed));
+
+        let style = apply_shadow(StyleRefinement::default(), ShadowStyle::None);
+        assert_eq!(style.box_shadow, Some(vec![]));
     }
 
     #[test]

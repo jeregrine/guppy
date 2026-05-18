@@ -1145,6 +1145,11 @@ fn parses_canonical_box_spacing_style_ops() {
         parse_style_op(&tuple(vec![atom("border_style"), atom("dashed")])).unwrap(),
         StyleOp::BorderStyle(super::BorderLineStyle::Dashed)
     );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("shadow"), atom("2xs")])).unwrap(),
+        StyleOp::Shadow(super::ShadowStyle::TwoXs)
+    );
 }
 
 #[test]
@@ -1192,6 +1197,7 @@ fn rejects_invalid_canonical_length_style_ops() {
             tuple(vec![atom("px"), integer(1)]),
         ]),
         tuple(vec![atom("border_style"), atom("double")]),
+        tuple(vec![atom("shadow"), atom("huge")]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
@@ -1204,6 +1210,7 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("overflow")
                 || err.contains("cursor")
                 || err.contains("border")
+                || err.contains("shadow")
                 || err.contains("length"),
             "unexpected error: {err}"
         );
@@ -1262,6 +1269,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "text_color")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "shadow")
     );
 }
 

@@ -26,6 +26,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "bg"))
     assert Enum.any?(operations, &(&1["name"] == "text_color"))
     assert Enum.any?(operations, &(&1["name"] == "border_color"))
+    assert Enum.any?(operations, &(&1["name"] == "shadow"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -96,5 +97,10 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.text_color_white() == {:text_color, :white}
     assert Guppy.Style.border_color(:yellow) == {:border_color, :yellow}
     assert Guppy.Style.border_color_black() == {:border_color, :black}
+
+    assert Guppy.Style.shadow(:md) == {:shadow, :md}
+    assert Guppy.Style.shadow_md() == {:shadow, :md}
+    assert Guppy.Style.shadow_2xs() == {:shadow, :"2xs"}
+    assert Guppy.Style.shadow_none() == {:shadow, :none}
   end
 end

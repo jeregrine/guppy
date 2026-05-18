@@ -68,7 +68,7 @@ defmodule Guppy.ComponentTest do
 
   test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
     assert Guppy.Component.class_to_style!(
-             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue border-gray"
+             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue border-gray shadow-md shadow-none"
            ) == [
              {:padding, :y, {:rem, 0.25}},
              {:padding, :x, {:rem, 0.25}},
@@ -107,7 +107,9 @@ defmodule Guppy.ComponentTest do
              {:border_radius, :bottom_right, {:px, 9999}},
              {:bg, :red},
              {:text_color, :blue},
-             {:border_color, :gray}
+             {:border_color, :gray},
+             {:shadow, :md},
+             {:shadow, :none}
            ]
 
     assert :ok =
@@ -235,7 +237,7 @@ defmodule Guppy.ComponentTest do
     assert button.id == "save_button"
     assert button.label == "Save"
     assert :col_span_full in button.style
-    assert button.focus_visible_style == [{:border_color, :yellow}, :shadow_lg]
+    assert button.focus_visible_style == [{:border_color, :yellow}, {:shadow, :lg}]
     assert button.events == %{click: "save"}
 
     assert checkbox.kind == :checkbox

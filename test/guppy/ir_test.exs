@@ -185,7 +185,10 @@ defmodule Guppy.IRTest do
       {:border_radius, :all, {:rem, 0.25}},
       {:border_radius, :top_left, {:px, 3}},
       {:border_style, :dashed},
-      {:border_style, :solid}
+      {:border_style, :solid},
+      {:shadow, :md},
+      {:shadow, :none},
+      {:shadow, :"2xs"}
     ]
 
     assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: style))
@@ -213,7 +216,8 @@ defmodule Guppy.IRTest do
           {:border_radius, :x, {:px, 1}},
           {:border_radius, :all, :auto},
           {:border_radius, :all, {:fraction, 1}},
-          {:border_style, :double}
+          {:border_style, :double},
+          {:shadow, :huge}
         ] do
       assert {:error, {:invalid_style_op, ^invalid}} =
                Guppy.IR.validate(Guppy.IR.div([], style: [invalid]))

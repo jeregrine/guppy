@@ -336,6 +336,18 @@ pub enum BorderRadiusAxis {
     BottomRight,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ShadowStyle {
+    None,
+    TwoXs,
+    Xs,
+    Sm,
+    Md,
+    Lg,
+    Xl,
+    TwoXl,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -508,6 +520,7 @@ pub enum StyleOp {
         length: StyleLength,
     },
     BorderStyle(BorderLineStyle),
+    Shadow(ShadowStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2747,6 +2760,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "visibility" => Ok(StyleOp::Visibility(parse_visibility_style(&elements[1])?)),
                 "cursor" => Ok(StyleOp::Cursor(parse_mouse_cursor_style(&elements[1])?)),
                 "border_style" => Ok(StyleOp::BorderStyle(parse_border_line_style(&elements[1])?)),
+                "shadow" => Ok(StyleOp::Shadow(parse_shadow_style(&elements[1])?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
@@ -3178,6 +3192,24 @@ fn parse_border_line_style(term: &Term) -> Result<BorderLineStyle, String> {
         Term::Atom(atom) if atom.name == "solid" => Ok(BorderLineStyle::Solid),
         Term::Atom(atom) if atom.name == "dashed" => Ok(BorderLineStyle::Dashed),
         other => Err(format!("invalid border_style: {other}")),
+    }
+}
+
+fn parse_shadow_style(term: &Term) -> Result<ShadowStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid shadow style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "none" => Ok(ShadowStyle::None),
+        "2xs" => Ok(ShadowStyle::TwoXs),
+        "xs" => Ok(ShadowStyle::Xs),
+        "sm" => Ok(ShadowStyle::Sm),
+        "md" => Ok(ShadowStyle::Md),
+        "lg" => Ok(ShadowStyle::Lg),
+        "xl" => Ok(ShadowStyle::Xl),
+        "2xl" => Ok(ShadowStyle::TwoXl),
+        other => Err(format!("invalid shadow style: {other}")),
     }
 }
 

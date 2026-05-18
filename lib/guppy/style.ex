@@ -30,7 +30,8 @@ defmodule Guppy.Style do
                        "border_style",
                        "bg",
                        "text_color",
-                       "border_color"
+                       "border_color",
+                       "shadow"
                      ]
                    end)
 

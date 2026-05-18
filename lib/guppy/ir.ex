@@ -191,6 +191,7 @@ defmodule Guppy.IR do
           | {:border_width, style_axis(), {:px | :rem, number()}}
           | {:border_radius, border_radius_axis(), {:px | :rem, number()}}
           | {:border_style, :solid | :dashed}
+          | {:shadow, :none | :"2xs" | :xs | :sm | :md | :lg | :xl | :"2xl"}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -872,6 +873,7 @@ defmodule Guppy.IR do
   @visibility_value_tokens [:visible, :hidden]
   @overflow_value_tokens [:hidden, :scroll]
   @border_style_value_tokens [:solid, :dashed]
+  @shadow_value_tokens [:none, :"2xs", :xs, :sm, :md, :lg, :xl, :"2xl"]
 
   @cursor_value_tokens [
     :default,
@@ -2668,6 +2670,7 @@ defmodule Guppy.IR do
   end
 
   defp validate_style_op({:border_style, value}) when value in @border_style_value_tokens, do: :ok
+  defp validate_style_op({:shadow, value}) when value in @shadow_value_tokens, do: :ok
 
   defp validate_style_op({key, value})
        when key in @color_style_value_tokens and value in @color_tokens,
