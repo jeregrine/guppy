@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-text-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, flex/alignment, and core text/font helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-text-grid-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, flex/alignment, core text/font, and grid count/span helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2810,6 +2810,98 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled underline/line_through/text_decoration_none"
+    },
+    {
+      "name": "grid_cols",
+      "tuple_schema": [
+        "grid_cols",
+        "positive_integer"
+      ],
+      "class_prefixes": {
+        "grid-cols": null
+      },
+      "helpers": [
+        {
+          "name": "grid_cols",
+          "kind": "integer"
+        }
+      ],
+      "integer": {
+        "min": 1,
+        "max": 65535
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled grid_cols"
+    },
+    {
+      "name": "grid_rows",
+      "tuple_schema": [
+        "grid_rows",
+        "positive_integer"
+      ],
+      "class_prefixes": {
+        "grid-rows": null
+      },
+      "helpers": [
+        {
+          "name": "grid_rows",
+          "kind": "integer"
+        }
+      ],
+      "integer": {
+        "min": 1,
+        "max": 65535
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled grid_rows"
+    },
+    {
+      "name": "col_span",
+      "tuple_schema": [
+        "col_span",
+        "positive_integer"
+      ],
+      "class_prefixes": {
+        "col-span": null
+      },
+      "helpers": [
+        {
+          "name": "col_span",
+          "kind": "integer"
+        }
+      ],
+      "integer": {
+        "min": 1,
+        "max": 65535
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled col_span"
+    },
+    {
+      "name": "row_span",
+      "tuple_schema": [
+        "row_span",
+        "positive_integer"
+      ],
+      "class_prefixes": {
+        "row-span": null
+      },
+      "helpers": [
+        {
+          "name": "row_span",
+          "kind": "integer"
+        }
+      ],
+      "integer": {
+        "min": 1,
+        "max": 65535
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled row_span"
     }
   ],
   "border_width_scale": [

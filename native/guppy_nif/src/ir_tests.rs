@@ -1373,6 +1373,11 @@ fn native_style_catalog_loads() {
             .iter()
             .any(|operation| operation["name"] == "text_decoration")
     );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "grid_cols")
+    );
 }
 
 #[test]

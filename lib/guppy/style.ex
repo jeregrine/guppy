@@ -63,6 +63,10 @@ defmodule Guppy.Style do
                        ]
                      end)
 
+  @integer_operations Enum.filter(@catalog["operations"], fn operation ->
+                        operation["name"] in ["grid_cols", "grid_rows", "col_span", "row_span"]
+                      end)
+
   @style_operations @axis_operations ++ @length_operations
 
   @enum_config Map.new(@enum_operations, fn operation ->
@@ -99,6 +103,32 @@ defmodule Guppy.Style do
                               value: String.to_atom(helper["value"])
                             }
                           end)
+
+  @integer_config Map.new(@integer_operations, fn operation ->
+                    integer = operation["integer"]
+
+                    {String.to_atom(operation["name"]),
+                     %{
+                       min: integer["min"],
+                       max: integer["max"]
+                     }}
+                  end)
+
+  @integer_class_prefix_specs @integer_operations
+                              |> Enum.map(fn operation ->
+                                config =
+                                  Map.fetch!(@integer_config, String.to_atom(operation["name"]))
+
+                                {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+                                %{
+                                  prefix: prefix,
+                                  operation: String.to_atom(operation["name"]),
+                                  min: config.min,
+                                  max: config.max
+                                }
+                              end)
+                              |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
   @operation_config Map.new(@style_operations, fn operation ->
                       length = operation["length"]
@@ -221,6 +251,18 @@ defmodule Guppy.Style do
     def unquote(helper.function)(), do: {:overflow, unquote(helper.axis), unquote(helper.value)}
   end
 
+  for {operation, config} <- @integer_config do
+    @doc "Returns a canonical #{operation} integer style tuple."
+    def unquote(operation)(value)
+        when is_integer(value) and value >= unquote(config.min) and value <= unquote(config.max),
+        do: {unquote(operation), value}
+
+    def unquote(operation)(value) do
+      raise ArgumentError,
+            "invalid #{unquote(operation)} value: #{inspect(value)}; expected integer #{unquote(config.min)}..#{unquote(config.max)}"
+    end
+  end
+
   for {operation, config} <- @operation_config, is_list(config.axes) do
     axes = config.axes
     allow_auto = config.allow_auto
@@ -278,7 +320,8 @@ defmodule Guppy.Style do
   @doc false
   def class_token_to_style(token) when is_binary(token) do
     with :error <- parse_enum_class(token),
-         :error <- parse_overflow_class(token) do
+         :error <- parse_overflow_class(token),
+         :error <- parse_integer_class(token) do
       parse_box_class(token)
     end
   end
@@ -297,6 +340,25 @@ defmodule Guppy.Style do
       {:ok, {axis, value}} -> {:ok, {:overflow, axis, value}}
       :error -> :error
     end
+  end
+
+  defp parse_integer_class(token) do
+    Enum.find_value(@integer_class_prefix_specs, :error, fn spec ->
+      cond do
+        String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]") ->
+          token
+          |> String.slice((String.length(spec.prefix) + 2)..-2//1)
+          |> integer_token_to_style(spec)
+
+        String.starts_with?(token, spec.prefix <> "-") ->
+          token
+          |> String.replace_prefix(spec.prefix <> "-", "")
+          |> integer_token_to_style(spec)
+
+        true ->
+          false
+      end
+    end)
   end
 
   defp parse_box_class(token) do
@@ -322,6 +384,16 @@ defmodule Guppy.Style do
 
   defp split_negative_class_token("-" <> token), do: {true, token}
   defp split_negative_class_token(token), do: {false, token}
+
+  defp integer_token_to_style(token, spec) do
+    case Integer.parse(token) do
+      {value, ""} when value >= spec.min and value <= spec.max ->
+        {:ok, {spec.operation, value}}
+
+      _ ->
+        false
+    end
+  end
 
   defp scale_token_to_style(scale_token, spec, negated) do
     case catalog_scale_length(

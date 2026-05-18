@@ -41,6 +41,10 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "font_weight"))
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration"))
+    assert Enum.any?(operations, &(&1["name"] == "grid_cols"))
+    assert Enum.any?(operations, &(&1["name"] == "grid_rows"))
+    assert Enum.any?(operations, &(&1["name"] == "col_span"))
+    assert Enum.any?(operations, &(&1["name"] == "row_span"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -149,5 +153,10 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.text_decoration(:underline) == {:text_decoration, :underline}
     assert Guppy.Style.underline() == {:text_decoration, :underline}
     assert Guppy.Style.no_underline() == {:text_decoration, :none}
+
+    assert Guppy.Style.grid_cols(3) == {:grid_cols, 3}
+    assert Guppy.Style.grid_rows(2) == {:grid_rows, 2}
+    assert Guppy.Style.col_span(4) == {:col_span, 4}
+    assert Guppy.Style.row_span(5) == {:row_span, 5}
   end
 end
