@@ -65,7 +65,13 @@ defmodule Guppy.Style do
                      end)
 
   @integer_operations Enum.filter(@catalog["operations"], fn operation ->
-                        operation["name"] in ["grid_cols", "grid_rows", "col_span", "row_span"]
+                        operation["name"] in [
+                          "line_clamp",
+                          "grid_cols",
+                          "grid_rows",
+                          "col_span",
+                          "row_span"
+                        ]
                       end)
 
   @image_option_operations Enum.filter(@catalog["operations"], fn operation ->

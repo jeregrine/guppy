@@ -46,6 +46,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "font_weight"))
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration"))
+    assert Enum.any?(operations, &(&1["name"] == "line_clamp"))
     assert Enum.any?(operations, &(&1["name"] == "grid_cols"))
     assert Enum.any?(operations, &(&1["name"] == "grid_rows"))
     assert Enum.any?(operations, &(&1["name"] == "col_span"))
@@ -169,6 +170,8 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.text_decoration(:underline) == {:text_decoration, :underline}
     assert Guppy.Style.underline() == {:text_decoration, :underline}
     assert Guppy.Style.no_underline() == {:text_decoration, :none}
+    assert Guppy.Style.line_clamp(2) == {:line_clamp, 2}
+    assert_raise ArgumentError, fn -> Guppy.Style.line_clamp(0) end
 
     assert Guppy.Style.grid_cols(3) == {:grid_cols, 3}
     assert Guppy.Style.grid_rows(2) == {:grid_rows, 2}
@@ -218,5 +221,11 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.class_token_to_style("opacity-50") == {:ok, {:opacity, 0.5}}
     assert Guppy.Style.class_token_to_style("opacity-[0.42]") == {:ok, {:opacity, 0.42}}
     assert Guppy.Style.class_token_to_style("opacity-[1.5]") == :error
+  end
+
+  test "line-clamp classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("line-clamp-2") == {:ok, {:line_clamp, 2}}
+    assert Guppy.Style.class_token_to_style("line-clamp-[4]") == {:ok, {:line_clamp, 4}}
+    assert Guppy.Style.class_token_to_style("line-clamp-0") == :error
   end
 end

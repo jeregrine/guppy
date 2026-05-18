@@ -852,6 +852,7 @@ defmodule Guppy.IRTest do
           {:text_color_hex, "445566"},
           {:border_color_hex, "#abcdef"},
           {:opacity, 0.75},
+          {:line_clamp, 4},
           {:w_px, 320},
           {:w_rem, 24.0},
           {:w_frac, 0.5},
@@ -1007,6 +1008,7 @@ defmodule Guppy.IRTest do
              {:text_color_hex, "445566"},
              {:border_color_hex, "#abcdef"},
              {:opacity, 0.75},
+             {:line_clamp, 4},
              {:w_px, 320},
              {:w_rem, 24.0},
              {:w_frac, 0.5},
@@ -1045,6 +1047,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_animation, %{id: "fade", duration_ms: 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], animation: %{id: "fade", duration_ms: 0}))
+
+    assert {:error, {:invalid_style_op, {:line_clamp, 0}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:line_clamp, 0}]))
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))

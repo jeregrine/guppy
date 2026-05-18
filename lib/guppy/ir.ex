@@ -208,6 +208,7 @@ defmodule Guppy.IR do
           | {:bg_linear_gradient,
              [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
           | {:opacity, number()}
+          | {:line_clamp, pos_integer()}
           | {:grid_cols, pos_integer()}
           | {:grid_rows, pos_integer()}
           | {:col_span, pos_integer()}
@@ -2766,6 +2767,10 @@ defmodule Guppy.IR do
   end
 
   defp validate_style_op({:opacity, value}) when is_unit_native_f32_number(value), do: :ok
+
+  defp validate_style_op({:line_clamp, value})
+       when is_integer(value) and value >= 1 and value <= 65_535,
+       do: :ok
 
   defp validate_style_op({key, value})
        when key in @grid_value_tokens and is_integer(value) and value >= 1 and value <= 65_535,

@@ -1207,6 +1207,10 @@ fn parses_canonical_box_spacing_style_ops() {
         parse_style_op(&tuple(vec![atom("text_decoration"), atom("none")])).unwrap(),
         StyleOp::TextDecoration(super::TextDecorationStyle::None)
     );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("line_clamp"), integer(4)])).unwrap(),
+        StyleOp::LineClamp(4)
+    );
 }
 
 #[test]
@@ -1391,6 +1395,11 @@ fn native_style_catalog_loads() {
     assert!(
         operations
             .iter()
+            .any(|operation| operation["name"] == "line_clamp")
+    );
+    assert!(
+        operations
+            .iter()
             .any(|operation| operation["name"] == "grid_cols")
     );
     assert!(
@@ -1477,6 +1486,7 @@ fn rejects_invalid_hex_style_color_ops() {
 fn rejects_invalid_numeric_style_ops() {
     for term in [
         tuple(vec![atom("opacity"), float(1.5)]),
+        tuple(vec![atom("line_clamp"), integer(0)]),
         tuple(vec![atom("w_px"), integer(-1)]),
         tuple(vec![atom("w_frac"), float(1.2)]),
         tuple(vec![atom("scrollbar_width_px"), integer(-1)]),

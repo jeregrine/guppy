@@ -668,6 +668,7 @@ pub enum StyleOp {
         to: LinearGradientStop,
     },
     Opacity(f32),
+    LineClamp(u16),
     GridCols(u16),
     GridRows(u16),
     ColSpan(u16),
@@ -2936,6 +2937,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     &elements[1],
                     "opacity",
                 )?)),
+                "line_clamp" => Ok(StyleOp::LineClamp(parse_positive_u16(
+                    &elements[1],
+                    "line_clamp",
+                )?)),
                 "grid_cols" => Ok(StyleOp::GridCols(parse_grid_u16(&elements[1])?)),
                 "grid_rows" => Ok(StyleOp::GridRows(parse_grid_u16(&elements[1])?)),
                 "col_span" => Ok(StyleOp::ColSpan(parse_grid_u16(&elements[1])?)),
@@ -3691,20 +3696,28 @@ fn parse_bounded_style_f32(term: &Term, key: &str, allow_negative: bool) -> Resu
 }
 
 fn parse_grid_u16(term: &Term) -> Result<u16, String> {
+    parse_positive_u16(term, "grid")
+}
+
+fn parse_positive_u16(term: &Term, key: &str) -> Result<u16, String> {
     let value = match term {
         Term::FixInteger(value) => value.value,
         Term::BigInteger(value) => value
             .value
             .clone()
             .try_into()
-            .map_err(|_| format!("expected positive grid integer <= 65535, got {term}"))?,
-        other => return Err(format!("expected positive grid integer, got {other}")),
+            .map_err(|_| format!("invalid {key} integer; expected 1..65535, got {term}"))?,
+        other => {
+            return Err(format!(
+                "invalid {key} integer; expected integer, got {other}"
+            ));
+        }
     };
 
     u16::try_from(value)
         .ok()
         .filter(|value| *value >= 1)
-        .ok_or_else(|| format!("expected positive grid integer <= 65535, got {term}"))
+        .ok_or_else(|| format!("invalid {key} integer; expected 1..65535, got {term}"))
 }
 
 fn parse_f32(term: &Term) -> Result<f32, String> {

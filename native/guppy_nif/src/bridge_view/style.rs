@@ -158,6 +158,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::TextEllipsis
         | StyleOp::LineClamp2
         | StyleOp::LineClamp3
+        | StyleOp::LineClamp(_)
         | StyleOp::TextXs
         | StyleOp::TextSm
         | StyleOp::TextBase
@@ -258,6 +259,7 @@ where
         StyleOp::TextEllipsis => style.text_ellipsis(),
         StyleOp::LineClamp2 => style.line_clamp(2),
         StyleOp::LineClamp3 => style.line_clamp(3),
+        StyleOp::LineClamp(value) => style.line_clamp(usize::from(*value)),
         StyleOp::TextXs => style.text_xs(),
         StyleOp::TextSm => style.text_sm(),
         StyleOp::TextBase => style.text_base(),
