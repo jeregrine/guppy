@@ -282,7 +282,7 @@ Styles are ordered lists of style ops, these follow the tailwind inspired styles
 style: [:flex, :flex_col, Guppy.Style.p(4), {:padding, :y, {:rem, 0.25}}, {:bg, :gray}, {:bg, :blue}]
 ```
 
-Padding helpers and classes already use canonical tuple ops: `Guppy.Style.py(1)` and template `class="py-1"` both produce `{:padding, :y, {:rem, 0.25}}`. Later ops win over earlier ones, and order is preserved through the bridge. In `~GUI` templates, `class` may be a string or a dynamic list of strings; `nil` and `false` list entries are ignored. Raw `style` values must be canonical style lists (for example `style={Guppy.Style.py(1)}` or `style={[Guppy.Style.py(1)]}`); use `class` for class-token strings.
+Box-spacing helpers and classes already use canonical tuple ops: `Guppy.Style.py(1)` and template `class="py-1"` both produce `{:padding, :y, {:rem, 0.25}}`; `Guppy.Style.mx(:auto)` produces `{:margin, :x, :auto}`; `Guppy.Style.gap_x("px")` produces `{:gap, :x, {:px, 1}}`. Later ops win over earlier ones, and order is preserved through the bridge. In `~GUI` templates, `class` may be a string or a dynamic list of strings; `nil` and `false` list entries are ignored. Raw `style` values must be canonical style lists (for example `style={Guppy.Style.py(1)}` or `style={[Guppy.Style.py(1)]}`); use `class` for class-token strings.
 
 Stateful style lists are explicit:
 

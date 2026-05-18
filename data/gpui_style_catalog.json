@@ -1,72 +1,435 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "initial-padding-slice",
-  "notes": "Initial source-of-truth catalog for the style parity pass. It starts with GPUI generated padding helpers and the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
-  "length_units": ["px", "rem", "fraction", "auto"],
+  "coverage": "box-spacing-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, and gap helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "length_units": [
+    "px",
+    "rem",
+    "fraction",
+    "auto"
+  ],
   "spacing_scale": [
-    {"token": "0", "length": {"unit": "px", "value": 0}},
-    {"token": "0.5", "aliases": ["0p5"], "length": {"unit": "rem", "value": 0.125}},
-    {"token": "1", "length": {"unit": "rem", "value": 0.25}},
-    {"token": "1.5", "aliases": ["1p5"], "length": {"unit": "rem", "value": 0.375}},
-    {"token": "2", "length": {"unit": "rem", "value": 0.5}},
-    {"token": "2.5", "aliases": ["2p5"], "length": {"unit": "rem", "value": 0.625}},
-    {"token": "3", "length": {"unit": "rem", "value": 0.75}},
-    {"token": "3.5", "aliases": ["3p5"], "length": {"unit": "rem", "value": 0.875}},
-    {"token": "4", "length": {"unit": "rem", "value": 1}},
-    {"token": "5", "length": {"unit": "rem", "value": 1.25}},
-    {"token": "6", "length": {"unit": "rem", "value": 1.5}},
-    {"token": "7", "length": {"unit": "rem", "value": 1.75}},
-    {"token": "8", "length": {"unit": "rem", "value": 2}},
-    {"token": "9", "length": {"unit": "rem", "value": 2.25}},
-    {"token": "10", "length": {"unit": "rem", "value": 2.5}},
-    {"token": "11", "length": {"unit": "rem", "value": 2.75}},
-    {"token": "12", "length": {"unit": "rem", "value": 3}},
-    {"token": "16", "length": {"unit": "rem", "value": 4}},
-    {"token": "20", "length": {"unit": "rem", "value": 5}},
-    {"token": "24", "length": {"unit": "rem", "value": 6}},
-    {"token": "32", "length": {"unit": "rem", "value": 8}},
-    {"token": "40", "length": {"unit": "rem", "value": 10}},
-    {"token": "48", "length": {"unit": "rem", "value": 12}},
-    {"token": "56", "length": {"unit": "rem", "value": 14}},
-    {"token": "64", "length": {"unit": "rem", "value": 16}},
-    {"token": "72", "length": {"unit": "rem", "value": 18}},
-    {"token": "80", "length": {"unit": "rem", "value": 20}},
-    {"token": "96", "length": {"unit": "rem", "value": 24}},
-    {"token": "112", "length": {"unit": "rem", "value": 28}},
-    {"token": "128", "length": {"unit": "rem", "value": 32}},
-    {"token": "px", "length": {"unit": "px", "value": 1}},
-    {"token": "full", "length": {"unit": "fraction", "value": 1}},
-    {"token": "1/2", "aliases": ["1_2"], "length": {"unit": "fraction", "value": 0.5}},
-    {"token": "1/3", "aliases": ["1_3"], "length": {"unit": "fraction", "value": 0.3333333333333333}},
-    {"token": "2/3", "aliases": ["2_3"], "length": {"unit": "fraction", "value": 0.6666666666666666}},
-    {"token": "1/4", "aliases": ["1_4"], "length": {"unit": "fraction", "value": 0.25}},
-    {"token": "2/4", "aliases": ["2_4"], "length": {"unit": "fraction", "value": 0.5}},
-    {"token": "3/4", "aliases": ["3_4"], "length": {"unit": "fraction", "value": 0.75}},
-    {"token": "1/5", "aliases": ["1_5"], "length": {"unit": "fraction", "value": 0.2}},
-    {"token": "2/5", "aliases": ["2_5"], "length": {"unit": "fraction", "value": 0.4}},
-    {"token": "3/5", "aliases": ["3_5"], "length": {"unit": "fraction", "value": 0.6}},
-    {"token": "4/5", "aliases": ["4_5"], "length": {"unit": "fraction", "value": 0.8}},
-    {"token": "1/6", "aliases": ["1_6"], "length": {"unit": "fraction", "value": 0.16666666666666666}},
-    {"token": "5/6", "aliases": ["5_6"], "length": {"unit": "fraction", "value": 0.8333333333333334}},
-    {"token": "1/12", "aliases": ["1_12"], "length": {"unit": "fraction", "value": 0.08333333333333333}}
+    {
+      "token": "0",
+      "length": {
+        "unit": "px",
+        "value": 0
+      }
+    },
+    {
+      "token": "0.5",
+      "aliases": [
+        "0p5"
+      ],
+      "length": {
+        "unit": "rem",
+        "value": 0.125
+      }
+    },
+    {
+      "token": "1",
+      "length": {
+        "unit": "rem",
+        "value": 0.25
+      }
+    },
+    {
+      "token": "1.5",
+      "aliases": [
+        "1p5"
+      ],
+      "length": {
+        "unit": "rem",
+        "value": 0.375
+      }
+    },
+    {
+      "token": "2",
+      "length": {
+        "unit": "rem",
+        "value": 0.5
+      }
+    },
+    {
+      "token": "2.5",
+      "aliases": [
+        "2p5"
+      ],
+      "length": {
+        "unit": "rem",
+        "value": 0.625
+      }
+    },
+    {
+      "token": "3",
+      "length": {
+        "unit": "rem",
+        "value": 0.75
+      }
+    },
+    {
+      "token": "3.5",
+      "aliases": [
+        "3p5"
+      ],
+      "length": {
+        "unit": "rem",
+        "value": 0.875
+      }
+    },
+    {
+      "token": "4",
+      "length": {
+        "unit": "rem",
+        "value": 1
+      }
+    },
+    {
+      "token": "5",
+      "length": {
+        "unit": "rem",
+        "value": 1.25
+      }
+    },
+    {
+      "token": "6",
+      "length": {
+        "unit": "rem",
+        "value": 1.5
+      }
+    },
+    {
+      "token": "7",
+      "length": {
+        "unit": "rem",
+        "value": 1.75
+      }
+    },
+    {
+      "token": "8",
+      "length": {
+        "unit": "rem",
+        "value": 2
+      }
+    },
+    {
+      "token": "9",
+      "length": {
+        "unit": "rem",
+        "value": 2.25
+      }
+    },
+    {
+      "token": "10",
+      "length": {
+        "unit": "rem",
+        "value": 2.5
+      }
+    },
+    {
+      "token": "11",
+      "length": {
+        "unit": "rem",
+        "value": 2.75
+      }
+    },
+    {
+      "token": "12",
+      "length": {
+        "unit": "rem",
+        "value": 3
+      }
+    },
+    {
+      "token": "16",
+      "length": {
+        "unit": "rem",
+        "value": 4
+      }
+    },
+    {
+      "token": "20",
+      "length": {
+        "unit": "rem",
+        "value": 5
+      }
+    },
+    {
+      "token": "24",
+      "length": {
+        "unit": "rem",
+        "value": 6
+      }
+    },
+    {
+      "token": "32",
+      "length": {
+        "unit": "rem",
+        "value": 8
+      }
+    },
+    {
+      "token": "40",
+      "length": {
+        "unit": "rem",
+        "value": 10
+      }
+    },
+    {
+      "token": "48",
+      "length": {
+        "unit": "rem",
+        "value": 12
+      }
+    },
+    {
+      "token": "56",
+      "length": {
+        "unit": "rem",
+        "value": 14
+      }
+    },
+    {
+      "token": "64",
+      "length": {
+        "unit": "rem",
+        "value": 16
+      }
+    },
+    {
+      "token": "72",
+      "length": {
+        "unit": "rem",
+        "value": 18
+      }
+    },
+    {
+      "token": "80",
+      "length": {
+        "unit": "rem",
+        "value": 20
+      }
+    },
+    {
+      "token": "96",
+      "length": {
+        "unit": "rem",
+        "value": 24
+      }
+    },
+    {
+      "token": "112",
+      "length": {
+        "unit": "rem",
+        "value": 28
+      }
+    },
+    {
+      "token": "128",
+      "length": {
+        "unit": "rem",
+        "value": 32
+      }
+    },
+    {
+      "token": "px",
+      "length": {
+        "unit": "px",
+        "value": 1
+      }
+    },
+    {
+      "token": "full",
+      "length": {
+        "unit": "fraction",
+        "value": 1
+      }
+    },
+    {
+      "token": "1/2",
+      "aliases": [
+        "1_2"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.5
+      }
+    },
+    {
+      "token": "1/3",
+      "aliases": [
+        "1_3"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.3333333333333333
+      }
+    },
+    {
+      "token": "2/3",
+      "aliases": [
+        "2_3"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.6666666666666666
+      }
+    },
+    {
+      "token": "1/4",
+      "aliases": [
+        "1_4"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.25
+      }
+    },
+    {
+      "token": "2/4",
+      "aliases": [
+        "2_4"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.5
+      }
+    },
+    {
+      "token": "3/4",
+      "aliases": [
+        "3_4"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.75
+      }
+    },
+    {
+      "token": "1/5",
+      "aliases": [
+        "1_5"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.2
+      }
+    },
+    {
+      "token": "2/5",
+      "aliases": [
+        "2_5"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.4
+      }
+    },
+    {
+      "token": "3/5",
+      "aliases": [
+        "3_5"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.6
+      }
+    },
+    {
+      "token": "4/5",
+      "aliases": [
+        "4_5"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.8
+      }
+    },
+    {
+      "token": "1/6",
+      "aliases": [
+        "1_6"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.16666666666666666
+      }
+    },
+    {
+      "token": "5/6",
+      "aliases": [
+        "5_6"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.8333333333333334
+      }
+    },
+    {
+      "token": "1/12",
+      "aliases": [
+        "1_12"
+      ],
+      "length": {
+        "unit": "fraction",
+        "value": 0.08333333333333333
+      }
+    }
   ],
   "operations": [
     {
       "name": "padding",
-      "tuple_schema": ["padding", "axis", "definite_length"],
+      "tuple_schema": [
+        "padding",
+        "axis",
+        "definite_length"
+      ],
       "canonical_examples": [
-        ["padding", "y", ["rem", 0.25]],
-        ["padding", "all", ["px", 1]]
+        [
+          "padding",
+          "y",
+          [
+            "rem",
+            0.25
+          ]
+        ],
+        [
+          "padding",
+          "all",
+          [
+            "px",
+            1
+          ]
+        ]
       ],
       "axes": {
-        "all": ["top", "right", "bottom", "left"],
-        "x": ["left", "right"],
-        "y": ["top", "bottom"],
-        "top": ["top"],
-        "right": ["right"],
-        "bottom": ["bottom"],
-        "left": ["left"]
+        "all": [
+          "top",
+          "right",
+          "bottom",
+          "left"
+        ],
+        "x": [
+          "left",
+          "right"
+        ],
+        "y": [
+          "top",
+          "bottom"
+        ],
+        "top": [
+          "top"
+        ],
+        "right": [
+          "right"
+        ],
+        "bottom": [
+          "bottom"
+        ],
+        "left": [
+          "left"
+        ]
       },
       "class_prefixes": {
         "p": "all",
@@ -78,23 +441,248 @@
         "pl": "left"
       },
       "helpers": [
-        {"name": "padding", "kind": "exact"},
-        {"name": "p", "kind": "scale", "axis": "all"},
-        {"name": "px", "kind": "scale", "axis": "x"},
-        {"name": "py", "kind": "scale", "axis": "y"},
-        {"name": "pt", "kind": "scale", "axis": "top"},
-        {"name": "pr", "kind": "scale", "axis": "right"},
-        {"name": "pb", "kind": "scale", "axis": "bottom"},
-        {"name": "pl", "kind": "scale", "axis": "left"}
+        {
+          "name": "padding",
+          "kind": "exact"
+        },
+        {
+          "name": "p",
+          "kind": "scale",
+          "axis": "all"
+        },
+        {
+          "name": "px",
+          "kind": "scale",
+          "axis": "x"
+        },
+        {
+          "name": "py",
+          "kind": "scale",
+          "axis": "y"
+        },
+        {
+          "name": "pt",
+          "kind": "scale",
+          "axis": "top"
+        },
+        {
+          "name": "pr",
+          "kind": "scale",
+          "axis": "right"
+        },
+        {
+          "name": "pb",
+          "kind": "scale",
+          "axis": "bottom"
+        },
+        {
+          "name": "pl",
+          "kind": "scale",
+          "axis": "left"
+        }
       ],
       "length": {
-        "allowed_units": ["px", "rem", "fraction"],
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction"
+        ],
         "negative": false,
         "auto": false
       },
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Styled padding_style_methods! p/px/py/pt/pr/pb/pl"
+    },
+    {
+      "name": "margin",
+      "tuple_schema": [
+        "margin",
+        "axis",
+        "length"
+      ],
+      "canonical_examples": [
+        [
+          "margin",
+          "x",
+          "auto"
+        ],
+        [
+          "margin",
+          "top",
+          [
+            "rem",
+            -0.5
+          ]
+        ]
+      ],
+      "axes": {
+        "all": [
+          "top",
+          "right",
+          "bottom",
+          "left"
+        ],
+        "x": [
+          "left",
+          "right"
+        ],
+        "y": [
+          "top",
+          "bottom"
+        ],
+        "top": [
+          "top"
+        ],
+        "right": [
+          "right"
+        ],
+        "bottom": [
+          "bottom"
+        ],
+        "left": [
+          "left"
+        ]
+      },
+      "class_prefixes": {
+        "m": "all",
+        "mx": "x",
+        "my": "y",
+        "mt": "top",
+        "mr": "right",
+        "mb": "bottom",
+        "ml": "left"
+      },
+      "helpers": [
+        {
+          "name": "margin",
+          "kind": "exact"
+        },
+        {
+          "name": "m",
+          "kind": "scale",
+          "axis": "all"
+        },
+        {
+          "name": "mx",
+          "kind": "scale",
+          "axis": "x"
+        },
+        {
+          "name": "my",
+          "kind": "scale",
+          "axis": "y"
+        },
+        {
+          "name": "mt",
+          "kind": "scale",
+          "axis": "top"
+        },
+        {
+          "name": "mr",
+          "kind": "scale",
+          "axis": "right"
+        },
+        {
+          "name": "mb",
+          "kind": "scale",
+          "axis": "bottom"
+        },
+        {
+          "name": "ml",
+          "kind": "scale",
+          "axis": "left"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction",
+          "auto"
+        ],
+        "negative": true,
+        "auto": true
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled margin_style_methods! m/mx/my/mt/mr/mb/ml"
+    },
+    {
+      "name": "gap",
+      "tuple_schema": [
+        "gap",
+        "axis",
+        "definite_length"
+      ],
+      "canonical_examples": [
+        [
+          "gap",
+          "all",
+          [
+            "rem",
+            0.25
+          ]
+        ],
+        [
+          "gap",
+          "x",
+          [
+            "px",
+            1
+          ]
+        ]
+      ],
+      "axes": {
+        "all": [
+          "width",
+          "height"
+        ],
+        "x": [
+          "width"
+        ],
+        "y": [
+          "height"
+        ]
+      },
+      "class_prefixes": {
+        "gap": "all",
+        "gap-x": "x",
+        "gap-y": "y"
+      },
+      "helpers": [
+        {
+          "name": "gap",
+          "kind": "exact"
+        },
+        {
+          "name": "gap",
+          "kind": "scale",
+          "axis": "all"
+        },
+        {
+          "name": "gap_x",
+          "kind": "scale",
+          "axis": "x"
+        },
+        {
+          "name": "gap_y",
+          "kind": "scale",
+          "axis": "y"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem",
+          "fraction"
+        ],
+        "negative": true,
+        "auto": false
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled style_helpers! gap/gap_x/gap_y"
     }
   ]
 }

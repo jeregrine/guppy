@@ -260,6 +260,7 @@ pub enum StyleLength {
     Px(f32),
     Rem(f32),
     Fraction(f32),
+    Auto,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -395,6 +396,14 @@ pub enum StyleOp {
     OverflowXHidden,
     OverflowYHidden,
     Padding {
+        axis: StyleAxis,
+        length: StyleLength,
+    },
+    Margin {
+        axis: StyleAxis,
+        length: StyleLength,
+    },
+    Gap {
         axis: StyleAxis,
         length: StyleLength,
     },
@@ -2554,7 +2563,15 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
             match key {
                 "padding" => Ok(StyleOp::Padding {
                     axis: parse_style_axis(&elements[1], "padding")?,
-                    length: parse_non_negative_style_length(&elements[2], "padding")?,
+                    length: parse_style_length(&elements[2], "padding", false, false)?,
+                }),
+                "margin" => Ok(StyleOp::Margin {
+                    axis: parse_style_axis(&elements[1], "margin")?,
+                    length: parse_style_length(&elements[2], "margin", true, true)?,
+                }),
+                "gap" => Ok(StyleOp::Gap {
+                    axis: parse_gap_axis(&elements[1])?,
+                    length: parse_style_length(&elements[2], "gap", false, true)?,
                 }),
                 other => Err(format!("unsupported style tuple key: {other}")),
             }
@@ -2917,27 +2934,36 @@ fn parse_style_axis(term: &Term, key: &str) -> Result<StyleAxis, String> {
     }
 }
 
-fn parse_non_negative_style_length(term: &Term, key: &str) -> Result<StyleLength, String> {
+fn parse_gap_axis(term: &Term) -> Result<StyleAxis, String> {
+    let axis = parse_style_axis(term, "gap")?;
+
+    match axis {
+        StyleAxis::All | StyleAxis::X | StyleAxis::Y => Ok(axis),
+        _ => Err(format!("invalid gap axis: {term}")),
+    }
+}
+
+fn parse_style_length(
+    term: &Term,
+    key: &str,
+    allow_auto: bool,
+    allow_negative: bool,
+) -> Result<StyleLength, String> {
     match term {
+        Term::Atom(atom) if atom.name == "auto" && allow_auto => Ok(StyleLength::Auto),
+        Term::Atom(atom) if atom.name == "auto" => Err(format!("{key} length does not allow auto")),
         Term::Tuple(Tuple { elements }) if elements.len() == 2 => {
             let unit = match &elements[0] {
                 Term::Atom(atom) => atom.name.as_str(),
                 other => return Err(format!("expected {key} length unit atom, got {other}")),
             };
 
+            let value = parse_bounded_style_f32(&elements[1], key, allow_negative)?;
+
             match unit {
-                "px" => Ok(StyleLength::Px(parse_non_negative_style_f32(
-                    &elements[1],
-                    key,
-                )?)),
-                "rem" => Ok(StyleLength::Rem(parse_non_negative_style_f32(
-                    &elements[1],
-                    key,
-                )?)),
-                "fraction" => Ok(StyleLength::Fraction(parse_non_negative_style_f32(
-                    &elements[1],
-                    key,
-                )?)),
+                "px" => Ok(StyleLength::Px(value)),
+                "rem" => Ok(StyleLength::Rem(value)),
+                "fraction" => Ok(StyleLength::Fraction(value)),
                 other => Err(format!("invalid {key} length unit: {other}")),
             }
         }
@@ -2956,10 +2982,16 @@ fn parse_unit_style_f32(term: &Term, key: &str) -> Result<f32, String> {
 }
 
 fn parse_non_negative_style_f32(term: &Term, key: &str) -> Result<f32, String> {
+    parse_bounded_style_f32(term, key, false)
+}
+
+fn parse_bounded_style_f32(term: &Term, key: &str, allow_negative: bool) -> Result<f32, String> {
     let value = parse_f32(term)?;
 
-    if value.is_finite() && value >= 0.0 {
+    if value.is_finite() && (allow_negative || value >= 0.0) {
         Ok(value)
+    } else if allow_negative {
+        Err(format!("invalid numeric style {key}: {value}"))
     } else {
         Err(format!("invalid non-negative numeric style {key}: {value}"))
     }

@@ -2,7 +2,7 @@ use crate::ir::{
     ColorToken, DivStyle, LinearGradientStop, StyleAxis, StyleColor, StyleLength, StyleOp,
 };
 use gpui::{
-    DefiniteLength, FontStyle, FontWeight, HighlightStyle, StatefulInteractiveElement,
+    DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
     StrikethroughStyle, StyleRefinement, Styled, UnderlineStyle, linear_color_stop,
     linear_gradient, px, relative, rems, rgb,
 };
@@ -108,6 +108,8 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::OverflowXHidden
         | StyleOp::OverflowYHidden
         | StyleOp::Padding { .. }
+        | StyleOp::Margin { .. }
+        | StyleOp::Gap { .. }
         | StyleOp::GridCols(_)
         | StyleOp::GridRows(_)
         | StyleOp::ColSpan(_)
@@ -366,6 +368,8 @@ where
         StyleOp::ScrollbarWidthPx(value) => element.scrollbar_width(px(*value)),
         StyleOp::ScrollbarWidthRem(value) => element.scrollbar_width(rems(*value)),
         StyleOp::Padding { axis, length } => apply_padding(element, *axis, *length),
+        StyleOp::Margin { axis, length } => apply_margin(element, *axis, *length),
+        StyleOp::Gap { axis, length } => apply_gap(element, *axis, *length),
         _ => element,
     }
 }
@@ -387,11 +391,52 @@ where
     }
 }
 
+fn apply_margin<E>(element: E, axis: StyleAxis, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    let length = style_length_to_length(length);
+
+    match axis {
+        StyleAxis::All => element.m(length),
+        StyleAxis::X => element.mx(length),
+        StyleAxis::Y => element.my(length),
+        StyleAxis::Top => element.mt(length),
+        StyleAxis::Right => element.mr(length),
+        StyleAxis::Bottom => element.mb(length),
+        StyleAxis::Left => element.ml(length),
+    }
+}
+
+fn apply_gap<E>(element: E, axis: StyleAxis, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    let length = style_length_to_definite(length);
+
+    match axis {
+        StyleAxis::All => element.gap(length),
+        StyleAxis::X => element.gap_x(length),
+        StyleAxis::Y => element.gap_y(length),
+        _ => element,
+    }
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
         StyleLength::Rem(value) => rems(value).into(),
         StyleLength::Fraction(value) => relative(value),
+        StyleLength::Auto => px(0.0).into(),
+    }
+}
+
+fn style_length_to_length(length: StyleLength) -> Length {
+    match length {
+        StyleLength::Px(value) => px(value).into(),
+        StyleLength::Rem(value) => rems(value).into(),
+        StyleLength::Fraction(value) => relative(value).into(),
+        StyleLength::Auto => Length::Auto,
     }
 }
 
@@ -485,7 +530,7 @@ mod tests {
     use gpui::{Fill, StyleRefinement, linear_color_stop, linear_gradient};
 
     #[test]
-    fn applies_canonical_padding_to_style_refinement() {
+    fn applies_canonical_box_spacing_to_style_refinement() {
         let style = apply_padding(
             StyleRefinement::default(),
             StyleAxis::Y,
@@ -496,6 +541,20 @@ mod tests {
         assert_eq!(style.padding.bottom, Some(DefiniteLength::from(rems(0.25))));
         assert_eq!(style.padding.left, None);
         assert_eq!(style.padding.right, None);
+
+        let style = apply_margin(StyleRefinement::default(), StyleAxis::X, StyleLength::Auto);
+        assert_eq!(style.margin.left, Some(Length::Auto));
+        assert_eq!(style.margin.right, Some(Length::Auto));
+        assert_eq!(style.margin.top, None);
+        assert_eq!(style.margin.bottom, None);
+
+        let style = apply_gap(
+            StyleRefinement::default(),
+            StyleAxis::All,
+            StyleLength::Px(-1.0),
+        );
+        assert_eq!(style.gap.width, Some(DefiniteLength::from(px(-1.0))));
+        assert_eq!(style.gap.height, Some(DefiniteLength::from(px(-1.0))));
     }
 
     #[test]

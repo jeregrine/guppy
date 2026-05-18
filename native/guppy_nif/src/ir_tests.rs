@@ -1025,18 +1025,38 @@ fn list_row_control_ids_are_unique_within_a_row() {
 }
 
 #[test]
-fn parses_canonical_padding_style_op() {
-    let term = tuple(vec![
-        atom("padding"),
-        atom("y"),
-        tuple(vec![atom("rem"), float(0.25)]),
-    ]);
-
+fn parses_canonical_box_spacing_style_ops() {
     assert_eq!(
-        parse_style_op(&term).unwrap(),
+        parse_style_op(&tuple(vec![
+            atom("padding"),
+            atom("y"),
+            tuple(vec![atom("rem"), float(0.25)]),
+        ]))
+        .unwrap(),
         StyleOp::Padding {
             axis: StyleAxis::Y,
             length: StyleLength::Rem(0.25),
+        }
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("margin"), atom("x"), atom("auto")])).unwrap(),
+        StyleOp::Margin {
+            axis: StyleAxis::X,
+            length: StyleLength::Auto,
+        }
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("gap"),
+            atom("all"),
+            tuple(vec![atom("px"), integer(-1)]),
+        ]))
+        .unwrap(),
+        StyleOp::Gap {
+            axis: StyleAxis::All,
+            length: StyleLength::Px(-1.0),
         }
     );
 }

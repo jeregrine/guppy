@@ -66,18 +66,27 @@ defmodule Guppy.ComponentTest do
     end
   end
 
-  test "Guppy.Component parses catalog-backed padding classes into canonical tuple styles" do
-    assert Guppy.Component.class_to_style!("py-1 px-1 p-0.5 p-0p5 p-[6px]") == [
+  test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
+    assert Guppy.Component.class_to_style!(
+             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px"
+           ) == [
              {:padding, :y, {:rem, 0.25}},
              {:padding, :x, {:rem, 0.25}},
              {:padding, :all, {:rem, 0.125}},
              {:padding, :all, {:rem, 0.125}},
-             {:padding, :all, {:px, 6}}
+             {:padding, :all, {:px, 6}},
+             {:margin, :all, :auto},
+             {:margin, :x, {:rem, -0.5}},
+             {:margin, :top, {:px, -4}},
+             {:gap, :all, {:rem, 0.25}},
+             {:gap, :x, {:px, 1}}
            ]
 
     assert :ok =
              Guppy.IR.validate(
-               Guppy.IR.div([], style: Guppy.Component.class_to_style!("py-1 px-[2rem]"))
+               Guppy.IR.div([],
+                 style: Guppy.Component.class_to_style!("py-1 px-[2rem] m-[auto] gap-y-[4px]")
+               )
              )
   end
 

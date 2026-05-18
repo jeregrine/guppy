@@ -10,14 +10,25 @@ defmodule Guppy.StyleTest do
              catalog_path |> File.read!() |> JSON.decode!()
 
     assert Enum.any?(operations, &(&1["name"] == "padding"))
+    assert Enum.any?(operations, &(&1["name"] == "margin"))
+    assert Enum.any?(operations, &(&1["name"] == "gap"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
-  test "padding helpers are generated from the catalog as canonical tuple style ops" do
+  test "box spacing helpers are generated from the catalog as canonical tuple style ops" do
     assert Guppy.Style.padding(:y, {:rem, 0.25}) == {:padding, :y, {:rem, 0.25}}
     assert Guppy.Style.py(1) == {:padding, :y, {:rem, 0.25}}
     assert Guppy.Style.p(0.5) == {:padding, :all, {:rem, 0.125}}
     assert Guppy.Style.p("0p5") == {:padding, :all, {:rem, 0.125}}
     assert Guppy.Style.px("px") == {:padding, :x, {:px, 1}}
+
+    assert Guppy.Style.margin(:x, :auto) == {:margin, :x, :auto}
+    assert Guppy.Style.m(1) == {:margin, :all, {:rem, 0.25}}
+    assert Guppy.Style.mx(-2) == {:margin, :x, {:rem, -0.5}}
+    assert Guppy.Style.mt(:auto) == {:margin, :top, :auto}
+
+    assert Guppy.Style.gap(:x, {:rem, 0.25}) == {:gap, :x, {:rem, 0.25}}
+    assert Guppy.Style.gap(1) == {:gap, :all, {:rem, 0.25}}
+    assert Guppy.Style.gap_x("px") == {:gap, :x, {:px, 1}}
   end
 end

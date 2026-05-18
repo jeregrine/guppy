@@ -154,12 +154,16 @@ defmodule Guppy.IRTest do
              )
   end
 
-  test "ir validation accepts canonical padding style ops" do
+  test "ir validation accepts canonical box spacing style ops" do
     style = [
       {:padding, :all, {:rem, 0.5}},
       {:padding, :x, {:px, 1}},
       {:padding, :y, {:fraction, 0.25}},
-      {:padding, :top, {:px, 0}}
+      {:padding, :top, {:px, 0}},
+      {:margin, :all, :auto},
+      {:margin, :x, {:rem, -0.5}},
+      {:gap, :all, {:rem, 0.25}},
+      {:gap, :x, {:px, -1}}
     ]
 
     assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: style))
@@ -168,7 +172,10 @@ defmodule Guppy.IRTest do
           {:padding, :inline, {:rem, 0.25}},
           {:padding, :all, {:px, -1}},
           {:padding, :all, :auto},
-          {:padding, :all, {:percent, 50}}
+          {:padding, :all, {:percent, 50}},
+          {:margin, :inline, {:rem, 0.25}},
+          {:gap, :top, {:rem, 0.25}},
+          {:gap, :all, :auto}
         ] do
       assert {:error, {:invalid_style_op, ^invalid}} =
                Guppy.IR.validate(Guppy.IR.div([], style: [invalid]))

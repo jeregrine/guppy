@@ -163,6 +163,8 @@ defmodule Guppy.IR do
 
   @type style_value ::
           {:padding, style_axis(), style_length()}
+          | {:margin, style_axis(), style_length() | :auto}
+          | {:gap, :all | :x | :y, style_length()}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -826,6 +828,7 @@ defmodule Guppy.IR do
   ]
 
   @style_axis_tokens [:all, :x, :y, :top, :right, :bottom, :left]
+  @gap_axis_tokens [:all, :x, :y]
   @color_style_value_tokens [:bg, :text_color, :border_color]
   @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
@@ -2518,7 +2521,23 @@ defmodule Guppy.IR do
   defp validate_style_op(op) when op in @style_flag_tokens, do: :ok
 
   defp validate_style_op({:padding, axis, length} = op) when axis in @style_axis_tokens do
-    if valid_non_negative_definite_length?(length) do
+    if valid_definite_length?(length, false) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
+  defp validate_style_op({:margin, axis, length} = op) when axis in @style_axis_tokens do
+    if valid_length?(length, true) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
+  defp validate_style_op({:gap, axis, length} = op) when axis in @gap_axis_tokens do
+    if valid_definite_length?(length, true) do
       :ok
     else
       {:error, {:invalid_style_op, op}}
@@ -2566,11 +2585,18 @@ defmodule Guppy.IR do
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
 
-  defp valid_non_negative_definite_length?({unit, value})
+  defp valid_length?(:auto, true), do: true
+  defp valid_length?(length, allow_negative), do: valid_definite_length?(length, allow_negative)
+
+  defp valid_definite_length?({unit, value}, true)
+       when unit in [:px, :rem, :fraction] and is_native_f32_number(value),
+       do: true
+
+  defp valid_definite_length?({unit, value}, false)
        when unit in [:px, :rem, :fraction] and is_non_neg_native_f32_number(value),
        do: true
 
-  defp valid_non_negative_definite_length?(_length), do: false
+  defp valid_definite_length?(_length, _allow_negative), do: false
 
   defp valid_linear_gradient_options?(options) when is_list(options) do
     if Keyword.keyword?(options) do
