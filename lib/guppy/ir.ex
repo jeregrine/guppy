@@ -203,6 +203,7 @@ defmodule Guppy.IR do
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:text_bg, color_token()}
+          | {:font_family, String.t()}
           | {:border_color, color_token()}
           | {:bg_hex, String.t()}
           | {:text_color_hex, String.t()}
@@ -2753,6 +2754,7 @@ defmodule Guppy.IR do
   defp validate_style_op({:line_height, value}) when value in @line_height_value_tokens, do: :ok
   defp validate_style_op({:font_weight, value}) when value in @font_weight_value_tokens, do: :ok
   defp validate_style_op({:font_style, value}) when value in @font_style_value_tokens, do: :ok
+  defp validate_style_op({:font_family, value}) when is_binary(value) and value != "", do: :ok
 
   defp validate_style_op({:text_decoration, value})
        when value in @text_decoration_value_tokens,

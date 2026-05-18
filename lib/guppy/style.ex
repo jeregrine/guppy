@@ -101,6 +101,10 @@ defmodule Guppy.Style do
                             operation["name"] in ["scrollbar_width"]
                           end)
 
+  @string_operations Enum.filter(@catalog["operations"], fn operation ->
+                       operation["name"] in ["font_family"]
+                     end)
+
   @grid_line_operations Enum.filter(@catalog["operations"], fn operation ->
                           operation["name"] in ["col_start", "col_end", "row_start", "row_end"]
                         end)
@@ -268,6 +272,30 @@ defmodule Guppy.Style do
                                   }
                                 end)
                                 |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+
+  @string_config Map.new(@string_operations, fn operation ->
+                   string = operation["string"]
+
+                   {String.to_atom(operation["name"]),
+                    %{
+                      min_length: string["min_length"]
+                    }}
+                 end)
+
+  @string_class_prefix_specs @string_operations
+                             |> Enum.map(fn operation ->
+                               config =
+                                 Map.fetch!(@string_config, String.to_atom(operation["name"]))
+
+                               {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+                               %{
+                                 prefix: prefix,
+                                 operation: String.to_atom(operation["name"]),
+                                 min_length: config.min_length
+                               }
+                             end)
+                             |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -483,6 +511,16 @@ defmodule Guppy.Style do
         )
   end
 
+  for operation <- @string_operations,
+      %{"kind" => "string", "name" => name} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    @doc "Returns a canonical #{operation_name} string tuple."
+    def unquote(function)(value),
+      do: {unquote(operation_name), normalize_string!(unquote(operation_name), value)}
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -584,7 +622,8 @@ defmodule Guppy.Style do
          :error <- parse_hex_color_class(token),
          :error <- parse_linear_gradient_class(token),
          :error <- parse_number_class(token),
-         :error <- parse_unit_length_class(token) do
+         :error <- parse_unit_length_class(token),
+         :error <- parse_string_class(token) do
       parse_box_class(token)
     end
   end
@@ -727,6 +766,19 @@ defmodule Guppy.Style do
                spec.length_units
              ) do
         {:ok, unit_length_style_tuple(spec.operation, length)}
+      else
+        _ -> false
+      end
+    end)
+  end
+
+  defp parse_string_class(token) do
+    Enum.find_value(@string_class_prefix_specs, :error, fn spec ->
+      with true <-
+             String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
+           payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
+           {:ok, value} <- normalize_string(spec.operation, payload) do
+        {:ok, {spec.operation, value}}
       else
         _ -> false
       end
@@ -995,6 +1047,25 @@ defmodule Guppy.Style do
       config.length_units
     )
   end
+
+  defp normalize_string!(operation, value) do
+    case normalize_string(operation, value) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "invalid #{operation} value: #{inspect(value)}"
+    end
+  end
+
+  defp normalize_string(operation, value) when is_binary(value) do
+    config = Map.fetch!(@string_config, operation)
+
+    if String.length(value) >= config.min_length do
+      {:ok, value}
+    else
+      :error
+    end
+  end
+
+  defp normalize_string(_operation, _value), do: :error
 
   defp unit_length_style_tuple(:scrollbar_width, {:px, value}), do: {:scrollbar_width_px, value}
   defp unit_length_style_tuple(:scrollbar_width, {:rem, value}), do: {:scrollbar_width_rem, value}

@@ -232,6 +232,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::LineHeight(_)
         | StyleOp::FontWeight(_)
         | StyleOp::FontStyle(_)
+        | StyleOp::FontFamily(_)
         | StyleOp::TextDecoration(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
@@ -349,6 +350,7 @@ where
         StyleOp::LineHeight(line_height) => apply_line_height(style, *line_height),
         StyleOp::FontWeight(weight) => apply_font_weight(style, *weight),
         StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
+        StyleOp::FontFamily(family) => style.font_family(family.clone()),
         StyleOp::TextDecoration(decoration) => apply_text_decoration(style, *decoration),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),

@@ -656,6 +656,7 @@ pub enum StyleOp {
     LineHeight(LineHeightStyle),
     FontWeight(FontWeightStyle),
     FontStyle(FontStyleValue),
+    FontFamily(String),
     TextDecoration(TextDecorationStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
@@ -2935,6 +2936,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "line_height" => Ok(StyleOp::LineHeight(parse_line_height_style(&elements[1])?)),
                 "font_weight" => Ok(StyleOp::FontWeight(parse_font_weight_style(&elements[1])?)),
                 "font_style" => Ok(StyleOp::FontStyle(parse_font_style_value(&elements[1])?)),
+                "font_family" => Ok(StyleOp::FontFamily(parse_non_empty_style_string(
+                    &elements[1],
+                    "font_family",
+                )?)),
                 "text_decoration" => Ok(StyleOp::TextDecoration(parse_text_decoration_style(
                     &elements[1],
                 )?)),
@@ -3609,6 +3614,16 @@ fn parse_font_style_value(term: &Term) -> Result<FontStyleValue, String> {
         "italic" => Ok(FontStyleValue::Italic),
         "normal" => Ok(FontStyleValue::Normal),
         other => Err(format!("invalid font_style: {other}")),
+    }
+}
+
+fn parse_non_empty_style_string(term: &Term, key: &str) -> Result<String, String> {
+    let value = term_to_string(term)?;
+
+    if value.is_empty() {
+        Err(format!("invalid {key} string: expected non-empty string"))
+    } else {
+        Ok(value)
     }
 }
 

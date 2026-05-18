@@ -821,6 +821,7 @@ defmodule Guppy.IRTest do
           :font_black,
           :italic,
           :not_italic,
+          {:font_family, "Monaco"},
           :underline,
           :line_through,
           :items_start,
@@ -984,6 +985,7 @@ defmodule Guppy.IRTest do
              :font_black,
              :italic,
              :not_italic,
+             {:font_family, "Monaco"},
              :underline,
              :line_through,
              :items_start,
@@ -1070,6 +1072,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:flex_basis, {:px, -1}}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:flex_basis, {:px, -1}}]))
+
+    assert {:error, {:invalid_style_op, {:font_family, ""}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:font_family, ""}]))
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))
