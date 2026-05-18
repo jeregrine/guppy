@@ -14,6 +14,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "gap"))
     assert Enum.any?(operations, &(&1["name"] == "width"))
     assert Enum.any?(operations, &(&1["name"] == "max_height"))
+    assert Enum.any?(operations, &(&1["name"] == "aspect_ratio"))
     assert Enum.any?(operations, &(&1["name"] == "position"))
     assert Enum.any?(operations, &(&1["name"] == "inset"))
     assert Enum.any?(operations, &(&1["name"] == "display"))
@@ -94,6 +95,8 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.size(4) == {:size, {:rem, 1}}
     assert Guppy.Style.min_h(0) == {:min_height, {:px, 0}}
     assert Guppy.Style.max_w("1/2") == {:max_width, {:fraction, 0.5}}
+    assert Guppy.Style.aspect_ratio(1.5) == {:aspect_ratio, 1.5}
+    assert_raise ArgumentError, fn -> Guppy.Style.aspect_ratio(0) end
 
     assert Guppy.Style.position(:relative) == {:position, :relative}
     assert Guppy.Style.relative() == {:position, :relative}
@@ -306,6 +309,16 @@ defmodule Guppy.StyleTest do
              {:ok, {:font_family, "Monaco"}}
 
     assert Guppy.Style.class_token_to_style("font-family-[]") == :error
+  end
+
+  test "aspect ratio classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("aspect-square") == {:ok, {:aspect_ratio, 1}}
+
+    assert Guppy.Style.class_token_to_style("aspect-video") ==
+             {:ok, {:aspect_ratio, 16 / 9}}
+
+    assert Guppy.Style.class_token_to_style("aspect-[1.5]") == {:ok, {:aspect_ratio, 1.5}}
+    assert Guppy.Style.class_token_to_style("aspect-[0]") == :error
   end
 
   test "alignment edge classes normalize through the catalog parser" do

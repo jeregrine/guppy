@@ -1075,6 +1075,11 @@ fn parses_canonical_box_spacing_style_ops() {
     );
 
     assert_eq!(
+        parse_style_op(&tuple(vec![atom("aspect_ratio"), float(1.5)])).unwrap(),
+        StyleOp::AspectRatio(1.5)
+    );
+
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("position"), atom("relative")])).unwrap(),
         StyleOp::Position(super::PositionStyle::Relative)
     );
@@ -1292,6 +1297,7 @@ fn rejects_invalid_canonical_length_style_ops() {
             tuple(vec![atom("px"), integer(1)]),
         ]),
         tuple(vec![atom("width"), tuple(vec![atom("bad"), integer(1)])]),
+        tuple(vec![atom("aspect_ratio"), integer(0)]),
         tuple(vec![atom("position"), atom("fixed")]),
         tuple(vec![
             atom("inset"),
@@ -1359,7 +1365,9 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("color")
                 || err.contains("font")
                 || err.contains("line")
-                || err.contains("length"),
+                || err.contains("length")
+                || err.contains("aspect")
+                || err.contains("numeric"),
             "unexpected error: {err}"
         );
     }
@@ -1386,6 +1394,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "width")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "aspect_ratio")
     );
     assert!(
         operations

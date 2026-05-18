@@ -629,6 +629,7 @@ pub enum StyleOp {
     MinHeight(StyleLength),
     MaxWidth(StyleLength),
     MaxHeight(StyleLength),
+    AspectRatio(f32),
     Position(PositionStyle),
     Inset {
         axis: StyleAxis,
@@ -2917,6 +2918,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     true,
                     true,
                 )?)),
+                "aspect_ratio" => Ok(StyleOp::AspectRatio(parse_positive_style_f32(
+                    &elements[1],
+                    "aspect_ratio",
+                )?)),
                 "position" => Ok(StyleOp::Position(parse_position_style(&elements[1])?)),
                 "display" => Ok(StyleOp::Display(parse_display_style(&elements[1])?)),
                 "visibility" => Ok(StyleOp::Visibility(parse_visibility_style(&elements[1])?)),
@@ -3781,6 +3786,16 @@ fn parse_unit_style_f32(term: &Term, key: &str) -> Result<f32, String> {
 
 fn parse_non_negative_style_f32(term: &Term, key: &str) -> Result<f32, String> {
     parse_bounded_style_f32(term, key, false)
+}
+
+fn parse_positive_style_f32(term: &Term, key: &str) -> Result<f32, String> {
+    let value = parse_non_negative_style_f32(term, key)?;
+
+    if value > 0.0 {
+        Ok(value)
+    } else {
+        Err(format!("invalid positive numeric style {key}: {value}"))
+    }
 }
 
 fn parse_bounded_style_f32(term: &Term, key: &str, allow_negative: bool) -> Result<f32, String> {

@@ -182,6 +182,7 @@ defmodule Guppy.IR do
           | {:min_height, style_length() | :auto}
           | {:max_width, style_length() | :auto}
           | {:max_height, style_length() | :auto}
+          | {:aspect_ratio, number()}
           | {:position, :relative | :absolute}
           | {:inset, :all | :top | :right | :bottom | :left, style_length() | :auto}
           | {:display, :block | :flex | :grid | :none}
@@ -2804,6 +2805,9 @@ defmodule Guppy.IR do
   end
 
   defp validate_style_op({:opacity, value}) when is_unit_native_f32_number(value), do: :ok
+
+  defp validate_style_op({:aspect_ratio, value}) when is_positive_native_f32_number(value),
+    do: :ok
 
   defp validate_style_op({:line_clamp, value})
        when is_integer(value) and value >= 1 and value <= 65_535,

@@ -133,6 +133,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::MinHeight(_)
         | StyleOp::MaxWidth(_)
         | StyleOp::MaxHeight(_)
+        | StyleOp::AspectRatio(_)
         | StyleOp::Position(_)
         | StyleOp::Inset { .. }
         | StyleOp::Display(_)
@@ -488,6 +489,7 @@ where
         StyleOp::MaxHeight(length) => {
             apply_length_style(element, LengthStyleProperty::MaxHeight, *length)
         }
+        StyleOp::AspectRatio(value) => apply_aspect_ratio(element, *value),
         StyleOp::Position(position) => apply_position(element, *position),
         StyleOp::Inset { axis, length } => apply_inset(element, *axis, *length),
         StyleOp::Display(display) => apply_display(element, *display),
@@ -573,6 +575,14 @@ where
         LengthStyleProperty::MaxWidth => element.max_w(length),
         LengthStyleProperty::MaxHeight => element.max_h(length),
     }
+}
+
+fn apply_aspect_ratio<E>(mut element: E, value: f32) -> E
+where
+    E: Styled,
+{
+    element.style().aspect_ratio = Some(value);
+    element
 }
 
 fn apply_position<E>(element: E, position: PositionStyle) -> E
@@ -1216,6 +1226,9 @@ mod tests {
             StyleLength::Auto,
         );
         assert_eq!(style.size.height, Some(Length::Auto));
+
+        let style = apply_aspect_ratio(StyleRefinement::default(), 1.5);
+        assert_eq!(style.aspect_ratio, Some(1.5));
 
         let style = apply_position(StyleRefinement::default(), PositionStyle::Absolute);
         assert_eq!(style.position, Some(gpui::Position::Absolute));
