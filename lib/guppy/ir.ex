@@ -212,6 +212,7 @@ defmodule Guppy.IR do
           | {:text_decoration_color, color_token()}
           | {:text_decoration_color_hex, String.t()}
           | {:text_decoration_style, :solid | :wavy}
+          | {:text_decoration_thickness, number()}
           | {:bg_linear_gradient,
              [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
           | {:opacity, number()}
@@ -2772,6 +2773,10 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:text_decoration_style, value})
        when value in @text_decoration_style_value_tokens,
+       do: :ok
+
+  defp validate_style_op({:text_decoration_thickness, value})
+       when is_non_neg_native_f32_number(value),
        do: :ok
 
   defp validate_style_op({key, value})

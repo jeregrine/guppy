@@ -97,7 +97,7 @@ defmodule Guppy.Style do
                        end)
 
   @number_operations Enum.filter(@catalog["operations"], fn operation ->
-                       operation["name"] in ["opacity"]
+                       operation["name"] in ["opacity", "text_decoration_thickness"]
                      end)
 
   @unit_length_operations Enum.filter(@catalog["operations"], fn operation ->

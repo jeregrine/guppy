@@ -237,6 +237,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::TextDecorationColor(_)
         | StyleOp::TextDecorationColorHex(_)
         | StyleOp::TextDecorationLineStyle(_)
+        | StyleOp::TextDecorationThickness(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::TextBg(_)
@@ -364,6 +365,7 @@ where
         StyleOp::TextDecorationLineStyle(line_style) => {
             apply_text_decoration_line_style(style, *line_style)
         }
+        StyleOp::TextDecorationThickness(value) => apply_text_decoration_thickness(style, *value),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -970,6 +972,20 @@ where
     }
 }
 
+fn apply_text_decoration_thickness<E>(mut element: E, thickness: f32) -> E
+where
+    E: Styled,
+{
+    element
+        .style()
+        .text
+        .get_or_insert_with(Default::default)
+        .underline
+        .get_or_insert_with(Default::default)
+        .thickness = px(thickness);
+    element
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
@@ -1076,6 +1092,12 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
                     .underline
                     .get_or_insert_with(Default::default)
                     .wavy = *line_style == TextDecorationLineStyle::Wavy;
+            }
+            StyleOp::TextDecorationThickness(value) => {
+                highlight
+                    .underline
+                    .get_or_insert_with(Default::default)
+                    .thickness = px(*value);
             }
             StyleOp::Opacity(value) => highlight.fade_out = Some(1.0 - value.clamp(0.0, 1.0)),
             _ => {}
@@ -1271,11 +1293,13 @@ mod tests {
                 StyleOp::TextDecoration(TextDecorationStyle::Underline),
                 StyleOp::TextDecorationColor(ColorToken::Red),
                 StyleOp::TextDecorationLineStyle(TextDecorationLineStyle::Wavy),
+                StyleOp::TextDecorationThickness(2.0),
             ]
             .into(),
         );
         let underline = style.text.as_ref().and_then(|text| text.underline).unwrap();
         assert_eq!(underline.color, Some(rgb(0xff0000).into()));
+        assert_eq!(underline.thickness, px(2.0));
         assert!(underline.wavy);
     }
 

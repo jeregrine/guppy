@@ -1236,6 +1236,10 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::TextDecorationLineStyle(super::TextDecorationLineStyle::Wavy)
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![atom("text_decoration_thickness"), integer(2)])).unwrap(),
+        StyleOp::TextDecorationThickness(2.0)
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("line_clamp"), integer(4)])).unwrap(),
         StyleOp::LineClamp(4)
     );
@@ -1320,6 +1324,7 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("text_decoration"), atom("blink")]),
         tuple(vec![atom("text_decoration_color"), atom("purple")]),
         tuple(vec![atom("text_decoration_style"), atom("double")]),
+        tuple(vec![atom("text_decoration_thickness"), integer(-1)]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
@@ -1464,6 +1469,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "text_decoration_color")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "text_decoration_thickness")
     );
     assert!(
         operations

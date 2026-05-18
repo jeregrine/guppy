@@ -2,7 +2,7 @@
   "gpui_version": "0.2.2",
   "catalog_version": 1,
   "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-basis-text-bg-font-family-decoration-detail-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex/alignment/basis, core text/font family, text decoration lines/colors/styles, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex/alignment/basis, core text/font family, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -3224,6 +3224,36 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled text_decoration_solid/text_decoration_wavy"
+    },
+    {
+      "name": "text_decoration_thickness",
+      "tuple_schema": [
+        "text_decoration_thickness",
+        "non_negative_px_number"
+      ],
+      "class_prefixes": {
+        "decoration": null
+      },
+      "class_tokens": {
+        "decoration-0": 0,
+        "decoration-1": 1,
+        "decoration-2": 2,
+        "decoration-4": 4,
+        "decoration-8": 8
+      },
+      "helpers": [
+        {
+          "name": "text_decoration_thickness",
+          "kind": "number"
+        }
+      ],
+      "number": {
+        "min": 0,
+        "max": 4096
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_decoration_0/1/2/4/8 or underline thickness px"
     },
     {
       "name": "line_clamp",

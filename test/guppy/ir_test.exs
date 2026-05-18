@@ -826,6 +826,7 @@ defmodule Guppy.IRTest do
           {:text_decoration_color, :red},
           {:text_decoration_color_hex, "#abcdef"},
           {:text_decoration_style, :wavy},
+          {:text_decoration_thickness, 2},
           :line_through,
           :items_start,
           :items_end,
@@ -993,6 +994,7 @@ defmodule Guppy.IRTest do
              {:text_decoration_color, :red},
              {:text_decoration_color_hex, "#abcdef"},
              {:text_decoration_style, :wavy},
+             {:text_decoration_thickness, 2},
              :line_through,
              :items_start,
              :items_end,
@@ -1087,6 +1089,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:text_decoration_style, :double}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:text_decoration_style, :double}]))
+
+    assert {:error, {:invalid_style_op, {:text_decoration_thickness, -1}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:text_decoration_thickness, -1}]))
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))

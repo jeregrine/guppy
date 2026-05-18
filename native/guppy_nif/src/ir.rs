@@ -667,6 +667,7 @@ pub enum StyleOp {
     TextDecorationColor(ColorToken),
     TextDecorationColorHex(u32),
     TextDecorationLineStyle(TextDecorationLineStyle),
+    TextDecorationThickness(f32),
     Bg(ColorToken),
     TextColor(ColorToken),
     TextBg(ColorToken),
@@ -2960,6 +2961,9 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 )),
                 "text_decoration_style" => Ok(StyleOp::TextDecorationLineStyle(
                     parse_text_decoration_line_style(&elements[1])?,
+                )),
+                "text_decoration_thickness" => Ok(StyleOp::TextDecorationThickness(
+                    parse_non_negative_style_f32(&elements[1], "text_decoration_thickness")?,
                 )),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
