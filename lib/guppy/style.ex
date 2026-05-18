@@ -38,6 +38,7 @@ defmodule Guppy.Style do
                        "flex_wrap",
                        "flex_item",
                        "align_items",
+                       "align_self",
                        "justify_content",
                        "align_content",
                        "text_align",

@@ -142,6 +142,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::FlexItem(_)
         | StyleOp::FlexBasis(_)
         | StyleOp::AlignItems(_)
+        | StyleOp::AlignSelf(_)
         | StyleOp::JustifyContent(_)
         | StyleOp::AlignContent(_)
         | StyleOp::GridCols(_)
@@ -502,6 +503,7 @@ where
         StyleOp::FlexItem(item) => apply_flex_item(element, *item),
         StyleOp::FlexBasis(length) => element.flex_basis(style_length_to_length(*length)),
         StyleOp::AlignItems(align) => apply_align_items(element, *align),
+        StyleOp::AlignSelf(align) => apply_align_self(element, *align),
         StyleOp::JustifyContent(justify) => apply_justify_content(element, *justify),
         StyleOp::AlignContent(align) => apply_align_content(element, *align),
         _ => element,
@@ -815,28 +817,49 @@ where
     }
 }
 
-fn apply_align_items<E>(element: E, align: AlignItemsStyle) -> E
+fn apply_align_items<E>(mut element: E, align: AlignItemsStyle) -> E
 where
     E: Styled,
 {
+    element.style().align_items = Some(align_items_to_gpui(align));
+    element
+}
+
+fn apply_align_self<E>(mut element: E, align: AlignItemsStyle) -> E
+where
+    E: Styled,
+{
+    element.style().align_self = Some(align_items_to_gpui(align));
+    element
+}
+
+fn align_items_to_gpui(align: AlignItemsStyle) -> gpui::AlignItems {
     match align {
-        AlignItemsStyle::Start => element.items_start(),
-        AlignItemsStyle::End => element.items_end(),
-        AlignItemsStyle::Center => element.items_center(),
-        AlignItemsStyle::Baseline => element.items_baseline(),
+        AlignItemsStyle::Start => gpui::AlignItems::FlexStart,
+        AlignItemsStyle::End => gpui::AlignItems::FlexEnd,
+        AlignItemsStyle::Center => gpui::AlignItems::Center,
+        AlignItemsStyle::Baseline => gpui::AlignItems::Baseline,
+        AlignItemsStyle::Stretch => gpui::AlignItems::Stretch,
     }
 }
 
-fn apply_justify_content<E>(element: E, justify: JustifyContentStyle) -> E
+fn apply_justify_content<E>(mut element: E, justify: JustifyContentStyle) -> E
 where
     E: Styled,
 {
+    element.style().justify_content = Some(justify_content_to_gpui(justify));
+    element
+}
+
+fn justify_content_to_gpui(justify: JustifyContentStyle) -> gpui::JustifyContent {
     match justify {
-        JustifyContentStyle::Start => element.justify_start(),
-        JustifyContentStyle::End => element.justify_end(),
-        JustifyContentStyle::Center => element.justify_center(),
-        JustifyContentStyle::Between => element.justify_between(),
-        JustifyContentStyle::Around => element.justify_around(),
+        JustifyContentStyle::Start => gpui::JustifyContent::Start,
+        JustifyContentStyle::End => gpui::JustifyContent::End,
+        JustifyContentStyle::Center => gpui::JustifyContent::Center,
+        JustifyContentStyle::Between => gpui::JustifyContent::SpaceBetween,
+        JustifyContentStyle::Around => gpui::JustifyContent::SpaceAround,
+        JustifyContentStyle::Evenly => gpui::JustifyContent::SpaceEvenly,
+        JustifyContentStyle::Stretch => gpui::JustifyContent::Stretch,
     }
 }
 
@@ -1259,10 +1282,19 @@ mod tests {
         let style = apply_align_items(StyleRefinement::default(), AlignItemsStyle::Baseline);
         assert_eq!(style.align_items, Some(gpui::AlignItems::Baseline));
 
+        let style = apply_align_self(StyleRefinement::default(), AlignItemsStyle::Stretch);
+        assert_eq!(style.align_self, Some(gpui::AlignItems::Stretch));
+
         let style = apply_justify_content(StyleRefinement::default(), JustifyContentStyle::Around);
         assert_eq!(
             style.justify_content,
             Some(gpui::JustifyContent::SpaceAround)
+        );
+
+        let style = apply_justify_content(StyleRefinement::default(), JustifyContentStyle::Evenly);
+        assert_eq!(
+            style.justify_content,
+            Some(gpui::JustifyContent::SpaceEvenly)
         );
 
         let style = apply_align_content(StyleRefinement::default(), AlignContentStyle::Evenly);

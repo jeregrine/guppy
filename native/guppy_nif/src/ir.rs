@@ -380,6 +380,7 @@ pub enum AlignItemsStyle {
     End,
     Center,
     Baseline,
+    Stretch,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -389,6 +390,8 @@ pub enum JustifyContentStyle {
     Center,
     Between,
     Around,
+    Evenly,
+    Stretch,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -653,6 +656,7 @@ pub enum StyleOp {
     FlexItem(FlexItemStyle),
     FlexBasis(StyleLength),
     AlignItems(AlignItemsStyle),
+    AlignSelf(AlignItemsStyle),
     JustifyContent(JustifyContentStyle),
     AlignContent(AlignContentStyle),
     TextAlign(TextAlignStyle),
@@ -2931,6 +2935,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     false,
                 )?)),
                 "align_items" => Ok(StyleOp::AlignItems(parse_align_items_style(&elements[1])?)),
+                "align_self" => Ok(StyleOp::AlignSelf(parse_align_items_style(&elements[1])?)),
                 "justify_content" => Ok(StyleOp::JustifyContent(parse_justify_content_style(
                     &elements[1],
                 )?)),
@@ -3501,6 +3506,7 @@ fn parse_align_items_style(term: &Term) -> Result<AlignItemsStyle, String> {
         "end" => Ok(AlignItemsStyle::End),
         "center" => Ok(AlignItemsStyle::Center),
         "baseline" => Ok(AlignItemsStyle::Baseline),
+        "stretch" => Ok(AlignItemsStyle::Stretch),
         other => Err(format!("invalid align_items style: {other}")),
     }
 }
@@ -3516,6 +3522,8 @@ fn parse_justify_content_style(term: &Term) -> Result<JustifyContentStyle, Strin
         "center" => Ok(JustifyContentStyle::Center),
         "between" => Ok(JustifyContentStyle::Between),
         "around" => Ok(JustifyContentStyle::Around),
+        "evenly" => Ok(JustifyContentStyle::Evenly),
+        "stretch" => Ok(JustifyContentStyle::Stretch),
         other => Err(format!("invalid justify_content style: {other}")),
     }
 }

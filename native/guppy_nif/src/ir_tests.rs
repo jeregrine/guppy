@@ -1176,8 +1176,20 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::AlignItems(super::AlignItemsStyle::Baseline)
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![atom("align_items"), atom("stretch")])).unwrap(),
+        StyleOp::AlignItems(super::AlignItemsStyle::Stretch)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("align_self"), atom("stretch")])).unwrap(),
+        StyleOp::AlignSelf(super::AlignItemsStyle::Stretch)
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("justify_content"), atom("around")])).unwrap(),
         StyleOp::JustifyContent(super::JustifyContentStyle::Around)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("justify_content"), atom("evenly")])).unwrap(),
+        StyleOp::JustifyContent(super::JustifyContentStyle::Evenly)
     );
     assert_eq!(
         parse_style_op(&tuple(vec![atom("align_content"), atom("evenly")])).unwrap(),
@@ -1311,7 +1323,8 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("flex_wrap"), atom("maybe")]),
         tuple(vec![atom("flex_item"), atom("bad")]),
         tuple(vec![atom("align_items"), atom("left")]),
-        tuple(vec![atom("justify_content"), atom("stretch")]),
+        tuple(vec![atom("align_self"), atom("auto")]),
+        tuple(vec![atom("justify_content"), atom("auto")]),
         tuple(vec![atom("align_content"), atom("bad")]),
         tuple(vec![atom("text_align"), atom("justify")]),
         tuple(vec![atom("white_space"), atom("pre")]),
@@ -1439,6 +1452,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "flex_basis")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "align_self")
     );
     assert!(
         operations

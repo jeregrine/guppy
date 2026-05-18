@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-basis-text-bg-font-family-decoration-detail-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex/alignment/basis, core text/font family, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-basis-alignment-text-bg-font-family-decoration-detail-line-clamp-grid-placement-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex/alignment/self-alignment/basis, core text/font family, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2514,13 +2514,15 @@
         "start",
         "end",
         "center",
-        "baseline"
+        "baseline",
+        "stretch"
       ],
       "class_tokens": {
         "items-start": "start",
         "items-end": "end",
         "items-center": "center",
-        "items-baseline": "baseline"
+        "items-baseline": "baseline",
+        "items-stretch": "stretch"
       },
       "helpers": [
         {
@@ -2546,11 +2548,71 @@
           "name": "items_baseline",
           "kind": "value",
           "value": "baseline"
+        },
+        {
+          "name": "items_stretch",
+          "kind": "value",
+          "value": "stretch"
         }
       ],
       "node_applicability": "all_nodes",
       "refinement_support": false,
-      "gpui_mapping": "Styled items_start/items_end/items_center/items_baseline"
+      "gpui_mapping": "Style align_items via GPUI AlignItems enum; includes start/end/center/baseline/stretch"
+    },
+    {
+      "name": "align_self",
+      "tuple_schema": [
+        "align_self",
+        "value"
+      ],
+      "values": [
+        "start",
+        "end",
+        "center",
+        "baseline",
+        "stretch"
+      ],
+      "class_tokens": {
+        "self-start": "start",
+        "self-end": "end",
+        "self-center": "center",
+        "self-baseline": "baseline",
+        "self-stretch": "stretch"
+      },
+      "helpers": [
+        {
+          "name": "align_self",
+          "kind": "exact"
+        },
+        {
+          "name": "self_start",
+          "kind": "value",
+          "value": "start"
+        },
+        {
+          "name": "self_end",
+          "kind": "value",
+          "value": "end"
+        },
+        {
+          "name": "self_center",
+          "kind": "value",
+          "value": "center"
+        },
+        {
+          "name": "self_baseline",
+          "kind": "value",
+          "value": "baseline"
+        },
+        {
+          "name": "self_stretch",
+          "kind": "value",
+          "value": "stretch"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Style align_self via GPUI AlignSelf/AlignItems enum; includes start/end/center/baseline/stretch"
     },
     {
       "name": "justify_content",
@@ -2563,14 +2625,18 @@
         "end",
         "center",
         "between",
-        "around"
+        "around",
+        "evenly",
+        "stretch"
       ],
       "class_tokens": {
         "justify-start": "start",
         "justify-end": "end",
         "justify-center": "center",
         "justify-between": "between",
-        "justify-around": "around"
+        "justify-around": "around",
+        "justify-evenly": "evenly",
+        "justify-stretch": "stretch"
       },
       "helpers": [
         {
@@ -2601,11 +2667,21 @@
           "name": "justify_around",
           "kind": "value",
           "value": "around"
+        },
+        {
+          "name": "justify_evenly",
+          "kind": "value",
+          "value": "evenly"
+        },
+        {
+          "name": "justify_stretch",
+          "kind": "value",
+          "value": "stretch"
         }
       ],
       "node_applicability": "all_nodes",
       "refinement_support": false,
-      "gpui_mapping": "Styled justify_start/justify_end/justify_center/justify_between/justify_around"
+      "gpui_mapping": "Style justify_content via GPUI JustifyContent enum; includes start/end/center/between/around/evenly/stretch"
     },
     {
       "name": "align_content",

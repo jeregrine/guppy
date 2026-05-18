@@ -40,6 +40,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "flex_item"))
     assert Enum.any?(operations, &(&1["name"] == "flex_basis"))
     assert Enum.any?(operations, &(&1["name"] == "align_items"))
+    assert Enum.any?(operations, &(&1["name"] == "align_self"))
     assert Enum.any?(operations, &(&1["name"] == "justify_content"))
     assert Enum.any?(operations, &(&1["name"] == "align_content"))
     assert Enum.any?(operations, &(&1["name"] == "text_align"))
@@ -169,7 +170,12 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.flex_basis(:auto) == {:flex_basis, :auto}
     assert Guppy.Style.basis("1/2") == {:flex_basis, {:fraction, 0.5}}
     assert Guppy.Style.items_baseline() == {:align_items, :baseline}
+    assert Guppy.Style.items_stretch() == {:align_items, :stretch}
+    assert Guppy.Style.align_self(:start) == {:align_self, :start}
+    assert Guppy.Style.self_stretch() == {:align_self, :stretch}
     assert Guppy.Style.justify_between() == {:justify_content, :between}
+    assert Guppy.Style.justify_evenly() == {:justify_content, :evenly}
+    assert Guppy.Style.justify_stretch() == {:justify_content, :stretch}
     assert Guppy.Style.content_evenly() == {:align_content, :evenly}
 
     assert Guppy.Style.text_align(:center) == {:text_align, :center}
@@ -300,6 +306,18 @@ defmodule Guppy.StyleTest do
              {:ok, {:font_family, "Monaco"}}
 
     assert Guppy.Style.class_token_to_style("font-family-[]") == :error
+  end
+
+  test "alignment edge classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("items-stretch") == {:ok, {:align_items, :stretch}}
+    assert Guppy.Style.class_token_to_style("self-start") == {:ok, {:align_self, :start}}
+    assert Guppy.Style.class_token_to_style("self-stretch") == {:ok, {:align_self, :stretch}}
+
+    assert Guppy.Style.class_token_to_style("justify-evenly") ==
+             {:ok, {:justify_content, :evenly}}
+
+    assert Guppy.Style.class_token_to_style("justify-stretch") ==
+             {:ok, {:justify_content, :stretch}}
   end
 
   test "text decoration detail classes normalize through the catalog parser" do

@@ -245,7 +245,7 @@ defmodule Guppy.IRTest do
           {:flex_wrap, :maybe},
           {:flex_item, :bad},
           {:align_items, :left},
-          {:justify_content, :stretch},
+          {:justify_content, :auto},
           {:align_content, :bad},
           {:text_align, :justify},
           {:white_space, :pre},
@@ -830,11 +830,15 @@ defmodule Guppy.IRTest do
           :line_through,
           :items_start,
           :items_end,
+          {:align_items, :stretch},
+          {:align_self, :stretch},
           :justify_start,
           :justify_center,
           :justify_end,
           :justify_between,
           :justify_around,
+          {:justify_content, :evenly},
+          {:justify_content, :stretch},
           {:bg, :gray},
           :rounded_sm,
           :rounded_md,
@@ -998,11 +1002,15 @@ defmodule Guppy.IRTest do
              :line_through,
              :items_start,
              :items_end,
+             {:align_items, :stretch},
+             {:align_self, :stretch},
              :justify_start,
              :justify_center,
              :justify_end,
              :justify_between,
              :justify_around,
+             {:justify_content, :evenly},
+             {:justify_content, :stretch},
              {:bg, :gray},
              :rounded_sm,
              :rounded_md,
@@ -1092,6 +1100,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:text_decoration_thickness, -1}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:text_decoration_thickness, -1}]))
+
+    assert {:error, {:invalid_style_op, {:align_self, :auto}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:align_self, :auto}]))
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))
