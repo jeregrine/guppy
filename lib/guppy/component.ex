@@ -473,15 +473,11 @@ defmodule Guppy.Component do
   end
 
   defp parse_size_style(token) do
-    case Regex.run(~r/^(w|h|scrollbar-w)-\[([0-9]+(?:\.[0-9]+)?)(px|rem)\]$/, token,
-           capture: :all_but_first
-         ) do
+    case Regex.run(~r/^(w|h)-\[([0-9]+(?:\.[0-9]+)?)(px|rem)\]$/, token, capture: :all_but_first) do
       ["w", number, "px"] -> {:w_px, parse_number!(number)}
       ["w", number, "rem"] -> {:w_rem, parse_number!(number)}
       ["h", number, "px"] -> {:h_px, parse_number!(number)}
       ["h", number, "rem"] -> {:h_rem, parse_number!(number)}
-      ["scrollbar-w", number, "px"] -> {:scrollbar_width_px, parse_number!(number)}
-      ["scrollbar-w", number, "rem"] -> {:scrollbar_width_rem, parse_number!(number)}
       _ -> nil
     end
   end

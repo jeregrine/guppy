@@ -31,6 +31,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "border_color_hex"))
     assert Enum.any?(operations, &(&1["name"] == "bg_linear_gradient"))
     assert Enum.any?(operations, &(&1["name"] == "opacity"))
+    assert Enum.any?(operations, &(&1["name"] == "scrollbar_width"))
     assert Enum.any?(operations, &(&1["name"] == "shadow"))
     assert Enum.any?(operations, &(&1["name"] == "flex_direction"))
     assert Enum.any?(operations, &(&1["name"] == "flex_wrap"))
@@ -132,6 +133,9 @@ defmodule Guppy.StyleTest do
 
     assert Guppy.Style.opacity(0.5) == {:opacity, 0.5}
     assert_raise ArgumentError, fn -> Guppy.Style.opacity(1.5) end
+    assert Guppy.Style.scrollbar_width({:px, 12}) == {:scrollbar_width_px, 12}
+    assert Guppy.Style.scrollbar_width({:rem, 1.0}) == {:scrollbar_width_rem, 1.0}
+    assert_raise ArgumentError, fn -> Guppy.Style.scrollbar_width({:fraction, 1}) end
 
     assert Guppy.Style.shadow(:md) == {:shadow, :md}
     assert Guppy.Style.shadow_md() == {:shadow, :md}
@@ -227,5 +231,15 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.class_token_to_style("line-clamp-2") == {:ok, {:line_clamp, 2}}
     assert Guppy.Style.class_token_to_style("line-clamp-[4]") == {:ok, {:line_clamp, 4}}
     assert Guppy.Style.class_token_to_style("line-clamp-0") == :error
+  end
+
+  test "scrollbar width classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("scrollbar-w-[12px]") ==
+             {:ok, {:scrollbar_width_px, 12}}
+
+    assert Guppy.Style.class_token_to_style("scrollbar-w-[1.5rem]") ==
+             {:ok, {:scrollbar_width_rem, 1.5}}
+
+    assert Guppy.Style.class_token_to_style("scrollbar-w-2") == :error
   end
 end

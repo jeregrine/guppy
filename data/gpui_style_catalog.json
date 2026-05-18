@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-shadow-flex-text-line-clamp-grid-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border colors, opacity, box shadows, flex/alignment, core text/font, line clamp, grid count/span helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-text-line-clamp-grid-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border colors, opacity, scrollbar width, box shadows, flex/alignment, core text/font, line clamp, grid count/span helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2122,6 +2122,34 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled opacity"
+    },
+    {
+      "name": "scrollbar_width",
+      "tuple_schema": [
+        "scrollbar_width_px|scrollbar_width_rem",
+        "non_negative_number"
+      ],
+      "class_pattern": "scrollbar-w-[numberpx|numberrem]",
+      "class_prefixes": {
+        "scrollbar-w": null
+      },
+      "helpers": [
+        {
+          "name": "scrollbar_width",
+          "kind": "unit_length"
+        }
+      ],
+      "length": {
+        "allowed_units": [
+          "px",
+          "rem"
+        ],
+        "auto": false,
+        "negative": false
+      },
+      "node_applicability": "scroll_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Scrollbar element scrollbar_width"
     },
     {
       "name": "shadow",

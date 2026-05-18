@@ -94,6 +94,10 @@ defmodule Guppy.Style do
                        operation["name"] in ["opacity"]
                      end)
 
+  @unit_length_operations Enum.filter(@catalog["operations"], fn operation ->
+                            operation["name"] in ["scrollbar_width"]
+                          end)
+
   @named_color_tokens @catalog["color_tokens"] |> Enum.map(&String.to_atom/1)
 
   @style_operations @axis_operations ++ @length_operations
@@ -186,6 +190,37 @@ defmodule Guppy.Style do
                                }
                              end)
                              |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+
+  @unit_length_config Map.new(@unit_length_operations, fn operation ->
+                        length = operation["length"]
+
+                        {String.to_atom(operation["name"]),
+                         %{
+                           allow_auto: length["auto"],
+                           allow_negative: length["negative"],
+                           length_units: length["allowed_units"] |> Enum.map(&String.to_atom/1)
+                         }}
+                      end)
+
+  @unit_length_class_prefix_specs @unit_length_operations
+                                  |> Enum.map(fn operation ->
+                                    config =
+                                      Map.fetch!(
+                                        @unit_length_config,
+                                        String.to_atom(operation["name"])
+                                      )
+
+                                    {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+                                    %{
+                                      prefix: prefix,
+                                      operation: String.to_atom(operation["name"]),
+                                      allow_auto: config.allow_auto,
+                                      allow_negative: config.allow_negative,
+                                      length_units: config.length_units
+                                    }
+                                  end)
+                                  |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -387,6 +422,20 @@ defmodule Guppy.Style do
       do: {unquote(operation_name), normalize_number!(unquote(operation_name), value)}
   end
 
+  for operation <- @unit_length_operations,
+      %{"kind" => "unit_length", "name" => name} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    @doc "Returns a canonical #{operation_name} unit length tuple."
+    def unquote(function)(length),
+      do:
+        unit_length_style_tuple(
+          unquote(operation_name),
+          normalize_unit_length!(unquote(operation_name), length)
+        )
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -472,7 +521,8 @@ defmodule Guppy.Style do
          :error <- parse_integer_class(token),
          :error <- parse_hex_color_class(token),
          :error <- parse_linear_gradient_class(token),
-         :error <- parse_number_class(token) do
+         :error <- parse_number_class(token),
+         :error <- parse_unit_length_class(token) do
       parse_box_class(token)
     end
   end
@@ -565,6 +615,25 @@ defmodule Guppy.Style do
            {:ok, value} <- parse_number(payload),
            {:ok, value} <- normalize_number(spec.operation, value) do
         {:ok, {spec.operation, value}}
+      else
+        _ -> false
+      end
+    end)
+  end
+
+  defp parse_unit_length_class(token) do
+    Enum.find_value(@unit_length_class_prefix_specs, :error, fn spec ->
+      with true <-
+             String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
+           payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
+           {:ok, length} <-
+             parse_arbitrary_length(
+               payload,
+               spec.allow_auto,
+               spec.allow_negative,
+               spec.length_units
+             ) do
+        {:ok, unit_length_style_tuple(spec.operation, length)}
       else
         _ -> false
       end
@@ -802,6 +871,23 @@ defmodule Guppy.Style do
   end
 
   defp normalize_number(_operation, _value), do: :error
+
+  defp normalize_unit_length!(operation, length) do
+    config = Map.fetch!(@unit_length_config, operation)
+
+    normalize_length!(
+      length,
+      config.allow_auto,
+      config.allow_negative,
+      config.length_units
+    )
+  end
+
+  defp unit_length_style_tuple(:scrollbar_width, {:px, value}), do: {:scrollbar_width_px, value}
+  defp unit_length_style_tuple(:scrollbar_width, {:rem, value}), do: {:scrollbar_width_rem, value}
+
+  defp unit_length_style_tuple(operation, length),
+    do: raise(ArgumentError, "invalid #{operation} length: #{inspect(length)}")
 
   defp normalize_linear_gradient_options!(options) do
     case normalize_linear_gradient_options(options) do
