@@ -68,7 +68,7 @@ defmodule Guppy.ComponentTest do
 
   test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
     assert Guppy.Component.class_to_style!(
-             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto"
+             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll"
            ) == [
              {:padding, :y, {:rem, 0.25}},
              {:padding, :x, {:rem, 0.25}},
@@ -88,7 +88,13 @@ defmodule Guppy.ComponentTest do
              {:position, :relative},
              {:inset, :all, {:px, 0}},
              {:inset, :top, {:rem, -0.5}},
-             {:inset, :right, :auto}
+             {:inset, :right, :auto},
+             {:display, :flex},
+             {:display, :none},
+             {:visibility, :hidden},
+             {:visibility, :visible},
+             {:overflow, :all, :hidden},
+             {:overflow, :x, :scroll}
            ]
 
     assert :ok =
@@ -170,7 +176,7 @@ defmodule Guppy.ComponentTest do
     assert ir.id == "root"
     assert ir.tooltip == "Template root"
     assert ir.animation.id == "root_fade"
-    assert :flex in ir.style
+    assert {:display, :flex} in ir.style
     assert {:bg_hex, "#0f172a"} in ir.style
 
     [

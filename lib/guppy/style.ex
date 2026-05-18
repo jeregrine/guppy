@@ -15,8 +15,10 @@ defmodule Guppy.Style do
                    end)
 
   @enum_operations Enum.filter(@catalog["operations"], fn operation ->
-                     operation["name"] in ["position"]
+                     operation["name"] in ["position", "display", "visibility"]
                    end)
+
+  @overflow_operation Enum.find(@catalog["operations"], &(&1["name"] == "overflow"))
 
   @length_operations Enum.filter(@catalog["operations"], fn operation ->
                        operation["name"] in [
@@ -32,11 +34,40 @@ defmodule Guppy.Style do
 
   @style_operations @axis_operations ++ @length_operations
 
-  @position_operation Enum.find(@enum_operations, &(&1["name"] == "position"))
-  @position_values @position_operation["values"] |> Enum.map(&String.to_atom/1)
-  @position_class_tokens Map.new(@position_operation["class_tokens"], fn {token, value} ->
-                           {token, String.to_atom(value)}
+  @enum_config Map.new(@enum_operations, fn operation ->
+                 {String.to_atom(operation["name"]),
+                  %{
+                    values: Enum.map(operation["values"], &String.to_atom/1),
+                    class_tokens:
+                      Map.new(operation["class_tokens"], fn {token, value} ->
+                        {token, String.to_atom(value)}
+                      end)
+                  }}
+               end)
+
+  @enum_class_tokens Enum.flat_map(@enum_operations, fn operation ->
+                       operation_name = String.to_atom(operation["name"])
+
+                       Enum.map(operation["class_tokens"], fn {token, value} ->
+                         {token, {operation_name, String.to_atom(value)}}
+                       end)
+                     end)
+                     |> Map.new()
+
+  @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
+  @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
+  @overflow_class_tokens Map.new(@overflow_operation["class_tokens"], fn {token, [axis, value]} ->
+                           {token, {String.to_atom(axis), String.to_atom(value)}}
                          end)
+  @overflow_value_helpers @overflow_operation["helpers"]
+                          |> Enum.filter(&(&1["kind"] == "value"))
+                          |> Enum.map(fn helper ->
+                            %{
+                              function: String.to_atom(helper["name"]),
+                              axis: String.to_atom(helper["axis"]),
+                              value: String.to_atom(helper["value"])
+                            }
+                          end)
 
   @operation_config Map.new(@style_operations, fn operation ->
                       length = operation["length"]
@@ -115,14 +146,36 @@ defmodule Guppy.Style do
   @doc "Returns the decoded style catalog used to generate this module."
   def catalog, do: @catalog
 
-  @doc "Returns a canonical position tuple."
-  def position(value) when value in @position_values, do: {:position, value}
+  for {operation, config} <- @enum_config do
+    values = config.values
 
-  def position(value), do: raise(ArgumentError, "invalid position value: #{inspect(value)}")
+    @doc "Returns a canonical #{operation} tuple."
+    def unquote(operation)(value) when value in unquote(values), do: {unquote(operation), value}
 
-  for value <- @position_values do
-    @doc "Returns canonical #{value} position style."
-    def unquote(value)(), do: {:position, unquote(value)}
+    def unquote(operation)(value),
+      do: raise(ArgumentError, "invalid #{unquote(operation)} value: #{inspect(value)}")
+  end
+
+  for operation <- @enum_operations,
+      %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+    value = String.to_atom(value)
+
+    @doc "Returns canonical #{value} #{operation_name} style."
+    def unquote(function)(), do: {unquote(operation_name), unquote(value)}
+  end
+
+  @doc "Returns a canonical overflow tuple."
+  def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
+    do: {:overflow, axis, value}
+
+  def overflow(axis, value),
+    do: raise(ArgumentError, "invalid overflow axis/value: #{inspect({axis, value})}")
+
+  for helper <- @overflow_value_helpers do
+    @doc "Returns canonical #{helper.value} overflow style for #{helper.axis}."
+    def unquote(helper.function)(), do: {:overflow, unquote(helper.axis), unquote(helper.value)}
   end
 
   for {operation, config} <- @operation_config, is_list(config.axes) do
@@ -168,17 +221,24 @@ defmodule Guppy.Style do
 
   @doc false
   def class_token_to_style(token) when is_binary(token) do
-    case parse_position_class(token) do
-      {:ok, style} -> {:ok, style}
-      :error -> parse_box_class(token)
+    with :error <- parse_enum_class(token),
+         :error <- parse_overflow_class(token) do
+      parse_box_class(token)
     end
   end
 
   def class_token_to_style(_token), do: :error
 
-  defp parse_position_class(token) do
-    case Map.fetch(@position_class_tokens, token) do
-      {:ok, value} -> {:ok, {:position, value}}
+  defp parse_enum_class(token) do
+    case Map.fetch(@enum_class_tokens, token) do
+      {:ok, {operation, value}} -> {:ok, {operation, value}}
+      :error -> :error
+    end
+  end
+
+  defp parse_overflow_class(token) do
+    case Map.fetch(@overflow_class_tokens, token) do
+      {:ok, {axis, value}} -> {:ok, {:overflow, axis, value}}
       :error -> :error
     end
   end

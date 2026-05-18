@@ -174,6 +174,9 @@ defmodule Guppy.IR do
           | {:max_height, style_length() | :auto}
           | {:position, :relative | :absolute}
           | {:inset, :all | :top | :right | :bottom | :left, style_length() | :auto}
+          | {:display, :block | :flex | :grid | :none}
+          | {:visibility, :visible | :hidden}
+          | {:overflow, :all | :x | :y, :hidden | :scroll}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -840,6 +843,9 @@ defmodule Guppy.IR do
   @gap_axis_tokens [:all, :x, :y]
   @inset_axis_tokens [:all, :top, :right, :bottom, :left]
   @position_value_tokens [:relative, :absolute]
+  @display_value_tokens [:block, :flex, :grid, :none]
+  @visibility_value_tokens [:visible, :hidden]
+  @overflow_value_tokens [:hidden, :scroll]
   @color_style_value_tokens [:bg, :text_color, :border_color]
   @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
@@ -2581,6 +2587,13 @@ defmodule Guppy.IR do
       {:error, {:invalid_style_op, op}}
     end
   end
+
+  defp validate_style_op({:display, value}) when value in @display_value_tokens, do: :ok
+  defp validate_style_op({:visibility, value}) when value in @visibility_value_tokens, do: :ok
+
+  defp validate_style_op({:overflow, axis, value})
+       when axis in @gap_axis_tokens and value in @overflow_value_tokens,
+       do: :ok
 
   defp validate_style_op({key, value})
        when key in @color_style_value_tokens and value in @color_tokens,

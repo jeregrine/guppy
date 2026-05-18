@@ -172,7 +172,12 @@ defmodule Guppy.IRTest do
       {:position, :relative},
       {:inset, :all, {:px, 0}},
       {:inset, :top, {:rem, -0.5}},
-      {:inset, :right, :auto}
+      {:inset, :right, :auto},
+      {:display, :flex},
+      {:display, :none},
+      {:visibility, :hidden},
+      {:overflow, :all, :hidden},
+      {:overflow, :x, :scroll}
     ]
 
     assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: style))
@@ -188,7 +193,11 @@ defmodule Guppy.IRTest do
           {:width, {:bad, 1}},
           {:size, :bad},
           {:position, :fixed},
-          {:inset, :center, {:px, 0}}
+          {:inset, :center, {:px, 0}},
+          {:display, :inline},
+          {:visibility, :collapsed},
+          {:overflow, :top, :scroll},
+          {:overflow, :x, :clip}
         ] do
       assert {:error, {:invalid_style_op, ^invalid}} =
                Guppy.IR.validate(Guppy.IR.div([], style: [invalid]))

@@ -1091,6 +1091,24 @@ fn parses_canonical_box_spacing_style_ops() {
             length: StyleLength::Rem(-0.5),
         }
     );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("display"), atom("flex")])).unwrap(),
+        StyleOp::Display(super::DisplayStyle::Flex)
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("visibility"), atom("hidden")])).unwrap(),
+        StyleOp::Visibility(super::VisibilityStyle::Hidden)
+    );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("overflow"), atom("x"), atom("scroll")])).unwrap(),
+        StyleOp::Overflow {
+            axis: StyleAxis::X,
+            behavior: super::OverflowStyle::Scroll,
+        }
+    );
 }
 
 #[test]
@@ -1118,6 +1136,9 @@ fn rejects_invalid_canonical_length_style_ops() {
             atom("center"),
             tuple(vec![atom("px"), integer(1)]),
         ]),
+        tuple(vec![atom("display"), atom("inline")]),
+        tuple(vec![atom("visibility"), atom("collapsed")]),
+        tuple(vec![atom("overflow"), atom("x"), atom("clip")]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
@@ -1125,6 +1146,9 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("gap")
                 || err.contains("position")
                 || err.contains("inset")
+                || err.contains("display")
+                || err.contains("visibility")
+                || err.contains("overflow")
                 || err.contains("length"),
             "unexpected error: {err}"
         );
@@ -1157,6 +1181,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "position")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "display")
     );
 }
 

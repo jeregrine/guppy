@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, size, and position/inset helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, size, position/inset, display, visibility, and overflow helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1141,6 +1141,183 @@
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Styled position_style_methods! inset/top/right/bottom/left"
+    },
+    {
+      "name": "display",
+      "tuple_schema": [
+        "display",
+        "value"
+      ],
+      "values": [
+        "block",
+        "flex",
+        "grid",
+        "none"
+      ],
+      "class_tokens": {
+        "block": "block",
+        "flex": "flex",
+        "grid": "grid",
+        "hidden": "none"
+      },
+      "helpers": [
+        {
+          "name": "display",
+          "kind": "exact"
+        },
+        {
+          "name": "block",
+          "kind": "value",
+          "value": "block"
+        },
+        {
+          "name": "flex",
+          "kind": "value",
+          "value": "flex"
+        },
+        {
+          "name": "grid",
+          "kind": "value",
+          "value": "grid"
+        },
+        {
+          "name": "hidden",
+          "kind": "value",
+          "value": "none"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled block/flex/grid/hidden"
+    },
+    {
+      "name": "visibility",
+      "tuple_schema": [
+        "visibility",
+        "value"
+      ],
+      "values": [
+        "visible",
+        "hidden"
+      ],
+      "class_tokens": {
+        "visible": "visible",
+        "invisible": "hidden"
+      },
+      "helpers": [
+        {
+          "name": "visibility",
+          "kind": "exact"
+        },
+        {
+          "name": "visible",
+          "kind": "value",
+          "value": "visible"
+        },
+        {
+          "name": "invisible",
+          "kind": "value",
+          "value": "hidden"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled visibility_style_methods! visible/invisible"
+    },
+    {
+      "name": "overflow",
+      "tuple_schema": [
+        "overflow",
+        "axis",
+        "value"
+      ],
+      "values": [
+        "hidden",
+        "scroll"
+      ],
+      "axes": {
+        "all": [
+          "x",
+          "y"
+        ],
+        "x": [
+          "x"
+        ],
+        "y": [
+          "y"
+        ]
+      },
+      "class_tokens": {
+        "overflow-hidden": [
+          "all",
+          "hidden"
+        ],
+        "overflow-x-hidden": [
+          "x",
+          "hidden"
+        ],
+        "overflow-y-hidden": [
+          "y",
+          "hidden"
+        ],
+        "overflow-scroll": [
+          "all",
+          "scroll"
+        ],
+        "overflow-x-scroll": [
+          "x",
+          "scroll"
+        ],
+        "overflow-y-scroll": [
+          "y",
+          "scroll"
+        ]
+      },
+      "helpers": [
+        {
+          "name": "overflow",
+          "kind": "exact"
+        },
+        {
+          "name": "overflow_hidden",
+          "kind": "value",
+          "axis": "all",
+          "value": "hidden"
+        },
+        {
+          "name": "overflow_x_hidden",
+          "kind": "value",
+          "axis": "x",
+          "value": "hidden"
+        },
+        {
+          "name": "overflow_y_hidden",
+          "kind": "value",
+          "axis": "y",
+          "value": "hidden"
+        },
+        {
+          "name": "overflow_scroll",
+          "kind": "value",
+          "axis": "all",
+          "value": "scroll"
+        },
+        {
+          "name": "overflow_x_scroll",
+          "kind": "value",
+          "axis": "x",
+          "value": "scroll"
+        },
+        {
+          "name": "overflow_y_scroll",
+          "kind": "value",
+          "axis": "y",
+          "value": "scroll"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled overflow helpers and div scroll overflow helpers"
     }
   ]
 }

@@ -16,6 +16,9 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "max_height"))
     assert Enum.any?(operations, &(&1["name"] == "position"))
     assert Enum.any?(operations, &(&1["name"] == "inset"))
+    assert Enum.any?(operations, &(&1["name"] == "display"))
+    assert Enum.any?(operations, &(&1["name"] == "visibility"))
+    assert Enum.any?(operations, &(&1["name"] == "overflow"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -51,5 +54,14 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.inset(1) == {:inset, :all, {:rem, 0.25}}
     assert Guppy.Style.top(-2) == {:inset, :top, {:rem, -0.5}}
     assert Guppy.Style.right(:auto) == {:inset, :right, :auto}
+
+    assert Guppy.Style.display(:flex) == {:display, :flex}
+    assert Guppy.Style.flex() == {:display, :flex}
+    assert Guppy.Style.hidden() == {:display, :none}
+    assert Guppy.Style.visibility(:hidden) == {:visibility, :hidden}
+    assert Guppy.Style.invisible() == {:visibility, :hidden}
+    assert Guppy.Style.visible() == {:visibility, :visible}
+    assert Guppy.Style.overflow(:x, :scroll) == {:overflow, :x, :scroll}
+    assert Guppy.Style.overflow_hidden() == {:overflow, :all, :hidden}
   end
 end

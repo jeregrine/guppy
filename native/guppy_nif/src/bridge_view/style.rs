@@ -1,6 +1,6 @@
 use crate::ir::{
-    ColorToken, DivStyle, LinearGradientStop, PositionStyle, StyleAxis, StyleColor, StyleLength,
-    StyleOp,
+    ColorToken, DisplayStyle, DivStyle, LinearGradientStop, OverflowStyle, PositionStyle,
+    StyleAxis, StyleColor, StyleLength, StyleOp, VisibilityStyle,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -131,6 +131,8 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::MaxHeight(_)
         | StyleOp::Position(_)
         | StyleOp::Inset { .. }
+        | StyleOp::Display(_)
+        | StyleOp::Overflow { .. }
         | StyleOp::GridCols(_)
         | StyleOp::GridRows(_)
         | StyleOp::ColSpan(_)
@@ -197,6 +199,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::ShadowSm
         | StyleOp::ShadowMd
         | StyleOp::ShadowLg
+        | StyleOp::Visibility(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::BorderColor(_)
@@ -295,6 +298,7 @@ where
             linear_gradient_stop_to_gpui(to),
         )),
         StyleOp::Opacity(value) => style.opacity(*value),
+        StyleOp::Visibility(visibility) => apply_visibility(style, *visibility),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -410,6 +414,9 @@ where
         }
         StyleOp::Position(position) => apply_position(element, *position),
         StyleOp::Inset { axis, length } => apply_inset(element, *axis, *length),
+        StyleOp::Display(display) => apply_display(element, *display),
+        StyleOp::Visibility(visibility) => apply_visibility(element, *visibility),
+        StyleOp::Overflow { axis, behavior } => apply_overflow(element, *axis, *behavior),
         _ => element,
     }
 }
@@ -503,6 +510,50 @@ where
         StyleAxis::Left => element.left(length),
         _ => element,
     }
+}
+
+fn apply_display<E>(element: E, display: DisplayStyle) -> E
+where
+    E: Styled,
+{
+    match display {
+        DisplayStyle::Block => element.block(),
+        DisplayStyle::Flex => element.flex(),
+        DisplayStyle::Grid => element.grid(),
+        DisplayStyle::None => element.hidden(),
+    }
+}
+
+fn apply_visibility<E>(element: E, visibility: VisibilityStyle) -> E
+where
+    E: Styled,
+{
+    match visibility {
+        VisibilityStyle::Visible => element.visible(),
+        VisibilityStyle::Hidden => element.invisible(),
+    }
+}
+
+fn apply_overflow<E>(mut element: E, axis: StyleAxis, overflow: OverflowStyle) -> E
+where
+    E: Styled,
+{
+    let overflow = match overflow {
+        OverflowStyle::Hidden => gpui::Overflow::Hidden,
+        OverflowStyle::Scroll => gpui::Overflow::Scroll,
+    };
+
+    match axis {
+        StyleAxis::All => {
+            element.style().overflow.x = Some(overflow);
+            element.style().overflow.y = Some(overflow);
+        }
+        StyleAxis::X => element.style().overflow.x = Some(overflow),
+        StyleAxis::Y => element.style().overflow.y = Some(overflow),
+        _ => {}
+    }
+
+    element
 }
 
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
@@ -662,6 +713,19 @@ mod tests {
             StyleLength::Rem(-0.5),
         );
         assert_eq!(style.inset.top, Some(Length::Definite(rems(-0.5).into())));
+
+        let style = apply_display(StyleRefinement::default(), DisplayStyle::Flex);
+        assert_eq!(style.display, Some(gpui::Display::Flex));
+
+        let style = apply_visibility(StyleRefinement::default(), VisibilityStyle::Hidden);
+        assert_eq!(style.visibility, Some(gpui::Visibility::Hidden));
+
+        let style = apply_overflow(
+            StyleRefinement::default(),
+            StyleAxis::X,
+            OverflowStyle::Scroll,
+        );
+        assert_eq!(style.overflow.x, Some(gpui::Overflow::Scroll));
     }
 
     #[test]

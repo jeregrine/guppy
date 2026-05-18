@@ -269,6 +269,26 @@ pub enum PositionStyle {
     Absolute,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DisplayStyle {
+    Block,
+    Flex,
+    Grid,
+    None,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VisibilityStyle {
+    Visible,
+    Hidden,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OverflowStyle {
+    Hidden,
+    Scroll,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -424,6 +444,12 @@ pub enum StyleOp {
     Inset {
         axis: StyleAxis,
         length: StyleLength,
+    },
+    Display(DisplayStyle),
+    Visibility(VisibilityStyle),
+    Overflow {
+        axis: StyleAxis,
+        behavior: OverflowStyle,
     },
     Bg(ColorToken),
     TextColor(ColorToken),
@@ -2595,6 +2621,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     axis: parse_gap_axis(&elements[1])?,
                     length: parse_style_length(&elements[2], "gap", false, true)?,
                 }),
+                "overflow" => Ok(StyleOp::Overflow {
+                    axis: parse_gap_axis(&elements[1])?,
+                    behavior: parse_overflow_style(&elements[2])?,
+                }),
                 other => Err(format!("unsupported style tuple key: {other}")),
             }
         }
@@ -2648,6 +2678,8 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     true,
                 )?)),
                 "position" => Ok(StyleOp::Position(parse_position_style(&elements[1])?)),
+                "display" => Ok(StyleOp::Display(parse_display_style(&elements[1])?)),
+                "visibility" => Ok(StyleOp::Visibility(parse_visibility_style(&elements[1])?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
@@ -3026,6 +3058,32 @@ fn parse_position_style(term: &Term) -> Result<PositionStyle, String> {
         Term::Atom(atom) if atom.name == "relative" => Ok(PositionStyle::Relative),
         Term::Atom(atom) if atom.name == "absolute" => Ok(PositionStyle::Absolute),
         other => Err(format!("invalid position style: {other}")),
+    }
+}
+
+fn parse_display_style(term: &Term) -> Result<DisplayStyle, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "block" => Ok(DisplayStyle::Block),
+        Term::Atom(atom) if atom.name == "flex" => Ok(DisplayStyle::Flex),
+        Term::Atom(atom) if atom.name == "grid" => Ok(DisplayStyle::Grid),
+        Term::Atom(atom) if atom.name == "none" => Ok(DisplayStyle::None),
+        other => Err(format!("invalid display style: {other}")),
+    }
+}
+
+fn parse_visibility_style(term: &Term) -> Result<VisibilityStyle, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "visible" => Ok(VisibilityStyle::Visible),
+        Term::Atom(atom) if atom.name == "hidden" => Ok(VisibilityStyle::Hidden),
+        other => Err(format!("invalid visibility style: {other}")),
+    }
+}
+
+fn parse_overflow_style(term: &Term) -> Result<OverflowStyle, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "hidden" => Ok(OverflowStyle::Hidden),
+        Term::Atom(atom) if atom.name == "scroll" => Ok(OverflowStyle::Scroll),
+        other => Err(format!("invalid overflow style: {other}")),
     }
 }
 
