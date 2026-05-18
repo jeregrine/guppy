@@ -289,6 +289,34 @@ pub enum OverflowStyle {
     Scroll,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MouseCursorStyle {
+    Default,
+    Pointer,
+    Text,
+    Move,
+    NotAllowed,
+    ContextMenu,
+    Crosshair,
+    VerticalText,
+    Alias,
+    Copy,
+    NoDrop,
+    Grab,
+    Grabbing,
+    EwResize,
+    NsResize,
+    NeswResize,
+    NwseResize,
+    ColResize,
+    RowResize,
+    NResize,
+    EResize,
+    SResize,
+    WResize,
+    None,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -451,6 +479,7 @@ pub enum StyleOp {
         axis: StyleAxis,
         behavior: OverflowStyle,
     },
+    Cursor(MouseCursorStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2680,6 +2709,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "position" => Ok(StyleOp::Position(parse_position_style(&elements[1])?)),
                 "display" => Ok(StyleOp::Display(parse_display_style(&elements[1])?)),
                 "visibility" => Ok(StyleOp::Visibility(parse_visibility_style(&elements[1])?)),
+                "cursor" => Ok(StyleOp::Cursor(parse_mouse_cursor_style(&elements[1])?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
@@ -3084,6 +3114,40 @@ fn parse_overflow_style(term: &Term) -> Result<OverflowStyle, String> {
         Term::Atom(atom) if atom.name == "hidden" => Ok(OverflowStyle::Hidden),
         Term::Atom(atom) if atom.name == "scroll" => Ok(OverflowStyle::Scroll),
         other => Err(format!("invalid overflow style: {other}")),
+    }
+}
+
+fn parse_mouse_cursor_style(term: &Term) -> Result<MouseCursorStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid cursor style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "default" => Ok(MouseCursorStyle::Default),
+        "pointer" => Ok(MouseCursorStyle::Pointer),
+        "text" => Ok(MouseCursorStyle::Text),
+        "move" => Ok(MouseCursorStyle::Move),
+        "not_allowed" => Ok(MouseCursorStyle::NotAllowed),
+        "context_menu" => Ok(MouseCursorStyle::ContextMenu),
+        "crosshair" => Ok(MouseCursorStyle::Crosshair),
+        "vertical_text" => Ok(MouseCursorStyle::VerticalText),
+        "alias" => Ok(MouseCursorStyle::Alias),
+        "copy" => Ok(MouseCursorStyle::Copy),
+        "no_drop" => Ok(MouseCursorStyle::NoDrop),
+        "grab" => Ok(MouseCursorStyle::Grab),
+        "grabbing" => Ok(MouseCursorStyle::Grabbing),
+        "ew_resize" => Ok(MouseCursorStyle::EwResize),
+        "ns_resize" => Ok(MouseCursorStyle::NsResize),
+        "nesw_resize" => Ok(MouseCursorStyle::NeswResize),
+        "nwse_resize" => Ok(MouseCursorStyle::NwseResize),
+        "col_resize" => Ok(MouseCursorStyle::ColResize),
+        "row_resize" => Ok(MouseCursorStyle::RowResize),
+        "n_resize" => Ok(MouseCursorStyle::NResize),
+        "e_resize" => Ok(MouseCursorStyle::EResize),
+        "s_resize" => Ok(MouseCursorStyle::SResize),
+        "w_resize" => Ok(MouseCursorStyle::WResize),
+        "none" => Ok(MouseCursorStyle::None),
+        other => Err(format!("invalid cursor style: {other}")),
     }
 }
 

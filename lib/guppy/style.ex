@@ -15,7 +15,7 @@ defmodule Guppy.Style do
                    end)
 
   @enum_operations Enum.filter(@catalog["operations"], fn operation ->
-                     operation["name"] in ["position", "display", "visibility"]
+                     operation["name"] in ["position", "display", "visibility", "cursor"]
                    end)
 
   @overflow_operation Enum.find(@catalog["operations"], &(&1["name"] == "overflow"))

@@ -1109,6 +1109,11 @@ fn parses_canonical_box_spacing_style_ops() {
             behavior: super::OverflowStyle::Scroll,
         }
     );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("cursor"), atom("not_allowed")])).unwrap(),
+        StyleOp::Cursor(super::MouseCursorStyle::NotAllowed)
+    );
 }
 
 #[test]
@@ -1139,6 +1144,7 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("display"), atom("inline")]),
         tuple(vec![atom("visibility"), atom("collapsed")]),
         tuple(vec![atom("overflow"), atom("x"), atom("clip")]),
+        tuple(vec![atom("cursor"), atom("bad")]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
@@ -1149,6 +1155,7 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("display")
                 || err.contains("visibility")
                 || err.contains("overflow")
+                || err.contains("cursor")
                 || err.contains("length"),
             "unexpected error: {err}"
         );
@@ -1186,6 +1193,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "display")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "cursor")
     );
 }
 

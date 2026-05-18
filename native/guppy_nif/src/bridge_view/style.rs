@@ -1,6 +1,6 @@
 use crate::ir::{
-    ColorToken, DisplayStyle, DivStyle, LinearGradientStop, OverflowStyle, PositionStyle,
-    StyleAxis, StyleColor, StyleLength, StyleOp, VisibilityStyle,
+    ColorToken, DisplayStyle, DivStyle, LinearGradientStop, MouseCursorStyle, OverflowStyle,
+    PositionStyle, StyleAxis, StyleColor, StyleLength, StyleOp, VisibilityStyle,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -200,6 +200,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::ShadowMd
         | StyleOp::ShadowLg
         | StyleOp::Visibility(_)
+        | StyleOp::Cursor(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::BorderColor(_)
@@ -299,6 +300,7 @@ where
         )),
         StyleOp::Opacity(value) => style.opacity(*value),
         StyleOp::Visibility(visibility) => apply_visibility(style, *visibility),
+        StyleOp::Cursor(cursor) => apply_cursor(style, *cursor),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -417,6 +419,7 @@ where
         StyleOp::Display(display) => apply_display(element, *display),
         StyleOp::Visibility(visibility) => apply_visibility(element, *visibility),
         StyleOp::Overflow { axis, behavior } => apply_overflow(element, *axis, *behavior),
+        StyleOp::Cursor(cursor) => apply_cursor(element, *cursor),
         _ => element,
     }
 }
@@ -554,6 +557,42 @@ where
     }
 
     element
+}
+
+fn apply_cursor<E>(element: E, cursor: MouseCursorStyle) -> E
+where
+    E: Styled,
+{
+    element.cursor(mouse_cursor_to_gpui(cursor))
+}
+
+fn mouse_cursor_to_gpui(cursor: MouseCursorStyle) -> gpui::CursorStyle {
+    match cursor {
+        MouseCursorStyle::Default => gpui::CursorStyle::Arrow,
+        MouseCursorStyle::Pointer => gpui::CursorStyle::PointingHand,
+        MouseCursorStyle::Text => gpui::CursorStyle::IBeam,
+        MouseCursorStyle::Move => gpui::CursorStyle::ClosedHand,
+        MouseCursorStyle::NotAllowed => gpui::CursorStyle::OperationNotAllowed,
+        MouseCursorStyle::ContextMenu => gpui::CursorStyle::ContextualMenu,
+        MouseCursorStyle::Crosshair => gpui::CursorStyle::Crosshair,
+        MouseCursorStyle::VerticalText => gpui::CursorStyle::IBeamCursorForVerticalLayout,
+        MouseCursorStyle::Alias => gpui::CursorStyle::DragLink,
+        MouseCursorStyle::Copy => gpui::CursorStyle::DragCopy,
+        MouseCursorStyle::NoDrop => gpui::CursorStyle::OperationNotAllowed,
+        MouseCursorStyle::Grab => gpui::CursorStyle::OpenHand,
+        MouseCursorStyle::Grabbing => gpui::CursorStyle::ClosedHand,
+        MouseCursorStyle::EwResize => gpui::CursorStyle::ResizeLeftRight,
+        MouseCursorStyle::NsResize => gpui::CursorStyle::ResizeUpDown,
+        MouseCursorStyle::NeswResize => gpui::CursorStyle::ResizeUpRightDownLeft,
+        MouseCursorStyle::NwseResize => gpui::CursorStyle::ResizeUpLeftDownRight,
+        MouseCursorStyle::ColResize => gpui::CursorStyle::ResizeColumn,
+        MouseCursorStyle::RowResize => gpui::CursorStyle::ResizeRow,
+        MouseCursorStyle::NResize => gpui::CursorStyle::ResizeUp,
+        MouseCursorStyle::EResize => gpui::CursorStyle::ResizeRight,
+        MouseCursorStyle::SResize => gpui::CursorStyle::ResizeDown,
+        MouseCursorStyle::WResize => gpui::CursorStyle::ResizeLeft,
+        MouseCursorStyle::None => gpui::CursorStyle::None,
+    }
 }
 
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
@@ -726,6 +765,12 @@ mod tests {
             OverflowStyle::Scroll,
         );
         assert_eq!(style.overflow.x, Some(gpui::Overflow::Scroll));
+
+        let style = apply_cursor(StyleRefinement::default(), MouseCursorStyle::NotAllowed);
+        assert_eq!(
+            style.mouse_cursor,
+            Some(gpui::CursorStyle::OperationNotAllowed)
+        );
     }
 
     #[test]

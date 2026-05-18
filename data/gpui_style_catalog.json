@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, size, position/inset, display, visibility, and overflow helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI generated padding, margin, gap, size, position/inset, display, visibility, overflow, and cursor helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1318,6 +1318,194 @@
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Styled overflow helpers and div scroll overflow helpers"
+    },
+    {
+      "name": "cursor",
+      "tuple_schema": [
+        "cursor",
+        "value"
+      ],
+      "values": [
+        "default",
+        "pointer",
+        "text",
+        "move",
+        "not_allowed",
+        "context_menu",
+        "crosshair",
+        "vertical_text",
+        "alias",
+        "copy",
+        "no_drop",
+        "grab",
+        "grabbing",
+        "ew_resize",
+        "ns_resize",
+        "nesw_resize",
+        "nwse_resize",
+        "col_resize",
+        "row_resize",
+        "n_resize",
+        "e_resize",
+        "s_resize",
+        "w_resize",
+        "none"
+      ],
+      "class_tokens": {
+        "cursor-default": "default",
+        "cursor-pointer": "pointer",
+        "cursor-text": "text",
+        "cursor-move": "move",
+        "cursor-not-allowed": "not_allowed",
+        "cursor-context-menu": "context_menu",
+        "cursor-crosshair": "crosshair",
+        "cursor-vertical-text": "vertical_text",
+        "cursor-alias": "alias",
+        "cursor-copy": "copy",
+        "cursor-no-drop": "no_drop",
+        "cursor-grab": "grab",
+        "cursor-grabbing": "grabbing",
+        "cursor-ew-resize": "ew_resize",
+        "cursor-ns-resize": "ns_resize",
+        "cursor-nesw-resize": "nesw_resize",
+        "cursor-nwse-resize": "nwse_resize",
+        "cursor-col-resize": "col_resize",
+        "cursor-row-resize": "row_resize",
+        "cursor-n-resize": "n_resize",
+        "cursor-e-resize": "e_resize",
+        "cursor-s-resize": "s_resize",
+        "cursor-w-resize": "w_resize",
+        "cursor-none": "none"
+      },
+      "helpers": [
+        {
+          "name": "cursor",
+          "kind": "exact"
+        },
+        {
+          "name": "cursor_default",
+          "kind": "value",
+          "value": "default"
+        },
+        {
+          "name": "cursor_pointer",
+          "kind": "value",
+          "value": "pointer"
+        },
+        {
+          "name": "cursor_text",
+          "kind": "value",
+          "value": "text"
+        },
+        {
+          "name": "cursor_move",
+          "kind": "value",
+          "value": "move"
+        },
+        {
+          "name": "cursor_not_allowed",
+          "kind": "value",
+          "value": "not_allowed"
+        },
+        {
+          "name": "cursor_context_menu",
+          "kind": "value",
+          "value": "context_menu"
+        },
+        {
+          "name": "cursor_crosshair",
+          "kind": "value",
+          "value": "crosshair"
+        },
+        {
+          "name": "cursor_vertical_text",
+          "kind": "value",
+          "value": "vertical_text"
+        },
+        {
+          "name": "cursor_alias",
+          "kind": "value",
+          "value": "alias"
+        },
+        {
+          "name": "cursor_copy",
+          "kind": "value",
+          "value": "copy"
+        },
+        {
+          "name": "cursor_no_drop",
+          "kind": "value",
+          "value": "no_drop"
+        },
+        {
+          "name": "cursor_grab",
+          "kind": "value",
+          "value": "grab"
+        },
+        {
+          "name": "cursor_grabbing",
+          "kind": "value",
+          "value": "grabbing"
+        },
+        {
+          "name": "cursor_ew_resize",
+          "kind": "value",
+          "value": "ew_resize"
+        },
+        {
+          "name": "cursor_ns_resize",
+          "kind": "value",
+          "value": "ns_resize"
+        },
+        {
+          "name": "cursor_nesw_resize",
+          "kind": "value",
+          "value": "nesw_resize"
+        },
+        {
+          "name": "cursor_nwse_resize",
+          "kind": "value",
+          "value": "nwse_resize"
+        },
+        {
+          "name": "cursor_col_resize",
+          "kind": "value",
+          "value": "col_resize"
+        },
+        {
+          "name": "cursor_row_resize",
+          "kind": "value",
+          "value": "row_resize"
+        },
+        {
+          "name": "cursor_n_resize",
+          "kind": "value",
+          "value": "n_resize"
+        },
+        {
+          "name": "cursor_e_resize",
+          "kind": "value",
+          "value": "e_resize"
+        },
+        {
+          "name": "cursor_s_resize",
+          "kind": "value",
+          "value": "s_resize"
+        },
+        {
+          "name": "cursor_w_resize",
+          "kind": "value",
+          "value": "w_resize"
+        },
+        {
+          "name": "cursor_none",
+          "kind": "value",
+          "value": "none"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled cursor_style_methods! cursor_*"
     }
   ]
 }

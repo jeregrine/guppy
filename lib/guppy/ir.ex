@@ -177,6 +177,7 @@ defmodule Guppy.IR do
           | {:display, :block | :flex | :grid | :none}
           | {:visibility, :visible | :hidden}
           | {:overflow, :all | :x | :y, :hidden | :scroll}
+          | {:cursor, atom()}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -846,6 +847,33 @@ defmodule Guppy.IR do
   @display_value_tokens [:block, :flex, :grid, :none]
   @visibility_value_tokens [:visible, :hidden]
   @overflow_value_tokens [:hidden, :scroll]
+
+  @cursor_value_tokens [
+    :default,
+    :pointer,
+    :text,
+    :move,
+    :not_allowed,
+    :context_menu,
+    :crosshair,
+    :vertical_text,
+    :alias,
+    :copy,
+    :no_drop,
+    :grab,
+    :grabbing,
+    :ew_resize,
+    :ns_resize,
+    :nesw_resize,
+    :nwse_resize,
+    :col_resize,
+    :row_resize,
+    :n_resize,
+    :e_resize,
+    :s_resize,
+    :w_resize,
+    :none
+  ]
   @color_style_value_tokens [:bg, :text_color, :border_color]
   @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
@@ -2594,6 +2622,8 @@ defmodule Guppy.IR do
   defp validate_style_op({:overflow, axis, value})
        when axis in @gap_axis_tokens and value in @overflow_value_tokens,
        do: :ok
+
+  defp validate_style_op({:cursor, value}) when value in @cursor_value_tokens, do: :ok
 
   defp validate_style_op({key, value})
        when key in @color_style_value_tokens and value in @color_tokens,

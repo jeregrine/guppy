@@ -19,6 +19,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "display"))
     assert Enum.any?(operations, &(&1["name"] == "visibility"))
     assert Enum.any?(operations, &(&1["name"] == "overflow"))
+    assert Enum.any?(operations, &(&1["name"] == "cursor"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -63,5 +64,9 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.visible() == {:visibility, :visible}
     assert Guppy.Style.overflow(:x, :scroll) == {:overflow, :x, :scroll}
     assert Guppy.Style.overflow_hidden() == {:overflow, :all, :hidden}
+
+    assert Guppy.Style.cursor(:pointer) == {:cursor, :pointer}
+    assert Guppy.Style.cursor_pointer() == {:cursor, :pointer}
+    assert Guppy.Style.cursor_not_allowed() == {:cursor, :not_allowed}
   end
 end
