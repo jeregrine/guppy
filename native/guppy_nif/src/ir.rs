@@ -656,6 +656,8 @@ pub enum StyleOp {
     FlexWrapValue(FlexWrapStyle),
     FlexItem(FlexItemStyle),
     FlexBasis(StyleLength),
+    FlexGrowValue(f32),
+    FlexShrinkValue(f32),
     AlignItems(AlignItemsStyle),
     AlignSelf(AlignItemsStyle),
     JustifyContent(JustifyContentStyle),
@@ -2938,6 +2940,14 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     "flex_basis",
                     true,
                     false,
+                )?)),
+                "flex_grow" => Ok(StyleOp::FlexGrowValue(parse_non_negative_style_f32(
+                    &elements[1],
+                    "flex_grow",
+                )?)),
+                "flex_shrink" => Ok(StyleOp::FlexShrinkValue(parse_non_negative_style_f32(
+                    &elements[1],
+                    "flex_shrink",
                 )?)),
                 "align_items" => Ok(StyleOp::AlignItems(parse_align_items_style(&elements[1])?)),
                 "align_self" => Ok(StyleOp::AlignSelf(parse_align_items_style(&elements[1])?)),

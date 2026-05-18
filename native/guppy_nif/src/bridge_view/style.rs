@@ -142,6 +142,8 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::FlexWrapValue(_)
         | StyleOp::FlexItem(_)
         | StyleOp::FlexBasis(_)
+        | StyleOp::FlexGrowValue(_)
+        | StyleOp::FlexShrinkValue(_)
         | StyleOp::AlignItems(_)
         | StyleOp::AlignSelf(_)
         | StyleOp::JustifyContent(_)
@@ -504,6 +506,8 @@ where
         StyleOp::FlexWrapValue(wrap) => apply_flex_wrap(element, *wrap),
         StyleOp::FlexItem(item) => apply_flex_item(element, *item),
         StyleOp::FlexBasis(length) => element.flex_basis(style_length_to_length(*length)),
+        StyleOp::FlexGrowValue(value) => apply_flex_grow(element, *value),
+        StyleOp::FlexShrinkValue(value) => apply_flex_shrink(element, *value),
         StyleOp::AlignItems(align) => apply_align_items(element, *align),
         StyleOp::AlignSelf(align) => apply_align_self(element, *align),
         StyleOp::JustifyContent(justify) => apply_justify_content(element, *justify),
@@ -825,6 +829,22 @@ where
         FlexItemStyle::Shrink => element.flex_shrink(),
         FlexItemStyle::Shrink0 => element.flex_shrink_0(),
     }
+}
+
+fn apply_flex_grow<E>(mut element: E, value: f32) -> E
+where
+    E: Styled,
+{
+    element.style().flex_grow = Some(value);
+    element
+}
+
+fn apply_flex_shrink<E>(mut element: E, value: f32) -> E
+where
+    E: Styled,
+{
+    element.style().flex_shrink = Some(value);
+    element
 }
 
 fn apply_align_items<E>(mut element: E, align: AlignItemsStyle) -> E
@@ -1291,6 +1311,12 @@ mod tests {
 
         let style = apply_flex_item(StyleRefinement::default(), FlexItemStyle::Shrink0);
         assert_eq!(style.flex_shrink, Some(0.0));
+
+        let style = apply_flex_grow(StyleRefinement::default(), 2.0);
+        assert_eq!(style.flex_grow, Some(2.0));
+
+        let style = apply_flex_shrink(StyleRefinement::default(), 0.5);
+        assert_eq!(style.flex_shrink, Some(0.5));
 
         let style = apply_align_items(StyleRefinement::default(), AlignItemsStyle::Baseline);
         assert_eq!(style.align_items, Some(gpui::AlignItems::Baseline));

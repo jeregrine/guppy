@@ -100,6 +100,8 @@ defmodule Guppy.Style do
   @number_operations Enum.filter(@catalog["operations"], fn operation ->
                        operation["name"] in [
                          "aspect_ratio",
+                         "flex_grow",
+                         "flex_shrink",
                          "opacity",
                          "text_decoration_thickness"
                        ]

@@ -1177,6 +1177,14 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::FlexBasis(StyleLength::Fraction(0.5))
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![atom("flex_grow"), float(2.0)])).unwrap(),
+        StyleOp::FlexGrowValue(2.0)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("flex_shrink"), float(0.5)])).unwrap(),
+        StyleOp::FlexShrinkValue(0.5)
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("align_items"), atom("baseline")])).unwrap(),
         StyleOp::AlignItems(super::AlignItemsStyle::Baseline)
     );
@@ -1328,6 +1336,8 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("flex_direction"), atom("sideways")]),
         tuple(vec![atom("flex_wrap"), atom("maybe")]),
         tuple(vec![atom("flex_item"), atom("bad")]),
+        tuple(vec![atom("flex_grow"), integer(-1)]),
+        tuple(vec![atom("flex_shrink"), integer(-1)]),
         tuple(vec![atom("align_items"), atom("left")]),
         tuple(vec![atom("align_self"), atom("auto")]),
         tuple(vec![atom("justify_content"), atom("auto")]),
@@ -1465,6 +1475,16 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "flex_basis")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "flex_grow")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "flex_shrink")
     );
     assert!(
         operations

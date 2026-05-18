@@ -40,6 +40,8 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "flex_wrap"))
     assert Enum.any?(operations, &(&1["name"] == "flex_item"))
     assert Enum.any?(operations, &(&1["name"] == "flex_basis"))
+    assert Enum.any?(operations, &(&1["name"] == "flex_grow"))
+    assert Enum.any?(operations, &(&1["name"] == "flex_shrink"))
     assert Enum.any?(operations, &(&1["name"] == "align_items"))
     assert Enum.any?(operations, &(&1["name"] == "align_self"))
     assert Enum.any?(operations, &(&1["name"] == "justify_content"))
@@ -172,6 +174,9 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.flex_initial() == {:flex_item, :initial}
     assert Guppy.Style.flex_basis(:auto) == {:flex_basis, :auto}
     assert Guppy.Style.basis("1/2") == {:flex_basis, {:fraction, 0.5}}
+    assert Guppy.Style.flex_grow(2) == {:flex_grow, 2}
+    assert Guppy.Style.flex_shrink(0.5) == {:flex_shrink, 0.5}
+    assert_raise ArgumentError, fn -> Guppy.Style.flex_grow(-1) end
     assert Guppy.Style.items_baseline() == {:align_items, :baseline}
     assert Guppy.Style.items_stretch() == {:align_items, :stretch}
     assert Guppy.Style.align_self(:start) == {:align_self, :start}
@@ -331,6 +336,16 @@ defmodule Guppy.StyleTest do
 
     assert Guppy.Style.class_token_to_style("justify-stretch") ==
              {:ok, {:justify_content, :stretch}}
+  end
+
+  test "flex grow and shrink classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("grow") == {:ok, {:flex_grow, 1}}
+    assert Guppy.Style.class_token_to_style("grow-0") == {:ok, {:flex_grow, 0}}
+    assert Guppy.Style.class_token_to_style("grow-[2]") == {:ok, {:flex_grow, 2}}
+    assert Guppy.Style.class_token_to_style("shrink") == {:ok, {:flex_shrink, 1}}
+    assert Guppy.Style.class_token_to_style("shrink-0") == {:ok, {:flex_shrink, 0}}
+    assert Guppy.Style.class_token_to_style("shrink-[0.5]") == {:ok, {:flex_shrink, 0.5}}
+    assert Guppy.Style.class_token_to_style("grow-[-1]") == :error
   end
 
   test "text decoration detail classes normalize through the catalog parser" do

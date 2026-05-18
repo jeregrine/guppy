@@ -197,6 +197,8 @@ defmodule Guppy.IR do
           | {:flex_wrap, :wrap | :wrap_reverse | :nowrap}
           | {:flex_item, :one | :auto | :initial | :none | :grow | :shrink | :shrink_0}
           | {:flex_basis, style_length() | :auto}
+          | {:flex_grow, number()}
+          | {:flex_shrink, number()}
           | {:align_items, :start | :end | :center | :baseline | :stretch}
           | {:align_self, :start | :end | :center | :baseline | :stretch}
           | {:justify_content, :start | :end | :center | :between | :around | :evenly | :stretch}
@@ -2746,6 +2748,10 @@ defmodule Guppy.IR do
   defp validate_style_op({:flex_basis, value} = op) do
     if valid_length?(value, false), do: :ok, else: {:error, {:invalid_style_op, op}}
   end
+
+  defp validate_style_op({key, value})
+       when key in [:flex_grow, :flex_shrink] and is_non_neg_native_f32_number(value),
+       do: :ok
 
   defp validate_style_op({:align_items, value}) when value in @align_items_value_tokens, do: :ok
   defp validate_style_op({:align_self, value}) when value in @align_self_value_tokens, do: :ok
