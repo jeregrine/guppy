@@ -23,6 +23,9 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "border_width"))
     assert Enum.any?(operations, &(&1["name"] == "border_radius"))
     assert Enum.any?(operations, &(&1["name"] == "border_style"))
+    assert Enum.any?(operations, &(&1["name"] == "bg"))
+    assert Enum.any?(operations, &(&1["name"] == "text_color"))
+    assert Enum.any?(operations, &(&1["name"] == "border_color"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -86,5 +89,12 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.rounded("sm") == {:border_radius, :all, {:rem, 0.25}}
     assert Guppy.Style.rounded_t("lg") == {:border_radius, :top, {:rem, 0.5}}
     assert Guppy.Style.rounded_br("full") == {:border_radius, :bottom_right, {:px, 9999}}
+
+    assert Guppy.Style.bg(:red) == {:bg, :red}
+    assert Guppy.Style.bg_gray() == {:bg, :gray}
+    assert Guppy.Style.text_color(:blue) == {:text_color, :blue}
+    assert Guppy.Style.text_color_white() == {:text_color, :white}
+    assert Guppy.Style.border_color(:yellow) == {:border_color, :yellow}
+    assert Guppy.Style.border_color_black() == {:border_color, :black}
   end
 end

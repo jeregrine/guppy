@@ -27,7 +27,10 @@ defmodule Guppy.Style do
                        "display",
                        "visibility",
                        "cursor",
-                       "border_style"
+                       "border_style",
+                       "bg",
+                       "text_color",
+                       "border_color"
                      ]
                    end)
 

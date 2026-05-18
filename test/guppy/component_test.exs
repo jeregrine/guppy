@@ -68,7 +68,7 @@ defmodule Guppy.ComponentTest do
 
   test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
     assert Guppy.Component.class_to_style!(
-             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full"
+             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue border-gray"
            ) == [
              {:padding, :y, {:rem, 0.25}},
              {:padding, :x, {:rem, 0.25}},
@@ -104,7 +104,10 @@ defmodule Guppy.ComponentTest do
              {:border_style, :solid},
              {:border_radius, :all, {:rem, 0.25}},
              {:border_radius, :top, {:rem, 0.5}},
-             {:border_radius, :bottom_right, {:px, 9999}}
+             {:border_radius, :bottom_right, {:px, 9999}},
+             {:bg, :red},
+             {:text_color, :blue},
+             {:border_color, :gray}
            ]
 
     assert :ok =

@@ -1257,6 +1257,12 @@ fn native_style_catalog_loads() {
             .iter()
             .any(|operation| operation["name"] == "border_radius")
     );
+    assert!(operations.iter().any(|operation| operation["name"] == "bg"));
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "text_color")
+    );
 }
 
 #[test]

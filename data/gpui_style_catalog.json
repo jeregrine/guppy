@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, and border radius helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, and named background/text/border colors plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1792,6 +1792,213 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled style_helpers! rounded/rounded_t/rounded_r/rounded_b/rounded_l/rounded_tl/rounded_tr/rounded_bl/rounded_br"
+    },
+    {
+      "name": "bg",
+      "tuple_schema": [
+        "bg",
+        "color"
+      ],
+      "values": [
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "black",
+        "white",
+        "gray"
+      ],
+      "class_tokens": {
+        "bg-red": "red",
+        "bg-green": "green",
+        "bg-blue": "blue",
+        "bg-yellow": "yellow",
+        "bg-black": "black",
+        "bg-white": "white",
+        "bg-gray": "gray"
+      },
+      "helpers": [
+        {
+          "name": "bg",
+          "kind": "exact"
+        },
+        {
+          "name": "bg_red",
+          "kind": "value",
+          "value": "red"
+        },
+        {
+          "name": "bg_green",
+          "kind": "value",
+          "value": "green"
+        },
+        {
+          "name": "bg_blue",
+          "kind": "value",
+          "value": "blue"
+        },
+        {
+          "name": "bg_yellow",
+          "kind": "value",
+          "value": "yellow"
+        },
+        {
+          "name": "bg_black",
+          "kind": "value",
+          "value": "black"
+        },
+        {
+          "name": "bg_white",
+          "kind": "value",
+          "value": "white"
+        },
+        {
+          "name": "bg_gray",
+          "kind": "value",
+          "value": "gray"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled bg"
+    },
+    {
+      "name": "text_color",
+      "tuple_schema": [
+        "text_color",
+        "color"
+      ],
+      "values": [
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "black",
+        "white",
+        "gray"
+      ],
+      "class_tokens": {
+        "text-red": "red",
+        "text-green": "green",
+        "text-blue": "blue",
+        "text-yellow": "yellow",
+        "text-black": "black",
+        "text-white": "white",
+        "text-gray": "gray"
+      },
+      "helpers": [
+        {
+          "name": "text_color",
+          "kind": "exact"
+        },
+        {
+          "name": "text_color_red",
+          "kind": "value",
+          "value": "red"
+        },
+        {
+          "name": "text_color_green",
+          "kind": "value",
+          "value": "green"
+        },
+        {
+          "name": "text_color_blue",
+          "kind": "value",
+          "value": "blue"
+        },
+        {
+          "name": "text_color_yellow",
+          "kind": "value",
+          "value": "yellow"
+        },
+        {
+          "name": "text_color_black",
+          "kind": "value",
+          "value": "black"
+        },
+        {
+          "name": "text_color_white",
+          "kind": "value",
+          "value": "white"
+        },
+        {
+          "name": "text_color_gray",
+          "kind": "value",
+          "value": "gray"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_color"
+    },
+    {
+      "name": "border_color",
+      "tuple_schema": [
+        "border_color",
+        "color"
+      ],
+      "values": [
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "black",
+        "white",
+        "gray"
+      ],
+      "class_tokens": {
+        "border-red": "red",
+        "border-green": "green",
+        "border-blue": "blue",
+        "border-yellow": "yellow",
+        "border-black": "black",
+        "border-white": "white",
+        "border-gray": "gray"
+      },
+      "helpers": [
+        {
+          "name": "border_color",
+          "kind": "exact"
+        },
+        {
+          "name": "border_color_red",
+          "kind": "value",
+          "value": "red"
+        },
+        {
+          "name": "border_color_green",
+          "kind": "value",
+          "value": "green"
+        },
+        {
+          "name": "border_color_blue",
+          "kind": "value",
+          "value": "blue"
+        },
+        {
+          "name": "border_color_yellow",
+          "kind": "value",
+          "value": "yellow"
+        },
+        {
+          "name": "border_color_black",
+          "kind": "value",
+          "value": "black"
+        },
+        {
+          "name": "border_color_white",
+          "kind": "value",
+          "value": "white"
+        },
+        {
+          "name": "border_color_gray",
+          "kind": "value",
+          "value": "gray"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled border_color"
     }
   ],
   "border_width_scale": [
@@ -1986,5 +2193,14 @@
         "value": 9999
       }
     }
+  ],
+  "color_tokens": [
+    "red",
+    "green",
+    "blue",
+    "yellow",
+    "black",
+    "white",
+    "gray"
   ]
 }
