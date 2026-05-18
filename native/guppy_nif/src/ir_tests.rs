@@ -1150,6 +1150,31 @@ fn parses_canonical_box_spacing_style_ops() {
         parse_style_op(&tuple(vec![atom("shadow"), atom("2xs")])).unwrap(),
         StyleOp::Shadow(super::ShadowStyle::TwoXs)
     );
+
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("flex_direction"), atom("row_reverse")])).unwrap(),
+        StyleOp::FlexDirection(super::FlexDirectionStyle::RowReverse)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("flex_wrap"), atom("nowrap")])).unwrap(),
+        StyleOp::FlexWrapValue(super::FlexWrapStyle::NoWrap)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("flex_item"), atom("shrink_0")])).unwrap(),
+        StyleOp::FlexItem(super::FlexItemStyle::Shrink0)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("align_items"), atom("baseline")])).unwrap(),
+        StyleOp::AlignItems(super::AlignItemsStyle::Baseline)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("justify_content"), atom("around")])).unwrap(),
+        StyleOp::JustifyContent(super::JustifyContentStyle::Around)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("align_content"), atom("evenly")])).unwrap(),
+        StyleOp::AlignContent(super::AlignContentStyle::Evenly)
+    );
 }
 
 #[test]
@@ -1198,6 +1223,12 @@ fn rejects_invalid_canonical_length_style_ops() {
         ]),
         tuple(vec![atom("border_style"), atom("double")]),
         tuple(vec![atom("shadow"), atom("huge")]),
+        tuple(vec![atom("flex_direction"), atom("sideways")]),
+        tuple(vec![atom("flex_wrap"), atom("maybe")]),
+        tuple(vec![atom("flex_item"), atom("bad")]),
+        tuple(vec![atom("align_items"), atom("left")]),
+        tuple(vec![atom("justify_content"), atom("stretch")]),
+        tuple(vec![atom("align_content"), atom("bad")]),
     ] {
         let err = parse_style_op(&term).unwrap_err();
         assert!(
@@ -1211,6 +1242,9 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("cursor")
                 || err.contains("border")
                 || err.contains("shadow")
+                || err.contains("flex")
+                || err.contains("align")
+                || err.contains("justify")
                 || err.contains("length"),
             "unexpected error: {err}"
         );
@@ -1274,6 +1308,16 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "shadow")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "flex_direction")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "align_content")
     );
 }
 

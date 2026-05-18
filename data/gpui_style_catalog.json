@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, and box shadows plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, and flex/alignment helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2075,6 +2075,343 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled box_shadow_style_methods! shadow_none/shadow_2xs/shadow_xs/shadow_sm/shadow_md/shadow_lg/shadow_xl/shadow_2xl"
+    },
+    {
+      "name": "flex_direction",
+      "tuple_schema": [
+        "flex_direction",
+        "value"
+      ],
+      "values": [
+        "column",
+        "column_reverse",
+        "row",
+        "row_reverse"
+      ],
+      "class_tokens": {
+        "flex-col": "column",
+        "flex-col-reverse": "column_reverse",
+        "flex-row": "row",
+        "flex-row-reverse": "row_reverse"
+      },
+      "helpers": [
+        {
+          "name": "flex_direction",
+          "kind": "exact"
+        },
+        {
+          "name": "flex_col",
+          "kind": "value",
+          "value": "column"
+        },
+        {
+          "name": "flex_col_reverse",
+          "kind": "value",
+          "value": "column_reverse"
+        },
+        {
+          "name": "flex_row",
+          "kind": "value",
+          "value": "row"
+        },
+        {
+          "name": "flex_row_reverse",
+          "kind": "value",
+          "value": "row_reverse"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled flex_col/flex_col_reverse/flex_row/flex_row_reverse"
+    },
+    {
+      "name": "flex_wrap",
+      "tuple_schema": [
+        "flex_wrap",
+        "value"
+      ],
+      "values": [
+        "wrap",
+        "wrap_reverse",
+        "nowrap"
+      ],
+      "class_tokens": {
+        "flex-wrap": "wrap",
+        "flex-wrap-reverse": "wrap_reverse",
+        "flex-nowrap": "nowrap"
+      },
+      "helpers": [
+        {
+          "name": "flex_wrap",
+          "kind": "exact"
+        },
+        {
+          "name": "flex_wrap",
+          "kind": "value",
+          "value": "wrap"
+        },
+        {
+          "name": "flex_wrap_reverse",
+          "kind": "value",
+          "value": "wrap_reverse"
+        },
+        {
+          "name": "flex_nowrap",
+          "kind": "value",
+          "value": "nowrap"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled flex_wrap/flex_wrap_reverse/flex_nowrap"
+    },
+    {
+      "name": "flex_item",
+      "tuple_schema": [
+        "flex_item",
+        "value"
+      ],
+      "values": [
+        "one",
+        "auto",
+        "initial",
+        "none",
+        "grow",
+        "shrink",
+        "shrink_0"
+      ],
+      "class_tokens": {
+        "flex-1": "one",
+        "flex-auto": "auto",
+        "flex-initial": "initial",
+        "flex-none": "none",
+        "flex-grow": "grow",
+        "flex-shrink": "shrink",
+        "flex-shrink-0": "shrink_0"
+      },
+      "helpers": [
+        {
+          "name": "flex_item",
+          "kind": "exact"
+        },
+        {
+          "name": "flex_1",
+          "kind": "value",
+          "value": "one"
+        },
+        {
+          "name": "flex_auto",
+          "kind": "value",
+          "value": "auto"
+        },
+        {
+          "name": "flex_initial",
+          "kind": "value",
+          "value": "initial"
+        },
+        {
+          "name": "flex_none",
+          "kind": "value",
+          "value": "none"
+        },
+        {
+          "name": "flex_grow",
+          "kind": "value",
+          "value": "grow"
+        },
+        {
+          "name": "flex_shrink",
+          "kind": "value",
+          "value": "shrink"
+        },
+        {
+          "name": "flex_shrink_0",
+          "kind": "value",
+          "value": "shrink_0"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled flex_1/flex_auto/flex_initial/flex_none/flex_grow/flex_shrink/flex_shrink_0"
+    },
+    {
+      "name": "align_items",
+      "tuple_schema": [
+        "align_items",
+        "value"
+      ],
+      "values": [
+        "start",
+        "end",
+        "center",
+        "baseline"
+      ],
+      "class_tokens": {
+        "items-start": "start",
+        "items-end": "end",
+        "items-center": "center",
+        "items-baseline": "baseline"
+      },
+      "helpers": [
+        {
+          "name": "align_items",
+          "kind": "exact"
+        },
+        {
+          "name": "items_start",
+          "kind": "value",
+          "value": "start"
+        },
+        {
+          "name": "items_end",
+          "kind": "value",
+          "value": "end"
+        },
+        {
+          "name": "items_center",
+          "kind": "value",
+          "value": "center"
+        },
+        {
+          "name": "items_baseline",
+          "kind": "value",
+          "value": "baseline"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled items_start/items_end/items_center/items_baseline"
+    },
+    {
+      "name": "justify_content",
+      "tuple_schema": [
+        "justify_content",
+        "value"
+      ],
+      "values": [
+        "start",
+        "end",
+        "center",
+        "between",
+        "around"
+      ],
+      "class_tokens": {
+        "justify-start": "start",
+        "justify-end": "end",
+        "justify-center": "center",
+        "justify-between": "between",
+        "justify-around": "around"
+      },
+      "helpers": [
+        {
+          "name": "justify_content",
+          "kind": "exact"
+        },
+        {
+          "name": "justify_start",
+          "kind": "value",
+          "value": "start"
+        },
+        {
+          "name": "justify_end",
+          "kind": "value",
+          "value": "end"
+        },
+        {
+          "name": "justify_center",
+          "kind": "value",
+          "value": "center"
+        },
+        {
+          "name": "justify_between",
+          "kind": "value",
+          "value": "between"
+        },
+        {
+          "name": "justify_around",
+          "kind": "value",
+          "value": "around"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled justify_start/justify_end/justify_center/justify_between/justify_around"
+    },
+    {
+      "name": "align_content",
+      "tuple_schema": [
+        "align_content",
+        "value"
+      ],
+      "values": [
+        "normal",
+        "start",
+        "end",
+        "center",
+        "between",
+        "around",
+        "evenly",
+        "stretch"
+      ],
+      "class_tokens": {
+        "content-normal": "normal",
+        "content-start": "start",
+        "content-end": "end",
+        "content-center": "center",
+        "content-between": "between",
+        "content-around": "around",
+        "content-evenly": "evenly",
+        "content-stretch": "stretch"
+      },
+      "helpers": [
+        {
+          "name": "align_content",
+          "kind": "exact"
+        },
+        {
+          "name": "content_normal",
+          "kind": "value",
+          "value": "normal"
+        },
+        {
+          "name": "content_start",
+          "kind": "value",
+          "value": "start"
+        },
+        {
+          "name": "content_end",
+          "kind": "value",
+          "value": "end"
+        },
+        {
+          "name": "content_center",
+          "kind": "value",
+          "value": "center"
+        },
+        {
+          "name": "content_between",
+          "kind": "value",
+          "value": "between"
+        },
+        {
+          "name": "content_around",
+          "kind": "value",
+          "value": "around"
+        },
+        {
+          "name": "content_evenly",
+          "kind": "value",
+          "value": "evenly"
+        },
+        {
+          "name": "content_stretch",
+          "kind": "value",
+          "value": "stretch"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": false,
+      "gpui_mapping": "Styled content_normal/content_start/content_end/content_center/content_between/content_around/content_evenly/content_stretch"
     }
   ],
   "border_width_scale": [

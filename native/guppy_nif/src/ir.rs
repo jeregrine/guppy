@@ -348,6 +348,61 @@ pub enum ShadowStyle {
     TwoXl,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FlexDirectionStyle {
+    Column,
+    ColumnReverse,
+    Row,
+    RowReverse,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FlexWrapStyle {
+    Wrap,
+    WrapReverse,
+    NoWrap,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FlexItemStyle {
+    One,
+    Auto,
+    Initial,
+    None,
+    Grow,
+    Shrink,
+    Shrink0,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AlignItemsStyle {
+    Start,
+    End,
+    Center,
+    Baseline,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum JustifyContentStyle {
+    Start,
+    End,
+    Center,
+    Between,
+    Around,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AlignContentStyle {
+    Normal,
+    Start,
+    End,
+    Center,
+    Between,
+    Around,
+    Evenly,
+    Stretch,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -521,6 +576,12 @@ pub enum StyleOp {
     },
     BorderStyle(BorderLineStyle),
     Shadow(ShadowStyle),
+    FlexDirection(FlexDirectionStyle),
+    FlexWrapValue(FlexWrapStyle),
+    FlexItem(FlexItemStyle),
+    AlignItems(AlignItemsStyle),
+    JustifyContent(JustifyContentStyle),
+    AlignContent(AlignContentStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2761,6 +2822,18 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "cursor" => Ok(StyleOp::Cursor(parse_mouse_cursor_style(&elements[1])?)),
                 "border_style" => Ok(StyleOp::BorderStyle(parse_border_line_style(&elements[1])?)),
                 "shadow" => Ok(StyleOp::Shadow(parse_shadow_style(&elements[1])?)),
+                "flex_direction" => Ok(StyleOp::FlexDirection(parse_flex_direction_style(
+                    &elements[1],
+                )?)),
+                "flex_wrap" => Ok(StyleOp::FlexWrapValue(parse_flex_wrap_style(&elements[1])?)),
+                "flex_item" => Ok(StyleOp::FlexItem(parse_flex_item_style(&elements[1])?)),
+                "align_items" => Ok(StyleOp::AlignItems(parse_align_items_style(&elements[1])?)),
+                "justify_content" => Ok(StyleOp::JustifyContent(parse_justify_content_style(
+                    &elements[1],
+                )?)),
+                "align_content" => Ok(StyleOp::AlignContent(parse_align_content_style(
+                    &elements[1],
+                )?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
@@ -3210,6 +3283,97 @@ fn parse_shadow_style(term: &Term) -> Result<ShadowStyle, String> {
         "xl" => Ok(ShadowStyle::Xl),
         "2xl" => Ok(ShadowStyle::TwoXl),
         other => Err(format!("invalid shadow style: {other}")),
+    }
+}
+
+fn parse_flex_direction_style(term: &Term) -> Result<FlexDirectionStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid flex_direction style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "column" => Ok(FlexDirectionStyle::Column),
+        "column_reverse" => Ok(FlexDirectionStyle::ColumnReverse),
+        "row" => Ok(FlexDirectionStyle::Row),
+        "row_reverse" => Ok(FlexDirectionStyle::RowReverse),
+        other => Err(format!("invalid flex_direction style: {other}")),
+    }
+}
+
+fn parse_flex_wrap_style(term: &Term) -> Result<FlexWrapStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid flex_wrap style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "wrap" => Ok(FlexWrapStyle::Wrap),
+        "wrap_reverse" => Ok(FlexWrapStyle::WrapReverse),
+        "nowrap" => Ok(FlexWrapStyle::NoWrap),
+        other => Err(format!("invalid flex_wrap style: {other}")),
+    }
+}
+
+fn parse_flex_item_style(term: &Term) -> Result<FlexItemStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid flex_item style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "one" => Ok(FlexItemStyle::One),
+        "auto" => Ok(FlexItemStyle::Auto),
+        "initial" => Ok(FlexItemStyle::Initial),
+        "none" => Ok(FlexItemStyle::None),
+        "grow" => Ok(FlexItemStyle::Grow),
+        "shrink" => Ok(FlexItemStyle::Shrink),
+        "shrink_0" => Ok(FlexItemStyle::Shrink0),
+        other => Err(format!("invalid flex_item style: {other}")),
+    }
+}
+
+fn parse_align_items_style(term: &Term) -> Result<AlignItemsStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid align_items style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "start" => Ok(AlignItemsStyle::Start),
+        "end" => Ok(AlignItemsStyle::End),
+        "center" => Ok(AlignItemsStyle::Center),
+        "baseline" => Ok(AlignItemsStyle::Baseline),
+        other => Err(format!("invalid align_items style: {other}")),
+    }
+}
+
+fn parse_justify_content_style(term: &Term) -> Result<JustifyContentStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid justify_content style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "start" => Ok(JustifyContentStyle::Start),
+        "end" => Ok(JustifyContentStyle::End),
+        "center" => Ok(JustifyContentStyle::Center),
+        "between" => Ok(JustifyContentStyle::Between),
+        "around" => Ok(JustifyContentStyle::Around),
+        other => Err(format!("invalid justify_content style: {other}")),
+    }
+}
+
+fn parse_align_content_style(term: &Term) -> Result<AlignContentStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid align_content style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "normal" => Ok(AlignContentStyle::Normal),
+        "start" => Ok(AlignContentStyle::Start),
+        "end" => Ok(AlignContentStyle::End),
+        "center" => Ok(AlignContentStyle::Center),
+        "between" => Ok(AlignContentStyle::Between),
+        "around" => Ok(AlignContentStyle::Around),
+        "evenly" => Ok(AlignContentStyle::Evenly),
+        "stretch" => Ok(AlignContentStyle::Stretch),
+        other => Err(format!("invalid align_content style: {other}")),
     }
 }
 

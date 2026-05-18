@@ -27,6 +27,12 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "text_color"))
     assert Enum.any?(operations, &(&1["name"] == "border_color"))
     assert Enum.any?(operations, &(&1["name"] == "shadow"))
+    assert Enum.any?(operations, &(&1["name"] == "flex_direction"))
+    assert Enum.any?(operations, &(&1["name"] == "flex_wrap"))
+    assert Enum.any?(operations, &(&1["name"] == "flex_item"))
+    assert Enum.any?(operations, &(&1["name"] == "align_items"))
+    assert Enum.any?(operations, &(&1["name"] == "justify_content"))
+    assert Enum.any?(operations, &(&1["name"] == "align_content"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -102,5 +108,18 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.shadow_md() == {:shadow, :md}
     assert Guppy.Style.shadow_2xs() == {:shadow, :"2xs"}
     assert Guppy.Style.shadow_none() == {:shadow, :none}
+
+    assert Guppy.Style.flex_direction(:column) == {:flex_direction, :column}
+    assert Guppy.Style.flex_col() == {:flex_direction, :column}
+    assert Guppy.Style.flex_row_reverse() == {:flex_direction, :row_reverse}
+    assert Guppy.Style.flex_wrap(:wrap) == {:flex_wrap, :wrap}
+    assert Guppy.Style.flex_wrap() == {:flex_wrap, :wrap}
+    assert Guppy.Style.flex_nowrap() == {:flex_wrap, :nowrap}
+    assert Guppy.Style.flex_item(:one) == {:flex_item, :one}
+    assert Guppy.Style.flex_1() == {:flex_item, :one}
+    assert Guppy.Style.flex_initial() == {:flex_item, :initial}
+    assert Guppy.Style.items_baseline() == {:align_items, :baseline}
+    assert Guppy.Style.justify_between() == {:justify_content, :between}
+    assert Guppy.Style.content_evenly() == {:align_content, :evenly}
   end
 end

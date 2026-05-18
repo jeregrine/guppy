@@ -1,7 +1,8 @@
 use crate::ir::{
-    BorderLineStyle, BorderRadiusAxis, ColorToken, DisplayStyle, DivStyle, LinearGradientStop,
-    MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis, StyleColor,
-    StyleLength, StyleOp, VisibilityStyle,
+    AlignContentStyle, AlignItemsStyle, BorderLineStyle, BorderRadiusAxis, ColorToken,
+    DisplayStyle, DivStyle, FlexDirectionStyle, FlexItemStyle, FlexWrapStyle, JustifyContentStyle,
+    LinearGradientStop, MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis,
+    StyleColor, StyleLength, StyleOp, VisibilityStyle,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -134,6 +135,12 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::Inset { .. }
         | StyleOp::Display(_)
         | StyleOp::Overflow { .. }
+        | StyleOp::FlexDirection(_)
+        | StyleOp::FlexWrapValue(_)
+        | StyleOp::FlexItem(_)
+        | StyleOp::AlignItems(_)
+        | StyleOp::JustifyContent(_)
+        | StyleOp::AlignContent(_)
         | StyleOp::GridCols(_)
         | StyleOp::GridRows(_)
         | StyleOp::ColSpan(_)
@@ -433,6 +440,12 @@ where
         StyleOp::BorderRadius { axis, length } => apply_border_radius(element, *axis, *length),
         StyleOp::BorderStyle(border_style) => apply_border_style(element, *border_style),
         StyleOp::Shadow(shadow) => apply_shadow(element, *shadow),
+        StyleOp::FlexDirection(direction) => apply_flex_direction(element, *direction),
+        StyleOp::FlexWrapValue(wrap) => apply_flex_wrap(element, *wrap),
+        StyleOp::FlexItem(item) => apply_flex_item(element, *item),
+        StyleOp::AlignItems(align) => apply_align_items(element, *align),
+        StyleOp::JustifyContent(justify) => apply_justify_content(element, *justify),
+        StyleOp::AlignContent(align) => apply_align_content(element, *align),
         _ => element,
     }
 }
@@ -706,6 +719,85 @@ where
     }
 }
 
+fn apply_flex_direction<E>(element: E, direction: FlexDirectionStyle) -> E
+where
+    E: Styled,
+{
+    match direction {
+        FlexDirectionStyle::Column => element.flex_col(),
+        FlexDirectionStyle::ColumnReverse => element.flex_col_reverse(),
+        FlexDirectionStyle::Row => element.flex_row(),
+        FlexDirectionStyle::RowReverse => element.flex_row_reverse(),
+    }
+}
+
+fn apply_flex_wrap<E>(element: E, wrap: FlexWrapStyle) -> E
+where
+    E: Styled,
+{
+    match wrap {
+        FlexWrapStyle::Wrap => element.flex_wrap(),
+        FlexWrapStyle::WrapReverse => element.flex_wrap_reverse(),
+        FlexWrapStyle::NoWrap => element.flex_nowrap(),
+    }
+}
+
+fn apply_flex_item<E>(element: E, item: FlexItemStyle) -> E
+where
+    E: Styled,
+{
+    match item {
+        FlexItemStyle::One => element.flex_1(),
+        FlexItemStyle::Auto => element.flex_auto(),
+        FlexItemStyle::Initial => element.flex_initial(),
+        FlexItemStyle::None => element.flex_none(),
+        FlexItemStyle::Grow => element.flex_grow(),
+        FlexItemStyle::Shrink => element.flex_shrink(),
+        FlexItemStyle::Shrink0 => element.flex_shrink_0(),
+    }
+}
+
+fn apply_align_items<E>(element: E, align: AlignItemsStyle) -> E
+where
+    E: Styled,
+{
+    match align {
+        AlignItemsStyle::Start => element.items_start(),
+        AlignItemsStyle::End => element.items_end(),
+        AlignItemsStyle::Center => element.items_center(),
+        AlignItemsStyle::Baseline => element.items_baseline(),
+    }
+}
+
+fn apply_justify_content<E>(element: E, justify: JustifyContentStyle) -> E
+where
+    E: Styled,
+{
+    match justify {
+        JustifyContentStyle::Start => element.justify_start(),
+        JustifyContentStyle::End => element.justify_end(),
+        JustifyContentStyle::Center => element.justify_center(),
+        JustifyContentStyle::Between => element.justify_between(),
+        JustifyContentStyle::Around => element.justify_around(),
+    }
+}
+
+fn apply_align_content<E>(element: E, align: AlignContentStyle) -> E
+where
+    E: Styled,
+{
+    match align {
+        AlignContentStyle::Normal => element.content_normal(),
+        AlignContentStyle::Start => element.content_start(),
+        AlignContentStyle::End => element.content_end(),
+        AlignContentStyle::Center => element.content_center(),
+        AlignContentStyle::Between => element.content_between(),
+        AlignContentStyle::Around => element.content_around(),
+        AlignContentStyle::Evenly => element.content_evenly(),
+        AlignContentStyle::Stretch => element.content_stretch(),
+    }
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
@@ -913,6 +1005,28 @@ mod tests {
 
         let style = apply_shadow(StyleRefinement::default(), ShadowStyle::None);
         assert_eq!(style.box_shadow, Some(vec![]));
+
+        let style =
+            apply_flex_direction(StyleRefinement::default(), FlexDirectionStyle::RowReverse);
+        assert_eq!(style.flex_direction, Some(gpui::FlexDirection::RowReverse));
+
+        let style = apply_flex_wrap(StyleRefinement::default(), FlexWrapStyle::NoWrap);
+        assert_eq!(style.flex_wrap, Some(gpui::FlexWrap::NoWrap));
+
+        let style = apply_flex_item(StyleRefinement::default(), FlexItemStyle::Shrink0);
+        assert_eq!(style.flex_shrink, Some(0.0));
+
+        let style = apply_align_items(StyleRefinement::default(), AlignItemsStyle::Baseline);
+        assert_eq!(style.align_items, Some(gpui::AlignItems::Baseline));
+
+        let style = apply_justify_content(StyleRefinement::default(), JustifyContentStyle::Around);
+        assert_eq!(
+            style.justify_content,
+            Some(gpui::JustifyContent::SpaceAround)
+        );
+
+        let style = apply_align_content(StyleRefinement::default(), AlignContentStyle::Evenly);
+        assert_eq!(style.align_content, Some(gpui::AlignContent::SpaceEvenly));
     }
 
     #[test]

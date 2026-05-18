@@ -192,6 +192,13 @@ defmodule Guppy.IR do
           | {:border_radius, border_radius_axis(), {:px | :rem, number()}}
           | {:border_style, :solid | :dashed}
           | {:shadow, :none | :"2xs" | :xs | :sm | :md | :lg | :xl | :"2xl"}
+          | {:flex_direction, :column | :column_reverse | :row | :row_reverse}
+          | {:flex_wrap, :wrap | :wrap_reverse | :nowrap}
+          | {:flex_item, :one | :auto | :initial | :none | :grow | :shrink | :shrink_0}
+          | {:align_items, :start | :end | :center | :baseline}
+          | {:justify_content, :start | :end | :center | :between | :around}
+          | {:align_content,
+             :normal | :start | :end | :center | :between | :around | :evenly | :stretch}
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
@@ -874,6 +881,21 @@ defmodule Guppy.IR do
   @overflow_value_tokens [:hidden, :scroll]
   @border_style_value_tokens [:solid, :dashed]
   @shadow_value_tokens [:none, :"2xs", :xs, :sm, :md, :lg, :xl, :"2xl"]
+  @flex_direction_value_tokens [:column, :column_reverse, :row, :row_reverse]
+  @flex_wrap_value_tokens [:wrap, :wrap_reverse, :nowrap]
+  @flex_item_value_tokens [:one, :auto, :initial, :none, :grow, :shrink, :shrink_0]
+  @align_items_value_tokens [:start, :end, :center, :baseline]
+  @justify_content_value_tokens [:start, :end, :center, :between, :around]
+  @align_content_value_tokens [
+    :normal,
+    :start,
+    :end,
+    :center,
+    :between,
+    :around,
+    :evenly,
+    :stretch
+  ]
 
   @cursor_value_tokens [
     :default,
@@ -2671,6 +2693,22 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:border_style, value}) when value in @border_style_value_tokens, do: :ok
   defp validate_style_op({:shadow, value}) when value in @shadow_value_tokens, do: :ok
+
+  defp validate_style_op({:flex_direction, value})
+       when value in @flex_direction_value_tokens,
+       do: :ok
+
+  defp validate_style_op({:flex_wrap, value}) when value in @flex_wrap_value_tokens, do: :ok
+  defp validate_style_op({:flex_item, value}) when value in @flex_item_value_tokens, do: :ok
+  defp validate_style_op({:align_items, value}) when value in @align_items_value_tokens, do: :ok
+
+  defp validate_style_op({:justify_content, value})
+       when value in @justify_content_value_tokens,
+       do: :ok
+
+  defp validate_style_op({:align_content, value})
+       when value in @align_content_value_tokens,
+       do: :ok
 
   defp validate_style_op({key, value})
        when key in @color_style_value_tokens and value in @color_tokens,

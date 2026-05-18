@@ -31,7 +31,13 @@ defmodule Guppy.Style do
                        "bg",
                        "text_color",
                        "border_color",
-                       "shadow"
+                       "shadow",
+                       "flex_direction",
+                       "flex_wrap",
+                       "flex_item",
+                       "align_items",
+                       "justify_content",
+                       "align_content"
                      ]
                    end)
 
