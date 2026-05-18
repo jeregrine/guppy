@@ -26,6 +26,9 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "bg"))
     assert Enum.any?(operations, &(&1["name"] == "text_color"))
     assert Enum.any?(operations, &(&1["name"] == "border_color"))
+    assert Enum.any?(operations, &(&1["name"] == "bg_hex"))
+    assert Enum.any?(operations, &(&1["name"] == "text_color_hex"))
+    assert Enum.any?(operations, &(&1["name"] == "border_color_hex"))
     assert Enum.any?(operations, &(&1["name"] == "shadow"))
     assert Enum.any?(operations, &(&1["name"] == "flex_direction"))
     assert Enum.any?(operations, &(&1["name"] == "flex_wrap"))
@@ -117,6 +120,9 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.text_color_white() == {:text_color, :white}
     assert Guppy.Style.border_color(:yellow) == {:border_color, :yellow}
     assert Guppy.Style.border_color_black() == {:border_color, :black}
+    assert Guppy.Style.bg_hex("#0f172a") == {:bg_hex, "#0f172a"}
+    assert Guppy.Style.text_color_hex("445566") == {:text_color_hex, "445566"}
+    assert Guppy.Style.border_color_hex("#abcdef") == {:border_color_hex, "#abcdef"}
 
     assert Guppy.Style.shadow(:md) == {:shadow, :md}
     assert Guppy.Style.shadow_md() == {:shadow, :md}
@@ -176,5 +182,17 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.class_token_to_image_option("grayscale") == {:ok, {:grayscale, true}}
     assert Guppy.Style.class_token_to_image_option("grayscale-0") == {:ok, {:grayscale, false}}
     assert Guppy.Style.class_token_to_image_option("p-2") == :error
+  end
+
+  test "hex color classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("bg-[#0f172a]") == {:ok, {:bg_hex, "#0f172a"}}
+
+    assert Guppy.Style.class_token_to_style("text-[#445566]") ==
+             {:ok, {:text_color_hex, "#445566"}}
+
+    assert Guppy.Style.class_token_to_style("border-[#abcdef]") ==
+             {:ok, {:border_color_hex, "#abcdef"}}
+
+    assert Guppy.Style.class_token_to_style("bg-[#12]") == :error
   end
 end

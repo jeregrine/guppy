@@ -72,6 +72,14 @@ defmodule Guppy.Style do
                              operation["name"] in ["object_fit", "grayscale"]
                            end)
 
+  @hex_color_operations Enum.filter(@catalog["operations"], fn operation ->
+                          operation["name"] in [
+                            "bg_hex",
+                            "text_color_hex",
+                            "border_color_hex"
+                          ]
+                        end)
+
   @style_operations @axis_operations ++ @length_operations
 
   @enum_config Map.new(@enum_operations, fn operation ->
@@ -123,6 +131,10 @@ defmodule Guppy.Style do
                                end)
                              end)
                              |> Map.new()
+
+  @hex_color_class_prefixes Map.new(@hex_color_operations, fn operation ->
+                              {operation["class_prefix"], String.to_atom(operation["name"])}
+                            end)
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -299,6 +311,13 @@ defmodule Guppy.Style do
     def unquote(function)(), do: {unquote(operation_name), unquote(value)}
   end
 
+  for operation <- @hex_color_operations do
+    operation_name = String.to_atom(operation["name"])
+
+    @doc "Returns a canonical #{operation_name} hex color tuple."
+    def unquote(operation_name)(value), do: {unquote(operation_name), normalize_hex_color!(value)}
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -381,7 +400,8 @@ defmodule Guppy.Style do
   def class_token_to_style(token) when is_binary(token) do
     with :error <- parse_enum_class(token),
          :error <- parse_overflow_class(token),
-         :error <- parse_integer_class(token) do
+         :error <- parse_integer_class(token),
+         :error <- parse_hex_color_class(token) do
       parse_box_class(token)
     end
   end
@@ -429,6 +449,16 @@ defmodule Guppy.Style do
           false
       end
     end)
+  end
+
+  defp parse_hex_color_class(token) do
+    with [prefix, hex] <-
+           Regex.run(~r/^([a-z-]+)-\[(#[0-9A-Fa-f]{6})\]$/, token, capture: :all_but_first),
+         {:ok, operation} <- Map.fetch(@hex_color_class_prefixes, prefix) do
+      {:ok, {operation, hex}}
+    else
+      _ -> :error
+    end
   end
 
   defp parse_box_class(token) do
@@ -632,6 +662,17 @@ defmodule Guppy.Style do
       raise ArgumentError, "style length unit is not allowed here: #{inspect(length)}"
     end
   end
+
+  defp normalize_hex_color!(value) when is_binary(value) do
+    if Regex.match?(~r/^#?[0-9A-Fa-f]{6}$/, value) do
+      value
+    else
+      raise ArgumentError, "invalid hex color: #{inspect(value)}"
+    end
+  end
+
+  defp normalize_hex_color!(value),
+    do: raise(ArgumentError, "invalid hex color: #{inspect(value)}")
 
   defp maybe_negate_length!(length, false, _spec_or_allow_negative), do: length
 

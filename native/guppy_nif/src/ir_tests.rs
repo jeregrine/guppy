@@ -1351,6 +1351,11 @@ fn native_style_catalog_loads() {
     assert!(
         operations
             .iter()
+            .any(|operation| operation["name"] == "bg_hex")
+    );
+    assert!(
+        operations
+            .iter()
             .any(|operation| operation["name"] == "shadow")
     );
     assert!(

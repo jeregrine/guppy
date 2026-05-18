@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-text-grid-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, flex/alignment, core text/font, grid count/span helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-shadow-flex-text-grid-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named and hex background/text/border colors, box shadows, flex/alignment, core text/font, grid count/span helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1999,6 +1999,60 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled border_color"
+    },
+    {
+      "name": "bg_hex",
+      "tuple_schema": [
+        "bg_hex",
+        "hex_color"
+      ],
+      "class_pattern": "bg-[#RRGGBB]",
+      "class_prefix": "bg",
+      "helpers": [
+        {
+          "name": "bg_hex",
+          "kind": "exact"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled bg hex"
+    },
+    {
+      "name": "text_color_hex",
+      "tuple_schema": [
+        "text_color_hex",
+        "hex_color"
+      ],
+      "class_pattern": "text-[#RRGGBB]",
+      "class_prefix": "text",
+      "helpers": [
+        {
+          "name": "text_color_hex",
+          "kind": "exact"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_color hex"
+    },
+    {
+      "name": "border_color_hex",
+      "tuple_schema": [
+        "border_color_hex",
+        "hex_color"
+      ],
+      "class_pattern": "border-[#RRGGBB]",
+      "class_prefix": "border",
+      "helpers": [
+        {
+          "name": "border_color_hex",
+          "kind": "exact"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled border_color hex"
     },
     {
       "name": "shadow",
