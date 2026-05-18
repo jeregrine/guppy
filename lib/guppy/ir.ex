@@ -158,8 +158,12 @@ defmodule Guppy.IR do
           | :overflow_x_hidden
           | :overflow_y_hidden
 
+  @type style_length :: {:px, number()} | {:rem, number()} | {:fraction, number()}
+  @type style_axis :: :all | :x | :y | :top | :right | :bottom | :left
+
   @type style_value ::
-          {:bg, color_token()}
+          {:padding, style_axis(), style_length()}
+          | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:border_color, color_token()}
           | {:bg_hex, String.t()}
@@ -821,6 +825,7 @@ defmodule Guppy.IR do
     :overflow_y_hidden
   ]
 
+  @style_axis_tokens [:all, :x, :y, :top, :right, :bottom, :left]
   @color_style_value_tokens [:bg, :text_color, :border_color]
   @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
@@ -2512,6 +2517,14 @@ defmodule Guppy.IR do
 
   defp validate_style_op(op) when op in @style_flag_tokens, do: :ok
 
+  defp validate_style_op({:padding, axis, length} = op) when axis in @style_axis_tokens do
+    if valid_non_negative_definite_length?(length) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
   defp validate_style_op({key, value})
        when key in @color_style_value_tokens and value in @color_tokens,
        do: :ok
@@ -2552,6 +2565,12 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
+
+  defp valid_non_negative_definite_length?({unit, value})
+       when unit in [:px, :rem, :fraction] and is_non_neg_native_f32_number(value),
+       do: true
+
+  defp valid_non_negative_definite_length?(_length), do: false
 
   defp valid_linear_gradient_options?(options) when is_list(options) do
     if Keyword.keyword?(options) do

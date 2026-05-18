@@ -298,7 +298,7 @@ defmodule Guppy.Component do
   def class_to_style!(value) when is_binary(value) do
     value
     |> String.split(~r/\s+/, trim: true)
-    |> Enum.map(&class_token_to_style!/1)
+    |> Enum.flat_map(fn token -> List.wrap(class_token_to_style!(token)) end)
   end
 
   def class_to_style!(other) do
@@ -322,6 +322,9 @@ defmodule Guppy.Component do
 
   defp class_token_to_style!(token) do
     cond do
+      catalog_style = parse_catalog_style(token) ->
+        catalog_style
+
       gradient_style = parse_linear_gradient_style(token) ->
         gradient_style
 
@@ -345,6 +348,13 @@ defmodule Guppy.Component do
 
       true ->
         raise ArgumentError, "unsupported Guppy class token: #{inspect(token)}"
+    end
+  end
+
+  defp parse_catalog_style(token) do
+    case Guppy.Style.class_token_to_style(token) do
+      {:ok, style} -> style
+      :error -> nil
     end
   end
 

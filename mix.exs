@@ -30,6 +30,7 @@ defmodule Guppy.MixProject do
       files:
         [
           "lib",
+          "data",
           "mix.exs",
           "README.md",
           "LICENSE",

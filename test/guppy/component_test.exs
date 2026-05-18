@@ -30,9 +30,34 @@ defmodule Guppy.ComponentTest do
         style: [{:w_px, 10}]
       })
 
-    assert ir.style == [:p_2, {:text_color, :white}, {:bg_hex, "#0f172a"}, {:w_px, 10}]
+    assert ir.style == [
+             {:padding, :all, {:rem, 0.5}},
+             {:text_color, :white},
+             {:bg_hex, "#0f172a"},
+             {:w_px, 10}
+           ]
+
     assert :ok = Guppy.IR.validate(ir)
-    assert Guppy.Component.merge_styles(nil, "p-2 text-white") == [:p_2, {:text_color, :white}]
+
+    assert Guppy.Component.merge_styles(nil, "p-2 text-white") == [
+             {:padding, :all, {:rem, 0.5}},
+             {:text_color, :white}
+           ]
+  end
+
+  test "Guppy.Component parses catalog-backed padding classes into canonical tuple styles" do
+    assert Guppy.Component.class_to_style!("py-1 px-1 p-0.5 p-0p5 p-[6px]") == [
+             {:padding, :y, {:rem, 0.25}},
+             {:padding, :x, {:rem, 0.25}},
+             {:padding, :all, {:rem, 0.125}},
+             {:padding, :all, {:rem, 0.125}},
+             {:padding, :all, {:px, 6}}
+           ]
+
+    assert :ok =
+             Guppy.IR.validate(
+               Guppy.IR.div([], style: Guppy.Component.class_to_style!("py-1 px-[2rem]"))
+             )
   end
 
   test "Guppy.Component compiles ~GUI templates into valid IR" do
@@ -190,14 +215,14 @@ defmodule Guppy.ComponentTest do
     assert uniform_list.id == "virtual_items"
     assert Enum.map(uniform_list.items, & &1.id) == ["uniform_1", "uniform_2"]
     assert {:h_px, 120} in uniform_list.style
-    assert :p_2 in uniform_list.item_style
+    assert {:padding, :all, {:rem, 0.5}} in uniform_list.item_style
     assert uniform_list.events == %{click: "uniform_item_clicked"}
 
     assert list.kind == :list
     assert list.id == "generic_items"
     assert Enum.map(list.items, & &1.id) == ["generic_1", "generic_2"]
     assert {:h_px, 140} in list.style
-    assert :p_2 in list.item_style
+    assert {:padding, :all, {:rem, 0.5}} in list.item_style
     assert list.events == %{click: "generic_item_clicked"}
 
     assert data_table.kind == :data_table
@@ -239,7 +264,7 @@ defmodule Guppy.ComponentTest do
     assert popover.snap_margin == 12
     assert popover.close_on_click_outside == false
     assert popover.stack_priority == 2
-    assert :p_4 in popover.popover_style
+    assert {:padding, :all, {:rem, 1}} in popover.popover_style
     assert [%{kind: :text, content: "Popover content"}] = popover.children
 
     assert select.kind == :select
@@ -256,8 +281,8 @@ defmodule Guppy.ComponentTest do
            }
 
     assert {:w_px, 240} in select.style
-    assert :p_1 in select.list_style
-    assert :p_2 in select.option_style
+    assert {:padding, :all, {:rem, 0.25}} in select.list_style
+    assert {:padding, :all, {:rem, 0.5}} in select.option_style
 
     assert text_input.kind == :text_input
     assert text_input.id == "name_input"

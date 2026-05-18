@@ -276,13 +276,13 @@ Supported options match the `gpui = 0.2.2` surface Guppy uses:
 
 ## Styling
 
-Styles are ordered lists of style ops, these follow the tailwind inspired styles of gpui-rs!
+Styles are ordered lists of style ops, these follow the tailwind inspired styles of gpui-rs. The style-surface parity pass is moving new surface area to property-first canonical tuples generated from `data/gpui_style_catalog.json`.
 
 ```elixir
-style: [:flex, :flex_col, :p_4, {:bg, :gray}, {:bg, :blue}]
+style: [:flex, :flex_col, Guppy.Style.p(4), {:padding, :y, {:rem, 0.25}}, {:bg, :gray}, {:bg, :blue}]
 ```
 
-Later ops win over earlier ones, and order is preserved through the bridge. In `~GUI` templates, `class` may be a string or a dynamic list of strings; `nil` and `false` list entries are ignored. Raw `style` lists remain style ops, while `style={"p-2 text-white"}` is intentionally accepted as the same class-token shorthand used by `class`.
+Padding helpers and classes already use canonical tuple ops: `Guppy.Style.py(1)` and template `class="py-1"` both produce `{:padding, :y, {:rem, 0.25}}`. Later ops win over earlier ones, and order is preserved through the bridge. In `~GUI` templates, `class` may be a string or a dynamic list of strings; `nil` and `false` list entries are ignored. Raw `style` lists remain style ops, while `style={"p-2 text-white"}` is intentionally accepted as the same class-token shorthand used by `class`.
 
 Stateful style lists are explicit:
 

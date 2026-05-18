@@ -1,8 +1,8 @@
 use super::{
     CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode, ImageObjectFit, ImageSource,
-    IrNode, LinearGradientStop, StyleColor, StyleOp, decode_list_row_child_term,
-    ensure_unique_list_row_control_ids, field_key, get_optional_integer_field,
-    get_optional_usize_field, parse_positive_u32, parse_style_op,
+    IrNode, LinearGradientStop, StyleAxis, StyleColor, StyleLength, StyleOp,
+    decode_list_row_child_term, ensure_unique_list_row_control_ids, field_key,
+    get_optional_integer_field, get_optional_usize_field, parse_positive_u32, parse_style_op,
 };
 use crate::ir_allowed::{allowed_node_event_fields, allowed_node_fields};
 use eetf::{Atom, BigInteger, Binary, FixInteger, Float, List, Map, Term, Tuple};
@@ -1022,6 +1022,60 @@ fn list_row_control_ids_are_unique_within_a_row() {
 
     let err = ensure_unique_list_row_control_ids(&children).unwrap_err();
     assert!(err.contains("duplicate list row control id: done"));
+}
+
+#[test]
+fn parses_canonical_padding_style_op() {
+    let term = tuple(vec![
+        atom("padding"),
+        atom("y"),
+        tuple(vec![atom("rem"), float(0.25)]),
+    ]);
+
+    assert_eq!(
+        parse_style_op(&term).unwrap(),
+        StyleOp::Padding {
+            axis: StyleAxis::Y,
+            length: StyleLength::Rem(0.25),
+        }
+    );
+}
+
+#[test]
+fn rejects_invalid_canonical_padding_style_op() {
+    for term in [
+        tuple(vec![
+            atom("padding"),
+            atom("inline"),
+            tuple(vec![atom("rem"), float(0.25)]),
+        ]),
+        tuple(vec![
+            atom("padding"),
+            atom("all"),
+            tuple(vec![atom("px"), integer(-1)]),
+        ]),
+    ] {
+        let err = parse_style_op(&term).unwrap_err();
+        assert!(
+            err.contains("padding") || err.contains("length"),
+            "unexpected error: {err}"
+        );
+    }
+}
+
+#[test]
+fn native_style_catalog_loads() {
+    let catalog: serde_json::Value =
+        serde_json::from_str(include_str!("../../../data/gpui_style_catalog.json")).unwrap();
+
+    assert_eq!(catalog["gpui_version"], "0.2.2");
+    assert!(
+        catalog["operations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|operation| { operation["name"] == "padding" })
+    );
 }
 
 #[test]

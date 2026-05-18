@@ -244,6 +244,24 @@ pub struct ShortcutBinding {
     pub parsed: KeybindingKeystroke,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StyleAxis {
+    All,
+    X,
+    Y,
+    Top,
+    Right,
+    Bottom,
+    Left,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum StyleLength {
+    Px(f32),
+    Rem(f32),
+    Fraction(f32),
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -376,6 +394,10 @@ pub enum StyleOp {
     OverflowHidden,
     OverflowXHidden,
     OverflowYHidden,
+    Padding {
+        axis: StyleAxis,
+        length: StyleLength,
+    },
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2523,6 +2545,20 @@ fn get_style_list_field(map: &HashMap<Term, Term>, key: &str) -> Result<DivStyle
 fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
     match term {
         Term::Atom(atom) => parse_style_flag(&atom.name),
+        Term::Tuple(Tuple { elements }) if elements.len() == 3 => {
+            let key = match &elements[0] {
+                Term::Atom(atom) => atom.name.as_str(),
+                other => return Err(format!("expected style tuple key atom, got {other}")),
+            };
+
+            match key {
+                "padding" => Ok(StyleOp::Padding {
+                    axis: parse_style_axis(&elements[1], "padding")?,
+                    length: parse_non_negative_style_length(&elements[2], "padding")?,
+                }),
+                other => Err(format!("unsupported style tuple key: {other}")),
+            }
+        }
         Term::Tuple(Tuple { elements }) if elements.len() == 2 => {
             let key = match &elements[0] {
                 Term::Atom(atom) => atom.name.as_str(),
@@ -2866,6 +2902,47 @@ fn is_hex_color(value: &str, require_hash: bool) -> bool {
     (!require_hash || value.starts_with('#'))
         && normalized.len() == 6
         && normalized.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn parse_style_axis(term: &Term, key: &str) -> Result<StyleAxis, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "all" => Ok(StyleAxis::All),
+        Term::Atom(atom) if atom.name == "x" => Ok(StyleAxis::X),
+        Term::Atom(atom) if atom.name == "y" => Ok(StyleAxis::Y),
+        Term::Atom(atom) if atom.name == "top" => Ok(StyleAxis::Top),
+        Term::Atom(atom) if atom.name == "right" => Ok(StyleAxis::Right),
+        Term::Atom(atom) if atom.name == "bottom" => Ok(StyleAxis::Bottom),
+        Term::Atom(atom) if atom.name == "left" => Ok(StyleAxis::Left),
+        other => Err(format!("invalid {key} axis: {other}")),
+    }
+}
+
+fn parse_non_negative_style_length(term: &Term, key: &str) -> Result<StyleLength, String> {
+    match term {
+        Term::Tuple(Tuple { elements }) if elements.len() == 2 => {
+            let unit = match &elements[0] {
+                Term::Atom(atom) => atom.name.as_str(),
+                other => return Err(format!("expected {key} length unit atom, got {other}")),
+            };
+
+            match unit {
+                "px" => Ok(StyleLength::Px(parse_non_negative_style_f32(
+                    &elements[1],
+                    key,
+                )?)),
+                "rem" => Ok(StyleLength::Rem(parse_non_negative_style_f32(
+                    &elements[1],
+                    key,
+                )?)),
+                "fraction" => Ok(StyleLength::Fraction(parse_non_negative_style_f32(
+                    &elements[1],
+                    key,
+                )?)),
+                other => Err(format!("invalid {key} length unit: {other}")),
+            }
+        }
+        other => Err(format!("expected {key} length tuple, got {other}")),
+    }
 }
 
 fn parse_unit_style_f32(term: &Term, key: &str) -> Result<f32, String> {

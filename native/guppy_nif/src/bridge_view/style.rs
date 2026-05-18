@@ -1,8 +1,10 @@
-use crate::ir::{ColorToken, DivStyle, LinearGradientStop, StyleColor, StyleOp};
+use crate::ir::{
+    ColorToken, DivStyle, LinearGradientStop, StyleAxis, StyleColor, StyleLength, StyleOp,
+};
 use gpui::{
-    FontStyle, FontWeight, HighlightStyle, StatefulInteractiveElement, StrikethroughStyle,
-    StyleRefinement, Styled, UnderlineStyle, linear_color_stop, linear_gradient, px, relative,
-    rems, rgb,
+    DefiniteLength, FontStyle, FontWeight, HighlightStyle, StatefulInteractiveElement,
+    StrikethroughStyle, StyleRefinement, Styled, UnderlineStyle, linear_color_stop,
+    linear_gradient, px, relative, rems, rgb,
 };
 
 pub(crate) fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
@@ -105,6 +107,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::OverflowHidden
         | StyleOp::OverflowXHidden
         | StyleOp::OverflowYHidden
+        | StyleOp::Padding { .. }
         | StyleOp::GridCols(_)
         | StyleOp::GridRows(_)
         | StyleOp::ColSpan(_)
@@ -362,7 +365,33 @@ where
         StyleOp::RowSpan(value) => element.row_span(*value),
         StyleOp::ScrollbarWidthPx(value) => element.scrollbar_width(px(*value)),
         StyleOp::ScrollbarWidthRem(value) => element.scrollbar_width(rems(*value)),
+        StyleOp::Padding { axis, length } => apply_padding(element, *axis, *length),
         _ => element,
+    }
+}
+
+fn apply_padding<E>(element: E, axis: StyleAxis, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    let length = style_length_to_definite(length);
+
+    match axis {
+        StyleAxis::All => element.p(length),
+        StyleAxis::X => element.px(length),
+        StyleAxis::Y => element.py(length),
+        StyleAxis::Top => element.pt(length),
+        StyleAxis::Right => element.pr(length),
+        StyleAxis::Bottom => element.pb(length),
+        StyleAxis::Left => element.pl(length),
+    }
+}
+
+fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
+    match length {
+        StyleLength::Px(value) => px(value).into(),
+        StyleLength::Rem(value) => rems(value).into(),
+        StyleLength::Fraction(value) => relative(value),
     }
 }
 
@@ -454,6 +483,20 @@ mod tests {
     use super::*;
     use crate::ir::{LinearGradientStop, StyleColor};
     use gpui::{Fill, StyleRefinement, linear_color_stop, linear_gradient};
+
+    #[test]
+    fn applies_canonical_padding_to_style_refinement() {
+        let style = apply_padding(
+            StyleRefinement::default(),
+            StyleAxis::Y,
+            StyleLength::Rem(0.25),
+        );
+
+        assert_eq!(style.padding.top, Some(DefiniteLength::from(rems(0.25))));
+        assert_eq!(style.padding.bottom, Some(DefiniteLength::from(rems(0.25))));
+        assert_eq!(style.padding.left, None);
+        assert_eq!(style.padding.right, None);
+    }
 
     #[test]
     fn applies_bg_linear_gradient_to_refinement_background() {

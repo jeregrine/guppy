@@ -154,6 +154,27 @@ defmodule Guppy.IRTest do
              )
   end
 
+  test "ir validation accepts canonical padding style ops" do
+    style = [
+      {:padding, :all, {:rem, 0.5}},
+      {:padding, :x, {:px, 1}},
+      {:padding, :y, {:fraction, 0.25}},
+      {:padding, :top, {:px, 0}}
+    ]
+
+    assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: style))
+
+    for invalid <- [
+          {:padding, :inline, {:rem, 0.25}},
+          {:padding, :all, {:px, -1}},
+          {:padding, :all, :auto},
+          {:padding, :all, {:percent, 50}}
+        ] do
+      assert {:error, {:invalid_style_op, ^invalid}} =
+               Guppy.IR.validate(Guppy.IR.div([], style: [invalid]))
+    end
+  end
+
   test "ir validation accepts background linear gradient style ops" do
     gradient = {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}, to: {:blue, 1.0}]}
 
