@@ -187,7 +187,7 @@ defmodule Guppy.IR do
           | {:inset, :all | :top | :right | :bottom | :left, style_length() | :auto}
           | {:display, :block | :flex | :grid | :none}
           | {:visibility, :visible | :hidden}
-          | {:overflow, :all | :x | :y, :hidden | :scroll}
+          | {:overflow, :all | :x | :y, :visible | :clip | :hidden | :scroll}
           | {:cursor, atom()}
           | {:border_width, style_axis(), {:px | :rem, number()}}
           | {:border_radius, border_radius_axis(), {:px | :rem, number()}}
@@ -895,7 +895,7 @@ defmodule Guppy.IR do
   @position_value_tokens [:relative, :absolute]
   @display_value_tokens [:block, :flex, :grid, :none]
   @visibility_value_tokens [:visible, :hidden]
-  @overflow_value_tokens [:hidden, :scroll]
+  @overflow_value_tokens [:visible, :clip, :hidden, :scroll]
   @border_style_value_tokens [:solid, :dashed]
   @shadow_value_tokens [:none, :"2xs", :xs, :sm, :md, :lg, :xl, :"2xl"]
   @flex_direction_value_tokens [:column, :column_reverse, :row, :row_reverse]

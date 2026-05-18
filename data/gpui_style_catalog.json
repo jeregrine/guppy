@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-aspect-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-family-decoration-detail-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font family, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-aspect-position-overflow-visible-clip-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-family-decoration-detail-line-clamp-grid-placement-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font family, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1259,6 +1259,8 @@
         "value"
       ],
       "values": [
+        "visible",
+        "clip",
         "hidden",
         "scroll"
       ],
@@ -1298,6 +1300,30 @@
         "overflow-y-scroll": [
           "y",
           "scroll"
+        ],
+        "overflow-visible": [
+          "all",
+          "visible"
+        ],
+        "overflow-clip": [
+          "all",
+          "clip"
+        ],
+        "overflow-x-visible": [
+          "x",
+          "visible"
+        ],
+        "overflow-x-clip": [
+          "x",
+          "clip"
+        ],
+        "overflow-y-visible": [
+          "y",
+          "visible"
+        ],
+        "overflow-y-clip": [
+          "y",
+          "clip"
         ]
       },
       "helpers": [
@@ -1340,11 +1366,47 @@
           "kind": "value",
           "axis": "y",
           "value": "scroll"
+        },
+        {
+          "name": "overflow_visible",
+          "kind": "value",
+          "axis": "all",
+          "value": "visible"
+        },
+        {
+          "name": "overflow_clip",
+          "kind": "value",
+          "axis": "all",
+          "value": "clip"
+        },
+        {
+          "name": "overflow_x_visible",
+          "kind": "value",
+          "axis": "x",
+          "value": "visible"
+        },
+        {
+          "name": "overflow_x_clip",
+          "kind": "value",
+          "axis": "x",
+          "value": "clip"
+        },
+        {
+          "name": "overflow_y_visible",
+          "kind": "value",
+          "axis": "y",
+          "value": "visible"
+        },
+        {
+          "name": "overflow_y_clip",
+          "kind": "value",
+          "axis": "y",
+          "value": "clip"
         }
       ],
       "node_applicability": "all_nodes",
       "refinement_support": false,
-      "gpui_mapping": "Styled overflow helpers and div scroll overflow helpers"
+      "gpui_mapping": "GPUI Overflow enum visible/clip/hidden/scroll with all/x/y axis mapping"
     },
     {
       "name": "cursor",

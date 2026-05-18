@@ -115,7 +115,10 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.invisible() == {:visibility, :hidden}
     assert Guppy.Style.visible() == {:visibility, :visible}
     assert Guppy.Style.overflow(:x, :scroll) == {:overflow, :x, :scroll}
+    assert Guppy.Style.overflow(:y, :clip) == {:overflow, :y, :clip}
     assert Guppy.Style.overflow_hidden() == {:overflow, :all, :hidden}
+    assert Guppy.Style.overflow_visible() == {:overflow, :all, :visible}
+    assert Guppy.Style.overflow_x_clip() == {:overflow, :x, :clip}
 
     assert Guppy.Style.cursor(:pointer) == {:cursor, :pointer}
     assert Guppy.Style.cursor_pointer() == {:cursor, :pointer}
@@ -336,6 +339,13 @@ defmodule Guppy.StyleTest do
 
     assert Guppy.Style.class_token_to_style("justify-stretch") ==
              {:ok, {:justify_content, :stretch}}
+  end
+
+  test "overflow edge classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("overflow-visible") ==
+             {:ok, {:overflow, :all, :visible}}
+
+    assert Guppy.Style.class_token_to_style("overflow-x-clip") == {:ok, {:overflow, :x, :clip}}
   end
 
   test "flex grow and shrink classes normalize through the catalog parser" do

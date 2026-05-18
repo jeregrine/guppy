@@ -285,6 +285,8 @@ pub enum VisibilityStyle {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OverflowStyle {
+    Visible,
+    Clip,
     Hidden,
     Scroll,
 }
@@ -3416,6 +3418,8 @@ fn parse_visibility_style(term: &Term) -> Result<VisibilityStyle, String> {
 
 fn parse_overflow_style(term: &Term) -> Result<OverflowStyle, String> {
     match term {
+        Term::Atom(atom) if atom.name == "visible" => Ok(OverflowStyle::Visible),
+        Term::Atom(atom) if atom.name == "clip" => Ok(OverflowStyle::Clip),
         Term::Atom(atom) if atom.name == "hidden" => Ok(OverflowStyle::Hidden),
         Term::Atom(atom) if atom.name == "scroll" => Ok(OverflowStyle::Scroll),
         other => Err(format!("invalid overflow style: {other}")),

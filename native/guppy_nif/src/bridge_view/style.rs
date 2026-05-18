@@ -642,6 +642,8 @@ where
     E: Styled,
 {
     let overflow = match overflow {
+        OverflowStyle::Visible => gpui::Overflow::Visible,
+        OverflowStyle::Clip => gpui::Overflow::Clip,
         OverflowStyle::Hidden => gpui::Overflow::Hidden,
         OverflowStyle::Scroll => gpui::Overflow::Scroll,
     };
@@ -1272,6 +1274,21 @@ mod tests {
             OverflowStyle::Scroll,
         );
         assert_eq!(style.overflow.x, Some(gpui::Overflow::Scroll));
+
+        let style = apply_overflow(
+            StyleRefinement::default(),
+            StyleAxis::Y,
+            OverflowStyle::Clip,
+        );
+        assert_eq!(style.overflow.y, Some(gpui::Overflow::Clip));
+
+        let style = apply_overflow(
+            StyleRefinement::default(),
+            StyleAxis::All,
+            OverflowStyle::Visible,
+        );
+        assert_eq!(style.overflow.x, Some(gpui::Overflow::Visible));
+        assert_eq!(style.overflow.y, Some(gpui::Overflow::Visible));
 
         let style = apply_cursor(StyleRefinement::default(), MouseCursorStyle::NotAllowed);
         assert_eq!(

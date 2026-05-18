@@ -1114,6 +1114,20 @@ fn parses_canonical_box_spacing_style_ops() {
             behavior: super::OverflowStyle::Scroll,
         }
     );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("overflow"), atom("y"), atom("clip")])).unwrap(),
+        StyleOp::Overflow {
+            axis: StyleAxis::Y,
+            behavior: super::OverflowStyle::Clip,
+        }
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("overflow"), atom("all"), atom("visible")])).unwrap(),
+        StyleOp::Overflow {
+            axis: StyleAxis::All,
+            behavior: super::OverflowStyle::Visible,
+        }
+    );
 
     assert_eq!(
         parse_style_op(&tuple(vec![atom("cursor"), atom("not_allowed")])).unwrap(),
@@ -1314,7 +1328,7 @@ fn rejects_invalid_canonical_length_style_ops() {
         ]),
         tuple(vec![atom("display"), atom("inline")]),
         tuple(vec![atom("visibility"), atom("collapsed")]),
-        tuple(vec![atom("overflow"), atom("x"), atom("clip")]),
+        tuple(vec![atom("overflow"), atom("x"), atom("auto")]),
         tuple(vec![atom("cursor"), atom("bad")]),
         tuple(vec![
             atom("border_width"),
