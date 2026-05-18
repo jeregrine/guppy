@@ -61,7 +61,8 @@ defmodule Guppy.Style do
                          "min_width",
                          "min_height",
                          "max_width",
-                         "max_height"
+                         "max_height",
+                         "flex_basis"
                        ]
                      end)
 
@@ -782,6 +783,8 @@ defmodule Guppy.Style do
     end
   end
 
+  defp scale_token_to_style(_scale_token, %{allow_negative: false}, true), do: false
+
   defp scale_token_to_style(scale_token, spec, negated) do
     case catalog_scale_length(
            spec.operation,
@@ -794,6 +797,8 @@ defmodule Guppy.Style do
       :error -> false
     end
   end
+
+  defp arbitrary_length_to_style(_payload, %{allow_negative: false}, true), do: false
 
   defp arbitrary_length_to_style(payload, spec, negated) do
     case parse_arbitrary_length(payload, spec.allow_auto, spec.allow_negative, spec.length_units) do

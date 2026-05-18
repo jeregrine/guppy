@@ -859,6 +859,7 @@ defmodule Guppy.IRTest do
           {:col_end, :auto},
           {:row_start, -1},
           {:row_end, :auto},
+          {:flex_basis, {:fraction, 0.5}},
           {:w_px, 320},
           {:w_rem, 24.0},
           {:w_frac, 0.5},
@@ -1021,6 +1022,7 @@ defmodule Guppy.IRTest do
              {:col_end, :auto},
              {:row_start, -1},
              {:row_end, :auto},
+             {:flex_basis, {:fraction, 0.5}},
              {:w_px, 320},
              {:w_rem, 24.0},
              {:w_frac, 0.5},
@@ -1065,6 +1067,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:line_clamp, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:line_clamp, 0}]))
+
+    assert {:error, {:invalid_style_op, {:flex_basis, {:px, -1}}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:flex_basis, {:px, -1}}]))
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))

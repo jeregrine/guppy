@@ -195,6 +195,7 @@ defmodule Guppy.IR do
           | {:flex_direction, :column | :column_reverse | :row | :row_reverse}
           | {:flex_wrap, :wrap | :wrap_reverse | :nowrap}
           | {:flex_item, :one | :auto | :initial | :none | :grow | :shrink | :shrink_0}
+          | {:flex_basis, style_length() | :auto}
           | {:align_items, :start | :end | :center | :baseline}
           | {:justify_content, :start | :end | :center | :between | :around}
           | {:align_content,
@@ -2726,6 +2727,11 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:flex_wrap, value}) when value in @flex_wrap_value_tokens, do: :ok
   defp validate_style_op({:flex_item, value}) when value in @flex_item_value_tokens, do: :ok
+
+  defp validate_style_op({:flex_basis, value} = op) do
+    if valid_length?(value, false), do: :ok, else: {:error, {:invalid_style_op, op}}
+  end
+
   defp validate_style_op({:align_items, value}) when value in @align_items_value_tokens, do: :ok
 
   defp validate_style_op({:justify_content, value})

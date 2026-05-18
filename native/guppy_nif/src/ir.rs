@@ -645,6 +645,7 @@ pub enum StyleOp {
     FlexDirection(FlexDirectionStyle),
     FlexWrapValue(FlexWrapStyle),
     FlexItem(FlexItemStyle),
+    FlexBasis(StyleLength),
     AlignItems(AlignItemsStyle),
     JustifyContent(JustifyContentStyle),
     AlignContent(AlignContentStyle),
@@ -2912,6 +2913,12 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 )?)),
                 "flex_wrap" => Ok(StyleOp::FlexWrapValue(parse_flex_wrap_style(&elements[1])?)),
                 "flex_item" => Ok(StyleOp::FlexItem(parse_flex_item_style(&elements[1])?)),
+                "flex_basis" => Ok(StyleOp::FlexBasis(parse_style_length(
+                    &elements[1],
+                    "flex_basis",
+                    true,
+                    false,
+                )?)),
                 "align_items" => Ok(StyleOp::AlignItems(parse_align_items_style(&elements[1])?)),
                 "justify_content" => Ok(StyleOp::JustifyContent(parse_justify_content_style(
                     &elements[1],

@@ -140,6 +140,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::FlexDirection(_)
         | StyleOp::FlexWrapValue(_)
         | StyleOp::FlexItem(_)
+        | StyleOp::FlexBasis(_)
         | StyleOp::AlignItems(_)
         | StyleOp::JustifyContent(_)
         | StyleOp::AlignContent(_)
@@ -483,6 +484,7 @@ where
         StyleOp::FlexDirection(direction) => apply_flex_direction(element, *direction),
         StyleOp::FlexWrapValue(wrap) => apply_flex_wrap(element, *wrap),
         StyleOp::FlexItem(item) => apply_flex_item(element, *item),
+        StyleOp::FlexBasis(length) => element.flex_basis(style_length_to_length(*length)),
         StyleOp::AlignItems(align) => apply_align_items(element, *align),
         StyleOp::JustifyContent(justify) => apply_justify_content(element, *justify),
         StyleOp::AlignContent(align) => apply_align_content(element, *align),

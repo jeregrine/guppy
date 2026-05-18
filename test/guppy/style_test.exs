@@ -38,6 +38,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "flex_direction"))
     assert Enum.any?(operations, &(&1["name"] == "flex_wrap"))
     assert Enum.any?(operations, &(&1["name"] == "flex_item"))
+    assert Enum.any?(operations, &(&1["name"] == "flex_basis"))
     assert Enum.any?(operations, &(&1["name"] == "align_items"))
     assert Enum.any?(operations, &(&1["name"] == "justify_content"))
     assert Enum.any?(operations, &(&1["name"] == "align_content"))
@@ -160,6 +161,8 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.flex_item(:one) == {:flex_item, :one}
     assert Guppy.Style.flex_1() == {:flex_item, :one}
     assert Guppy.Style.flex_initial() == {:flex_item, :initial}
+    assert Guppy.Style.flex_basis(:auto) == {:flex_basis, :auto}
+    assert Guppy.Style.basis("1/2") == {:flex_basis, {:fraction, 0.5}}
     assert Guppy.Style.items_baseline() == {:align_items, :baseline}
     assert Guppy.Style.justify_between() == {:justify_content, :between}
     assert Guppy.Style.content_evenly() == {:align_content, :evenly}
@@ -266,5 +269,12 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.class_token_to_style("row-start-auto") == {:ok, {:row_start, :auto}}
     assert Guppy.Style.class_token_to_style("row-end-[-1]") == {:ok, {:row_end, -1}}
     assert Guppy.Style.class_token_to_style("col-start-[40000]") == :error
+  end
+
+  test "flex basis classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("basis-1/2") == {:ok, {:flex_basis, {:fraction, 0.5}}}
+    assert Guppy.Style.class_token_to_style("basis-[12px]") == {:ok, {:flex_basis, {:px, 12}}}
+    assert Guppy.Style.class_token_to_style("basis-auto") == {:ok, {:flex_basis, :auto}}
+    assert Guppy.Style.class_token_to_style("-basis-1") == :error
   end
 end

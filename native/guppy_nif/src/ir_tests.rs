@@ -1164,6 +1164,14 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::FlexItem(super::FlexItemStyle::Shrink0)
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("flex_basis"),
+            tuple(vec![atom("fraction"), float(0.5)]),
+        ]))
+        .unwrap(),
+        StyleOp::FlexBasis(StyleLength::Fraction(0.5))
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("align_items"), atom("baseline")])).unwrap(),
         StyleOp::AlignItems(super::AlignItemsStyle::Baseline)
     );
@@ -1401,6 +1409,11 @@ fn native_style_catalog_loads() {
     assert!(
         operations
             .iter()
+            .any(|operation| operation["name"] == "flex_basis")
+    );
+    assert!(
+        operations
+            .iter()
             .any(|operation| operation["name"] == "align_content")
     );
     assert!(
@@ -1531,6 +1544,10 @@ fn rejects_invalid_numeric_style_ops() {
         tuple(vec![atom("opacity"), float(1.5)]),
         tuple(vec![atom("line_clamp"), integer(0)]),
         tuple(vec![atom("col_start"), integer(40_000)]),
+        tuple(vec![
+            atom("flex_basis"),
+            tuple(vec![atom("px"), integer(-1)]),
+        ]),
         tuple(vec![atom("w_px"), integer(-1)]),
         tuple(vec![atom("w_frac"), float(1.2)]),
         tuple(vec![atom("scrollbar_width_px"), integer(-1)]),
