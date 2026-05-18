@@ -39,10 +39,31 @@ defmodule Guppy.ComponentTest do
 
     assert :ok = Guppy.IR.validate(ir)
 
-    assert Guppy.Component.merge_styles(nil, "p-2 text-white") == [
-             {:padding, :all, {:rem, 0.5}},
-             {:text_color, :white}
-           ]
+    assert_raise ArgumentError, ~r/use class for class tokens/, fn ->
+      Guppy.Component.merge_styles(nil, "p-2 text-white")
+    end
+  end
+
+  test "Guppy.Component rejects raw string style attributes" do
+    source = """
+    defmodule Guppy.BadStringStyleTemplate do
+      use Guppy.Component
+
+      def render(assigns) do
+        ~GUI\"\"\"
+        <div style=\"p-2 text-white\">
+          <text>Bad style</text>
+        </div>
+        \"\"\"
+      end
+    end
+    """
+
+    [{module, _bytecode}] = Code.compile_string(source)
+
+    assert_raise ArgumentError, ~r/use class for class tokens/, fn ->
+      module.render(%{})
+    end
   end
 
   test "Guppy.Component parses catalog-backed padding classes into canonical tuple styles" do

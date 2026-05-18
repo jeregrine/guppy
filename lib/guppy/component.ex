@@ -310,14 +310,19 @@ defmodule Guppy.Component do
 
   defp normalize_style_value(nil), do: []
   defp normalize_style_value(false), do: []
-  defp normalize_style_value(value) when is_binary(value), do: class_to_style!(value)
+
+  defp normalize_style_value(value) when is_binary(value) do
+    raise ArgumentError,
+          "expected style to be a canonical style list; use class for class tokens, got: #{inspect(value)}"
+  end
+
   defp normalize_style_value(value) when is_list(value), do: value
 
   defp normalize_style_value(other),
     do:
       raise(
         ArgumentError,
-        "expected style to be nil, string, or style list, got: #{inspect(other)}"
+        "expected style to be nil, false, or a canonical style list; use class for class tokens, got: #{inspect(other)}"
       )
 
   defp class_token_to_style!(token) do
