@@ -98,6 +98,10 @@ defmodule Guppy.Style do
                             operation["name"] in ["scrollbar_width"]
                           end)
 
+  @grid_line_operations Enum.filter(@catalog["operations"], fn operation ->
+                          operation["name"] in ["col_start", "col_end", "row_start", "row_end"]
+                        end)
+
   @named_color_tokens @catalog["color_tokens"] |> Enum.map(&String.to_atom/1)
 
   @style_operations @axis_operations ++ @length_operations
@@ -221,6 +225,46 @@ defmodule Guppy.Style do
                                     }
                                   end)
                                   |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+
+  @grid_line_config Map.new(@grid_line_operations, fn operation ->
+                      integer = operation["integer"]
+
+                      {String.to_atom(operation["name"]),
+                       %{
+                         min: integer["min"],
+                         max: integer["max"],
+                         allow_auto: integer["auto"]
+                       }}
+                    end)
+
+  @grid_line_class_tokens Enum.flat_map(@grid_line_operations, fn operation ->
+                            operation_name = String.to_atom(operation["name"])
+
+                            Enum.map(operation["class_tokens"], fn {token, value} ->
+                              value = if value == "auto", do: :auto, else: value
+                              {token, {operation_name, value}}
+                            end)
+                          end)
+                          |> Map.new()
+
+  @grid_line_class_prefix_specs @grid_line_operations
+                                |> Enum.map(fn operation ->
+                                  config =
+                                    Map.fetch!(
+                                      @grid_line_config,
+                                      String.to_atom(operation["name"])
+                                    )
+
+                                  {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+                                  %{
+                                    prefix: prefix,
+                                    operation: String.to_atom(operation["name"]),
+                                    min: config.min,
+                                    max: config.max
+                                  }
+                                end)
+                                |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -460,6 +504,20 @@ defmodule Guppy.Style do
     end
   end
 
+  for {operation, config} <- @grid_line_config do
+    @doc "Returns a canonical #{operation} grid line placement style tuple."
+    def unquote(operation)(:auto) when unquote(config.allow_auto), do: {unquote(operation), :auto}
+
+    def unquote(operation)(value)
+        when is_integer(value) and value >= unquote(config.min) and value <= unquote(config.max),
+        do: {unquote(operation), value}
+
+    def unquote(operation)(value) do
+      raise ArgumentError,
+            "invalid #{unquote(operation)} value: #{inspect(value)}; expected :auto or integer #{unquote(config.min)}..#{unquote(config.max)}"
+    end
+  end
+
   for {operation, config} <- @operation_config, is_list(config.axes) do
     axes = config.axes
     allow_auto = config.allow_auto
@@ -519,6 +577,7 @@ defmodule Guppy.Style do
     with :error <- parse_enum_class(token),
          :error <- parse_overflow_class(token),
          :error <- parse_integer_class(token),
+         :error <- parse_grid_line_class(token),
          :error <- parse_hex_color_class(token),
          :error <- parse_linear_gradient_class(token),
          :error <- parse_number_class(token),
@@ -565,6 +624,37 @@ defmodule Guppy.Style do
           token
           |> String.replace_prefix(spec.prefix <> "-", "")
           |> integer_token_to_style(spec)
+
+        true ->
+          false
+      end
+    end)
+  end
+
+  defp parse_grid_line_class(token) do
+    case Map.fetch(@grid_line_class_tokens, token) do
+      {:ok, {operation, value}} ->
+        {:ok, {operation, value}}
+
+      :error ->
+        parse_grid_line_integer_class(token)
+    end
+  end
+
+  defp parse_grid_line_integer_class(token) do
+    {negated, token} = split_negative_class_token(token)
+
+    Enum.find_value(@grid_line_class_prefix_specs, :error, fn spec ->
+      cond do
+        String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]") ->
+          token
+          |> String.slice((String.length(spec.prefix) + 2)..-2//1)
+          |> grid_line_token_to_style(spec, negated)
+
+        String.starts_with?(token, spec.prefix <> "-") ->
+          token
+          |> String.replace_prefix(spec.prefix <> "-", "")
+          |> grid_line_token_to_style(spec, negated)
 
         true ->
           false
@@ -668,6 +758,22 @@ defmodule Guppy.Style do
     case Integer.parse(token) do
       {value, ""} when value >= spec.min and value <= spec.max ->
         {:ok, {spec.operation, value}}
+
+      _ ->
+        false
+    end
+  end
+
+  defp grid_line_token_to_style(token, spec, negated) do
+    case Integer.parse(token) do
+      {value, ""} ->
+        value = if negated, do: -value, else: value
+
+        if value >= spec.min and value <= spec.max do
+          {:ok, {spec.operation, value}}
+        else
+          false
+        end
 
       _ ->
         false

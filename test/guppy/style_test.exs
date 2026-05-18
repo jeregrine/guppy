@@ -50,6 +50,10 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "line_clamp"))
     assert Enum.any?(operations, &(&1["name"] == "grid_cols"))
     assert Enum.any?(operations, &(&1["name"] == "grid_rows"))
+    assert Enum.any?(operations, &(&1["name"] == "col_start"))
+    assert Enum.any?(operations, &(&1["name"] == "col_end"))
+    assert Enum.any?(operations, &(&1["name"] == "row_start"))
+    assert Enum.any?(operations, &(&1["name"] == "row_end"))
     assert Enum.any?(operations, &(&1["name"] == "col_span"))
     assert Enum.any?(operations, &(&1["name"] == "row_span"))
     assert Enum.any?(operations, &(&1["name"] == "object_fit"))
@@ -179,6 +183,11 @@ defmodule Guppy.StyleTest do
 
     assert Guppy.Style.grid_cols(3) == {:grid_cols, 3}
     assert Guppy.Style.grid_rows(2) == {:grid_rows, 2}
+    assert Guppy.Style.col_start(2) == {:col_start, 2}
+    assert Guppy.Style.col_end(:auto) == {:col_end, :auto}
+    assert Guppy.Style.row_start(-1) == {:row_start, -1}
+    assert Guppy.Style.row_end(:auto) == {:row_end, :auto}
+    assert_raise ArgumentError, fn -> Guppy.Style.col_start(40_000) end
     assert Guppy.Style.col_span(4) == {:col_span, 4}
     assert Guppy.Style.row_span(5) == {:row_span, 5}
 
@@ -241,5 +250,13 @@ defmodule Guppy.StyleTest do
              {:ok, {:scrollbar_width_rem, 1.5}}
 
     assert Guppy.Style.class_token_to_style("scrollbar-w-2") == :error
+  end
+
+  test "grid line placement classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("col-start-2") == {:ok, {:col_start, 2}}
+    assert Guppy.Style.class_token_to_style("-col-end-1") == {:ok, {:col_end, -1}}
+    assert Guppy.Style.class_token_to_style("row-start-auto") == {:ok, {:row_start, :auto}}
+    assert Guppy.Style.class_token_to_style("row-end-[-1]") == {:ok, {:row_end, -1}}
+    assert Guppy.Style.class_token_to_style("col-start-[40000]") == :error
   end
 end

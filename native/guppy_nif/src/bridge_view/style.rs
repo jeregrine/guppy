@@ -145,6 +145,14 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::AlignContent(_)
         | StyleOp::GridCols(_)
         | StyleOp::GridRows(_)
+        | StyleOp::ColStart(_)
+        | StyleOp::ColStartAuto
+        | StyleOp::ColEnd(_)
+        | StyleOp::ColEndAuto
+        | StyleOp::RowStart(_)
+        | StyleOp::RowStartAuto
+        | StyleOp::RowEnd(_)
+        | StyleOp::RowEndAuto
         | StyleOp::ColSpan(_)
         | StyleOp::RowSpan(_)
         | StyleOp::ScrollbarWidthPx(_)
@@ -426,6 +434,14 @@ where
         StyleOp::OverflowYHidden => element.overflow_y_hidden(),
         StyleOp::GridCols(value) => element.grid_cols(*value),
         StyleOp::GridRows(value) => element.grid_rows(*value),
+        StyleOp::ColStart(value) => element.col_start(*value),
+        StyleOp::ColStartAuto => element.col_start_auto(),
+        StyleOp::ColEnd(value) => element.col_end(*value),
+        StyleOp::ColEndAuto => element.col_end_auto(),
+        StyleOp::RowStart(value) => element.row_start(*value),
+        StyleOp::RowStartAuto => element.row_start_auto(),
+        StyleOp::RowEnd(value) => element.row_end(*value),
+        StyleOp::RowEndAuto => element.row_end_auto(),
         StyleOp::ColSpan(value) => element.col_span(*value),
         StyleOp::RowSpan(value) => element.row_span(*value),
         StyleOp::ScrollbarWidthPx(value) => element.scrollbar_width(px(*value)),
@@ -1235,6 +1251,7 @@ mod tests {
         let ops = vec![
             StyleOp::Flex,
             StyleOp::GridCols(3),
+            StyleOp::ColStart(2),
             StyleOp::OverflowHidden,
             StyleOp::ScrollbarWidthPx(12.0),
             StyleOp::TextColor(ColorToken::Red),

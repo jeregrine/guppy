@@ -853,6 +853,10 @@ defmodule Guppy.IRTest do
           {:border_color_hex, "#abcdef"},
           {:opacity, 0.75},
           {:line_clamp, 4},
+          {:col_start, 2},
+          {:col_end, :auto},
+          {:row_start, -1},
+          {:row_end, :auto},
           {:w_px, 320},
           {:w_rem, 24.0},
           {:w_frac, 0.5},
@@ -1009,6 +1013,10 @@ defmodule Guppy.IRTest do
              {:border_color_hex, "#abcdef"},
              {:opacity, 0.75},
              {:line_clamp, 4},
+             {:col_start, 2},
+             {:col_end, :auto},
+             {:row_start, -1},
+             {:row_end, :auto},
              {:w_px, 320},
              {:w_rem, 24.0},
              {:w_frac, 0.5},
@@ -1053,6 +1061,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:grid_cols, 0}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:grid_cols, 0}]))
+
+    assert {:error, {:invalid_style_op, {:col_start, 40_000}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:col_start, 40_000}]))
 
     assert {:error, {:invalid_style_op, {:col_span, 70_000}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:col_span, 70_000}]))

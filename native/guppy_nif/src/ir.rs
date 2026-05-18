@@ -671,6 +671,14 @@ pub enum StyleOp {
     LineClamp(u16),
     GridCols(u16),
     GridRows(u16),
+    ColStart(i16),
+    ColStartAuto,
+    ColEnd(i16),
+    ColEndAuto,
+    RowStart(i16),
+    RowStartAuto,
+    RowEnd(i16),
+    RowEndAuto,
     ColSpan(u16),
     RowSpan(u16),
     WPx(f32),
@@ -2943,6 +2951,30 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 )?)),
                 "grid_cols" => Ok(StyleOp::GridCols(parse_grid_u16(&elements[1])?)),
                 "grid_rows" => Ok(StyleOp::GridRows(parse_grid_u16(&elements[1])?)),
+                "col_start" => parse_grid_line_style(
+                    &elements[1],
+                    "col_start",
+                    StyleOp::ColStart,
+                    StyleOp::ColStartAuto,
+                ),
+                "col_end" => parse_grid_line_style(
+                    &elements[1],
+                    "col_end",
+                    StyleOp::ColEnd,
+                    StyleOp::ColEndAuto,
+                ),
+                "row_start" => parse_grid_line_style(
+                    &elements[1],
+                    "row_start",
+                    StyleOp::RowStart,
+                    StyleOp::RowStartAuto,
+                ),
+                "row_end" => parse_grid_line_style(
+                    &elements[1],
+                    "row_end",
+                    StyleOp::RowEnd,
+                    StyleOp::RowEndAuto,
+                ),
                 "col_span" => Ok(StyleOp::ColSpan(parse_grid_u16(&elements[1])?)),
                 "row_span" => Ok(StyleOp::RowSpan(parse_grid_u16(&elements[1])?)),
                 "w_px" => Ok(StyleOp::WPx(parse_non_negative_style_f32(
@@ -3697,6 +3729,31 @@ fn parse_bounded_style_f32(term: &Term, key: &str, allow_negative: bool) -> Resu
 
 fn parse_grid_u16(term: &Term) -> Result<u16, String> {
     parse_positive_u16(term, "grid")
+}
+
+fn parse_grid_line_style(
+    term: &Term,
+    key: &str,
+    line: fn(i16) -> StyleOp,
+    auto: StyleOp,
+) -> Result<StyleOp, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "auto" => Ok(auto),
+        Term::FixInteger(value) => i16::try_from(value.value)
+            .map(line)
+            .map_err(|_| format!("invalid {key} grid line; expected -32768..32767, got {term}")),
+        Term::BigInteger(value) => value
+            .value
+            .clone()
+            .try_into()
+            .ok()
+            .and_then(|value: i64| i16::try_from(value).ok())
+            .map(line)
+            .ok_or_else(|| format!("invalid {key} grid line; expected -32768..32767, got {term}")),
+        other => Err(format!(
+            "invalid {key} grid line; expected integer or auto, got {other}"
+        )),
+    }
 }
 
 fn parse_positive_u16(term: &Term, key: &str) -> Result<u16, String> {

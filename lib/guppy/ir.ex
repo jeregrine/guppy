@@ -211,6 +211,10 @@ defmodule Guppy.IR do
           | {:line_clamp, pos_integer()}
           | {:grid_cols, pos_integer()}
           | {:grid_rows, pos_integer()}
+          | {:col_start, integer() | :auto}
+          | {:col_end, integer() | :auto}
+          | {:row_start, integer() | :auto}
+          | {:row_end, integer() | :auto}
           | {:col_span, pos_integer()}
           | {:row_span, pos_integer()}
           | {:w_px, number()}
@@ -956,6 +960,7 @@ defmodule Guppy.IR do
     :max_width,
     :max_height
   ]
+  @grid_line_value_tokens [:col_start, :col_end, :row_start, :row_end]
   @grid_value_tokens [:grid_cols, :grid_rows, :col_span, :row_span]
   @color_tokens [:red, :green, :blue, :yellow, :black, :white, :gray]
   @native_f32_integer_min -9_223_372_036_854_775_808
@@ -2770,6 +2775,13 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:line_clamp, value})
        when is_integer(value) and value >= 1 and value <= 65_535,
+       do: :ok
+
+  defp validate_style_op({key, :auto}) when key in @grid_line_value_tokens, do: :ok
+
+  defp validate_style_op({key, value})
+       when key in @grid_line_value_tokens and is_integer(value) and value >= -32_768 and
+              value <= 32_767,
        do: :ok
 
   defp validate_style_op({key, value})

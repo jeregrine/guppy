@@ -1211,6 +1211,22 @@ fn parses_canonical_box_spacing_style_ops() {
         parse_style_op(&tuple(vec![atom("line_clamp"), integer(4)])).unwrap(),
         StyleOp::LineClamp(4)
     );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("col_start"), integer(2)])).unwrap(),
+        StyleOp::ColStart(2)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("col_end"), atom("auto")])).unwrap(),
+        StyleOp::ColEndAuto
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("row_start"), integer(-1)])).unwrap(),
+        StyleOp::RowStart(-1)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("row_end"), atom("auto")])).unwrap(),
+        StyleOp::RowEndAuto
+    );
 }
 
 #[test]
@@ -1410,6 +1426,11 @@ fn native_style_catalog_loads() {
     assert!(
         operations
             .iter()
+            .any(|operation| operation["name"] == "col_start")
+    );
+    assert!(
+        operations
+            .iter()
             .any(|operation| operation["name"] == "object_fit")
     );
     assert!(
@@ -1492,6 +1513,7 @@ fn rejects_invalid_numeric_style_ops() {
     for term in [
         tuple(vec![atom("opacity"), float(1.5)]),
         tuple(vec![atom("line_clamp"), integer(0)]),
+        tuple(vec![atom("col_start"), integer(40_000)]),
         tuple(vec![atom("w_px"), integer(-1)]),
         tuple(vec![atom("w_frac"), float(1.2)]),
         tuple(vec![atom("scrollbar_width_px"), integer(-1)]),
