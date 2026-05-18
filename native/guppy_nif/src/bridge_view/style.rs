@@ -234,9 +234,11 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::TextDecoration(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
+        | StyleOp::TextBg(_)
         | StyleOp::BorderColor(_)
         | StyleOp::BgHex(_)
         | StyleOp::TextColorHex(_)
+        | StyleOp::TextBgHex(_)
         | StyleOp::BorderColorHex(_)
         | StyleOp::BgLinearGradient { .. }
         | StyleOp::Opacity(_)
@@ -321,9 +323,11 @@ where
         StyleOp::ShadowLg => style.shadow_lg(),
         StyleOp::Bg(color) => style.bg(color_token_to_color(*color)),
         StyleOp::TextColor(color) => style.text_color(color_token_to_color(*color)),
+        StyleOp::TextBg(color) => style.text_bg(color_token_to_color(*color)),
         StyleOp::BorderColor(color) => style.border_color(color_token_to_color(*color)),
         StyleOp::BgHex(value) => style.bg(hex_color_to_color(*value)),
         StyleOp::TextColorHex(value) => style.text_color(hex_color_to_color(*value)),
+        StyleOp::TextBgHex(value) => style.text_bg(hex_color_to_color(*value)),
         StyleOp::BorderColorHex(value) => style.border_color(hex_color_to_color(*value)),
         StyleOp::BgLinearGradient { angle, from, to } => style.bg(linear_gradient(
             *angle,
@@ -973,10 +977,12 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
         match op {
             StyleOp::TextColor(color) => highlight.color = Some(color_token_to_color(*color)),
             StyleOp::TextColorHex(value) => highlight.color = Some(hex_color_to_color(*value)),
-            StyleOp::Bg(color) => {
+            StyleOp::Bg(color) | StyleOp::TextBg(color) => {
                 highlight.background_color = Some(color_token_to_color(*color));
             }
-            StyleOp::BgHex(value) => highlight.background_color = Some(hex_color_to_color(*value)),
+            StyleOp::BgHex(value) | StyleOp::TextBgHex(value) => {
+                highlight.background_color = Some(hex_color_to_color(*value));
+            }
             StyleOp::FontThin => highlight.font_weight = Some(FontWeight::THIN),
             StyleOp::FontExtralight => highlight.font_weight = Some(FontWeight::EXTRA_LIGHT),
             StyleOp::FontLight => highlight.font_weight = Some(FontWeight::LIGHT),

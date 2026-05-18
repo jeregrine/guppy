@@ -25,9 +25,11 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "border_style"))
     assert Enum.any?(operations, &(&1["name"] == "bg"))
     assert Enum.any?(operations, &(&1["name"] == "text_color"))
+    assert Enum.any?(operations, &(&1["name"] == "text_bg"))
     assert Enum.any?(operations, &(&1["name"] == "border_color"))
     assert Enum.any?(operations, &(&1["name"] == "bg_hex"))
     assert Enum.any?(operations, &(&1["name"] == "text_color_hex"))
+    assert Enum.any?(operations, &(&1["name"] == "text_bg_hex"))
     assert Enum.any?(operations, &(&1["name"] == "border_color_hex"))
     assert Enum.any?(operations, &(&1["name"] == "bg_linear_gradient"))
     assert Enum.any?(operations, &(&1["name"] == "opacity"))
@@ -126,10 +128,13 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.bg_gray() == {:bg, :gray}
     assert Guppy.Style.text_color(:blue) == {:text_color, :blue}
     assert Guppy.Style.text_color_white() == {:text_color, :white}
+    assert Guppy.Style.text_bg(:yellow) == {:text_bg, :yellow}
+    assert Guppy.Style.text_bg_gray() == {:text_bg, :gray}
     assert Guppy.Style.border_color(:yellow) == {:border_color, :yellow}
     assert Guppy.Style.border_color_black() == {:border_color, :black}
     assert Guppy.Style.bg_hex("#0f172a") == {:bg_hex, "#0f172a"}
     assert Guppy.Style.text_color_hex("445566") == {:text_color_hex, "445566"}
+    assert Guppy.Style.text_bg_hex("112233") == {:text_bg_hex, "112233"}
     assert Guppy.Style.border_color_hex("#abcdef") == {:border_color_hex, "#abcdef"}
 
     gradient = [angle: 90, from: {"#0f172a", 0}, to: {:blue, 1}]
@@ -213,6 +218,9 @@ defmodule Guppy.StyleTest do
 
     assert Guppy.Style.class_token_to_style("text-[#445566]") ==
              {:ok, {:text_color_hex, "#445566"}}
+
+    assert Guppy.Style.class_token_to_style("text-bg-[#112233]") ==
+             {:ok, {:text_bg_hex, "#112233"}}
 
     assert Guppy.Style.class_token_to_style("border-[#abcdef]") ==
              {:ok, {:border_color_hex, "#abcdef"}}

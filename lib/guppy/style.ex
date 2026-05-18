@@ -31,6 +31,7 @@ defmodule Guppy.Style do
                        "border_style",
                        "bg",
                        "text_color",
+                       "text_bg",
                        "border_color",
                        "shadow",
                        "flex_direction",
@@ -82,6 +83,7 @@ defmodule Guppy.Style do
                           operation["name"] in [
                             "bg_hex",
                             "text_color_hex",
+                            "text_bg_hex",
                             "border_color_hex"
                           ]
                         end)

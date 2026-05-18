@@ -850,6 +850,8 @@ defmodule Guppy.IRTest do
           {:border_color, :white},
           {:bg_hex, "#112233"},
           {:text_color_hex, "445566"},
+          {:text_bg, :yellow},
+          {:text_bg_hex, "#778899"},
           {:border_color_hex, "#abcdef"},
           {:opacity, 0.75},
           {:line_clamp, 4},
@@ -1010,6 +1012,8 @@ defmodule Guppy.IRTest do
              {:border_color, :white},
              {:bg_hex, "#112233"},
              {:text_color_hex, "445566"},
+             {:text_bg, :yellow},
+             {:text_bg_hex, "#778899"},
              {:border_color_hex, "#abcdef"},
              {:opacity, 0.75},
              {:line_clamp, 4},
@@ -1046,6 +1050,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:bg, :purple}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:bg, :purple}]))
+
+    assert {:error, {:invalid_style_op, {:text_bg, :purple}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:text_bg, :purple}]))
 
     assert {:error, {:invalid_style_op, {:opacity, 1.5}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:opacity, 1.5}]))

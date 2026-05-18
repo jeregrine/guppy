@@ -658,9 +658,11 @@ pub enum StyleOp {
     TextDecoration(TextDecorationStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
+    TextBg(ColorToken),
     BorderColor(ColorToken),
     BgHex(u32),
     TextColorHex(u32),
+    TextBgHex(u32),
     BorderColorHex(u32),
     BgLinearGradient {
         angle: f32,
@@ -2931,9 +2933,11 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 )?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
+                "text_bg" => Ok(StyleOp::TextBg(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
                 "bg_hex" => Ok(StyleOp::BgHex(parse_hex_style_color(&elements[1])?)),
                 "text_color_hex" => Ok(StyleOp::TextColorHex(parse_hex_style_color(&elements[1])?)),
+                "text_bg_hex" => Ok(StyleOp::TextBgHex(parse_hex_style_color(&elements[1])?)),
                 "border_color_hex" => Ok(StyleOp::BorderColorHex(parse_hex_style_color(
                     &elements[1],
                 )?)),

@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-text-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border colors, opacity, scrollbar width, box shadows, flex/alignment, core text/font, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-text-bg-line-clamp-grid-placement-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background colors, opacity, scrollbar width, box shadows, flex/alignment, core text/font, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1932,6 +1932,75 @@
       "gpui_mapping": "Styled text_color"
     },
     {
+      "name": "text_bg",
+      "tuple_schema": [
+        "text_bg",
+        "color"
+      ],
+      "values": [
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "black",
+        "white",
+        "gray"
+      ],
+      "class_tokens": {
+        "text-bg-red": "red",
+        "text-bg-green": "green",
+        "text-bg-blue": "blue",
+        "text-bg-yellow": "yellow",
+        "text-bg-black": "black",
+        "text-bg-white": "white",
+        "text-bg-gray": "gray"
+      },
+      "helpers": [
+        {
+          "name": "text_bg",
+          "kind": "exact"
+        },
+        {
+          "name": "text_bg_red",
+          "kind": "value",
+          "value": "red"
+        },
+        {
+          "name": "text_bg_green",
+          "kind": "value",
+          "value": "green"
+        },
+        {
+          "name": "text_bg_blue",
+          "kind": "value",
+          "value": "blue"
+        },
+        {
+          "name": "text_bg_yellow",
+          "kind": "value",
+          "value": "yellow"
+        },
+        {
+          "name": "text_bg_black",
+          "kind": "value",
+          "value": "black"
+        },
+        {
+          "name": "text_bg_white",
+          "kind": "value",
+          "value": "white"
+        },
+        {
+          "name": "text_bg_gray",
+          "kind": "value",
+          "value": "gray"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_bg"
+    },
+    {
       "name": "border_color",
       "tuple_schema": [
         "border_color",
@@ -2035,6 +2104,24 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled text_color hex"
+    },
+    {
+      "name": "text_bg_hex",
+      "tuple_schema": [
+        "text_bg_hex",
+        "hex_color"
+      ],
+      "class_pattern": "text-bg-[#RRGGBB]",
+      "class_prefix": "text-bg",
+      "helpers": [
+        {
+          "name": "text_bg_hex",
+          "kind": "exact"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_bg hex"
     },
     {
       "name": "border_color_hex",

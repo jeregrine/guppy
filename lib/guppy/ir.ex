@@ -201,9 +201,11 @@ defmodule Guppy.IR do
              :normal | :start | :end | :center | :between | :around | :evenly | :stretch}
           | {:bg, color_token()}
           | {:text_color, color_token()}
+          | {:text_bg, color_token()}
           | {:border_color, color_token()}
           | {:bg_hex, String.t()}
           | {:text_color_hex, String.t()}
+          | {:text_bg_hex, String.t()}
           | {:border_color_hex, String.t()}
           | {:bg_linear_gradient,
              [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
@@ -946,8 +948,8 @@ defmodule Guppy.IR do
     :w_resize,
     :none
   ]
-  @color_style_value_tokens [:bg, :text_color, :border_color]
-  @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :border_color_hex]
+  @color_style_value_tokens [:bg, :text_color, :text_bg, :border_color]
+  @hex_color_style_value_tokens [:bg_hex, :text_color_hex, :text_bg_hex, :border_color_hex]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
   @fraction_value_tokens [:w_frac, :h_frac]
   @scrollbar_value_tokens [:scrollbar_width_px, :scrollbar_width_rem]

@@ -1411,6 +1411,11 @@ fn native_style_catalog_loads() {
     assert!(
         operations
             .iter()
+            .any(|operation| operation["name"] == "text_bg")
+    );
+    assert!(
+        operations
+            .iter()
             .any(|operation| operation["name"] == "text_decoration")
     );
     assert!(
@@ -1437,6 +1442,14 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "grayscale")
+    );
+}
+
+#[test]
+fn parses_named_text_background_style_op() {
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("text_bg"), atom("blue")])).unwrap(),
+        StyleOp::TextBg(super::ColorToken::Blue)
     );
 }
 
@@ -1497,6 +1510,10 @@ fn parses_style_hex_color_ops_with_optional_hash() {
     assert_eq!(
         parse_style_op(&tuple(vec![atom("text_color_hex"), binary("445566")])).unwrap(),
         StyleOp::TextColorHex(0x445566)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("text_bg_hex"), binary("778899")])).unwrap(),
+        StyleOp::TextBgHex(0x778899)
     );
 }
 
