@@ -66,6 +66,24 @@ defmodule Guppy.ComponentTest do
     end
   end
 
+  test "Guppy.Component parses image-only catalog classes into image options" do
+    assert Guppy.Component.merge_image_options(
+             "object-contain grayscale w-[10px] h-[20px]",
+             nil,
+             nil,
+             nil
+           ) == [
+             style: [{:width, {:px, 10}}, {:height, {:px, 20}}],
+             object_fit: :contain,
+             grayscale: true
+           ]
+
+    assert Guppy.Component.merge_image_options("object-cover grayscale", nil, :fill, false) == [
+             object_fit: :fill,
+             grayscale: false
+           ]
+  end
+
   test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
     assert Guppy.Component.class_to_style!(
              "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue border-gray shadow-md shadow-none flex-col flex-row-reverse flex-wrap flex-nowrap flex-1 flex-auto flex-initial items-baseline justify-around content-evenly text-center whitespace-nowrap text-ellipsis truncate text-xl leading-tight font-bold italic not-italic underline line-through no-underline grid-cols-3 grid-rows-2 col-span-4 row-span-5"

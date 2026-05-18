@@ -493,16 +493,20 @@ defmodule Guppy.Component.Compiler do
     assert_empty_element!(content, "image", caller)
     source = build_image_source_ast(attrs, caller)
 
-    opts =
-      keyword_ast([
-        maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
-        maybe_attr_entry(attrs, "object_fit", :object_fit, caller),
-        maybe_attr_entry(attrs, "grayscale", :boolean, caller)
-      ])
+    id_opts = keyword_ast([maybe_attr_entry(attrs, "id", :string, caller)])
+
+    image_opts =
+      quote do
+        Guppy.Component.merge_image_options(
+          unquote(style_value_ast(Map.get(attrs, "class"))),
+          unquote(raw_style_ast(Map.get(attrs, "style"))),
+          unquote(optional_attr_value_ast(attrs, "object_fit", :object_fit, caller)),
+          unquote(optional_attr_value_ast(attrs, "grayscale", :boolean, caller))
+        )
+      end
 
     quote do
-      Guppy.IR.image(unquote(source), unquote(opts))
+      Guppy.IR.image(unquote(source), Keyword.merge(unquote(id_opts), unquote(image_opts)))
     end
   end
 
@@ -862,6 +866,13 @@ defmodule Guppy.Component.Compiler do
 
   defp raw_style_ast(nil), do: nil
   defp raw_style_ast(value), do: parse_attribute_value(value, :expr_or_string, nil)
+
+  defp optional_attr_value_ast(attrs, name, type, caller) do
+    case Map.get(attrs, name) do
+      nil -> nil
+      value -> parse_attribute_value(value, type, caller)
+    end
+  end
 
   defp style_tuple_ast(key, value_ast) do
     quote do

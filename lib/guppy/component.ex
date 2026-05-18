@@ -257,6 +257,24 @@ defmodule Guppy.Component do
     if merged == [], do: nil, else: merged
   end
 
+  @doc false
+  def merge_image_options(class_value, style_value, object_fit_value, grayscale_value) do
+    {class_style, class_options} = image_class_to_style_and_options!(class_value)
+    style = class_style ++ normalize_style_value(style_value)
+
+    object_fit =
+      if is_nil(object_fit_value), do: Map.get(class_options, :object_fit), else: object_fit_value
+
+    grayscale =
+      if is_nil(grayscale_value), do: Map.get(class_options, :grayscale), else: grayscale_value
+
+    build_keyword([
+      maybe_entry(:style, if(style == [], do: nil, else: style)),
+      maybe_entry(:object_fit, object_fit),
+      maybe_entry(:grayscale, grayscale)
+    ])
+  end
+
   def flatten_children(children) do
     children
     |> List.flatten()
@@ -302,6 +320,42 @@ defmodule Guppy.Component do
   end
 
   def class_to_style!(other) do
+    raise ArgumentError,
+          "expected class to be a string or list of strings, got: #{inspect(other)}"
+  end
+
+  defp image_class_to_style_and_options!(nil), do: {[], %{}}
+  defp image_class_to_style_and_options!(false), do: {[], %{}}
+
+  defp image_class_to_style_and_options!(value) when is_list(value) do
+    Enum.reduce(value, {[], %{}}, fn
+      nil, acc ->
+        acc
+
+      false, acc ->
+        acc
+
+      item, {styles, options} when is_binary(item) ->
+        {item_styles, item_options} = image_class_to_style_and_options!(item)
+        {styles ++ item_styles, Map.merge(options, item_options)}
+
+      other, _acc ->
+        raise ArgumentError, "expected class list entries to be strings, got: #{inspect(other)}"
+    end)
+  end
+
+  defp image_class_to_style_and_options!(value) when is_binary(value) do
+    value
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.reduce({[], %{}}, fn token, {styles, options} ->
+      case Guppy.Style.class_token_to_image_option(token) do
+        {:ok, {key, value}} -> {styles, Map.put(options, key, value)}
+        :error -> {styles ++ [class_token_to_style!(token)], options}
+      end
+    end)
+  end
+
+  defp image_class_to_style_and_options!(other) do
     raise ArgumentError,
           "expected class to be a string or list of strings, got: #{inspect(other)}"
   end

@@ -121,7 +121,7 @@ defmodule Guppy.TemplateExample do
         High priority
       </radio>
       <icon id="release_icon" embedded="icons/release.svg" class="w-[24px] h-[24px]" />
-      <image id="hero_image" uri="https://example.com/demo.png" object_fit="cover" grayscale="true" class="w-[240px] h-[120px] rounded-lg" />
+      <image id="hero_image" uri="https://example.com/demo.png" class="w-[240px] h-[120px] rounded-lg object-cover grayscale" />
       <scroll id="items" axis="y" class="flex-1 gap-2">
         <div :for={item <- @items} id={"item_#{item.id}"} class="rounded-md border-1 border-white p-2">
           <text>{item.label}</text>

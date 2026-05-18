@@ -1378,6 +1378,16 @@ fn native_style_catalog_loads() {
             .iter()
             .any(|operation| operation["name"] == "grid_cols")
     );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "object_fit")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "grayscale")
+    );
 }
 
 #[test]

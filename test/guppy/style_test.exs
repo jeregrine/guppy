@@ -45,6 +45,8 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "grid_rows"))
     assert Enum.any?(operations, &(&1["name"] == "col_span"))
     assert Enum.any?(operations, &(&1["name"] == "row_span"))
+    assert Enum.any?(operations, &(&1["name"] == "object_fit"))
+    assert Enum.any?(operations, &(&1["name"] == "grayscale"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -158,5 +160,21 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.grid_rows(2) == {:grid_rows, 2}
     assert Guppy.Style.col_span(4) == {:col_span, 4}
     assert Guppy.Style.row_span(5) == {:row_span, 5}
+
+    assert Guppy.Style.object_fit(:cover) == {:object_fit, :cover}
+    assert Guppy.Style.object_cover() == {:object_fit, :cover}
+    assert Guppy.Style.object_scale_down() == {:object_fit, :scale_down}
+    assert Guppy.Style.grayscale() == {:grayscale, true}
+    assert Guppy.Style.grayscale(false) == {:grayscale, false}
+    assert Guppy.Style.not_grayscale() == {:grayscale, false}
+  end
+
+  test "image-only catalog class tokens normalize to image options" do
+    assert Guppy.Style.class_token_to_image_option("object-contain") ==
+             {:ok, {:object_fit, :contain}}
+
+    assert Guppy.Style.class_token_to_image_option("grayscale") == {:ok, {:grayscale, true}}
+    assert Guppy.Style.class_token_to_image_option("grayscale-0") == {:ok, {:grayscale, false}}
+    assert Guppy.Style.class_token_to_image_option("p-2") == :error
   end
 end

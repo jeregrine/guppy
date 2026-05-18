@@ -3,7 +3,8 @@ defmodule Guppy.Style do
   Catalog-backed style helpers for canonical Guppy style tuple IR.
 
   `Guppy.Style` is generated from `data/gpui_style_catalog.json` at compile time.
-  Helpers return primitive tuple ops that can be placed directly in IR style lists.
+  Helpers return primitive tuple ops that can be placed directly in IR style lists,
+  plus catalog-backed option tuples for image-only options such as object fit.
   """
 
   @catalog_path Path.expand("../../data/gpui_style_catalog.json", __DIR__)
@@ -67,6 +68,10 @@ defmodule Guppy.Style do
                         operation["name"] in ["grid_cols", "grid_rows", "col_span", "row_span"]
                       end)
 
+  @image_option_operations Enum.filter(@catalog["operations"], fn operation ->
+                             operation["name"] in ["object_fit", "grayscale"]
+                           end)
+
   @style_operations @axis_operations ++ @length_operations
 
   @enum_config Map.new(@enum_operations, fn operation ->
@@ -88,6 +93,36 @@ defmodule Guppy.Style do
                        end)
                      end)
                      |> Map.new()
+
+  @image_option_config Map.new(@image_option_operations, fn operation ->
+                         normalize_value = fn
+                           value when is_binary(value) -> String.to_atom(value)
+                           value when is_boolean(value) -> value
+                         end
+
+                         {String.to_atom(operation["name"]),
+                          %{
+                            values: Enum.map(operation["values"], normalize_value),
+                            class_tokens:
+                              Map.new(operation["class_tokens"], fn {token, value} ->
+                                {token, normalize_value.(value)}
+                              end)
+                          }}
+                       end)
+
+  @image_option_class_tokens Enum.flat_map(@image_option_operations, fn operation ->
+                               normalize_value = fn
+                                 value when is_binary(value) -> String.to_atom(value)
+                                 value when is_boolean(value) -> value
+                               end
+
+                               operation_name = String.to_atom(operation["name"])
+
+                               Enum.map(operation["class_tokens"], fn {token, value} ->
+                                 {token, {operation_name, normalize_value.(value)}}
+                               end)
+                             end)
+                             |> Map.new()
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -239,6 +274,31 @@ defmodule Guppy.Style do
     def unquote(function)(), do: {unquote(operation_name), unquote(value)}
   end
 
+  for {operation, config} <- @image_option_config do
+    values = Macro.escape(config.values)
+
+    @doc "Returns a canonical image-only #{operation} option tuple."
+    def unquote(operation)(value) when value in unquote(values), do: {unquote(operation), value}
+
+    def unquote(operation)(value),
+      do: raise(ArgumentError, "invalid #{unquote(operation)} value: #{inspect(value)}")
+  end
+
+  for operation <- @image_option_operations,
+      %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    value =
+      case value do
+        value when is_binary(value) -> String.to_atom(value)
+        value when is_boolean(value) -> value
+      end
+
+    @doc "Returns canonical #{inspect(value)} #{operation_name} image option."
+    def unquote(function)(), do: {unquote(operation_name), unquote(value)}
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -327,6 +387,16 @@ defmodule Guppy.Style do
   end
 
   def class_token_to_style(_token), do: :error
+
+  @doc false
+  def class_token_to_image_option(token) when is_binary(token) do
+    case Map.fetch(@image_option_class_tokens, token) do
+      {:ok, {operation, value}} -> {:ok, {operation, value}}
+      :error -> :error
+    end
+  end
+
+  def class_token_to_image_option(_token), do: :error
 
   defp parse_enum_class(token) do
     case Map.fetch(@enum_class_tokens, token) do

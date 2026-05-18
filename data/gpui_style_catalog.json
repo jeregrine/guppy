@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-text-grid-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, flex/alignment, core text/font, and grid count/span helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-text-grid-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, flex/alignment, core text/font, grid count/span helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2902,6 +2902,98 @@
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Styled row_span"
+    },
+    {
+      "name": "object_fit",
+      "tuple_schema": [
+        "object_fit",
+        "value"
+      ],
+      "values": [
+        "fill",
+        "contain",
+        "cover",
+        "scale_down",
+        "none"
+      ],
+      "class_tokens": {
+        "object-fill": "fill",
+        "object-contain": "contain",
+        "object-cover": "cover",
+        "object-scale-down": "scale_down",
+        "object-none": "none"
+      },
+      "helpers": [
+        {
+          "name": "object_fit",
+          "kind": "exact"
+        },
+        {
+          "name": "object_fill",
+          "kind": "value",
+          "value": "fill"
+        },
+        {
+          "name": "object_contain",
+          "kind": "value",
+          "value": "contain"
+        },
+        {
+          "name": "object_cover",
+          "kind": "value",
+          "value": "cover"
+        },
+        {
+          "name": "object_scale_down",
+          "kind": "value",
+          "value": "scale_down"
+        },
+        {
+          "name": "object_none",
+          "kind": "value",
+          "value": "none"
+        }
+      ],
+      "node_applicability": "image_only",
+      "refinement_support": false,
+      "option_key": "object_fit",
+      "gpui_mapping": "StyledImage object_fit"
+    },
+    {
+      "name": "grayscale",
+      "tuple_schema": [
+        "grayscale",
+        "boolean"
+      ],
+      "values": [
+        true,
+        false
+      ],
+      "class_tokens": {
+        "grayscale": true,
+        "grayscale-0": false,
+        "not-grayscale": false
+      },
+      "helpers": [
+        {
+          "name": "grayscale",
+          "kind": "exact"
+        },
+        {
+          "name": "grayscale",
+          "kind": "value",
+          "value": true
+        },
+        {
+          "name": "not_grayscale",
+          "kind": "value",
+          "value": false
+        }
+      ],
+      "node_applicability": "image_only",
+      "refinement_support": false,
+      "option_key": "grayscale",
+      "gpui_mapping": "StyledImage grayscale"
     }
   ],
   "border_width_scale": [
