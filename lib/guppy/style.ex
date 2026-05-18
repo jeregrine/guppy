@@ -84,6 +84,10 @@ defmodule Guppy.Style do
                          operation["name"] in ["bg_linear_gradient"]
                        end)
 
+  @number_operations Enum.filter(@catalog["operations"], fn operation ->
+                       operation["name"] in ["opacity"]
+                     end)
+
   @named_color_tokens @catalog["color_tokens"] |> Enum.map(&String.to_atom/1)
 
   @style_operations @axis_operations ++ @length_operations
@@ -141,6 +145,41 @@ defmodule Guppy.Style do
   @hex_color_class_prefixes Map.new(@hex_color_operations, fn operation ->
                               {operation["class_prefix"], String.to_atom(operation["name"])}
                             end)
+
+  @number_config Map.new(@number_operations, fn operation ->
+                   number = operation["number"]
+
+                   {String.to_atom(operation["name"]),
+                    %{
+                      min: number["min"],
+                      max: number["max"]
+                    }}
+                 end)
+
+  @number_class_tokens Enum.flat_map(@number_operations, fn operation ->
+                         operation_name = String.to_atom(operation["name"])
+
+                         Enum.map(operation["class_tokens"], fn {token, value} ->
+                           {token, {operation_name, value}}
+                         end)
+                       end)
+                       |> Map.new()
+
+  @number_class_prefix_specs @number_operations
+                             |> Enum.map(fn operation ->
+                               config =
+                                 Map.fetch!(@number_config, String.to_atom(operation["name"]))
+
+                               {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+                               %{
+                                 prefix: prefix,
+                                 operation: String.to_atom(operation["name"]),
+                                 min: config.min,
+                                 max: config.max
+                               }
+                             end)
+                             |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -332,6 +371,16 @@ defmodule Guppy.Style do
       do: {unquote(operation_name), normalize_linear_gradient_options!(options)}
   end
 
+  for operation <- @number_operations,
+      %{"kind" => "number", "name" => name} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    @doc "Returns a canonical #{operation_name} number tuple."
+    def unquote(function)(value),
+      do: {unquote(operation_name), normalize_number!(unquote(operation_name), value)}
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -416,7 +465,8 @@ defmodule Guppy.Style do
          :error <- parse_overflow_class(token),
          :error <- parse_integer_class(token),
          :error <- parse_hex_color_class(token),
-         :error <- parse_linear_gradient_class(token) do
+         :error <- parse_linear_gradient_class(token),
+         :error <- parse_number_class(token) do
       parse_box_class(token)
     end
   end
@@ -489,6 +539,30 @@ defmodule Guppy.Style do
     else
       _ -> :error
     end
+  end
+
+  defp parse_number_class(token) do
+    case Map.fetch(@number_class_tokens, token) do
+      {:ok, {operation, value}} ->
+        {:ok, {operation, value}}
+
+      :error ->
+        parse_arbitrary_number_class(token)
+    end
+  end
+
+  defp parse_arbitrary_number_class(token) do
+    Enum.find_value(@number_class_prefix_specs, :error, fn spec ->
+      with true <-
+             String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
+           payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
+           {:ok, value} <- parse_number(payload),
+           {:ok, value} <- normalize_number(spec.operation, value) do
+        {:ok, {spec.operation, value}}
+      else
+        _ -> false
+      end
+    end)
   end
 
   defp parse_box_class(token) do
@@ -703,6 +777,25 @@ defmodule Guppy.Style do
 
   defp normalize_hex_color!(value),
     do: raise(ArgumentError, "invalid hex color: #{inspect(value)}")
+
+  defp normalize_number!(operation, value) do
+    case normalize_number(operation, value) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "invalid #{operation} value: #{inspect(value)}"
+    end
+  end
+
+  defp normalize_number(operation, value) when is_number(value) do
+    config = Map.fetch!(@number_config, operation)
+
+    if value >= config.min and value <= config.max do
+      {:ok, value}
+    else
+      :error
+    end
+  end
+
+  defp normalize_number(_operation, _value), do: :error
 
   defp normalize_linear_gradient_options!(options) do
     case normalize_linear_gradient_options(options) do

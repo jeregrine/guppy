@@ -396,9 +396,6 @@ defmodule Guppy.Component do
       size_style = parse_size_style(token) ->
         size_style
 
-      opacity_style = parse_opacity_style(token) ->
-        opacity_style
-
       grid_style = parse_grid_style(token) ->
         grid_style
 
@@ -485,13 +482,6 @@ defmodule Guppy.Component do
       ["h", number, "rem"] -> {:h_rem, parse_number!(number)}
       ["scrollbar-w", number, "px"] -> {:scrollbar_width_px, parse_number!(number)}
       ["scrollbar-w", number, "rem"] -> {:scrollbar_width_rem, parse_number!(number)}
-      _ -> nil
-    end
-  end
-
-  defp parse_opacity_style(token) do
-    case Regex.run(~r/^opacity-\[([0-9]+(?:\.[0-9]+)?)\]$/, token, capture: :all_but_first) do
-      [number] -> {:opacity, parse_number!(number)}
       _ -> nil
     end
   end

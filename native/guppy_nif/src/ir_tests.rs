@@ -1361,6 +1361,11 @@ fn native_style_catalog_loads() {
     assert!(
         operations
             .iter()
+            .any(|operation| operation["name"] == "opacity")
+    );
+    assert!(
+        operations
+            .iter()
             .any(|operation| operation["name"] == "shadow")
     );
     assert!(
