@@ -29,6 +29,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "bg_hex"))
     assert Enum.any?(operations, &(&1["name"] == "text_color_hex"))
     assert Enum.any?(operations, &(&1["name"] == "border_color_hex"))
+    assert Enum.any?(operations, &(&1["name"] == "bg_linear_gradient"))
     assert Enum.any?(operations, &(&1["name"] == "shadow"))
     assert Enum.any?(operations, &(&1["name"] == "flex_direction"))
     assert Enum.any?(operations, &(&1["name"] == "flex_wrap"))
@@ -124,6 +125,9 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.text_color_hex("445566") == {:text_color_hex, "445566"}
     assert Guppy.Style.border_color_hex("#abcdef") == {:border_color_hex, "#abcdef"}
 
+    gradient = [angle: 90, from: {"#0f172a", 0}, to: {:blue, 1}]
+    assert Guppy.Style.bg_linear_gradient(gradient) == {:bg_linear_gradient, gradient}
+
     assert Guppy.Style.shadow(:md) == {:shadow, :md}
     assert Guppy.Style.shadow_md() == {:shadow, :md}
     assert Guppy.Style.shadow_2xs() == {:shadow, :"2xs"}
@@ -194,5 +198,15 @@ defmodule Guppy.StyleTest do
              {:ok, {:border_color_hex, "#abcdef"}}
 
     assert Guppy.Style.class_token_to_style("bg-[#12]") == :error
+  end
+
+  test "background gradient classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("bg-linear-gradient-[90,#0f172a:0,#2563eb:1]") ==
+             {:ok, {:bg_linear_gradient, [angle: 90, from: {"#0f172a", 0}, to: {"#2563eb", 1}]}}
+
+    assert Guppy.Style.class_token_to_style("bg-linear-gradient-[90,red:0,blue:1]") ==
+             {:ok, {:bg_linear_gradient, [angle: 90, from: {:red, 0}, to: {:blue, 1}]}}
+
+    assert Guppy.Style.class_token_to_style("bg-linear-gradient-[bad]") == :error
   end
 end

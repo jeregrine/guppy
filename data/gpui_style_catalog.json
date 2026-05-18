@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-shadow-flex-text-grid-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named and hex background/text/border colors, box shadows, flex/alignment, core text/font, grid count/span helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-hex-gradient-shadow-flex-text-grid-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border colors, box shadows, flex/alignment, core text/font, grid count/span helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2053,6 +2053,34 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled border_color hex"
+    },
+    {
+      "name": "bg_linear_gradient",
+      "tuple_schema": [
+        "bg_linear_gradient",
+        "keyword_options"
+      ],
+      "class_pattern": "bg-linear-gradient-[angle,color:stop,color:stop]",
+      "helpers": [
+        {
+          "name": "bg_linear_gradient",
+          "kind": "exact"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gradient": {
+        "stops": 2,
+        "color_units": [
+          "named",
+          "hex"
+        ],
+        "angle_min": 0,
+        "angle_max": 360,
+        "stop_min": 0,
+        "stop_max": 1
+      },
+      "gpui_mapping": "Styled bg linear_gradient"
     },
     {
       "name": "shadow",

@@ -80,6 +80,12 @@ defmodule Guppy.Style do
                           ]
                         end)
 
+  @gradient_operations Enum.filter(@catalog["operations"], fn operation ->
+                         operation["name"] in ["bg_linear_gradient"]
+                       end)
+
+  @named_color_tokens @catalog["color_tokens"] |> Enum.map(&String.to_atom/1)
+
   @style_operations @axis_operations ++ @length_operations
 
   @enum_config Map.new(@enum_operations, fn operation ->
@@ -318,6 +324,14 @@ defmodule Guppy.Style do
     def unquote(operation_name)(value), do: {unquote(operation_name), normalize_hex_color!(value)}
   end
 
+  for operation <- @gradient_operations do
+    operation_name = String.to_atom(operation["name"])
+
+    @doc "Returns a canonical #{operation_name} tuple."
+    def unquote(operation_name)(options),
+      do: {unquote(operation_name), normalize_linear_gradient_options!(options)}
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -401,7 +415,8 @@ defmodule Guppy.Style do
     with :error <- parse_enum_class(token),
          :error <- parse_overflow_class(token),
          :error <- parse_integer_class(token),
-         :error <- parse_hex_color_class(token) do
+         :error <- parse_hex_color_class(token),
+         :error <- parse_linear_gradient_class(token) do
       parse_box_class(token)
     end
   end
@@ -456,6 +471,21 @@ defmodule Guppy.Style do
            Regex.run(~r/^([a-z-]+)-\[(#[0-9A-Fa-f]{6})\]$/, token, capture: :all_but_first),
          {:ok, operation} <- Map.fetch(@hex_color_class_prefixes, prefix) do
       {:ok, {operation, hex}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_linear_gradient_class(token) do
+    with [payload] <-
+           Regex.run(~r/^bg-linear-gradient-\[(.+)\]$/, token, capture: :all_but_first),
+         [angle, from, to] <- String.split(payload, ",", parts: 3),
+         {:ok, angle} <- parse_number(angle),
+         {:ok, from} <- parse_gradient_stop(from),
+         {:ok, to} <- parse_gradient_stop(to),
+         options <- [angle: angle, from: from, to: to],
+         {:ok, options} <- normalize_linear_gradient_options(options) do
+      {:ok, {:bg_linear_gradient, options}}
     else
       _ -> :error
     end
@@ -674,6 +704,81 @@ defmodule Guppy.Style do
   defp normalize_hex_color!(value),
     do: raise(ArgumentError, "invalid hex color: #{inspect(value)}")
 
+  defp normalize_linear_gradient_options!(options) do
+    case normalize_linear_gradient_options(options) do
+      {:ok, options} -> options
+      :error -> raise ArgumentError, "invalid linear gradient options: #{inspect(options)}"
+    end
+  end
+
+  defp normalize_linear_gradient_options(options) when is_list(options) do
+    if Keyword.keyword?(options) do
+      keys = Keyword.keys(options)
+
+      if length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
+           Enum.sort(keys) == [:angle, :from, :to] and
+           valid_gradient_angle?(Keyword.fetch!(options, :angle)) and
+           valid_gradient_stop?(Keyword.fetch!(options, :from)) and
+           valid_gradient_stop?(Keyword.fetch!(options, :to)) do
+        {:ok, options}
+      else
+        :error
+      end
+    else
+      :error
+    end
+  end
+
+  defp normalize_linear_gradient_options(_options), do: :error
+
+  defp parse_gradient_stop(stop) do
+    with [color, percentage] <- String.split(stop, ":", parts: 2),
+         {:ok, color} <- parse_gradient_color(color),
+         {:ok, percentage} <- parse_number(percentage) do
+      {:ok, {color, percentage}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_gradient_color(color) do
+    color = String.trim(color)
+
+    cond do
+      Regex.match?(~r/^#[0-9A-Fa-f]{6}$/, color) ->
+        {:ok, color}
+
+      color_atom = named_gradient_color(color) ->
+        {:ok, color_atom}
+
+      true ->
+        :error
+    end
+  end
+
+  defp named_gradient_color(color) do
+    color_atom = String.to_existing_atom(color)
+    if color_atom in @named_color_tokens, do: color_atom, else: nil
+  rescue
+    ArgumentError -> nil
+  end
+
+  defp valid_gradient_angle?(angle), do: is_number(angle) and angle >= 0 and angle <= 360
+
+  defp valid_gradient_stop?({color, percentage}),
+    do:
+      valid_gradient_color?(color) and is_number(percentage) and percentage >= 0 and
+        percentage <= 1
+
+  defp valid_gradient_stop?(_stop), do: false
+
+  defp valid_gradient_color?(color) when color in @named_color_tokens, do: true
+
+  defp valid_gradient_color?(color) when is_binary(color),
+    do: Regex.match?(~r/^#[0-9A-Fa-f]{6}$/, color)
+
+  defp valid_gradient_color?(_color), do: false
+
   defp maybe_negate_length!(length, false, _spec_or_allow_negative), do: length
 
   defp maybe_negate_length!(:auto, true, _spec_or_allow_negative) do
@@ -687,11 +792,20 @@ defmodule Guppy.Style do
     raise ArgumentError, "style length does not support negative values: #{inspect(length)}"
   end
 
-  defp parse_number!(number) do
+  defp parse_number(number) do
+    number = String.trim(number)
+
     case Float.parse(number) do
-      {value, ""} when value == trunc(value) -> trunc(value)
-      {value, ""} -> value
-      _ -> raise ArgumentError, "invalid numeric style value: #{inspect(number)}"
+      {value, ""} when value == trunc(value) -> {:ok, trunc(value)}
+      {value, ""} -> {:ok, value}
+      _ -> :error
+    end
+  end
+
+  defp parse_number!(number) do
+    case parse_number(number) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "invalid numeric style value: #{inspect(number)}"
     end
   end
 end
