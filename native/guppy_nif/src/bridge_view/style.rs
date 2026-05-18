@@ -1,8 +1,10 @@
 use crate::ir::{
     AlignContentStyle, AlignItemsStyle, BorderLineStyle, BorderRadiusAxis, ColorToken,
-    DisplayStyle, DivStyle, FlexDirectionStyle, FlexItemStyle, FlexWrapStyle, JustifyContentStyle,
-    LinearGradientStop, MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis,
-    StyleColor, StyleLength, StyleOp, VisibilityStyle,
+    DisplayStyle, DivStyle, FlexDirectionStyle, FlexItemStyle, FlexWrapStyle, FontSizeStyle,
+    FontStyleValue, FontWeightStyle, JustifyContentStyle, LineHeightStyle, LinearGradientStop,
+    MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis, StyleColor,
+    StyleLength, StyleOp, TextAlignStyle, TextDecorationStyle, TextOverflowStyle, VisibilityStyle,
+    WhiteSpaceStyle,
 };
 use gpui::{
     DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
@@ -213,6 +215,14 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::BorderRadius { .. }
         | StyleOp::BorderStyle(_)
         | StyleOp::Shadow(_)
+        | StyleOp::TextAlign(_)
+        | StyleOp::WhiteSpace(_)
+        | StyleOp::TextOverflow(_)
+        | StyleOp::FontSize(_)
+        | StyleOp::LineHeight(_)
+        | StyleOp::FontWeight(_)
+        | StyleOp::FontStyle(_)
+        | StyleOp::TextDecoration(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::BorderColor(_)
@@ -317,6 +327,14 @@ where
         StyleOp::BorderRadius { axis, length } => apply_border_radius(style, *axis, *length),
         StyleOp::BorderStyle(border_style) => apply_border_style(style, *border_style),
         StyleOp::Shadow(shadow) => apply_shadow(style, *shadow),
+        StyleOp::TextAlign(align) => apply_text_align(style, *align),
+        StyleOp::WhiteSpace(white_space) => apply_white_space(style, *white_space),
+        StyleOp::TextOverflow(overflow) => apply_text_overflow(style, *overflow),
+        StyleOp::FontSize(size) => apply_font_size(style, *size),
+        StyleOp::LineHeight(line_height) => apply_line_height(style, *line_height),
+        StyleOp::FontWeight(weight) => apply_font_weight(style, *weight),
+        StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
+        StyleOp::TextDecoration(decoration) => apply_text_decoration(style, *decoration),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -798,6 +816,112 @@ where
     }
 }
 
+fn apply_text_align<E>(element: E, align: TextAlignStyle) -> E
+where
+    E: Styled,
+{
+    match align {
+        TextAlignStyle::Left => element.text_left(),
+        TextAlignStyle::Center => element.text_center(),
+        TextAlignStyle::Right => element.text_right(),
+    }
+}
+
+fn apply_white_space<E>(element: E, white_space: WhiteSpaceStyle) -> E
+where
+    E: Styled,
+{
+    match white_space {
+        WhiteSpaceStyle::Normal => element.whitespace_normal(),
+        WhiteSpaceStyle::NoWrap => element.whitespace_nowrap(),
+    }
+}
+
+fn apply_text_overflow<E>(element: E, overflow: TextOverflowStyle) -> E
+where
+    E: Styled,
+{
+    match overflow {
+        TextOverflowStyle::Ellipsis => element.text_ellipsis(),
+        TextOverflowStyle::Truncate => element.truncate(),
+    }
+}
+
+fn apply_font_size<E>(element: E, size: FontSizeStyle) -> E
+where
+    E: Styled,
+{
+    match size {
+        FontSizeStyle::Xs => element.text_xs(),
+        FontSizeStyle::Sm => element.text_sm(),
+        FontSizeStyle::Base => element.text_base(),
+        FontSizeStyle::Lg => element.text_lg(),
+        FontSizeStyle::Xl => element.text_xl(),
+        FontSizeStyle::TwoXl => element.text_2xl(),
+        FontSizeStyle::ThreeXl => element.text_3xl(),
+    }
+}
+
+fn apply_line_height<E>(element: E, line_height: LineHeightStyle) -> E
+where
+    E: Styled,
+{
+    element.line_height(relative(line_height_to_relative(line_height)))
+}
+
+fn line_height_to_relative(line_height: LineHeightStyle) -> f32 {
+    match line_height {
+        LineHeightStyle::None => 1.0,
+        LineHeightStyle::Tight => 1.25,
+        LineHeightStyle::Snug => 1.375,
+        LineHeightStyle::Normal => 1.5,
+        LineHeightStyle::Relaxed => 1.625,
+        LineHeightStyle::Loose => 2.0,
+    }
+}
+
+fn apply_font_weight<E>(element: E, weight: FontWeightStyle) -> E
+where
+    E: Styled,
+{
+    element.font_weight(font_weight_to_gpui(weight))
+}
+
+fn font_weight_to_gpui(weight: FontWeightStyle) -> FontWeight {
+    match weight {
+        FontWeightStyle::Thin => FontWeight::THIN,
+        FontWeightStyle::Extralight => FontWeight::EXTRA_LIGHT,
+        FontWeightStyle::Light => FontWeight::LIGHT,
+        FontWeightStyle::Normal => FontWeight::NORMAL,
+        FontWeightStyle::Medium => FontWeight::MEDIUM,
+        FontWeightStyle::Semibold => FontWeight::SEMIBOLD,
+        FontWeightStyle::Bold => FontWeight::BOLD,
+        FontWeightStyle::Extrabold => FontWeight::EXTRA_BOLD,
+        FontWeightStyle::Black => FontWeight::BLACK,
+    }
+}
+
+fn apply_font_style<E>(element: E, font_style: FontStyleValue) -> E
+where
+    E: Styled,
+{
+    match font_style {
+        FontStyleValue::Italic => element.italic(),
+        FontStyleValue::Normal => element.not_italic(),
+    }
+}
+
+fn apply_text_decoration<E>(element: E, decoration: TextDecorationStyle) -> E
+where
+    E: Styled,
+{
+    match decoration {
+        TextDecorationStyle::Underline => element.underline(),
+        TextDecorationStyle::LineThrough => element.line_through(),
+        TextDecorationStyle::None => element.text_decoration_none(),
+    }
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
@@ -844,8 +968,17 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
             StyleOp::FontBold => highlight.font_weight = Some(FontWeight::BOLD),
             StyleOp::FontExtrabold => highlight.font_weight = Some(FontWeight::EXTRA_BOLD),
             StyleOp::FontBlack => highlight.font_weight = Some(FontWeight::BLACK),
+            StyleOp::FontWeight(weight) => {
+                highlight.font_weight = Some(font_weight_to_gpui(*weight))
+            }
             StyleOp::Italic => highlight.font_style = Some(FontStyle::Italic),
             StyleOp::NotItalic => highlight.font_style = Some(FontStyle::Normal),
+            StyleOp::FontStyle(FontStyleValue::Italic) => {
+                highlight.font_style = Some(FontStyle::Italic)
+            }
+            StyleOp::FontStyle(FontStyleValue::Normal) => {
+                highlight.font_style = Some(FontStyle::Normal)
+            }
             StyleOp::Underline => {
                 highlight.underline = Some(UnderlineStyle {
                     thickness: px(1.0),
@@ -858,6 +991,23 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
                     thickness: px(1.0),
                     color: None,
                 });
+            }
+            StyleOp::TextDecoration(TextDecorationStyle::Underline) => {
+                highlight.underline = Some(UnderlineStyle {
+                    thickness: px(1.0),
+                    color: None,
+                    wavy: false,
+                });
+            }
+            StyleOp::TextDecoration(TextDecorationStyle::LineThrough) => {
+                highlight.strikethrough = Some(StrikethroughStyle {
+                    thickness: px(1.0),
+                    color: None,
+                });
+            }
+            StyleOp::TextDecoration(TextDecorationStyle::None) => {
+                highlight.underline = None;
+                highlight.strikethrough = None;
             }
             StyleOp::Opacity(value) => highlight.fade_out = Some(1.0 - value.clamp(0.0, 1.0)),
             _ => {}
@@ -1027,6 +1177,25 @@ mod tests {
 
         let style = apply_align_content(StyleRefinement::default(), AlignContentStyle::Evenly);
         assert_eq!(style.align_content, Some(gpui::AlignContent::SpaceEvenly));
+
+        let style = apply_text_align(StyleRefinement::default(), TextAlignStyle::Center);
+        assert_eq!(
+            style.text.as_ref().and_then(|text| text.text_align),
+            Some(gpui::TextAlign::Center)
+        );
+
+        let style = apply_font_weight(StyleRefinement::default(), FontWeightStyle::Bold);
+        assert_eq!(
+            style.text.as_ref().and_then(|text| text.font_weight),
+            Some(FontWeight::BOLD)
+        );
+
+        let style = apply_text_decoration(StyleRefinement::default(), TextDecorationStyle::None);
+        assert_eq!(style.text.as_ref().and_then(|text| text.underline), None);
+        assert_eq!(
+            style.text.as_ref().and_then(|text| text.strikethrough),
+            None
+        );
     }
 
     #[test]

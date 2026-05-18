@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, and flex/alignment helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-position-overflow-cursor-border-radius-color-shadow-flex-text-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size, position/inset, display, visibility, overflow, cursor, border width/style, border radius, named background/text/border colors, box shadows, flex/alignment, and core text/font helpers plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2412,6 +2412,404 @@
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Styled content_normal/content_start/content_end/content_center/content_between/content_around/content_evenly/content_stretch"
+    },
+    {
+      "name": "text_align",
+      "tuple_schema": [
+        "text_align",
+        "value"
+      ],
+      "values": [
+        "left",
+        "center",
+        "right"
+      ],
+      "class_tokens": {
+        "text-left": "left",
+        "text-center": "center",
+        "text-right": "right"
+      },
+      "helpers": [
+        {
+          "name": "text_align",
+          "kind": "exact"
+        },
+        {
+          "name": "text_left",
+          "kind": "value",
+          "value": "left"
+        },
+        {
+          "name": "text_center",
+          "kind": "value",
+          "value": "center"
+        },
+        {
+          "name": "text_right",
+          "kind": "value",
+          "value": "right"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_left/text_center/text_right"
+    },
+    {
+      "name": "white_space",
+      "tuple_schema": [
+        "white_space",
+        "value"
+      ],
+      "values": [
+        "normal",
+        "nowrap"
+      ],
+      "class_tokens": {
+        "whitespace-normal": "normal",
+        "whitespace-nowrap": "nowrap"
+      },
+      "helpers": [
+        {
+          "name": "white_space",
+          "kind": "exact"
+        },
+        {
+          "name": "whitespace_normal",
+          "kind": "value",
+          "value": "normal"
+        },
+        {
+          "name": "whitespace_nowrap",
+          "kind": "value",
+          "value": "nowrap"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled whitespace_normal/whitespace_nowrap"
+    },
+    {
+      "name": "text_overflow",
+      "tuple_schema": [
+        "text_overflow",
+        "value"
+      ],
+      "values": [
+        "ellipsis",
+        "truncate"
+      ],
+      "class_tokens": {
+        "text-ellipsis": "ellipsis",
+        "truncate": "truncate"
+      },
+      "helpers": [
+        {
+          "name": "text_overflow",
+          "kind": "exact"
+        },
+        {
+          "name": "text_ellipsis",
+          "kind": "value",
+          "value": "ellipsis"
+        },
+        {
+          "name": "truncate",
+          "kind": "value",
+          "value": "truncate"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_ellipsis/truncate"
+    },
+    {
+      "name": "font_size",
+      "tuple_schema": [
+        "font_size",
+        "value"
+      ],
+      "values": [
+        "xs",
+        "sm",
+        "base",
+        "lg",
+        "xl",
+        "2xl",
+        "3xl"
+      ],
+      "class_tokens": {
+        "text-xs": "xs",
+        "text-sm": "sm",
+        "text-base": "base",
+        "text-lg": "lg",
+        "text-xl": "xl",
+        "text-2xl": "2xl",
+        "text-3xl": "3xl"
+      },
+      "helpers": [
+        {
+          "name": "font_size",
+          "kind": "exact"
+        },
+        {
+          "name": "text_xs",
+          "kind": "value",
+          "value": "xs"
+        },
+        {
+          "name": "text_sm",
+          "kind": "value",
+          "value": "sm"
+        },
+        {
+          "name": "text_base",
+          "kind": "value",
+          "value": "base"
+        },
+        {
+          "name": "text_lg",
+          "kind": "value",
+          "value": "lg"
+        },
+        {
+          "name": "text_xl",
+          "kind": "value",
+          "value": "xl"
+        },
+        {
+          "name": "text_2xl",
+          "kind": "value",
+          "value": "2xl"
+        },
+        {
+          "name": "text_3xl",
+          "kind": "value",
+          "value": "3xl"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled text_xs/text_sm/text_base/text_lg/text_xl/text_2xl/text_3xl"
+    },
+    {
+      "name": "line_height",
+      "tuple_schema": [
+        "line_height",
+        "value"
+      ],
+      "values": [
+        "none",
+        "tight",
+        "snug",
+        "normal",
+        "relaxed",
+        "loose"
+      ],
+      "class_tokens": {
+        "leading-none": "none",
+        "leading-tight": "tight",
+        "leading-snug": "snug",
+        "leading-normal": "normal",
+        "leading-relaxed": "relaxed",
+        "leading-loose": "loose"
+      },
+      "helpers": [
+        {
+          "name": "line_height",
+          "kind": "exact"
+        },
+        {
+          "name": "leading_none",
+          "kind": "value",
+          "value": "none"
+        },
+        {
+          "name": "leading_tight",
+          "kind": "value",
+          "value": "tight"
+        },
+        {
+          "name": "leading_snug",
+          "kind": "value",
+          "value": "snug"
+        },
+        {
+          "name": "leading_normal",
+          "kind": "value",
+          "value": "normal"
+        },
+        {
+          "name": "leading_relaxed",
+          "kind": "value",
+          "value": "relaxed"
+        },
+        {
+          "name": "leading_loose",
+          "kind": "value",
+          "value": "loose"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled line_height relative leading helpers"
+    },
+    {
+      "name": "font_weight",
+      "tuple_schema": [
+        "font_weight",
+        "value"
+      ],
+      "values": [
+        "thin",
+        "extralight",
+        "light",
+        "normal",
+        "medium",
+        "semibold",
+        "bold",
+        "extrabold",
+        "black"
+      ],
+      "class_tokens": {
+        "font-thin": "thin",
+        "font-extralight": "extralight",
+        "font-light": "light",
+        "font-normal": "normal",
+        "font-medium": "medium",
+        "font-semibold": "semibold",
+        "font-bold": "bold",
+        "font-extrabold": "extrabold",
+        "font-black": "black"
+      },
+      "helpers": [
+        {
+          "name": "font_weight",
+          "kind": "exact"
+        },
+        {
+          "name": "font_thin",
+          "kind": "value",
+          "value": "thin"
+        },
+        {
+          "name": "font_extralight",
+          "kind": "value",
+          "value": "extralight"
+        },
+        {
+          "name": "font_light",
+          "kind": "value",
+          "value": "light"
+        },
+        {
+          "name": "font_normal",
+          "kind": "value",
+          "value": "normal"
+        },
+        {
+          "name": "font_medium",
+          "kind": "value",
+          "value": "medium"
+        },
+        {
+          "name": "font_semibold",
+          "kind": "value",
+          "value": "semibold"
+        },
+        {
+          "name": "font_bold",
+          "kind": "value",
+          "value": "bold"
+        },
+        {
+          "name": "font_extrabold",
+          "kind": "value",
+          "value": "extrabold"
+        },
+        {
+          "name": "font_black",
+          "kind": "value",
+          "value": "black"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled font_weight"
+    },
+    {
+      "name": "font_style",
+      "tuple_schema": [
+        "font_style",
+        "value"
+      ],
+      "values": [
+        "italic",
+        "normal"
+      ],
+      "class_tokens": {
+        "italic": "italic",
+        "not-italic": "normal"
+      },
+      "helpers": [
+        {
+          "name": "font_style",
+          "kind": "exact"
+        },
+        {
+          "name": "italic",
+          "kind": "value",
+          "value": "italic"
+        },
+        {
+          "name": "not_italic",
+          "kind": "value",
+          "value": "normal"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled italic/not_italic"
+    },
+    {
+      "name": "text_decoration",
+      "tuple_schema": [
+        "text_decoration",
+        "value"
+      ],
+      "values": [
+        "underline",
+        "line_through",
+        "none"
+      ],
+      "class_tokens": {
+        "underline": "underline",
+        "line-through": "line_through",
+        "no-underline": "none"
+      },
+      "helpers": [
+        {
+          "name": "text_decoration",
+          "kind": "exact"
+        },
+        {
+          "name": "underline",
+          "kind": "value",
+          "value": "underline"
+        },
+        {
+          "name": "line_through",
+          "kind": "value",
+          "value": "line_through"
+        },
+        {
+          "name": "no_underline",
+          "kind": "value",
+          "value": "none"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled underline/line_through/text_decoration_none"
     }
   ],
   "border_width_scale": [

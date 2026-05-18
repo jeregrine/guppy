@@ -37,7 +37,15 @@ defmodule Guppy.Style do
                        "flex_item",
                        "align_items",
                        "justify_content",
-                       "align_content"
+                       "align_content",
+                       "text_align",
+                       "white_space",
+                       "text_overflow",
+                       "font_size",
+                       "line_height",
+                       "font_weight",
+                       "font_style",
+                       "text_decoration"
                      ]
                    end)
 

@@ -403,6 +403,72 @@ pub enum AlignContentStyle {
     Stretch,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextAlignStyle {
+    Left,
+    Center,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WhiteSpaceStyle {
+    Normal,
+    NoWrap,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextOverflowStyle {
+    Ellipsis,
+    Truncate,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FontSizeStyle {
+    Xs,
+    Sm,
+    Base,
+    Lg,
+    Xl,
+    TwoXl,
+    ThreeXl,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LineHeightStyle {
+    None,
+    Tight,
+    Snug,
+    Normal,
+    Relaxed,
+    Loose,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FontWeightStyle {
+    Thin,
+    Extralight,
+    Light,
+    Normal,
+    Medium,
+    Semibold,
+    Bold,
+    Extrabold,
+    Black,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FontStyleValue {
+    Italic,
+    Normal,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextDecorationStyle {
+    Underline,
+    LineThrough,
+    None,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleOp {
     Grid,
@@ -582,6 +648,14 @@ pub enum StyleOp {
     AlignItems(AlignItemsStyle),
     JustifyContent(JustifyContentStyle),
     AlignContent(AlignContentStyle),
+    TextAlign(TextAlignStyle),
+    WhiteSpace(WhiteSpaceStyle),
+    TextOverflow(TextOverflowStyle),
+    FontSize(FontSizeStyle),
+    LineHeight(LineHeightStyle),
+    FontWeight(FontWeightStyle),
+    FontStyle(FontStyleValue),
+    TextDecoration(TextDecorationStyle),
     Bg(ColorToken),
     TextColor(ColorToken),
     BorderColor(ColorToken),
@@ -2834,6 +2908,18 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "align_content" => Ok(StyleOp::AlignContent(parse_align_content_style(
                     &elements[1],
                 )?)),
+                "text_align" => Ok(StyleOp::TextAlign(parse_text_align_style(&elements[1])?)),
+                "white_space" => Ok(StyleOp::WhiteSpace(parse_white_space_style(&elements[1])?)),
+                "text_overflow" => Ok(StyleOp::TextOverflow(parse_text_overflow_style(
+                    &elements[1],
+                )?)),
+                "font_size" => Ok(StyleOp::FontSize(parse_font_size_style(&elements[1])?)),
+                "line_height" => Ok(StyleOp::LineHeight(parse_line_height_style(&elements[1])?)),
+                "font_weight" => Ok(StyleOp::FontWeight(parse_font_weight_style(&elements[1])?)),
+                "font_style" => Ok(StyleOp::FontStyle(parse_font_style_value(&elements[1])?)),
+                "text_decoration" => Ok(StyleOp::TextDecoration(parse_text_decoration_style(
+                    &elements[1],
+                )?)),
                 "bg" => Ok(StyleOp::Bg(parse_atom_color(&elements[1])?)),
                 "text_color" => Ok(StyleOp::TextColor(parse_atom_color(&elements[1])?)),
                 "border_color" => Ok(StyleOp::BorderColor(parse_atom_color(&elements[1])?)),
@@ -3374,6 +3460,120 @@ fn parse_align_content_style(term: &Term) -> Result<AlignContentStyle, String> {
         "evenly" => Ok(AlignContentStyle::Evenly),
         "stretch" => Ok(AlignContentStyle::Stretch),
         other => Err(format!("invalid align_content style: {other}")),
+    }
+}
+
+fn parse_text_align_style(term: &Term) -> Result<TextAlignStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid text_align style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "left" => Ok(TextAlignStyle::Left),
+        "center" => Ok(TextAlignStyle::Center),
+        "right" => Ok(TextAlignStyle::Right),
+        other => Err(format!("invalid text_align style: {other}")),
+    }
+}
+
+fn parse_white_space_style(term: &Term) -> Result<WhiteSpaceStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid white_space style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "normal" => Ok(WhiteSpaceStyle::Normal),
+        "nowrap" => Ok(WhiteSpaceStyle::NoWrap),
+        other => Err(format!("invalid white_space style: {other}")),
+    }
+}
+
+fn parse_text_overflow_style(term: &Term) -> Result<TextOverflowStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid text_overflow style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "ellipsis" => Ok(TextOverflowStyle::Ellipsis),
+        "truncate" => Ok(TextOverflowStyle::Truncate),
+        other => Err(format!("invalid text_overflow style: {other}")),
+    }
+}
+
+fn parse_font_size_style(term: &Term) -> Result<FontSizeStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid font_size style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "xs" => Ok(FontSizeStyle::Xs),
+        "sm" => Ok(FontSizeStyle::Sm),
+        "base" => Ok(FontSizeStyle::Base),
+        "lg" => Ok(FontSizeStyle::Lg),
+        "xl" => Ok(FontSizeStyle::Xl),
+        "2xl" => Ok(FontSizeStyle::TwoXl),
+        "3xl" => Ok(FontSizeStyle::ThreeXl),
+        other => Err(format!("invalid font_size style: {other}")),
+    }
+}
+
+fn parse_line_height_style(term: &Term) -> Result<LineHeightStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid line_height style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "none" => Ok(LineHeightStyle::None),
+        "tight" => Ok(LineHeightStyle::Tight),
+        "snug" => Ok(LineHeightStyle::Snug),
+        "normal" => Ok(LineHeightStyle::Normal),
+        "relaxed" => Ok(LineHeightStyle::Relaxed),
+        "loose" => Ok(LineHeightStyle::Loose),
+        other => Err(format!("invalid line_height style: {other}")),
+    }
+}
+
+fn parse_font_weight_style(term: &Term) -> Result<FontWeightStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid font_weight style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "thin" => Ok(FontWeightStyle::Thin),
+        "extralight" => Ok(FontWeightStyle::Extralight),
+        "light" => Ok(FontWeightStyle::Light),
+        "normal" => Ok(FontWeightStyle::Normal),
+        "medium" => Ok(FontWeightStyle::Medium),
+        "semibold" => Ok(FontWeightStyle::Semibold),
+        "bold" => Ok(FontWeightStyle::Bold),
+        "extrabold" => Ok(FontWeightStyle::Extrabold),
+        "black" => Ok(FontWeightStyle::Black),
+        other => Err(format!("invalid font_weight style: {other}")),
+    }
+}
+
+fn parse_font_style_value(term: &Term) -> Result<FontStyleValue, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid font_style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "italic" => Ok(FontStyleValue::Italic),
+        "normal" => Ok(FontStyleValue::Normal),
+        other => Err(format!("invalid font_style: {other}")),
+    }
+}
+
+fn parse_text_decoration_style(term: &Term) -> Result<TextDecorationStyle, String> {
+    let Term::Atom(atom) = term else {
+        return Err(format!("invalid text_decoration style: {term}"));
+    };
+
+    match atom.name.as_str() {
+        "underline" => Ok(TextDecorationStyle::Underline),
+        "line_through" => Ok(TextDecorationStyle::LineThrough),
+        "none" => Ok(TextDecorationStyle::None),
+        other => Err(format!("invalid text_decoration style: {other}")),
     }
 }
 

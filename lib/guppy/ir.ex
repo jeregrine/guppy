@@ -896,6 +896,24 @@ defmodule Guppy.IR do
     :evenly,
     :stretch
   ]
+  @text_align_value_tokens [:left, :center, :right]
+  @white_space_value_tokens [:normal, :nowrap]
+  @text_overflow_value_tokens [:ellipsis, :truncate]
+  @font_size_value_tokens [:xs, :sm, :base, :lg, :xl, :"2xl", :"3xl"]
+  @line_height_value_tokens [:none, :tight, :snug, :normal, :relaxed, :loose]
+  @font_weight_value_tokens [
+    :thin,
+    :extralight,
+    :light,
+    :normal,
+    :medium,
+    :semibold,
+    :bold,
+    :extrabold,
+    :black
+  ]
+  @font_style_value_tokens [:italic, :normal]
+  @text_decoration_value_tokens [:underline, :line_through, :none]
 
   @cursor_value_tokens [
     :default,
@@ -2708,6 +2726,22 @@ defmodule Guppy.IR do
 
   defp validate_style_op({:align_content, value})
        when value in @align_content_value_tokens,
+       do: :ok
+
+  defp validate_style_op({:text_align, value}) when value in @text_align_value_tokens, do: :ok
+  defp validate_style_op({:white_space, value}) when value in @white_space_value_tokens, do: :ok
+
+  defp validate_style_op({:text_overflow, value})
+       when value in @text_overflow_value_tokens,
+       do: :ok
+
+  defp validate_style_op({:font_size, value}) when value in @font_size_value_tokens, do: :ok
+  defp validate_style_op({:line_height, value}) when value in @line_height_value_tokens, do: :ok
+  defp validate_style_op({:font_weight, value}) when value in @font_weight_value_tokens, do: :ok
+  defp validate_style_op({:font_style, value}) when value in @font_style_value_tokens, do: :ok
+
+  defp validate_style_op({:text_decoration, value})
+       when value in @text_decoration_value_tokens,
        do: :ok
 
   defp validate_style_op({key, value})

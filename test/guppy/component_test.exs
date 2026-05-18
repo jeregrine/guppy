@@ -68,7 +68,7 @@ defmodule Guppy.ComponentTest do
 
   test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
     assert Guppy.Component.class_to_style!(
-             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue border-gray shadow-md shadow-none flex-col flex-row-reverse flex-wrap flex-nowrap flex-1 flex-auto flex-initial items-baseline justify-around content-evenly"
+             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue border-gray shadow-md shadow-none flex-col flex-row-reverse flex-wrap flex-nowrap flex-1 flex-auto flex-initial items-baseline justify-around content-evenly text-center whitespace-nowrap text-ellipsis truncate text-xl leading-tight font-bold italic not-italic underline line-through no-underline"
            ) == [
              {:padding, :y, {:rem, 0.25}},
              {:padding, :x, {:rem, 0.25}},
@@ -119,7 +119,19 @@ defmodule Guppy.ComponentTest do
              {:flex_item, :initial},
              {:align_items, :baseline},
              {:justify_content, :around},
-             {:align_content, :evenly}
+             {:align_content, :evenly},
+             {:text_align, :center},
+             {:white_space, :nowrap},
+             {:text_overflow, :ellipsis},
+             {:text_overflow, :truncate},
+             {:font_size, :xl},
+             {:line_height, :tight},
+             {:font_weight, :bold},
+             {:font_style, :italic},
+             {:font_style, :normal},
+             {:text_decoration, :underline},
+             {:text_decoration, :line_through},
+             {:text_decoration, :none}
            ]
 
     assert :ok =
@@ -228,8 +240,8 @@ defmodule Guppy.ComponentTest do
 
     assert title_wrapper.kind == :div
     assert title_wrapper.children == [%{kind: :text, content: "Template demo", id: "title"}]
-    assert :text_3xl in title_wrapper.style
-    assert :font_black in title_wrapper.style
+    assert {:font_size, :"3xl"} in title_wrapper.style
+    assert {:font_weight, :black} in title_wrapper.style
 
     assert rich_intro.kind == :text
     assert rich_intro.id == "rich_intro"

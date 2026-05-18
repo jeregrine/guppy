@@ -33,6 +33,14 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "align_items"))
     assert Enum.any?(operations, &(&1["name"] == "justify_content"))
     assert Enum.any?(operations, &(&1["name"] == "align_content"))
+    assert Enum.any?(operations, &(&1["name"] == "text_align"))
+    assert Enum.any?(operations, &(&1["name"] == "white_space"))
+    assert Enum.any?(operations, &(&1["name"] == "text_overflow"))
+    assert Enum.any?(operations, &(&1["name"] == "font_size"))
+    assert Enum.any?(operations, &(&1["name"] == "line_height"))
+    assert Enum.any?(operations, &(&1["name"] == "font_weight"))
+    assert Enum.any?(operations, &(&1["name"] == "font_style"))
+    assert Enum.any?(operations, &(&1["name"] == "text_decoration"))
     assert "data" in Mix.Project.config()[:package][:files]
   end
 
@@ -121,5 +129,25 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.items_baseline() == {:align_items, :baseline}
     assert Guppy.Style.justify_between() == {:justify_content, :between}
     assert Guppy.Style.content_evenly() == {:align_content, :evenly}
+
+    assert Guppy.Style.text_align(:center) == {:text_align, :center}
+    assert Guppy.Style.text_center() == {:text_align, :center}
+    assert Guppy.Style.white_space(:nowrap) == {:white_space, :nowrap}
+    assert Guppy.Style.whitespace_nowrap() == {:white_space, :nowrap}
+    assert Guppy.Style.text_overflow(:truncate) == {:text_overflow, :truncate}
+    assert Guppy.Style.truncate() == {:text_overflow, :truncate}
+    assert Guppy.Style.text_ellipsis() == {:text_overflow, :ellipsis}
+    assert Guppy.Style.font_size(:xl) == {:font_size, :xl}
+    assert Guppy.Style.text_2xl() == {:font_size, :"2xl"}
+    assert Guppy.Style.line_height(:tight) == {:line_height, :tight}
+    assert Guppy.Style.leading_relaxed() == {:line_height, :relaxed}
+    assert Guppy.Style.font_weight(:bold) == {:font_weight, :bold}
+    assert Guppy.Style.font_black() == {:font_weight, :black}
+    assert Guppy.Style.font_style(:italic) == {:font_style, :italic}
+    assert Guppy.Style.italic() == {:font_style, :italic}
+    assert Guppy.Style.not_italic() == {:font_style, :normal}
+    assert Guppy.Style.text_decoration(:underline) == {:text_decoration, :underline}
+    assert Guppy.Style.underline() == {:text_decoration, :underline}
+    assert Guppy.Style.no_underline() == {:text_decoration, :none}
   end
 end

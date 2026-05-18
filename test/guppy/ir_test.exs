@@ -202,7 +202,16 @@ defmodule Guppy.IRTest do
       {:flex_item, :shrink_0},
       {:align_items, :baseline},
       {:justify_content, :between},
-      {:align_content, :stretch}
+      {:align_content, :stretch},
+      {:text_align, :center},
+      {:white_space, :nowrap},
+      {:text_overflow, :truncate},
+      {:font_size, :"2xl"},
+      {:line_height, :relaxed},
+      {:font_weight, :bold},
+      {:font_style, :italic},
+      {:text_decoration, :underline},
+      {:text_decoration, :none}
     ]
 
     assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: style))
@@ -237,7 +246,15 @@ defmodule Guppy.IRTest do
           {:flex_item, :bad},
           {:align_items, :left},
           {:justify_content, :stretch},
-          {:align_content, :bad}
+          {:align_content, :bad},
+          {:text_align, :justify},
+          {:white_space, :pre},
+          {:text_overflow, :clip},
+          {:font_size, :huge},
+          {:line_height, :bad},
+          {:font_weight, :heavy},
+          {:font_style, :oblique},
+          {:text_decoration, :blink}
         ] do
       assert {:error, {:invalid_style_op, ^invalid}} =
                Guppy.IR.validate(Guppy.IR.div([], style: [invalid]))
