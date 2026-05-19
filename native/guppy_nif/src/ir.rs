@@ -670,6 +670,7 @@ pub enum StyleOp {
     WhiteSpace(WhiteSpaceStyle),
     TextOverflow(TextOverflowStyle),
     FontSize(FontSizeStyle),
+    TextSize(StyleLength),
     LineHeight(LineHeightStyle),
     FontWeight(FontWeightStyle),
     FontStyle(FontStyleValue),
@@ -2977,6 +2978,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     &elements[1],
                 )?)),
                 "font_size" => Ok(StyleOp::FontSize(parse_font_size_style(&elements[1])?)),
+                "text_size" => Ok(StyleOp::TextSize(parse_absolute_style_length(
+                    &elements[1],
+                    "text_size",
+                )?)),
                 "line_height" => Ok(StyleOp::LineHeight(parse_line_height_style(&elements[1])?)),
                 "font_weight" => Ok(StyleOp::FontWeight(parse_font_weight_style(&elements[1])?)),
                 "font_style" => Ok(StyleOp::FontStyle(parse_font_style_value(&elements[1])?)),

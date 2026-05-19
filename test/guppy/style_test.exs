@@ -52,6 +52,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "white_space"))
     assert Enum.any?(operations, &(&1["name"] == "text_overflow"))
     assert Enum.any?(operations, &(&1["name"] == "font_size"))
+    assert Enum.any?(operations, &(&1["name"] == "text_size"))
     assert Enum.any?(operations, &(&1["name"] == "line_height"))
     assert Enum.any?(operations, &(&1["name"] == "font_weight"))
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
@@ -209,6 +210,9 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.text_ellipsis() == {:text_overflow, :ellipsis}
     assert Guppy.Style.font_size(:xl) == {:font_size, :xl}
     assert Guppy.Style.text_2xl() == {:font_size, :"2xl"}
+    assert Guppy.Style.text_size({:px, 14}) == {:text_size, {:px, 14}}
+    assert Guppy.Style.text_size({:rem, 1.25}) == {:text_size, {:rem, 1.25}}
+    assert_raise ArgumentError, fn -> Guppy.Style.text_size({:fraction, 1}) end
     assert Guppy.Style.line_height(:tight) == {:line_height, :tight}
     assert Guppy.Style.leading_relaxed() == {:line_height, :relaxed}
     assert Guppy.Style.font_weight(:bold) == {:font_weight, :bold}
@@ -341,6 +345,13 @@ defmodule Guppy.StyleTest do
              {:ok, {:font_family, "Monaco"}}
 
     assert Guppy.Style.class_token_to_style("font-family-[]") == :error
+  end
+
+  test "arbitrary text size classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("text-[14px]") == {:ok, {:text_size, {:px, 14}}}
+    assert Guppy.Style.class_token_to_style("text-[1.25rem]") == {:ok, {:text_size, {:rem, 1.25}}}
+    assert Guppy.Style.class_token_to_style("text-[50%]") == :error
+    assert Guppy.Style.class_token_to_style("text-[-1px]") == :error
   end
 
   test "font fallback classes normalize through the catalog parser" do

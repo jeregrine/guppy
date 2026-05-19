@@ -236,6 +236,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::WhiteSpace(_)
         | StyleOp::TextOverflow(_)
         | StyleOp::FontSize(_)
+        | StyleOp::TextSize(_)
         | StyleOp::LineHeight(_)
         | StyleOp::FontWeight(_)
         | StyleOp::FontStyle(_)
@@ -360,6 +361,7 @@ where
         StyleOp::WhiteSpace(white_space) => apply_white_space(style, *white_space),
         StyleOp::TextOverflow(overflow) => apply_text_overflow(style, *overflow),
         StyleOp::FontSize(size) => apply_font_size(style, *size),
+        StyleOp::TextSize(size) => apply_text_size(style, *size),
         StyleOp::LineHeight(line_height) => apply_line_height(style, *line_height),
         StyleOp::FontWeight(weight) => apply_font_weight(style, *weight),
         StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
@@ -967,6 +969,13 @@ where
     }
 }
 
+fn apply_text_size<E>(element: E, size: StyleLength) -> E
+where
+    E: Styled,
+{
+    element.text_size(style_length_to_absolute(size))
+}
+
 fn apply_font_size<E>(element: E, size: FontSizeStyle) -> E
 where
     E: Styled,
@@ -1413,6 +1422,12 @@ mod tests {
         assert_eq!(
             style.text.as_ref().and_then(|text| text.text_align),
             Some(gpui::TextAlign::Center)
+        );
+
+        let style = apply_text_size(StyleRefinement::default(), StyleLength::Px(14.0));
+        assert_eq!(
+            style.text.as_ref().and_then(|text| text.font_size),
+            Some(px(14.0).into())
         );
 
         let style = apply_font_weight(StyleRefinement::default(), FontWeightStyle::Bold);

@@ -209,6 +209,9 @@ defmodule Guppy.IR do
           | {:bg, color_token()}
           | {:text_color, color_token()}
           | {:text_bg, color_token()}
+          | {:font_size, :xs | :sm | :base | :lg | :xl | :"2xl" | :"3xl"}
+          | {:text_size, {:px | :rem, number()}}
+          | {:line_height, :none | :tight | :snug | :normal | :relaxed | :loose}
           | {:font_family, String.t()}
           | {:font_fallbacks, [String.t()]}
           | {:font_features, [{String.t(), non_neg_integer()}]}
@@ -2781,6 +2784,11 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op({:font_size, value}) when value in @font_size_value_tokens, do: :ok
+
+  defp validate_style_op({:text_size, {unit, value}})
+       when unit in [:px, :rem] and is_non_neg_native_f32_number(value),
+       do: :ok
+
   defp validate_style_op({:line_height, value}) when value in @line_height_value_tokens, do: :ok
   defp validate_style_op({:font_weight, value}) when value in @font_weight_value_tokens, do: :ok
   defp validate_style_op({:font_style, value}) when value in @font_style_value_tokens, do: :ok

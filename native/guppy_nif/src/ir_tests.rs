@@ -1255,6 +1255,14 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::FontSize(super::FontSizeStyle::TwoXl)
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("text_size"),
+            tuple(vec![atom("px"), integer(14)]),
+        ]))
+        .unwrap(),
+        StyleOp::TextSize(StyleLength::Px(14.0))
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("line_height"), atom("relaxed")])).unwrap(),
         StyleOp::LineHeight(super::LineHeightStyle::Relaxed)
     );
@@ -1397,6 +1405,10 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("white_space"), atom("pre")]),
         tuple(vec![atom("text_overflow"), atom("clip")]),
         tuple(vec![atom("font_size"), atom("huge")]),
+        tuple(vec![
+            atom("text_size"),
+            tuple(vec![atom("fraction"), integer(1)]),
+        ]),
         tuple(vec![atom("line_height"), atom("bad")]),
         tuple(vec![atom("font_weight"), atom("heavy")]),
         tuple(vec![atom("font_style"), atom("oblique")]),
@@ -1573,6 +1585,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "font_weight")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "text_size")
     );
     assert!(
         operations
