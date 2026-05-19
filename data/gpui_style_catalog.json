@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-strikethrough-detail-line-clamp-grid-placement-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration/strikethrough colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness plus strikethrough colors/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -3684,6 +3684,123 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled text_decoration_0/1/2/4/8 or underline thickness px"
+    },
+    {
+      "name": "strikethrough_color",
+      "tuple_schema": [
+        "strikethrough_color",
+        "color"
+      ],
+      "values": [
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "black",
+        "white",
+        "gray"
+      ],
+      "class_tokens": {
+        "strikethrough-red": "red",
+        "strikethrough-green": "green",
+        "strikethrough-blue": "blue",
+        "strikethrough-yellow": "yellow",
+        "strikethrough-black": "black",
+        "strikethrough-white": "white",
+        "strikethrough-gray": "gray"
+      },
+      "helpers": [
+        {
+          "name": "strikethrough_color",
+          "kind": "exact"
+        },
+        {
+          "name": "strikethrough_red",
+          "kind": "value",
+          "value": "red"
+        },
+        {
+          "name": "strikethrough_green",
+          "kind": "value",
+          "value": "green"
+        },
+        {
+          "name": "strikethrough_blue",
+          "kind": "value",
+          "value": "blue"
+        },
+        {
+          "name": "strikethrough_yellow",
+          "kind": "value",
+          "value": "yellow"
+        },
+        {
+          "name": "strikethrough_black",
+          "kind": "value",
+          "value": "black"
+        },
+        {
+          "name": "strikethrough_white",
+          "kind": "value",
+          "value": "white"
+        },
+        {
+          "name": "strikethrough_gray",
+          "kind": "value",
+          "value": "gray"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "StyleRefinement/TextStyle strikethrough color"
+    },
+    {
+      "name": "strikethrough_color_hex",
+      "tuple_schema": [
+        "strikethrough_color_hex",
+        "hex_color"
+      ],
+      "class_pattern": "strikethrough-[#RRGGBB]",
+      "class_prefix": "strikethrough",
+      "helpers": [
+        {
+          "name": "strikethrough_color_hex",
+          "kind": "exact"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "StyleRefinement/TextStyle strikethrough hex color"
+    },
+    {
+      "name": "strikethrough_thickness",
+      "tuple_schema": [
+        "strikethrough_thickness",
+        "non_negative_px_number"
+      ],
+      "class_prefixes": {
+        "strikethrough": null
+      },
+      "class_tokens": {
+        "strikethrough-0": 0,
+        "strikethrough-1": 1,
+        "strikethrough-2": 2,
+        "strikethrough-4": 4,
+        "strikethrough-8": 8
+      },
+      "helpers": [
+        {
+          "name": "strikethrough_thickness",
+          "kind": "number"
+        }
+      ],
+      "number": {
+        "min": 0,
+        "max": 4096
+      },
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "StyleRefinement/TextStyle strikethrough thickness px"
     },
     {
       "name": "line_clamp",

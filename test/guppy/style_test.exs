@@ -66,6 +66,9 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "text_decoration_color_hex"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration_style"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration_thickness"))
+    assert Enum.any?(operations, &(&1["name"] == "strikethrough_color"))
+    assert Enum.any?(operations, &(&1["name"] == "strikethrough_color_hex"))
+    assert Enum.any?(operations, &(&1["name"] == "strikethrough_thickness"))
     assert Enum.any?(operations, &(&1["name"] == "line_clamp"))
     assert Enum.any?(operations, &(&1["name"] == "grid_cols"))
     assert Enum.any?(operations, &(&1["name"] == "grid_rows"))
@@ -255,6 +258,11 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.decoration_wavy() == {:text_decoration_style, :wavy}
     assert Guppy.Style.text_decoration_thickness(2) == {:text_decoration_thickness, 2}
     assert_raise ArgumentError, fn -> Guppy.Style.text_decoration_thickness(-1) end
+    assert Guppy.Style.strikethrough_color(:red) == {:strikethrough_color, :red}
+    assert Guppy.Style.strikethrough_blue() == {:strikethrough_color, :blue}
+    assert Guppy.Style.strikethrough_color_hex("#abcdef") == {:strikethrough_color_hex, "#abcdef"}
+    assert Guppy.Style.strikethrough_thickness(2) == {:strikethrough_thickness, 2}
+    assert_raise ArgumentError, fn -> Guppy.Style.strikethrough_thickness(-1) end
     assert Guppy.Style.line_clamp(2) == {:line_clamp, 2}
     assert_raise ArgumentError, fn -> Guppy.Style.line_clamp(0) end
 
@@ -471,6 +479,19 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.class_token_to_style("decoration-[3.5]") ==
              {:ok, {:text_decoration_thickness, 3.5}}
 
+    assert Guppy.Style.class_token_to_style("strikethrough-red") ==
+             {:ok, {:strikethrough_color, :red}}
+
+    assert Guppy.Style.class_token_to_style("strikethrough-[#abcdef]") ==
+             {:ok, {:strikethrough_color_hex, "#abcdef"}}
+
+    assert Guppy.Style.class_token_to_style("strikethrough-2") ==
+             {:ok, {:strikethrough_thickness, 2}}
+
+    assert Guppy.Style.class_token_to_style("strikethrough-[3.5]") ==
+             {:ok, {:strikethrough_thickness, 3.5}}
+
     assert Guppy.Style.class_token_to_style("decoration-[bad]") == :error
+    assert Guppy.Style.class_token_to_style("strikethrough-[bad]") == :error
   end
 end

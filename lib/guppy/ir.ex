@@ -226,6 +226,9 @@ defmodule Guppy.IR do
           | {:text_decoration_color_hex, String.t()}
           | {:text_decoration_style, :solid | :wavy}
           | {:text_decoration_thickness, number()}
+          | {:strikethrough_color, color_token()}
+          | {:strikethrough_color_hex, String.t()}
+          | {:strikethrough_thickness, number()}
           | {:bg_linear_gradient,
              [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
           | {:opacity, number()}
@@ -970,13 +973,21 @@ defmodule Guppy.IR do
     :w_resize,
     :none
   ]
-  @color_style_value_tokens [:bg, :text_color, :text_bg, :border_color, :text_decoration_color]
+  @color_style_value_tokens [
+    :bg,
+    :text_color,
+    :text_bg,
+    :border_color,
+    :text_decoration_color,
+    :strikethrough_color
+  ]
   @hex_color_style_value_tokens [
     :bg_hex,
     :text_color_hex,
     :text_bg_hex,
     :border_color_hex,
-    :text_decoration_color_hex
+    :text_decoration_color_hex,
+    :strikethrough_color_hex
   ]
   @size_value_tokens [:w_px, :w_rem, :h_px, :h_rem]
   @fraction_value_tokens [:w_frac, :h_frac]
@@ -2831,6 +2842,10 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op({:text_decoration_thickness, value})
+       when is_non_neg_native_f32_number(value),
+       do: :ok
+
+  defp validate_style_op({:strikethrough_thickness, value})
        when is_non_neg_native_f32_number(value),
        do: :ok
 

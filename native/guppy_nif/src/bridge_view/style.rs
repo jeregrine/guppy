@@ -250,6 +250,9 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::TextDecorationColorHex(_)
         | StyleOp::TextDecorationLineStyle(_)
         | StyleOp::TextDecorationThickness(_)
+        | StyleOp::StrikethroughColor(_)
+        | StyleOp::StrikethroughColorHex(_)
+        | StyleOp::StrikethroughThickness(_)
         | StyleOp::Bg(_)
         | StyleOp::TextColor(_)
         | StyleOp::TextBg(_)
@@ -383,6 +386,11 @@ where
             apply_text_decoration_line_style(style, *line_style)
         }
         StyleOp::TextDecorationThickness(value) => apply_text_decoration_thickness(style, *value),
+        StyleOp::StrikethroughColor(color) => apply_strikethrough_color(style, *color),
+        StyleOp::StrikethroughColorHex(value) => {
+            apply_strikethrough_color_value(style, hex_color_to_color(*value))
+        }
+        StyleOp::StrikethroughThickness(value) => apply_strikethrough_thickness(style, *value),
         StyleOp::WPx(value) => style.w(px(*value)),
         StyleOp::WRem(value) => style.w(rems(*value)),
         StyleOp::WFrac(value) => style.w(relative(*value)),
@@ -1115,6 +1123,41 @@ where
     element
 }
 
+fn apply_strikethrough_color<E>(element: E, color: ColorToken) -> E
+where
+    E: Styled,
+{
+    apply_strikethrough_color_value(element, color_token_to_color(color))
+}
+
+fn apply_strikethrough_color_value<E>(mut element: E, color: gpui::Hsla) -> E
+where
+    E: Styled,
+{
+    element
+        .style()
+        .text
+        .get_or_insert_with(Default::default)
+        .strikethrough
+        .get_or_insert_with(Default::default)
+        .color = Some(color);
+    element
+}
+
+fn apply_strikethrough_thickness<E>(mut element: E, thickness: f32) -> E
+where
+    E: Styled,
+{
+    element
+        .style()
+        .text
+        .get_or_insert_with(Default::default)
+        .strikethrough
+        .get_or_insert_with(Default::default)
+        .thickness = px(thickness);
+    element
+}
+
 fn style_length_to_definite(length: StyleLength) -> DefiniteLength {
     match length {
         StyleLength::Px(value) => px(value).into(),
@@ -1226,6 +1269,24 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
             StyleOp::TextDecorationThickness(value) => {
                 highlight
                     .underline
+                    .get_or_insert_with(Default::default)
+                    .thickness = px(*value);
+            }
+            StyleOp::StrikethroughColor(color) => {
+                highlight
+                    .strikethrough
+                    .get_or_insert_with(Default::default)
+                    .color = Some(color_token_to_color(*color));
+            }
+            StyleOp::StrikethroughColorHex(value) => {
+                highlight
+                    .strikethrough
+                    .get_or_insert_with(Default::default)
+                    .color = Some(hex_color_to_color(*value));
+            }
+            StyleOp::StrikethroughThickness(value) => {
+                highlight
+                    .strikethrough
                     .get_or_insert_with(Default::default)
                     .thickness = px(*value);
             }
@@ -1499,6 +1560,21 @@ mod tests {
             None
         );
 
+        let style = apply_strikethrough_thickness(
+            apply_strikethrough_color(StyleRefinement::default(), ColorToken::Red),
+            2.0,
+        );
+        let strikethrough = style
+            .text
+            .as_ref()
+            .and_then(|text| text.strikethrough)
+            .unwrap();
+        assert_eq!(
+            strikethrough.color,
+            Some(color_token_to_color(ColorToken::Red))
+        );
+        assert_eq!(strikethrough.thickness, px(2.0));
+
         let style = apply_refinement_style(
             StyleRefinement::default(),
             &vec![
@@ -1506,13 +1582,26 @@ mod tests {
                 StyleOp::TextDecorationColor(ColorToken::Red),
                 StyleOp::TextDecorationLineStyle(TextDecorationLineStyle::Wavy),
                 StyleOp::TextDecorationThickness(2.0),
+                StyleOp::TextDecoration(TextDecorationStyle::LineThrough),
+                StyleOp::StrikethroughColor(ColorToken::Blue),
+                StyleOp::StrikethroughThickness(3.0),
             ]
             .into(),
         );
         let underline = style.text.as_ref().and_then(|text| text.underline).unwrap();
+        let strikethrough = style
+            .text
+            .as_ref()
+            .and_then(|text| text.strikethrough)
+            .unwrap();
         assert_eq!(underline.color, Some(rgb(0xff0000).into()));
         assert_eq!(underline.thickness, px(2.0));
         assert!(underline.wavy);
+        assert_eq!(
+            strikethrough.color,
+            Some(color_token_to_color(ColorToken::Blue))
+        );
+        assert_eq!(strikethrough.thickness, px(3.0));
     }
 
     #[test]

@@ -223,6 +223,9 @@ defmodule Guppy.IRTest do
       {:font_fallbacks, ["Monaco", "Menlo"]},
       {:font_features, [{"calt", 0}, {"kern", 1}]},
       {:text_decoration, :underline},
+      {:strikethrough_color, :red},
+      {:strikethrough_color_hex, "#abcdef"},
+      {:strikethrough_thickness, 2},
       {:text_decoration, :none}
     ]
 
@@ -281,6 +284,9 @@ defmodule Guppy.IRTest do
           {:font_features, []},
           {:font_features, [{"bad", 1}]},
           {:font_features, [{"calt", -1}]},
+          {:strikethrough_color, :purple},
+          {:strikethrough_color_hex, "bad"},
+          {:strikethrough_thickness, -1},
           {:text_decoration, :blink}
         ] do
       assert {:error, {:invalid_style_op, ^invalid}} =
@@ -861,6 +867,9 @@ defmodule Guppy.IRTest do
           {:text_decoration_style, :wavy},
           {:text_decoration_thickness, 2},
           :line_through,
+          {:strikethrough_color, :red},
+          {:strikethrough_color_hex, "#abcdef"},
+          {:strikethrough_thickness, 2},
           :items_start,
           :items_end,
           {:align_items, :stretch},
@@ -1043,6 +1052,9 @@ defmodule Guppy.IRTest do
              {:text_decoration_style, :wavy},
              {:text_decoration_thickness, 2},
              :line_through,
+             {:strikethrough_color, :red},
+             {:strikethrough_color_hex, "#abcdef"},
+             {:strikethrough_thickness, 2},
              :items_start,
              :items_end,
              {:align_items, :stretch},
@@ -1147,6 +1159,15 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:text_decoration_thickness, -1}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:text_decoration_thickness, -1}]))
+
+    assert {:error, {:invalid_style_op, {:strikethrough_color, :purple}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:strikethrough_color, :purple}]))
+
+    assert {:error, {:invalid_style_op, {:strikethrough_color_hex, "bad"}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:strikethrough_color_hex, "bad"}]))
+
+    assert {:error, {:invalid_style_op, {:strikethrough_thickness, -1}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:strikethrough_thickness, -1}]))
 
     assert {:error, {:invalid_style_op, {:align_self, :auto}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:align_self, :auto}]))

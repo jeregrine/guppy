@@ -50,7 +50,8 @@ defmodule Guppy.Style do
                        "font_style",
                        "text_decoration",
                        "text_decoration_color",
-                       "text_decoration_style"
+                       "text_decoration_style",
+                       "strikethrough_color"
                      ]
                    end)
 
@@ -96,7 +97,8 @@ defmodule Guppy.Style do
                             "text_color_hex",
                             "text_bg_hex",
                             "border_color_hex",
-                            "text_decoration_color_hex"
+                            "text_decoration_color_hex",
+                            "strikethrough_color_hex"
                           ]
                         end)
 
@@ -111,7 +113,8 @@ defmodule Guppy.Style do
                          "flex_shrink",
                          "font_weight_value",
                          "opacity",
-                         "text_decoration_thickness"
+                         "text_decoration_thickness",
+                         "strikethrough_thickness"
                        ]
                      end)
 
