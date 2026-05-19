@@ -126,7 +126,13 @@ defmodule Guppy.AppTest do
     assert {:bg_hex, "#ffffff"} in panel_style
     assert {:text_color, :black} in panel_style
 
+    assert Guppy.active_theme(app_name).id == "light"
+    assert {:ok, "#ffffff"} = Guppy.theme_color(app_name, :surface)
+    assert {:ok, ^panel_style} = Guppy.theme_style(app_name, :panel)
+
     Guppy.App.put_window_context(app_name, "test")
+    assert {:ok, ^panel_style} = Guppy.theme_style(:panel)
+    assert "#ffffff" = Guppy.theme_color!(:surface)
     assert {:ok, ^panel_style} = Guppy.Component.theme_style(:panel)
     assert "#ffffff" = Guppy.Component.theme_color!(:surface)
 

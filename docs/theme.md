@@ -56,16 +56,23 @@ Validated themes store normalized string keys and resolved primitive style lists
 
 ## App/window helpers
 
-App-scoped helpers:
+Top-level helpers delegate to the current app context or accept an explicit app ref:
 
 ```elixir
-Guppy.App.theme(app)
-Guppy.App.set_theme(app, theme_or_registered_theme_id)
-Guppy.App.theme_color(app, :surface)
-Guppy.App.theme_style(app, :card)
-Guppy.App.register_theme_family(app, family)
-Guppy.App.theme_families(app)
+Guppy.active_theme()
+Guppy.active_theme(app)
+Guppy.set_theme(theme_or_registered_theme_id)
+Guppy.set_theme(app, theme_or_registered_theme_id)
+Guppy.theme_color(:surface)
+Guppy.theme_color(app, :surface)
+Guppy.theme_style(:card)
+Guppy.theme_style(app, :card)
+Guppy.register_theme_family(family)
+Guppy.register_theme_family(app, family)
+Guppy.theme_families(app)
 ```
+
+The same operations are available as app-scoped helpers under `Guppy.App`.
 
 `use Guppy.Window` imports current-app helpers through `Guppy.Component`:
 
