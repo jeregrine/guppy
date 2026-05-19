@@ -14,14 +14,19 @@ defmodule Guppy.Examples.MultiWindowApp.MainWindow do
   end
 
   def render(window) do
+    theme_window_style = theme_style!(:window)
+    theme_card_style = theme_style!(:card)
     app_styles = Guppy.App.styles(Guppy.App.current_app(), "card hover:bg-blue")
 
     ~GUI"""
-    <div id="main" class="flex flex-col gap-3 p-4 bg-[#0f172a] text-[#f8fafc]">
+    <div id="main" class="flex flex-col gap-3 p-4" style={theme_window_style}>
       <text id="title" class="text-3xl font-bold">Guppy.App multi-window demo</text>
       <text id="message">{@message}</text>
       <button id="palette" click="palette" class="p-2 rounded-md border-1">Open command palette</button>
       <button id="secondary" click="secondary" class="p-2 rounded-md border-1">Open secondary window</button>
+      <div id="theme_card" style={theme_card_style}>
+        <text>Theme styles resolve semantic color tokens to primitive IR style tuples.</text>
+      </div>
       <div id="styled_card" style={Keyword.get(app_styles, :style)} hover_style={Keyword.get(app_styles, :hover_style)}>
         <text>Stylesheet class refs resolve in Elixir, including state variants.</text>
       </div>

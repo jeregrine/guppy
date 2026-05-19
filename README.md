@@ -219,6 +219,21 @@ Window ids are strings. The first configured window starts by default unless `st
 
 App config is plain Elixir data validated into structs. Use child-spec/start options and optional `init/1` for final config assembly. App-owned menus dispatch callbacks to `handle_command/3`; `Guppy.App.open_command_palette/1` opens a minimal built-in command-palette overlay backed by the same command registry. Standalone `Guppy.Window` modules and low-level `Guppy.open_window/1..3` continue to work without an app.
 
+## Themes
+
+Themes are app-scoped Elixir data that compile semantic color/style tokens to primitive IR style tuples before native render. `Guppy.App.Theme.default(:dark)` and `Guppy.App.Theme.default(:light)` provide built-in defaults; apps can also register `Guppy.App.ThemeFamily` values and activate a theme by id.
+
+Useful helpers:
+
+- `Guppy.App.theme/1`
+- `Guppy.App.set_theme/2`
+- `Guppy.App.theme_color/2`
+- `Guppy.App.theme_style/2`
+- `Guppy.App.register_theme_family/2`
+- `theme_style!/1` / `theme_color!/1` inside `use Guppy.Window`
+
+See `docs/theme.md` for the Zed/GPUI audit notes and current Guppy theme boundaries.
+
 ## Window processes
 
 `Guppy.Window` modules can be supervised directly via their generated `child_spec/1` and use these callbacks:
