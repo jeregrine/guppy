@@ -106,6 +106,10 @@ defmodule Guppy.Style do
                          operation["name"] in ["bg_linear_gradient"]
                        end)
 
+  @background_pattern_operations Enum.filter(@catalog["operations"], fn operation ->
+                                   operation["name"] in ["bg_pattern_slash"]
+                                 end)
+
   @number_operations Enum.filter(@catalog["operations"], fn operation ->
                        operation["name"] in [
                          "aspect_ratio",
@@ -633,6 +637,14 @@ defmodule Guppy.Style do
       do: {unquote(operation_name), normalize_linear_gradient_options!(options)}
   end
 
+  for operation <- @background_pattern_operations do
+    operation_name = String.to_atom(operation["name"])
+
+    @doc "Returns a canonical #{operation_name} tuple."
+    def unquote(operation_name)(options),
+      do: {unquote(operation_name), normalize_background_pattern_options!(options)}
+  end
+
   for operation <- @number_operations,
       %{"kind" => "number", "name" => name} <- operation["helpers"] do
     operation_name = String.to_atom(operation["name"])
@@ -808,6 +820,7 @@ defmodule Guppy.Style do
          :error <- parse_grid_line_class(token),
          :error <- parse_hex_color_class(token),
          :error <- parse_linear_gradient_class(token),
+         :error <- parse_background_pattern_class(token),
          :error <- parse_number_class(token),
          :error <- parse_unit_length_class(token),
          :error <- parse_string_class(token),
@@ -930,6 +943,21 @@ defmodule Guppy.Style do
          options <- [angle: angle, from: from, to: to],
          {:ok, options} <- normalize_linear_gradient_options(options) do
       {:ok, {:bg_linear_gradient, options}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_background_pattern_class(token) do
+    with [payload] <-
+           Regex.run(~r/^bg-pattern-slash-\[(.+)\]$/, token, capture: :all_but_first),
+         [color, width, interval] <- String.split(payload, ",", parts: 3),
+         {:ok, color} <- parse_gradient_color(color),
+         {:ok, width} <- parse_number(width),
+         {:ok, interval} <- parse_number(interval),
+         options <- [color: color, width: width, interval: interval],
+         {:ok, options} <- normalize_background_pattern_options(options) do
+      {:ok, {:bg_pattern_slash, options}}
     else
       _ -> :error
     end
@@ -1440,6 +1468,35 @@ defmodule Guppy.Style do
   end
 
   defp normalize_linear_gradient_options(_options), do: :error
+
+  defp normalize_background_pattern_options!(options) do
+    case normalize_background_pattern_options(options) do
+      {:ok, options} -> options
+      :error -> raise ArgumentError, "invalid background pattern options: #{inspect(options)}"
+    end
+  end
+
+  defp normalize_background_pattern_options(options) when is_list(options) do
+    if Keyword.keyword?(options) do
+      keys = Keyword.keys(options)
+
+      if length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
+           Enum.sort(keys) == [:color, :interval, :width] and
+           valid_gradient_color?(Keyword.fetch!(options, :color)) and
+           valid_background_pattern_number?(Keyword.fetch!(options, :width)) and
+           valid_background_pattern_number?(Keyword.fetch!(options, :interval)) do
+        {:ok, options}
+      else
+        :error
+      end
+    else
+      :error
+    end
+  end
+
+  defp normalize_background_pattern_options(_options), do: :error
+
+  defp valid_background_pattern_number?(value), do: is_number(value) and value >= 0
 
   defp parse_gradient_stop(stop) do
     with [color, percentage] <- String.split(stop, ":", parts: 2),

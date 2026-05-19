@@ -25,6 +25,11 @@ defmodule Guppy.IR do
   @type color_token :: :red | :green | :blue | :yellow | :black | :white | :gray
   @type gradient_color :: color_token() | String.t()
   @type linear_gradient_stop :: {gradient_color(), number()}
+  @type background_pattern_options :: [
+          color: gradient_color(),
+          width: number(),
+          interval: number()
+        ]
 
   @type style_flag ::
           :grid
@@ -231,6 +236,7 @@ defmodule Guppy.IR do
           | {:strikethrough_thickness, number()}
           | {:bg_linear_gradient,
              [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
+          | {:bg_pattern_slash, background_pattern_options()}
           | {:opacity, number()}
           | {:line_clamp, pos_integer()}
           | {:grid_cols, pos_integer()}
@@ -2622,6 +2628,9 @@ defmodule Guppy.IR do
   defp native_f32_number?(value) when is_native_f32_number(value), do: true
   defp native_f32_number?(_value), do: false
 
+  defp non_neg_native_f32_number?(value) when is_non_neg_native_f32_number(value), do: true
+  defp non_neg_native_f32_number?(_value), do: false
+
   defp unit_native_f32_number?(value) when is_unit_native_f32_number(value), do: true
   defp unit_native_f32_number?(_value), do: false
 
@@ -2870,6 +2879,14 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_style_op({:bg_pattern_slash, options} = op) do
+    if valid_background_pattern_options?(options) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
   defp validate_style_op({:opacity, value}) when is_unit_native_f32_number(value), do: :ok
 
   defp validate_style_op({:aspect_ratio, value}) when is_positive_native_f32_number(value),
@@ -2946,6 +2963,22 @@ defmodule Guppy.IR do
   end
 
   defp valid_linear_gradient_options?(_options), do: false
+
+  defp valid_background_pattern_options?(options) when is_list(options) do
+    if Keyword.keyword?(options) do
+      keys = Keyword.keys(options)
+
+      length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
+        Enum.sort(keys) == [:color, :interval, :width] and
+        valid_gradient_color?(Keyword.fetch!(options, :color)) and
+        non_neg_native_f32_number?(Keyword.fetch!(options, :width)) and
+        non_neg_native_f32_number?(Keyword.fetch!(options, :interval))
+    else
+      false
+    end
+  end
+
+  defp valid_background_pattern_options?(_options), do: false
 
   defp valid_gradient_angle?(angle),
     do: native_f32_number?(angle) and angle >= 0.0 and angle <= 360.0

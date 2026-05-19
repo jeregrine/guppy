@@ -1,7 +1,7 @@
 use super::{
-    CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode, ImageObjectFit, ImageSource,
-    IrNode, LinearGradientStop, StyleAxis, StyleColor, StyleLength, StyleOp,
-    decode_list_row_child_term, ensure_unique_list_row_control_ids, field_key,
+    BackgroundPatternSlash, CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode,
+    ImageObjectFit, ImageSource, IrNode, LinearGradientStop, StyleAxis, StyleColor, StyleLength,
+    StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids, field_key,
     get_optional_integer_field, get_optional_usize_field, parse_positive_u32, parse_style_op,
 };
 use crate::ir_allowed::{allowed_node_event_fields, allowed_node_fields};
@@ -1584,6 +1584,11 @@ fn native_style_catalog_loads() {
     assert!(
         operations
             .iter()
+            .any(|operation| operation["name"] == "bg_pattern_slash")
+    );
+    assert!(
+        operations
+            .iter()
             .any(|operation| operation["name"] == "opacity")
     );
     assert!(
@@ -1754,6 +1759,24 @@ fn parses_bg_linear_gradient_style_op() {
             },
         }
     );
+
+    let pattern = tuple(vec![
+        atom("bg_pattern_slash"),
+        list(vec![
+            tuple(vec![atom("color"), atom("red")]),
+            tuple(vec![atom("width"), float(1.5)]),
+            tuple(vec![atom("interval"), integer(4)]),
+        ]),
+    ]);
+
+    assert_eq!(
+        parse_style_op(&pattern).unwrap(),
+        StyleOp::BgPatternSlash(BackgroundPatternSlash {
+            color: StyleColor::Token(super::ColorToken::Red),
+            width: 1.5,
+            interval: 4.0,
+        })
+    );
 }
 
 #[test]
@@ -1772,6 +1795,18 @@ fn rejects_invalid_bg_linear_gradient_style_op() {
 
     let err = parse_style_op(&term).unwrap_err();
     assert!(err.contains("gradient"));
+
+    let term = tuple(vec![
+        atom("bg_pattern_slash"),
+        list(vec![
+            tuple(vec![atom("color"), atom("purple")]),
+            tuple(vec![atom("width"), integer(1)]),
+            tuple(vec![atom("interval"), integer(4)]),
+        ]),
+    ]);
+
+    let err = parse_style_op(&term).unwrap_err();
+    assert!(err.contains("background pattern"));
 }
 
 #[test]

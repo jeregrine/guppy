@@ -194,6 +194,7 @@ defmodule Guppy.IRTest do
       {:shadow, :md},
       {:shadow, :none},
       {:shadow, :"2xs"},
+      {:bg_pattern_slash, [color: :red, width: 1.0, interval: 4.0]},
       {:flex_direction, :column},
       {:flex_direction, :row_reverse},
       {:flex_wrap, :wrap},
@@ -294,8 +295,9 @@ defmodule Guppy.IRTest do
     end
   end
 
-  test "ir validation accepts background linear gradient style ops" do
+  test "ir validation accepts background gradient and pattern style ops" do
     gradient = {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}, to: {:blue, 1.0}]}
+    pattern = {:bg_pattern_slash, [color: :red, width: 1.0, interval: 4.0]}
 
     missing_stop = {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}]}
 
@@ -309,23 +311,25 @@ defmodule Guppy.IRTest do
       {:bg_linear_gradient, [angle: 90.0, from: {"#0f172a", 0.0}, to: {"#2563eb", 1.5}]}
 
     invalid_options = {:bg_linear_gradient, [:bad]}
+    bad_pattern_color = {:bg_pattern_slash, [color: :purple, width: 1.0, interval: 4.0]}
+    bad_pattern_width = {:bg_pattern_slash, [color: :red, width: -1.0, interval: 4.0]}
+    bad_pattern_options = {:bg_pattern_slash, [color: :red, width: 1.0]}
 
-    assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: [gradient]))
+    assert :ok = Guppy.IR.validate(Guppy.IR.div([], style: [gradient, pattern]))
 
-    assert {:error, {:invalid_style_op, ^missing_stop}} =
-             Guppy.IR.validate(Guppy.IR.div([], style: [missing_stop]))
-
-    assert {:error, {:invalid_style_op, ^invalid_angle}} =
-             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_angle]))
-
-    assert {:error, {:invalid_style_op, ^invalid_color}} =
-             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_color]))
-
-    assert {:error, {:invalid_style_op, ^invalid_stop}} =
-             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_stop]))
-
-    assert {:error, {:invalid_style_op, ^invalid_options}} =
-             Guppy.IR.validate(Guppy.IR.div([], style: [invalid_options]))
+    for invalid <- [
+          missing_stop,
+          invalid_angle,
+          invalid_color,
+          invalid_stop,
+          invalid_options,
+          bad_pattern_color,
+          bad_pattern_width,
+          bad_pattern_options
+        ] do
+      assert {:error, {:invalid_style_op, ^invalid}} =
+               Guppy.IR.validate(Guppy.IR.div([], style: [invalid]))
+    end
   end
 
   test "ir validation rejects numeric values outside native f32 integer bounds" do

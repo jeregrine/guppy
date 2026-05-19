@@ -9,7 +9,7 @@ use crate::ir::{
 use gpui::{
     DefiniteLength, FontFallbacks, FontFeatures, FontStyle, FontWeight, HighlightStyle, Length,
     StatefulInteractiveElement, StrikethroughStyle, StyleRefinement, Styled, UnderlineStyle,
-    linear_color_stop, linear_gradient, px, relative, rems, rgb,
+    linear_color_stop, linear_gradient, pattern_slash, px, relative, rems, rgb,
 };
 use std::sync::Arc;
 
@@ -262,6 +262,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::TextBgHex(_)
         | StyleOp::BorderColorHex(_)
         | StyleOp::BgLinearGradient { .. }
+        | StyleOp::BgPatternSlash(_)
         | StyleOp::Opacity(_)
         | StyleOp::WPx(_)
         | StyleOp::WRem(_)
@@ -354,6 +355,11 @@ where
             *angle,
             linear_gradient_stop_to_gpui(from),
             linear_gradient_stop_to_gpui(to),
+        )),
+        StyleOp::BgPatternSlash(pattern) => style.bg(pattern_slash(
+            style_color_to_color(&pattern.color),
+            pattern.width,
+            pattern.interval,
         )),
         StyleOp::Opacity(value) => style.opacity(*value),
         StyleOp::Visibility(visibility) => apply_visibility(style, *visibility),
@@ -1341,8 +1347,8 @@ fn hex_color_to_color(value: u32) -> gpui::Hsla {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{LinearGradientStop, StyleColor};
-    use gpui::{Fill, StyleRefinement, linear_color_stop, linear_gradient};
+    use crate::ir::{BackgroundPatternSlash, LinearGradientStop, StyleColor};
+    use gpui::{Fill, StyleRefinement, linear_color_stop, linear_gradient, pattern_slash};
 
     #[test]
     fn applies_canonical_box_spacing_to_style_refinement() {
@@ -1630,6 +1636,25 @@ mod tests {
                 90.0,
                 linear_color_stop(rgb(0x0f172a), 0.0),
                 linear_color_stop(rgb(0x2563eb), 1.0),
+            )))
+        );
+
+        let style = apply_refinement_style(
+            StyleRefinement::default(),
+            &vec![StyleOp::BgPatternSlash(BackgroundPatternSlash {
+                color: StyleColor::Token(ColorToken::Red),
+                width: 1.0,
+                interval: 4.0,
+            })]
+            .into(),
+        );
+
+        assert_eq!(
+            style.background,
+            Some(Fill::from(pattern_slash(
+                color_token_to_color(ColorToken::Red),
+                1.0,
+                4.0,
             )))
         );
     }

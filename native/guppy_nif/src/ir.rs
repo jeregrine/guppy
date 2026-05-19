@@ -700,6 +700,7 @@ pub enum StyleOp {
         from: LinearGradientStop,
         to: LinearGradientStop,
     },
+    BgPatternSlash(BackgroundPatternSlash),
     Opacity(f32),
     LineClamp(u16),
     GridCols(u16),
@@ -741,6 +742,13 @@ pub enum StyleColor {
 pub struct LinearGradientStop {
     pub color: StyleColor,
     pub percentage: f32,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BackgroundPatternSlash {
+    pub color: StyleColor,
+    pub width: f32,
+    pub interval: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -3046,6 +3054,9 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     let (angle, from, to) = parse_linear_gradient_options(&elements[1])?;
                     Ok(StyleOp::BgLinearGradient { angle, from, to })
                 }
+                "bg_pattern_slash" => Ok(StyleOp::BgPatternSlash(parse_background_pattern_slash(
+                    &elements[1],
+                )?)),
                 "opacity" => Ok(StyleOp::Opacity(parse_unit_style_f32(
                     &elements[1],
                     "opacity",
@@ -3339,6 +3350,75 @@ fn parse_gradient_angle(term: &Term) -> Result<f32, String> {
     } else {
         Err(format!("invalid gradient angle: {value}"))
     }
+}
+
+fn parse_background_pattern_slash(term: &Term) -> Result<BackgroundPatternSlash, String> {
+    let options = get_list(term)?;
+    let mut color = None;
+    let mut width = None;
+    let mut interval = None;
+
+    for option in options {
+        let Term::Tuple(Tuple { elements }) = option else {
+            return Err(format!(
+                "expected background pattern option tuple, got {option}"
+            ));
+        };
+
+        if elements.len() != 2 {
+            return Err(format!(
+                "expected background pattern option tuple with 2 elements, got {option}"
+            ));
+        }
+
+        let Term::Atom(key) = &elements[0] else {
+            return Err(format!(
+                "expected background pattern option key atom, got {}",
+                elements[0]
+            ));
+        };
+
+        match key.name.as_str() {
+            "color" => {
+                if color.is_some() {
+                    return Err("duplicate background pattern color option".into());
+                }
+
+                color = Some(
+                    parse_style_color(&elements[1])
+                        .map_err(|error| format!("invalid background pattern color: {error}"))?,
+                );
+            }
+            "width" => {
+                if width.is_some() {
+                    return Err("duplicate background pattern width option".into());
+                }
+
+                width = Some(parse_non_negative_style_f32(
+                    &elements[1],
+                    "background pattern width",
+                )?);
+            }
+            "interval" => {
+                if interval.is_some() {
+                    return Err("duplicate background pattern interval option".into());
+                }
+
+                interval = Some(parse_non_negative_style_f32(
+                    &elements[1],
+                    "background pattern interval",
+                )?);
+            }
+            other => return Err(format!("unsupported background pattern option: {other}")),
+        }
+    }
+
+    Ok(BackgroundPatternSlash {
+        color: color.ok_or_else(|| "missing background pattern color option".to_string())?,
+        width: width.ok_or_else(|| "missing background pattern width option".to_string())?,
+        interval: interval
+            .ok_or_else(|| "missing background pattern interval option".to_string())?,
+    })
 }
 
 fn parse_linear_gradient_stop(term: &Term) -> Result<LinearGradientStop, String> {

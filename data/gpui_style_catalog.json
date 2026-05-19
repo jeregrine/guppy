@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-strikethrough-detail-line-clamp-grid-placement-full-span-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration/strikethrough colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness plus strikethrough colors/thickness, line clamp, grid count/span/full-span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-pattern-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-strikethrough-detail-line-clamp-grid-placement-full-span-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient/pattern background/text/border/text-background/text-decoration/strikethrough colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness plus strikethrough colors/thickness, line clamp, grid count/span/full-span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -2319,6 +2319,39 @@
         "stop_max": 1
       },
       "gpui_mapping": "Styled bg linear_gradient"
+    },
+    {
+      "name": "bg_pattern_slash",
+      "tuple_schema": [
+        "bg_pattern_slash",
+        "pattern_slash_options"
+      ],
+      "options": {
+        "required": [
+          "color",
+          "width",
+          "interval"
+        ],
+        "color": "named_or_hex_color",
+        "width": {
+          "min": 0,
+          "max": 4096
+        },
+        "interval": {
+          "min": 0,
+          "max": 4096
+        }
+      },
+      "class_pattern": "bg-pattern-slash-[color,width,interval]",
+      "helpers": [
+        {
+          "name": "bg_pattern_slash",
+          "kind": "pattern_slash"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled bg(pattern_slash(color, width, interval)) Background::PatternSlash"
     },
     {
       "name": "opacity",

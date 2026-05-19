@@ -35,6 +35,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "text_bg_hex"))
     assert Enum.any?(operations, &(&1["name"] == "border_color_hex"))
     assert Enum.any?(operations, &(&1["name"] == "bg_linear_gradient"))
+    assert Enum.any?(operations, &(&1["name"] == "bg_pattern_slash"))
     assert Enum.any?(operations, &(&1["name"] == "opacity"))
     assert Enum.any?(operations, &(&1["name"] == "scrollbar_width"))
     assert Enum.any?(operations, &(&1["name"] == "shadow"))
@@ -171,6 +172,10 @@ defmodule Guppy.StyleTest do
 
     gradient = [angle: 90, from: {"#0f172a", 0}, to: {:blue, 1}]
     assert Guppy.Style.bg_linear_gradient(gradient) == {:bg_linear_gradient, gradient}
+
+    pattern = [color: :red, width: 1, interval: 4]
+    assert Guppy.Style.bg_pattern_slash(pattern) == {:bg_pattern_slash, pattern}
+    assert_raise ArgumentError, fn -> Guppy.Style.bg_pattern_slash(color: :purple, width: 1) end
 
     assert Guppy.Style.opacity(0.5) == {:opacity, 0.5}
     assert_raise ArgumentError, fn -> Guppy.Style.opacity(1.5) end
@@ -310,14 +315,21 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.class_token_to_style("bg-[#12]") == :error
   end
 
-  test "background gradient classes normalize through the catalog parser" do
+  test "background gradient and pattern classes normalize through the catalog parser" do
     assert Guppy.Style.class_token_to_style("bg-linear-gradient-[90,#0f172a:0,#2563eb:1]") ==
              {:ok, {:bg_linear_gradient, [angle: 90, from: {"#0f172a", 0}, to: {"#2563eb", 1}]}}
 
     assert Guppy.Style.class_token_to_style("bg-linear-gradient-[90,red:0,blue:1]") ==
              {:ok, {:bg_linear_gradient, [angle: 90, from: {:red, 0}, to: {:blue, 1}]}}
 
+    assert Guppy.Style.class_token_to_style("bg-pattern-slash-[red,1,4]") ==
+             {:ok, {:bg_pattern_slash, [color: :red, width: 1, interval: 4]}}
+
+    assert Guppy.Style.class_token_to_style("bg-pattern-slash-[#0f172a,1.5,4]") ==
+             {:ok, {:bg_pattern_slash, [color: "#0f172a", width: 1.5, interval: 4]}}
+
     assert Guppy.Style.class_token_to_style("bg-linear-gradient-[bad]") == :error
+    assert Guppy.Style.class_token_to_style("bg-pattern-slash-[bad]") == :error
   end
 
   test "opacity classes normalize through the catalog parser" do
