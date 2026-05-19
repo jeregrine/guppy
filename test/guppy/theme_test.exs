@@ -28,6 +28,8 @@ defmodule Guppy.ThemeTest do
     assert {:ok, "#0f172a"} = Theme.color(theme, :surface)
     assert {:ok, :white} = Theme.color(theme, "text")
 
+    assert Guppy.Style.theme_color(:bg, :surface) == {:theme_color, :bg, :surface}
+
     assert {:ok, style} = Theme.style(theme, :card)
     assert {:padding, :all, {:rem, 1}} in style
     assert {:border_radius, :all, {:rem, 0.5}} in style

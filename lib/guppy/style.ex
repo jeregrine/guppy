@@ -825,6 +825,9 @@ defmodule Guppy.Style do
     end
   end
 
+  @doc "Returns a semantic theme color reference for theme style definitions."
+  def theme_color(role, token), do: Guppy.App.Theme.color_ref(role, token)
+
   @doc false
   def class_token_to_style(token) when is_binary(token) do
     with :error <- parse_enum_class(token),
