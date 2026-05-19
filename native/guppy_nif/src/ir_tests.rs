@@ -1279,6 +1279,10 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::FontWeight(super::FontWeightStyle::Bold)
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![atom("font_weight_value"), integer(650)])).unwrap(),
+        StyleOp::FontWeightValue(650.0)
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("font_style"), atom("italic")])).unwrap(),
         StyleOp::FontStyle(super::FontStyleValue::Italic)
     );
@@ -1424,6 +1428,7 @@ fn rejects_invalid_canonical_length_style_ops() {
             tuple(vec![atom("px"), integer(-1)]),
         ]),
         tuple(vec![atom("font_weight"), atom("heavy")]),
+        tuple(vec![atom("font_weight_value"), integer(50)]),
         tuple(vec![atom("font_style"), atom("oblique")]),
         tuple(vec![atom("font_family"), binary("")]),
         tuple(vec![atom("font_fallbacks"), list(vec![])]),
@@ -1598,6 +1603,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "font_weight")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "font_weight_value")
     );
     assert!(
         operations

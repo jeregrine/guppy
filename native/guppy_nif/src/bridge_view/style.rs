@@ -240,6 +240,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::LineHeight(_)
         | StyleOp::LineHeightLength(_)
         | StyleOp::FontWeight(_)
+        | StyleOp::FontWeightValue(_)
         | StyleOp::FontStyle(_)
         | StyleOp::FontFamily(_)
         | StyleOp::FontFallbacks(_)
@@ -366,6 +367,7 @@ where
         StyleOp::LineHeight(line_height) => apply_line_height(style, *line_height),
         StyleOp::LineHeightLength(length) => apply_line_height_length(style, *length),
         StyleOp::FontWeight(weight) => apply_font_weight(style, *weight),
+        StyleOp::FontWeightValue(value) => apply_font_weight_value(style, *value),
         StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
         StyleOp::FontFamily(family) => style.font_family(family.clone()),
         StyleOp::FontFallbacks(fallbacks) => apply_font_fallbacks(style, fallbacks),
@@ -1018,6 +1020,13 @@ where
     element.line_height(style_length_to_definite(length))
 }
 
+fn apply_font_weight_value<E>(element: E, value: f32) -> E
+where
+    E: Styled,
+{
+    element.font_weight(FontWeight(value))
+}
+
 fn apply_font_weight<E>(element: E, weight: FontWeightStyle) -> E
 where
     E: Styled,
@@ -1157,6 +1166,7 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
             StyleOp::FontWeight(weight) => {
                 highlight.font_weight = Some(font_weight_to_gpui(*weight))
             }
+            StyleOp::FontWeightValue(value) => highlight.font_weight = Some(FontWeight(*value)),
             StyleOp::Italic => highlight.font_style = Some(FontStyle::Italic),
             StyleOp::NotItalic => highlight.font_style = Some(FontStyle::Normal),
             StyleOp::FontStyle(FontStyleValue::Italic) => {
@@ -1450,6 +1460,12 @@ mod tests {
         assert_eq!(
             style.text.as_ref().and_then(|text| text.font_weight),
             Some(FontWeight::BOLD)
+        );
+
+        let style = apply_font_weight_value(StyleRefinement::default(), 650.0);
+        assert_eq!(
+            style.text.as_ref().and_then(|text| text.font_weight),
+            Some(FontWeight(650.0))
         );
 
         let style = apply_font_fallbacks(

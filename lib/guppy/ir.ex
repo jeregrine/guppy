@@ -213,6 +213,7 @@ defmodule Guppy.IR do
           | {:text_size, {:px | :rem, number()}}
           | {:line_height, :none | :tight | :snug | :normal | :relaxed | :loose}
           | {:line_height_length, {:px | :rem | :fraction, number()}}
+          | {:font_weight_value, number()}
           | {:font_family, String.t()}
           | {:font_fallbacks, [String.t()]}
           | {:font_features, [{String.t(), non_neg_integer()}]}
@@ -2797,6 +2798,11 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op({:font_weight, value}) when value in @font_weight_value_tokens, do: :ok
+
+  defp validate_style_op({:font_weight_value, value})
+       when is_native_f32_number(value) and value >= 100 and value <= 900,
+       do: :ok
+
   defp validate_style_op({:font_style, value}) when value in @font_style_value_tokens, do: :ok
   defp validate_style_op({:font_family, value}) when is_binary(value) and value != "", do: :ok
 

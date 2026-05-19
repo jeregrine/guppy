@@ -56,6 +56,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "line_height"))
     assert Enum.any?(operations, &(&1["name"] == "line_height_length"))
     assert Enum.any?(operations, &(&1["name"] == "font_weight"))
+    assert Enum.any?(operations, &(&1["name"] == "font_weight_value"))
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
     assert Enum.any?(operations, &(&1["name"] == "font_family"))
     assert Enum.any?(operations, &(&1["name"] == "font_fallbacks"))
@@ -221,6 +222,8 @@ defmodule Guppy.StyleTest do
     assert_raise ArgumentError, fn -> Guppy.Style.line_height_length(:auto) end
     assert Guppy.Style.font_weight(:bold) == {:font_weight, :bold}
     assert Guppy.Style.font_black() == {:font_weight, :black}
+    assert Guppy.Style.font_weight_value(650) == {:font_weight_value, 650}
+    assert_raise ArgumentError, fn -> Guppy.Style.font_weight_value(50) end
     assert Guppy.Style.font_style(:italic) == {:font_style, :italic}
     assert Guppy.Style.italic() == {:font_style, :italic}
     assert Guppy.Style.not_italic() == {:font_style, :normal}
@@ -380,6 +383,11 @@ defmodule Guppy.StyleTest do
 
     assert Guppy.Style.class_token_to_style("font-fallbacks-[]") == :error
     assert Guppy.Style.class_token_to_style("font-fallbacks-[Monaco,]") == :error
+  end
+
+  test "arbitrary font weight classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("font-[650]") == {:ok, {:font_weight_value, 650}}
+    assert Guppy.Style.class_token_to_style("font-[50]") == :error
   end
 
   test "font feature classes normalize through the catalog parser" do

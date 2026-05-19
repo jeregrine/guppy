@@ -674,6 +674,7 @@ pub enum StyleOp {
     LineHeight(LineHeightStyle),
     LineHeightLength(StyleLength),
     FontWeight(FontWeightStyle),
+    FontWeightValue(f32),
     FontStyle(FontStyleValue),
     FontFamily(String),
     FontFallbacks(Vec<String>),
@@ -2991,6 +2992,9 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     false,
                 )?)),
                 "font_weight" => Ok(StyleOp::FontWeight(parse_font_weight_style(&elements[1])?)),
+                "font_weight_value" => Ok(StyleOp::FontWeightValue(parse_font_weight_value(
+                    &elements[1],
+                )?)),
                 "font_style" => Ok(StyleOp::FontStyle(parse_font_style_value(&elements[1])?)),
                 "font_family" => Ok(StyleOp::FontFamily(parse_non_empty_style_string(
                     &elements[1],
@@ -3688,6 +3692,16 @@ fn parse_font_weight_style(term: &Term) -> Result<FontWeightStyle, String> {
         "extrabold" => Ok(FontWeightStyle::Extrabold),
         "black" => Ok(FontWeightStyle::Black),
         other => Err(format!("invalid font_weight style: {other}")),
+    }
+}
+
+fn parse_font_weight_value(term: &Term) -> Result<f32, String> {
+    let value = parse_f32(term)?;
+
+    if value.is_finite() && (100.0..=900.0).contains(&value) {
+        Ok(value)
+    } else {
+        Err(format!("invalid font_weight_value: {value}"))
     }
 }
 

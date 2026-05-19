@@ -109,6 +109,7 @@ defmodule Guppy.Style do
                          "aspect_ratio",
                          "flex_grow",
                          "flex_shrink",
+                         "font_weight_value",
                          "opacity",
                          "text_decoration_thickness"
                        ]

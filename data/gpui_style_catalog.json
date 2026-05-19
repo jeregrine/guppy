@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-family-fallbacks-features-decoration-detail-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/family/fallbacks/features, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-line-clamp-grid-placement-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -3345,6 +3345,30 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "Styled font_weight"
+    },
+    {
+      "name": "font_weight_value",
+      "tuple_schema": [
+        "font_weight_value",
+        "font_weight_number"
+      ],
+      "number": {
+        "min": 100,
+        "max": 900
+      },
+      "class_prefixes": {
+        "font": null
+      },
+      "helpers": [
+        {
+          "name": "font_weight_value",
+          "kind": "number"
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled font_weight arbitrary FontWeight numeric value 100..900",
+      "class_tokens": {}
     },
     {
       "name": "font_style",

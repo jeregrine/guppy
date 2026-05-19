@@ -86,7 +86,7 @@ defmodule Guppy.ComponentTest do
 
   test "Guppy.Component parses catalog-backed box spacing classes into canonical tuple styles" do
     assert Guppy.Component.class_to_style!(
-             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 aspect-video aspect-[1.5] relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll overflow-visible overflow-x-clip scroll-concurrent scroll-axis-restricted cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue text-bg-yellow text-bg-[#112233] border-gray opacity-50 scrollbar-w-[12px] shadow-md shadow-none flex-col flex-row-reverse flex-wrap flex-nowrap flex-1 flex-auto flex-initial basis-1/2 grow-[2] shrink-[0.5] items-baseline items-stretch self-stretch justify-around justify-evenly content-evenly text-center whitespace-nowrap text-ellipsis truncate text-xl text-[14px] leading-tight leading-[18px] font-bold italic not-italic font-family-[Monaco] font-fallbacks-[Monaco,Menlo] font-features-[calt=0,kern=1] font-ligatures-none underline decoration-red decoration-[#abcdef] decoration-wavy decoration-2 line-through no-underline line-clamp-2 grid-cols-3 grid-rows-2 col-start-2 col-end-auto row-start-1 row-end-[-1] col-span-4 row-span-5"
+             "py-1 px-1 p-0.5 p-0p5 p-[6px] m-auto -mx-2 mt-[-4px] gap-1 gap-x-px w-full h-[120px] min-h-0 max-w-1/2 size-4 aspect-video aspect-[1.5] relative inset-0 -top-2 right-auto flex hidden invisible visible overflow-hidden overflow-x-scroll overflow-visible overflow-x-clip scroll-concurrent scroll-axis-restricted cursor-pointer cursor-not-allowed border-1 border-x-4 border-t-px border-dashed border-solid rounded-sm rounded-t-lg rounded-br-full bg-red text-blue text-bg-yellow text-bg-[#112233] border-gray opacity-50 scrollbar-w-[12px] shadow-md shadow-none flex-col flex-row-reverse flex-wrap flex-nowrap flex-1 flex-auto flex-initial basis-1/2 grow-[2] shrink-[0.5] items-baseline items-stretch self-stretch justify-around justify-evenly content-evenly text-center whitespace-nowrap text-ellipsis truncate text-xl text-[14px] leading-tight leading-[18px] font-bold font-[650] italic not-italic font-family-[Monaco] font-fallbacks-[Monaco,Menlo] font-features-[calt=0,kern=1] font-ligatures-none underline decoration-red decoration-[#abcdef] decoration-wavy decoration-2 line-through no-underline line-clamp-2 grid-cols-3 grid-rows-2 col-start-2 col-end-auto row-start-1 row-end-[-1] col-span-4 row-span-5"
            ) == [
              {:padding, :y, {:rem, 0.25}},
              {:padding, :x, {:rem, 0.25}},
@@ -163,6 +163,7 @@ defmodule Guppy.ComponentTest do
              {:line_height, :tight},
              {:line_height_length, {:px, 18}},
              {:font_weight, :bold},
+             {:font_weight_value, 650},
              {:font_style, :italic},
              {:font_style, :normal},
              {:font_family, "Monaco"},
