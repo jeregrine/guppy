@@ -110,6 +110,10 @@ defmodule Guppy.Style do
                                    operation["name"] in ["bg_pattern_slash"]
                                  end)
 
+  @box_shadow_operations Enum.filter(@catalog["operations"], fn operation ->
+                           operation["name"] in ["box_shadow"]
+                         end)
+
   @number_operations Enum.filter(@catalog["operations"], fn operation ->
                        operation["name"] in [
                          "aspect_ratio",
@@ -645,6 +649,14 @@ defmodule Guppy.Style do
       do: {unquote(operation_name), normalize_background_pattern_options!(options)}
   end
 
+  for operation <- @box_shadow_operations do
+    operation_name = String.to_atom(operation["name"])
+
+    @doc "Returns a canonical #{operation_name} tuple."
+    def unquote(operation_name)(shadows),
+      do: {unquote(operation_name), normalize_box_shadow_list!(shadows)}
+  end
+
   for operation <- @number_operations,
       %{"kind" => "number", "name" => name} <- operation["helpers"] do
     operation_name = String.to_atom(operation["name"])
@@ -821,6 +833,7 @@ defmodule Guppy.Style do
          :error <- parse_hex_color_class(token),
          :error <- parse_linear_gradient_class(token),
          :error <- parse_background_pattern_class(token),
+         :error <- parse_box_shadow_class(token),
          :error <- parse_number_class(token),
          :error <- parse_unit_length_class(token),
          :error <- parse_string_class(token),
@@ -958,6 +971,22 @@ defmodule Guppy.Style do
          options <- [color: color, width: width, interval: interval],
          {:ok, options} <- normalize_background_pattern_options(options) do
       {:ok, {:bg_pattern_slash, options}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_box_shadow_class(token) do
+    with [payload] <- Regex.run(~r/^shadow-\[(.+)\]$/, token, capture: :all_but_first),
+         [color, x, y, blur, spread] <- String.split(payload, ",", parts: 5),
+         {:ok, color} <- parse_gradient_color(color),
+         {:ok, x} <- parse_number(x),
+         {:ok, y} <- parse_number(y),
+         {:ok, blur} <- parse_number(blur),
+         {:ok, spread} <- parse_number(spread),
+         shadow <- [color: color, x: x, y: y, blur: blur, spread: spread],
+         {:ok, shadows} <- normalize_box_shadow_list(shadow) do
+      {:ok, {:box_shadow, shadows}}
     else
       _ -> :error
     end
@@ -1497,6 +1526,56 @@ defmodule Guppy.Style do
   defp normalize_background_pattern_options(_options), do: :error
 
   defp valid_background_pattern_number?(value), do: is_number(value) and value >= 0
+
+  defp normalize_box_shadow_list!(shadows) do
+    case normalize_box_shadow_list(shadows) do
+      {:ok, shadows} -> shadows
+      :error -> raise ArgumentError, "invalid box shadow options: #{inspect(shadows)}"
+    end
+  end
+
+  defp normalize_box_shadow_list(shadow) when is_list(shadow) do
+    cond do
+      Keyword.keyword?(shadow) ->
+        case normalize_single_box_shadow(shadow) do
+          {:ok, shadow} -> {:ok, [shadow]}
+          :error -> :error
+        end
+
+      Enum.all?(shadow, &(is_list(&1) and Keyword.keyword?(&1))) ->
+        shadows = Enum.map(shadow, &normalize_single_box_shadow/1)
+
+        if Enum.all?(shadows, &match?({:ok, _}, &1)) do
+          {:ok, Enum.map(shadows, fn {:ok, value} -> value end)}
+        else
+          :error
+        end
+
+      true ->
+        :error
+    end
+  end
+
+  defp normalize_box_shadow_list(_shadows), do: :error
+
+  defp normalize_single_box_shadow(options) do
+    keys = Keyword.keys(options)
+
+    if length(options) == 5 and MapSet.size(MapSet.new(keys)) == 5 and
+         Enum.sort(keys) == [:blur, :color, :spread, :x, :y] and
+         valid_gradient_color?(Keyword.fetch!(options, :color)) and
+         valid_box_shadow_number?(Keyword.fetch!(options, :x)) and
+         valid_box_shadow_number?(Keyword.fetch!(options, :y)) and
+         valid_non_negative_box_shadow_number?(Keyword.fetch!(options, :blur)) and
+         valid_box_shadow_number?(Keyword.fetch!(options, :spread)) do
+      {:ok, options}
+    else
+      :error
+    end
+  end
+
+  defp valid_box_shadow_number?(value), do: is_number(value)
+  defp valid_non_negative_box_shadow_number?(value), do: is_number(value) and value >= 0
 
   defp parse_gradient_stop(stop) do
     with [color, percentage] <- String.split(stop, ":", parts: 2),

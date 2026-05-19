@@ -30,6 +30,13 @@ defmodule Guppy.IR do
           width: number(),
           interval: number()
         ]
+  @type box_shadow_options :: [
+          color: gradient_color(),
+          x: number(),
+          y: number(),
+          blur: number(),
+          spread: number()
+        ]
 
   @type style_flag ::
           :grid
@@ -237,6 +244,7 @@ defmodule Guppy.IR do
           | {:bg_linear_gradient,
              [angle: number(), from: linear_gradient_stop(), to: linear_gradient_stop()]}
           | {:bg_pattern_slash, background_pattern_options()}
+          | {:box_shadow, [box_shadow_options()]}
           | {:opacity, number()}
           | {:line_clamp, pos_integer()}
           | {:grid_cols, pos_integer()}
@@ -2887,6 +2895,14 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_style_op({:box_shadow, shadows} = op) do
+    if valid_box_shadow_list?(shadows) do
+      :ok
+    else
+      {:error, {:invalid_style_op, op}}
+    end
+  end
+
   defp validate_style_op({:opacity, value}) when is_unit_native_f32_number(value), do: :ok
 
   defp validate_style_op({:aspect_ratio, value}) when is_positive_native_f32_number(value),
@@ -2979,6 +2995,29 @@ defmodule Guppy.IR do
   end
 
   defp valid_background_pattern_options?(_options), do: false
+
+  defp valid_box_shadow_list?(shadows) when is_list(shadows),
+    do: Enum.all?(shadows, &valid_box_shadow_options?/1)
+
+  defp valid_box_shadow_list?(_shadows), do: false
+
+  defp valid_box_shadow_options?(options) when is_list(options) do
+    if Keyword.keyword?(options) do
+      keys = Keyword.keys(options)
+
+      length(options) == 5 and MapSet.size(MapSet.new(keys)) == 5 and
+        Enum.sort(keys) == [:blur, :color, :spread, :x, :y] and
+        valid_gradient_color?(Keyword.fetch!(options, :color)) and
+        native_f32_number?(Keyword.fetch!(options, :x)) and
+        native_f32_number?(Keyword.fetch!(options, :y)) and
+        non_neg_native_f32_number?(Keyword.fetch!(options, :blur)) and
+        native_f32_number?(Keyword.fetch!(options, :spread))
+    else
+      false
+    end
+  end
+
+  defp valid_box_shadow_options?(_options), do: false
 
   defp valid_gradient_angle?(angle),
     do: native_f32_number?(angle) and angle >= 0.0 and angle <= 360.0

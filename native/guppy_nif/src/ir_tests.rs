@@ -1,8 +1,9 @@
 use super::{
-    BackgroundPatternSlash, CanvasCommand, CheckboxNode, DataTableSortDirection, DivNode,
-    ImageObjectFit, ImageSource, IrNode, LinearGradientStop, StyleAxis, StyleColor, StyleLength,
-    StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids, field_key,
-    get_optional_integer_field, get_optional_usize_field, parse_positive_u32, parse_style_op,
+    BackgroundPatternSlash, BoxShadowSpec, CanvasCommand, CheckboxNode, DataTableSortDirection,
+    DivNode, ImageObjectFit, ImageSource, IrNode, LinearGradientStop, StyleAxis, StyleColor,
+    StyleLength, StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids,
+    field_key, get_optional_integer_field, get_optional_usize_field, parse_positive_u32,
+    parse_style_op,
 };
 use crate::ir_allowed::{allowed_node_event_fields, allowed_node_fields};
 use eetf::{Atom, BigInteger, Binary, FixInteger, Float, List, Map, Term, Tuple};
@@ -1185,6 +1186,26 @@ fn parses_canonical_box_spacing_style_ops() {
         parse_style_op(&tuple(vec![atom("shadow"), atom("2xs")])).unwrap(),
         StyleOp::Shadow(super::ShadowStyle::TwoXs)
     );
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("box_shadow"),
+            list(vec![list(vec![
+                tuple(vec![atom("color"), atom("red")]),
+                tuple(vec![atom("x"), integer(0)]),
+                tuple(vec![atom("y"), integer(2)]),
+                tuple(vec![atom("blur"), integer(4)]),
+                tuple(vec![atom("spread"), integer(-1)]),
+            ])]),
+        ]))
+        .unwrap(),
+        StyleOp::BoxShadow(vec![BoxShadowSpec {
+            color: StyleColor::Token(super::ColorToken::Red),
+            x: 0.0,
+            y: 2.0,
+            blur: 4.0,
+            spread: -1.0,
+        }])
+    );
 
     assert_eq!(
         parse_style_op(&tuple(vec![atom("flex_direction"), atom("row_reverse")])).unwrap(),
@@ -1428,6 +1449,26 @@ fn rejects_invalid_canonical_length_style_ops() {
         ]),
         tuple(vec![atom("border_style"), atom("double")]),
         tuple(vec![atom("shadow"), atom("huge")]),
+        tuple(vec![
+            atom("box_shadow"),
+            list(vec![list(vec![
+                tuple(vec![atom("color"), atom("purple")]),
+                tuple(vec![atom("x"), integer(0)]),
+                tuple(vec![atom("y"), integer(2)]),
+                tuple(vec![atom("blur"), integer(4)]),
+                tuple(vec![atom("spread"), integer(-1)]),
+            ])]),
+        ]),
+        tuple(vec![
+            atom("box_shadow"),
+            list(vec![list(vec![
+                tuple(vec![atom("color"), atom("red")]),
+                tuple(vec![atom("x"), integer(0)]),
+                tuple(vec![atom("y"), integer(2)]),
+                tuple(vec![atom("blur"), integer(-1)]),
+                tuple(vec![atom("spread"), integer(-1)]),
+            ])]),
+        ]),
         tuple(vec![atom("flex_direction"), atom("sideways")]),
         tuple(vec![atom("flex_wrap"), atom("maybe")]),
         tuple(vec![atom("flex_item"), atom("bad")]),
@@ -1600,6 +1641,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "shadow")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "box_shadow")
     );
     assert!(
         operations

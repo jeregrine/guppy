@@ -39,6 +39,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "opacity"))
     assert Enum.any?(operations, &(&1["name"] == "scrollbar_width"))
     assert Enum.any?(operations, &(&1["name"] == "shadow"))
+    assert Enum.any?(operations, &(&1["name"] == "box_shadow"))
     assert Enum.any?(operations, &(&1["name"] == "flex_direction"))
     assert Enum.any?(operations, &(&1["name"] == "flex_wrap"))
     assert Enum.any?(operations, &(&1["name"] == "flex_item"))
@@ -188,6 +189,11 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.shadow_2xs() == {:shadow, :"2xs"}
     assert Guppy.Style.shadow_none() == {:shadow, :none}
 
+    shadow = [color: :red, x: 0, y: 2, blur: 4, spread: -1]
+    assert Guppy.Style.box_shadow(shadow) == {:box_shadow, [shadow]}
+    assert Guppy.Style.box_shadow([shadow]) == {:box_shadow, [shadow]}
+    assert_raise ArgumentError, fn -> Guppy.Style.box_shadow(color: :purple, x: 0) end
+
     assert Guppy.Style.flex_direction(:column) == {:flex_direction, :column}
     assert Guppy.Style.flex_col() == {:flex_direction, :column}
     assert Guppy.Style.flex_row_reverse() == {:flex_direction, :row_reverse}
@@ -313,6 +319,16 @@ defmodule Guppy.StyleTest do
              {:ok, {:border_color_hex, "#abcdef"}}
 
     assert Guppy.Style.class_token_to_style("bg-[#12]") == :error
+  end
+
+  test "box shadow classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("shadow-[red,0,2,4,-1]") ==
+             {:ok, {:box_shadow, [[color: :red, x: 0, y: 2, blur: 4, spread: -1]]}}
+
+    assert Guppy.Style.class_token_to_style("shadow-[#0f172a,0,2.5,4,0]") ==
+             {:ok, {:box_shadow, [[color: "#0f172a", x: 0, y: 2.5, blur: 4, spread: 0]]}}
+
+    assert Guppy.Style.class_token_to_style("shadow-[bad]") == :error
   end
 
   test "background gradient and pattern classes normalize through the catalog parser" do

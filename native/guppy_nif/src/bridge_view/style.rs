@@ -1,15 +1,16 @@
 use crate::ir::{
-    AlignContentStyle, AlignItemsStyle, BorderLineStyle, BorderRadiusAxis, ColorToken,
-    DisplayStyle, DivStyle, FlexDirectionStyle, FlexItemStyle, FlexWrapStyle, FontSizeStyle,
-    FontStyleValue, FontWeightStyle, JustifyContentStyle, LineHeightStyle, LinearGradientStop,
-    MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis, StyleColor,
-    StyleLength, StyleOp, TextAlignStyle, TextDecorationLineStyle, TextDecorationStyle,
+    AlignContentStyle, AlignItemsStyle, BorderLineStyle, BorderRadiusAxis, BoxShadowSpec,
+    ColorToken, DisplayStyle, DivStyle, FlexDirectionStyle, FlexItemStyle, FlexWrapStyle,
+    FontSizeStyle, FontStyleValue, FontWeightStyle, JustifyContentStyle, LineHeightStyle,
+    LinearGradientStop, MouseCursorStyle, OverflowStyle, PositionStyle, ShadowStyle, StyleAxis,
+    StyleColor, StyleLength, StyleOp, TextAlignStyle, TextDecorationLineStyle, TextDecorationStyle,
     TextOverflowStyle, VisibilityStyle, WhiteSpaceStyle,
 };
 use gpui::{
-    DefiniteLength, FontFallbacks, FontFeatures, FontStyle, FontWeight, HighlightStyle, Length,
-    StatefulInteractiveElement, StrikethroughStyle, StyleRefinement, Styled, UnderlineStyle,
-    linear_color_stop, linear_gradient, pattern_slash, px, relative, rems, rgb,
+    BoxShadow, DefiniteLength, FontFallbacks, FontFeatures, FontStyle, FontWeight, HighlightStyle,
+    Length, StatefulInteractiveElement, StrikethroughStyle, StyleRefinement, Styled,
+    UnderlineStyle, linear_color_stop, linear_gradient, pattern_slash, point, px, relative, rems,
+    rgb,
 };
 use std::sync::Arc;
 
@@ -232,6 +233,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::BorderRadius { .. }
         | StyleOp::BorderStyle(_)
         | StyleOp::Shadow(_)
+        | StyleOp::BoxShadow(_)
         | StyleOp::TextAlign(_)
         | StyleOp::WhiteSpace(_)
         | StyleOp::TextOverflow(_)
@@ -368,6 +370,7 @@ where
         StyleOp::BorderRadius { axis, length } => apply_border_radius(style, *axis, *length),
         StyleOp::BorderStyle(border_style) => apply_border_style(style, *border_style),
         StyleOp::Shadow(shadow) => apply_shadow(style, *shadow),
+        StyleOp::BoxShadow(shadows) => apply_box_shadow(style, shadows),
         StyleOp::TextAlign(align) => apply_text_align(style, *align),
         StyleOp::WhiteSpace(white_space) => apply_white_space(style, *white_space),
         StyleOp::TextOverflow(overflow) => apply_text_overflow(style, *overflow),
@@ -837,6 +840,23 @@ where
         ShadowStyle::Lg => element.shadow_lg(),
         ShadowStyle::Xl => element.shadow_xl(),
         ShadowStyle::TwoXl => element.shadow_2xl(),
+    }
+}
+
+fn apply_box_shadow<E>(mut element: E, shadows: &[BoxShadowSpec]) -> E
+where
+    E: Styled,
+{
+    element.style().box_shadow = Some(shadows.iter().map(box_shadow_to_gpui).collect());
+    element
+}
+
+fn box_shadow_to_gpui(shadow: &BoxShadowSpec) -> BoxShadow {
+    BoxShadow {
+        color: style_color_to_color(&shadow.color),
+        offset: point(px(shadow.x), px(shadow.y)),
+        blur_radius: px(shadow.blur),
+        spread_radius: px(shadow.spread),
     }
 }
 
@@ -1347,8 +1367,10 @@ fn hex_color_to_color(value: u32) -> gpui::Hsla {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BackgroundPatternSlash, LinearGradientStop, StyleColor};
-    use gpui::{Fill, StyleRefinement, linear_color_stop, linear_gradient, pattern_slash};
+    use crate::ir::{BackgroundPatternSlash, BoxShadowSpec, LinearGradientStop, StyleColor};
+    use gpui::{
+        BoxShadow, Fill, StyleRefinement, linear_color_stop, linear_gradient, pattern_slash, point,
+    };
 
     #[test]
     fn applies_canonical_box_spacing_to_style_refinement() {
@@ -1466,6 +1488,26 @@ mod tests {
 
         let style = apply_shadow(StyleRefinement::default(), ShadowStyle::None);
         assert_eq!(style.box_shadow, Some(vec![]));
+
+        let style = apply_box_shadow(
+            StyleRefinement::default(),
+            &[BoxShadowSpec {
+                color: StyleColor::Token(ColorToken::Red),
+                x: 0.0,
+                y: 2.0,
+                blur: 4.0,
+                spread: -1.0,
+            }],
+        );
+        assert_eq!(
+            style.box_shadow,
+            Some(vec![BoxShadow {
+                color: color_token_to_color(ColorToken::Red),
+                offset: point(px(0.0), px(2.0)),
+                blur_radius: px(4.0),
+                spread_radius: px(-1.0),
+            }])
+        );
 
         let style =
             apply_flex_direction(StyleRefinement::default(), FlexDirectionStyle::RowReverse);

@@ -701,6 +701,7 @@ pub enum StyleOp {
         to: LinearGradientStop,
     },
     BgPatternSlash(BackgroundPatternSlash),
+    BoxShadow(Vec<BoxShadowSpec>),
     Opacity(f32),
     LineClamp(u16),
     GridCols(u16),
@@ -749,6 +750,15 @@ pub struct BackgroundPatternSlash {
     pub color: StyleColor,
     pub width: f32,
     pub interval: f32,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoxShadowSpec {
+    pub color: StyleColor,
+    pub x: f32,
+    pub y: f32,
+    pub blur: f32,
+    pub spread: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -3057,6 +3067,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "bg_pattern_slash" => Ok(StyleOp::BgPatternSlash(parse_background_pattern_slash(
                     &elements[1],
                 )?)),
+                "box_shadow" => Ok(StyleOp::BoxShadow(parse_box_shadows(&elements[1])?)),
                 "opacity" => Ok(StyleOp::Opacity(parse_unit_style_f32(
                     &elements[1],
                     "opacity",
@@ -3418,6 +3429,96 @@ fn parse_background_pattern_slash(term: &Term) -> Result<BackgroundPatternSlash,
         width: width.ok_or_else(|| "missing background pattern width option".to_string())?,
         interval: interval
             .ok_or_else(|| "missing background pattern interval option".to_string())?,
+    })
+}
+
+fn parse_box_shadows(term: &Term) -> Result<Vec<BoxShadowSpec>, String> {
+    let shadows = get_list(term)?;
+
+    shadows
+        .iter()
+        .map(parse_box_shadow_spec)
+        .collect::<Result<Vec<_>, _>>()
+}
+
+fn parse_box_shadow_spec(term: &Term) -> Result<BoxShadowSpec, String> {
+    let options = get_list(term)?;
+    let mut color = None;
+    let mut x = None;
+    let mut y = None;
+    let mut blur = None;
+    let mut spread = None;
+
+    for option in options {
+        let Term::Tuple(Tuple { elements }) = option else {
+            return Err(format!("expected box shadow option tuple, got {option}"));
+        };
+
+        if elements.len() != 2 {
+            return Err(format!(
+                "expected box shadow option tuple with 2 elements, got {option}"
+            ));
+        }
+
+        let Term::Atom(key) = &elements[0] else {
+            return Err(format!(
+                "expected box shadow option key atom, got {}",
+                elements[0]
+            ));
+        };
+
+        match key.name.as_str() {
+            "color" => {
+                if color.is_some() {
+                    return Err("duplicate box shadow color option".into());
+                }
+
+                color = Some(
+                    parse_style_color(&elements[1])
+                        .map_err(|error| format!("invalid box shadow color: {error}"))?,
+                );
+            }
+            "x" => {
+                if x.is_some() {
+                    return Err("duplicate box shadow x option".into());
+                }
+
+                x = Some(parse_finite_style_f32(&elements[1], "box shadow x")?);
+            }
+            "y" => {
+                if y.is_some() {
+                    return Err("duplicate box shadow y option".into());
+                }
+
+                y = Some(parse_finite_style_f32(&elements[1], "box shadow y")?);
+            }
+            "blur" => {
+                if blur.is_some() {
+                    return Err("duplicate box shadow blur option".into());
+                }
+
+                blur = Some(parse_non_negative_style_f32(
+                    &elements[1],
+                    "box shadow blur",
+                )?);
+            }
+            "spread" => {
+                if spread.is_some() {
+                    return Err("duplicate box shadow spread option".into());
+                }
+
+                spread = Some(parse_finite_style_f32(&elements[1], "box shadow spread")?);
+            }
+            other => return Err(format!("unsupported box shadow option: {other}")),
+        }
+    }
+
+    Ok(BoxShadowSpec {
+        color: color.ok_or_else(|| "missing box shadow color option".to_string())?,
+        x: x.ok_or_else(|| "missing box shadow x option".to_string())?,
+        y: y.ok_or_else(|| "missing box shadow y option".to_string())?,
+        blur: blur.ok_or_else(|| "missing box shadow blur option".to_string())?,
+        spread: spread.ok_or_else(|| "missing box shadow spread option".to_string())?,
     })
 }
 
@@ -4020,6 +4121,10 @@ fn parse_unit_style_f32(term: &Term, key: &str) -> Result<f32, String> {
 
 fn parse_non_negative_style_f32(term: &Term, key: &str) -> Result<f32, String> {
     parse_bounded_style_f32(term, key, false)
+}
+
+fn parse_finite_style_f32(term: &Term, key: &str) -> Result<f32, String> {
+    parse_bounded_style_f32(term, key, true)
 }
 
 fn parse_positive_style_f32(term: &Term, key: &str) -> Result<f32, String> {
