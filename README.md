@@ -221,7 +221,7 @@ App config is plain Elixir data validated into structs. Use child-spec/start opt
 
 ## Themes
 
-Themes are app-scoped Elixir data that compile semantic color/style tokens to primitive IR style tuples before native render. `Guppy.App.Theme.default(:dark)` and `Guppy.App.Theme.default(:light)` provide built-in defaults; apps can also register `Guppy.App.ThemeFamily` values and activate a theme by id.
+Themes are app-scoped Elixir data that compile semantic color/style tokens to primitive IR style tuples before native render. `Guppy.App.Theme.default(:dark)` and `Guppy.App.Theme.default(:light)` provide built-in defaults, `Guppy.App.Theme.refine/2` creates explicit overrides from an existing theme, and apps can register `Guppy.App.ThemeFamily` values and activate a theme by id.
 
 Useful helpers:
 
@@ -231,6 +231,7 @@ Useful helpers:
 - `Guppy.theme_color/1` / `Guppy.theme_color/2`
 - `Guppy.theme_style/1` / `Guppy.theme_style/2`
 - app-scoped equivalents under `Guppy.App`
+- `Guppy.Style.theme_color/2` for semantic references inside theme style definitions
 - `theme_style!/1` / `theme_color!/1` inside `use Guppy.Window`
 
 See `docs/theme.md` for the Zed/GPUI audit notes and current Guppy theme boundaries.

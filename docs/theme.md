@@ -32,7 +32,7 @@ Guppy does not currently install GPUI globals for themes. That would make native
 - `styles` — semantic style tokens resolved to canonical IR style tuples
 - `metadata`
 
-Theme style definitions can mix Guppy class strings, canonical style tuples, and explicit theme color references:
+Theme style definitions can mix Guppy class strings, canonical style tuples, and explicit theme color references (`Guppy.Style.theme_color/2` or `Guppy.App.Theme.color_ref/2`):
 
 ```elixir
 %{
@@ -43,14 +43,14 @@ Theme style definitions can mix Guppy class strings, canonical style tuples, and
   styles: %{
     card: [
       "p-4 rounded-lg",
-      {:theme_color, :bg, :surface},
-      {:theme_color, :text_color, :text}
+      Guppy.Style.theme_color(:bg, :surface),
+      Guppy.Style.theme_color(:text_color, :text)
     ]
   }
 }
 ```
 
-Validated themes store normalized string keys and resolved primitive style lists. Built-in defaults are available with `Guppy.App.Theme.default(:dark)` and `Guppy.App.Theme.default(:light)`.
+Validated themes store normalized string keys and resolved primitive style lists. Built-in defaults are available with `Guppy.App.Theme.default(:dark)` and `Guppy.App.Theme.default(:light)`. Use `Guppy.App.Theme.refine/2` to create explicit refinements/overrides from an existing theme while preserving unspecified tokens.
 
 `Guppy.App.ThemeFamily` groups related themes by stable theme id. Apps can register families with `Guppy.App.register_theme_family/2` and activate a registered theme by id with `Guppy.App.set_theme/2`.
 

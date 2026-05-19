@@ -11,21 +11,7 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 - Do not preserve old internal shapes for compatibility; this project is unreleased. DO NOT deprecate.
 - Preserve the architectural invariant that Elixir owns app/UI state and renders data IR; native code should stay a typed GPUI bridge.
 
-## Priority 1: Theme support
-
-Add first-class theming now that GPUI style-surface parity is catalog-backed. Keep themes as a semantic layer above primitive style tuples; raw template `style` strings should stay rejected.
-
-Initial direction to design next:
-
-- [ ] Audit Zed's theme architecture and use it as the primary reference, without taking a hard dependency on Zed crates. Key reference files include `../zed/crates/theme/src/theme.rs`, `../zed/crates/theme/src/registry.rs`, `../zed/crates/theme/src/styles/*.rs`, `../zed/crates/theme/src/default_colors.rs`, and `../zed/crates/theme_settings/src/theme_settings.rs`.
-- [ ] Audit GPUI 0.2.2 theming/color hooks. Known surface includes `Colors`, `GlobalColors`, `DefaultColors`, `WindowAppearance`, and app globals (`set_global`/`global`/`observe_global`); verify the usable surface before choosing Guppy's layer.
-- [ ] Define a Guppy theme shape: metadata (`id`, `name`, `appearance`), semantic color/style tokens, default light/dark themes, and explicit override/refinement support.
-- [ ] Decide theme ownership and scope: app-global, process-owned, per-window overrides, or inherited context. Define server restart and owner-exit behavior.
-- [ ] Decide where resolution happens. Prefer Elixir-side compile-down into primitive style IR unless GPUI globals provide appearance-aware behavior without violating Elixir source-of-truth semantics.
-- [ ] Add APIs and examples after design, likely `Guppy.set_theme/1`, `Guppy.set_theme/2`, `Guppy.register_theme_family/1`, `Guppy.active_theme/0`, `use Guppy.Window` theme helpers, and `~GUI`/`Guppy.Style` helpers for theme references.
-- [ ] Add tests for theme validation, registry/lookup, owner cleanup/lifecycle, render resolution, server restart behavior, and docs/examples.
-
-## Priority 2: Native app shell APIs
+## Priority 1: Native app shell APIs
 
 These are the biggest missing pieces for building real desktop apps. Add them as narrow, typed APIs with process ownership and restart behavior, not as ad hoc NIF calls.
 
@@ -37,7 +23,7 @@ These are the biggest missing pieces for building real desktop apps. Add them as
 - [ ] Notifications/badges where platform support is practical; keep optional and well-documented.
 - [ ] Dock/system menu follow-ups: dock menus, Services submenu, and dynamic menu enablement only after the command model is in place.
 
-## Priority 3: Overlay, popover, and select hardening
+## Priority 2: Overlay, popover, and select hardening
 
 Current popover/select support is first-pass. Native apps need reliable overlays before complex menus/forms feel right.
 
@@ -47,7 +33,7 @@ Current popover/select support is first-pass. Native apps need reliable overlays
 - [ ] Support nested overlays deliberately or reject/document unsupported nesting with tests.
 - [ ] Add examples that exercise dropdowns, context menus, nested panels, and form-like select usage.
 
-## Priority 4: Keyboard, focus, accessibility, data table, and tree interactions
+## Priority 3: Keyboard, focus, accessibility, data table, and tree interactions
 
 Focus and keyboard behavior are now more important than broadening visual primitives.
 
@@ -57,7 +43,7 @@ Focus and keyboard behavior are now more important than broadening visual primit
 - [ ] Add data-table column resize/reorder and pinned header/column behavior only after navigation/focus semantics are stable.
 - [ ] Audit GPUI accessibility/semantics support and expose labels/roles/states where practical through typed IR.
 
-## Priority 5: Packaging and distribution hardening
+## Priority 4: Packaging and distribution hardening
 
 Before external users rely on Guppy, make source builds and release consumption boring.
 
@@ -66,7 +52,7 @@ Before external users rely on Guppy, make source builds and release consumption 
 - [ ] Document release-mode native build workflows and expected performance tradeoffs.
 - [ ] Brainstorm ways to package this up into a binary we can code-sign. Existing ways all suck we might have to reinvent the wheel here.
 
-## Priority 6: Text/editor parity
+## Priority 5: Text/editor parity
 
 Real native apps often need more than plain inputs. Treat this as a focused design effort rather than incremental prop sprawl.
 
