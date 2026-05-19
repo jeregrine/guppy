@@ -54,6 +54,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "font_size"))
     assert Enum.any?(operations, &(&1["name"] == "text_size"))
     assert Enum.any?(operations, &(&1["name"] == "line_height"))
+    assert Enum.any?(operations, &(&1["name"] == "line_height_length"))
     assert Enum.any?(operations, &(&1["name"] == "font_weight"))
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
     assert Enum.any?(operations, &(&1["name"] == "font_family"))
@@ -215,6 +216,9 @@ defmodule Guppy.StyleTest do
     assert_raise ArgumentError, fn -> Guppy.Style.text_size({:fraction, 1}) end
     assert Guppy.Style.line_height(:tight) == {:line_height, :tight}
     assert Guppy.Style.leading_relaxed() == {:line_height, :relaxed}
+    assert Guppy.Style.line_height_length({:px, 18}) == {:line_height_length, {:px, 18}}
+    assert Guppy.Style.leading({:fraction, 1.4}) == {:line_height_length, {:fraction, 1.4}}
+    assert_raise ArgumentError, fn -> Guppy.Style.line_height_length(:auto) end
     assert Guppy.Style.font_weight(:bold) == {:font_weight, :bold}
     assert Guppy.Style.font_black() == {:font_weight, :black}
     assert Guppy.Style.font_style(:italic) == {:font_style, :italic}
@@ -352,6 +356,19 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.class_token_to_style("text-[1.25rem]") == {:ok, {:text_size, {:rem, 1.25}}}
     assert Guppy.Style.class_token_to_style("text-[50%]") == :error
     assert Guppy.Style.class_token_to_style("text-[-1px]") == :error
+  end
+
+  test "arbitrary line height classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("leading-[18px]") ==
+             {:ok, {:line_height_length, {:px, 18}}}
+
+    assert Guppy.Style.class_token_to_style("leading-[1.4rem]") ==
+             {:ok, {:line_height_length, {:rem, 1.4}}}
+
+    assert Guppy.Style.class_token_to_style("leading-[140%]") ==
+             {:ok, {:line_height_length, {:fraction, 1.4}}}
+
+    assert Guppy.Style.class_token_to_style("leading-[-1px]") == :error
   end
 
   test "font fallback classes normalize through the catalog parser" do

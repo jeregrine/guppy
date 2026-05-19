@@ -115,7 +115,11 @@ defmodule Guppy.Style do
                      end)
 
   @unit_length_operations Enum.filter(@catalog["operations"], fn operation ->
-                            operation["name"] in ["scrollbar_width", "text_size"]
+                            operation["name"] in [
+                              "line_height_length",
+                              "scrollbar_width",
+                              "text_size"
+                            ]
                           end)
 
   @string_operations Enum.filter(@catalog["operations"], fn operation ->
@@ -1369,6 +1373,7 @@ defmodule Guppy.Style do
   defp unit_length_style_tuple(:scrollbar_width, {:px, value}), do: {:scrollbar_width_px, value}
   defp unit_length_style_tuple(:scrollbar_width, {:rem, value}), do: {:scrollbar_width_rem, value}
   defp unit_length_style_tuple(:text_size, length), do: {:text_size, length}
+  defp unit_length_style_tuple(:line_height_length, length), do: {:line_height_length, length}
 
   defp unit_length_style_tuple(operation, length),
     do: raise(ArgumentError, "invalid #{operation} length: #{inspect(length)}")

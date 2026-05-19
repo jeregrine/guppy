@@ -238,6 +238,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::FontSize(_)
         | StyleOp::TextSize(_)
         | StyleOp::LineHeight(_)
+        | StyleOp::LineHeightLength(_)
         | StyleOp::FontWeight(_)
         | StyleOp::FontStyle(_)
         | StyleOp::FontFamily(_)
@@ -363,6 +364,7 @@ where
         StyleOp::FontSize(size) => apply_font_size(style, *size),
         StyleOp::TextSize(size) => apply_text_size(style, *size),
         StyleOp::LineHeight(line_height) => apply_line_height(style, *line_height),
+        StyleOp::LineHeightLength(length) => apply_line_height_length(style, *length),
         StyleOp::FontWeight(weight) => apply_font_weight(style, *weight),
         StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
         StyleOp::FontFamily(family) => style.font_family(family.clone()),
@@ -1009,6 +1011,13 @@ fn line_height_to_relative(line_height: LineHeightStyle) -> f32 {
     }
 }
 
+fn apply_line_height_length<E>(element: E, length: StyleLength) -> E
+where
+    E: Styled,
+{
+    element.line_height(style_length_to_definite(length))
+}
+
 fn apply_font_weight<E>(element: E, weight: FontWeightStyle) -> E
 where
     E: Styled,
@@ -1428,6 +1437,13 @@ mod tests {
         assert_eq!(
             style.text.as_ref().and_then(|text| text.font_size),
             Some(px(14.0).into())
+        );
+
+        let style =
+            apply_line_height_length(StyleRefinement::default(), StyleLength::Fraction(1.4));
+        assert_eq!(
+            style.text.as_ref().and_then(|text| text.line_height),
+            Some(relative(1.4))
         );
 
         let style = apply_font_weight(StyleRefinement::default(), FontWeightStyle::Bold);

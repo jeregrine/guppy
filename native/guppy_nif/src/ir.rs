@@ -672,6 +672,7 @@ pub enum StyleOp {
     FontSize(FontSizeStyle),
     TextSize(StyleLength),
     LineHeight(LineHeightStyle),
+    LineHeightLength(StyleLength),
     FontWeight(FontWeightStyle),
     FontStyle(FontStyleValue),
     FontFamily(String),
@@ -2983,6 +2984,12 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     "text_size",
                 )?)),
                 "line_height" => Ok(StyleOp::LineHeight(parse_line_height_style(&elements[1])?)),
+                "line_height_length" => Ok(StyleOp::LineHeightLength(parse_style_length(
+                    &elements[1],
+                    "line_height_length",
+                    false,
+                    false,
+                )?)),
                 "font_weight" => Ok(StyleOp::FontWeight(parse_font_weight_style(&elements[1])?)),
                 "font_style" => Ok(StyleOp::FontStyle(parse_font_style_value(&elements[1])?)),
                 "font_family" => Ok(StyleOp::FontFamily(parse_non_empty_style_string(

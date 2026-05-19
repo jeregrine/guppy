@@ -1267,6 +1267,14 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::LineHeight(super::LineHeightStyle::Relaxed)
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("line_height_length"),
+            tuple(vec![atom("fraction"), float(1.4)]),
+        ]))
+        .unwrap(),
+        StyleOp::LineHeightLength(StyleLength::Fraction(1.4))
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("font_weight"), atom("bold")])).unwrap(),
         StyleOp::FontWeight(super::FontWeightStyle::Bold)
     );
@@ -1410,6 +1418,11 @@ fn rejects_invalid_canonical_length_style_ops() {
             tuple(vec![atom("fraction"), integer(1)]),
         ]),
         tuple(vec![atom("line_height"), atom("bad")]),
+        tuple(vec![atom("line_height_length"), atom("auto")]),
+        tuple(vec![
+            atom("line_height_length"),
+            tuple(vec![atom("px"), integer(-1)]),
+        ]),
         tuple(vec![atom("font_weight"), atom("heavy")]),
         tuple(vec![atom("font_style"), atom("oblique")]),
         tuple(vec![atom("font_family"), binary("")]),
@@ -1590,6 +1603,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "text_size")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "line_height_length")
     );
     assert!(
         operations
