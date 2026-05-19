@@ -674,6 +674,7 @@ pub enum StyleOp {
     FontWeight(FontWeightStyle),
     FontStyle(FontStyleValue),
     FontFamily(String),
+    FontFallbacks(Vec<String>),
     TextDecoration(TextDecorationStyle),
     TextDecorationColor(ColorToken),
     TextDecorationColorHex(u32),
@@ -2982,6 +2983,10 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     &elements[1],
                     "font_family",
                 )?)),
+                "font_fallbacks" => Ok(StyleOp::FontFallbacks(parse_non_empty_style_string_list(
+                    &elements[1],
+                    "font_fallbacks",
+                )?)),
                 "text_decoration" => Ok(StyleOp::TextDecoration(parse_text_decoration_style(
                     &elements[1],
                 )?)),
@@ -3691,6 +3696,21 @@ fn parse_non_empty_style_string(term: &Term, key: &str) -> Result<String, String
         Err(format!("invalid {key} string: expected non-empty string"))
     } else {
         Ok(value)
+    }
+}
+
+fn parse_non_empty_style_string_list(term: &Term, key: &str) -> Result<Vec<String>, String> {
+    let values = get_list(term)?
+        .iter()
+        .map(|term| parse_non_empty_style_string(term, key))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if values.is_empty() {
+        Err(format!(
+            "invalid {key} string list: expected at least one string"
+        ))
+    } else {
+        Ok(values)
     }
 }
 

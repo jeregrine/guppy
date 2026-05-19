@@ -122,6 +122,10 @@ defmodule Guppy.Style do
                        operation["name"] in ["font_family"]
                      end)
 
+  @string_list_operations Enum.filter(@catalog["operations"], fn operation ->
+                            operation["name"] in ["font_fallbacks"]
+                          end)
+
   @grid_line_operations Enum.filter(@catalog["operations"], fn operation ->
                           operation["name"] in ["col_start", "col_end", "row_start", "row_end"]
                         end)
@@ -322,6 +326,35 @@ defmodule Guppy.Style do
                                }
                              end)
                              |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+
+  @string_list_config Map.new(@string_list_operations, fn operation ->
+                        string_list = operation["string_list"]
+
+                        {String.to_atom(operation["name"]),
+                         %{
+                           min_items: string_list["min_items"],
+                           min_length: string_list["min_length"]
+                         }}
+                      end)
+
+  @string_list_class_prefix_specs @string_list_operations
+                                  |> Enum.map(fn operation ->
+                                    config =
+                                      Map.fetch!(
+                                        @string_list_config,
+                                        String.to_atom(operation["name"])
+                                      )
+
+                                    {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+                                    %{
+                                      prefix: prefix,
+                                      operation: String.to_atom(operation["name"]),
+                                      min_items: config.min_items,
+                                      min_length: config.min_length
+                                    }
+                                  end)
+                                  |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -568,6 +601,16 @@ defmodule Guppy.Style do
       do: {unquote(operation_name), normalize_string!(unquote(operation_name), value)}
   end
 
+  for operation <- @string_list_operations,
+      %{"kind" => "string_list", "name" => name} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    @doc "Returns a canonical #{operation_name} string-list tuple."
+    def unquote(function)(value),
+      do: {unquote(operation_name), normalize_string_list!(unquote(operation_name), value)}
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -671,7 +714,8 @@ defmodule Guppy.Style do
          :error <- parse_linear_gradient_class(token),
          :error <- parse_number_class(token),
          :error <- parse_unit_length_class(token),
-         :error <- parse_string_class(token) do
+         :error <- parse_string_class(token),
+         :error <- parse_string_list_class(token) do
       parse_box_class(token)
     end
   end
@@ -833,6 +877,19 @@ defmodule Guppy.Style do
              String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
            payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
            {:ok, value} <- normalize_string(spec.operation, payload) do
+        {:ok, {spec.operation, value}}
+      else
+        _ -> false
+      end
+    end)
+  end
+
+  defp parse_string_list_class(token) do
+    Enum.find_value(@string_list_class_prefix_specs, :error, fn spec ->
+      with true <-
+             String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
+           payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
+           {:ok, value} <- normalize_string_list(spec.operation, String.split(payload, ",")) do
         {:ok, {spec.operation, value}}
       else
         _ -> false
@@ -1121,6 +1178,30 @@ defmodule Guppy.Style do
   end
 
   defp normalize_string(_operation, _value), do: :error
+
+  defp normalize_string_list!(operation, value) do
+    case normalize_string_list(operation, value) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "invalid #{operation} value: #{inspect(value)}"
+    end
+  end
+
+  defp normalize_string_list(operation, values) when is_list(values) do
+    config = Map.fetch!(@string_list_config, operation)
+
+    cond do
+      length(values) < config.min_items ->
+        :error
+
+      Enum.all?(values, &(is_binary(&1) and String.length(&1) >= config.min_length)) ->
+        {:ok, values}
+
+      true ->
+        :error
+    end
+  end
+
+  defp normalize_string_list(_operation, _value), do: :error
 
   defp unit_length_style_tuple(:scrollbar_width, {:px, value}), do: {:scrollbar_width_px, value}
   defp unit_length_style_tuple(:scrollbar_width, {:rem, value}), do: {:scrollbar_width_rem, value}

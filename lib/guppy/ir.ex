@@ -210,6 +210,7 @@ defmodule Guppy.IR do
           | {:text_color, color_token()}
           | {:text_bg, color_token()}
           | {:font_family, String.t()}
+          | {:font_fallbacks, [String.t()]}
           | {:border_color, color_token()}
           | {:bg_hex, String.t()}
           | {:text_color_hex, String.t()}
@@ -2782,6 +2783,14 @@ defmodule Guppy.IR do
   defp validate_style_op({:font_weight, value}) when value in @font_weight_value_tokens, do: :ok
   defp validate_style_op({:font_style, value}) when value in @font_style_value_tokens, do: :ok
   defp validate_style_op({:font_family, value}) when is_binary(value) and value != "", do: :ok
+
+  defp validate_style_op({:font_fallbacks, values}) when is_list(values) do
+    if values != [] and Enum.all?(values, &(is_binary(&1) and &1 != "")) do
+      :ok
+    else
+      {:error, {:invalid_style_op, {:font_fallbacks, values}}}
+    end
+  end
 
   defp validate_style_op({:text_decoration, value})
        when value in @text_decoration_value_tokens,

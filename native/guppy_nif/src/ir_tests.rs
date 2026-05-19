@@ -1271,6 +1271,14 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::FontFamily("Monaco".into())
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("font_fallbacks"),
+            list(vec![binary("Monaco"), binary("Menlo")]),
+        ]))
+        .unwrap(),
+        StyleOp::FontFallbacks(vec!["Monaco".into(), "Menlo".into()])
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("text_decoration"), atom("none")])).unwrap(),
         StyleOp::TextDecoration(super::TextDecorationStyle::None)
     );
@@ -1382,6 +1390,8 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("font_weight"), atom("heavy")]),
         tuple(vec![atom("font_style"), atom("oblique")]),
         tuple(vec![atom("font_family"), binary("")]),
+        tuple(vec![atom("font_fallbacks"), list(vec![])]),
+        tuple(vec![atom("font_fallbacks"), list(vec![binary("")])]),
         tuple(vec![atom("text_decoration"), atom("blink")]),
         tuple(vec![atom("text_decoration_color"), atom("purple")]),
         tuple(vec![atom("text_decoration_style"), atom("double")]),
@@ -1548,6 +1558,11 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "font_family")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "font_fallbacks")
     );
     assert!(
         operations

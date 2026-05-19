@@ -56,6 +56,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "font_weight"))
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
     assert Enum.any?(operations, &(&1["name"] == "font_family"))
+    assert Enum.any?(operations, &(&1["name"] == "font_fallbacks"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration_color"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration_color_hex"))
@@ -216,6 +217,12 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.not_italic() == {:font_style, :normal}
     assert Guppy.Style.font_family("Monaco") == {:font_family, "Monaco"}
     assert_raise ArgumentError, fn -> Guppy.Style.font_family("") end
+
+    assert Guppy.Style.font_fallbacks(["Monaco", "Menlo"]) ==
+             {:font_fallbacks, ["Monaco", "Menlo"]}
+
+    assert_raise ArgumentError, fn -> Guppy.Style.font_fallbacks([]) end
+    assert_raise ArgumentError, fn -> Guppy.Style.font_fallbacks([""]) end
     assert Guppy.Style.text_decoration(:underline) == {:text_decoration, :underline}
     assert Guppy.Style.underline() == {:text_decoration, :underline}
     assert Guppy.Style.no_underline() == {:text_decoration, :none}
@@ -326,6 +333,17 @@ defmodule Guppy.StyleTest do
              {:ok, {:font_family, "Monaco"}}
 
     assert Guppy.Style.class_token_to_style("font-family-[]") == :error
+  end
+
+  test "font fallback classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("font-fallbacks-[Monaco,Menlo]") ==
+             {:ok, {:font_fallbacks, ["Monaco", "Menlo"]}}
+
+    assert Guppy.Style.class_token_to_style("font-fallbacks-[Monaco]") ==
+             {:ok, {:font_fallbacks, ["Monaco"]}}
+
+    assert Guppy.Style.class_token_to_style("font-fallbacks-[]") == :error
+    assert Guppy.Style.class_token_to_style("font-fallbacks-[Monaco,]") == :error
   end
 
   test "aspect ratio classes normalize through the catalog parser" do

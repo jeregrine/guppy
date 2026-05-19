@@ -7,9 +7,9 @@ use crate::ir::{
     TextOverflowStyle, VisibilityStyle, WhiteSpaceStyle,
 };
 use gpui::{
-    DefiniteLength, FontStyle, FontWeight, HighlightStyle, Length, StatefulInteractiveElement,
-    StrikethroughStyle, StyleRefinement, Styled, UnderlineStyle, linear_color_stop,
-    linear_gradient, px, relative, rems, rgb,
+    DefiniteLength, FontFallbacks, FontStyle, FontWeight, HighlightStyle, Length,
+    StatefulInteractiveElement, StrikethroughStyle, StyleRefinement, Styled, UnderlineStyle,
+    linear_color_stop, linear_gradient, px, relative, rems, rgb,
 };
 
 pub(crate) fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
@@ -239,6 +239,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::FontWeight(_)
         | StyleOp::FontStyle(_)
         | StyleOp::FontFamily(_)
+        | StyleOp::FontFallbacks(_)
         | StyleOp::TextDecoration(_)
         | StyleOp::TextDecorationColor(_)
         | StyleOp::TextDecorationColorHex(_)
@@ -361,6 +362,7 @@ where
         StyleOp::FontWeight(weight) => apply_font_weight(style, *weight),
         StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
         StyleOp::FontFamily(family) => style.font_family(family.clone()),
+        StyleOp::FontFallbacks(fallbacks) => apply_font_fallbacks(style, fallbacks),
         StyleOp::TextDecoration(decoration) => apply_text_decoration(style, *decoration),
         StyleOp::TextDecorationColor(color) => {
             style.text_decoration_color(color_token_to_color(*color))
@@ -1026,6 +1028,17 @@ where
     }
 }
 
+fn apply_font_fallbacks<E>(mut element: E, fallbacks: &[String]) -> E
+where
+    E: Styled,
+{
+    element
+        .text_style()
+        .get_or_insert_with(Default::default)
+        .font_fallbacks = Some(FontFallbacks::from_fonts(fallbacks.to_vec()));
+    element
+}
+
 fn apply_text_decoration<E>(element: E, decoration: TextDecorationStyle) -> E
 where
     E: Styled,
@@ -1392,6 +1405,18 @@ mod tests {
         assert_eq!(
             style.text.as_ref().and_then(|text| text.font_weight),
             Some(FontWeight::BOLD)
+        );
+
+        let style = apply_font_fallbacks(
+            StyleRefinement::default(),
+            &["Monaco".to_string(), "Menlo".to_string()],
+        );
+        assert_eq!(
+            style
+                .text
+                .and_then(|text| text.font_fallbacks)
+                .map(|fallbacks| fallbacks.fallback_list().to_vec()),
+            Some(vec!["Monaco".to_string(), "Menlo".to_string()])
         );
 
         let style = apply_text_decoration(StyleRefinement::default(), TextDecorationStyle::None);
