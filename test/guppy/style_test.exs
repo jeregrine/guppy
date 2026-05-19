@@ -274,7 +274,9 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.row_end(:auto) == {:row_end, :auto}
     assert_raise ArgumentError, fn -> Guppy.Style.col_start(40_000) end
     assert Guppy.Style.col_span(4) == {:col_span, 4}
+    assert Guppy.Style.col_span_full() == {:col_span, :full}
     assert Guppy.Style.row_span(5) == {:row_span, 5}
+    assert Guppy.Style.row_span_full() == {:row_span, :full}
 
     assert Guppy.Style.object_fit(:cover) == {:object_fit, :cover}
     assert Guppy.Style.object_cover() == {:object_fit, :cover}
@@ -341,6 +343,8 @@ defmodule Guppy.StyleTest do
   end
 
   test "grid line placement classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("col-span-full") == {:ok, {:col_span, :full}}
+    assert Guppy.Style.class_token_to_style("row-span-full") == {:ok, {:row_span, :full}}
     assert Guppy.Style.class_token_to_style("col-start-2") == {:ok, {:col_start, 2}}
     assert Guppy.Style.class_token_to_style("-col-end-1") == {:ok, {:col_end, -1}}
     assert Guppy.Style.class_token_to_style("row-start-auto") == {:ok, {:row_start, :auto}}

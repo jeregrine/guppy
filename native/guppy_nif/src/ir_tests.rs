@@ -1362,6 +1362,14 @@ fn parses_canonical_box_spacing_style_ops() {
         StyleOp::ColEndAuto
     );
     assert_eq!(
+        parse_style_op(&tuple(vec![atom("col_span"), atom("full")])).unwrap(),
+        StyleOp::ColSpanFull
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("row_span"), atom("full")])).unwrap(),
+        StyleOp::RowSpanFull
+    );
+    assert_eq!(
         parse_style_op(&tuple(vec![atom("row_start"), integer(-1)])).unwrap(),
         StyleOp::RowStart(-1)
     );
@@ -1796,6 +1804,7 @@ fn rejects_invalid_numeric_style_ops() {
         tuple(vec![atom("opacity"), float(1.5)]),
         tuple(vec![atom("line_clamp"), integer(0)]),
         tuple(vec![atom("col_start"), integer(40_000)]),
+        tuple(vec![atom("col_span"), atom("auto")]),
         tuple(vec![
             atom("flex_basis"),
             tuple(vec![atom("px"), integer(-1)]),

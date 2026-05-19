@@ -435,6 +435,18 @@ defmodule Guppy.Style do
                      }}
                   end)
 
+  @integer_class_tokens Enum.flat_map(@integer_operations, fn operation ->
+                          operation_name = String.to_atom(operation["name"])
+
+                          operation
+                          |> Map.get("class_tokens", %{})
+                          |> Enum.map(fn {token, value} ->
+                            value = if is_binary(value), do: String.to_atom(value), else: value
+                            {token, {operation_name, value}}
+                          end)
+                        end)
+                        |> Map.new()
+
   @integer_class_prefix_specs @integer_operations
                               |> Enum.map(fn operation ->
                                 config =
@@ -709,6 +721,16 @@ defmodule Guppy.Style do
     end
   end
 
+  for operation <- @integer_operations,
+      %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+    value = if is_binary(value), do: String.to_atom(value), else: value
+
+    @doc "Returns canonical #{inspect(value)} #{operation_name} style."
+    def unquote(function)(), do: {unquote(operation_name), unquote(value)}
+  end
+
   for {operation, config} <- @grid_line_config do
     @doc "Returns a canonical #{operation} grid line placement style tuple."
     def unquote(operation)(:auto) when unquote(config.allow_auto), do: {unquote(operation), :auto}
@@ -829,6 +851,16 @@ defmodule Guppy.Style do
   end
 
   defp parse_integer_class(token) do
+    case Map.fetch(@integer_class_tokens, token) do
+      {:ok, {operation, value}} ->
+        {:ok, {operation, value}}
+
+      :error ->
+        parse_integer_prefixed_class(token)
+    end
+  end
+
+  defp parse_integer_prefixed_class(token) do
     Enum.find_value(@integer_class_prefix_specs, :error, fn spec ->
       cond do
         String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]") ->

@@ -3080,8 +3080,18 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     StyleOp::RowEnd,
                     StyleOp::RowEndAuto,
                 ),
-                "col_span" => Ok(StyleOp::ColSpan(parse_grid_u16(&elements[1])?)),
-                "row_span" => Ok(StyleOp::RowSpan(parse_grid_u16(&elements[1])?)),
+                "col_span" => parse_grid_span_style(
+                    &elements[1],
+                    "col_span",
+                    StyleOp::ColSpan,
+                    StyleOp::ColSpanFull,
+                ),
+                "row_span" => parse_grid_span_style(
+                    &elements[1],
+                    "row_span",
+                    StyleOp::RowSpan,
+                    StyleOp::RowSpanFull,
+                ),
                 "w_px" => Ok(StyleOp::WPx(parse_non_negative_style_f32(
                     &elements[1],
                     "w_px",
@@ -3956,6 +3966,18 @@ fn parse_bounded_style_f32(term: &Term, key: &str, allow_negative: bool) -> Resu
 
 fn parse_grid_u16(term: &Term) -> Result<u16, String> {
     parse_positive_u16(term, "grid")
+}
+
+fn parse_grid_span_style(
+    term: &Term,
+    key: &str,
+    span: fn(u16) -> StyleOp,
+    full: StyleOp,
+) -> Result<StyleOp, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "full" => Ok(full),
+        term => parse_positive_u16(term, key).map(span),
+    }
 }
 
 fn parse_grid_line_style(

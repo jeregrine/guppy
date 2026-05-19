@@ -239,8 +239,8 @@ defmodule Guppy.IR do
           | {:col_end, integer() | :auto}
           | {:row_start, integer() | :auto}
           | {:row_end, integer() | :auto}
-          | {:col_span, pos_integer()}
-          | {:row_span, pos_integer()}
+          | {:col_span, pos_integer() | :full}
+          | {:row_span, pos_integer() | :full}
           | {:w_px, number()}
           | {:w_rem, number()}
           | {:w_frac, number()}
@@ -2885,6 +2885,8 @@ defmodule Guppy.IR do
        when key in @grid_line_value_tokens and is_integer(value) and value >= -32_768 and
               value <= 32_767,
        do: :ok
+
+  defp validate_style_op({key, :full}) when key in [:col_span, :row_span], do: :ok
 
   defp validate_style_op({key, value})
        when key in @grid_value_tokens and is_integer(value) and value >= 1 and value <= 65_535,

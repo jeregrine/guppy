@@ -470,8 +470,10 @@ defmodule Guppy.IRTest do
           {:grid_cols, 5},
           {:grid_rows, 5},
           {:col_span, 3},
+          {:col_span, :full},
           :col_span_full,
           {:row_span, 2},
+          {:row_span, :full},
           :row_span_full
         ]
       )
@@ -1180,6 +1182,9 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_style_op, {:col_span, 70_000}}} =
              Guppy.IR.validate(Guppy.IR.div([], style: [{:col_span, 70_000}]))
+
+    assert {:error, {:invalid_style_op, {:col_span, :auto}}} =
+             Guppy.IR.validate(Guppy.IR.div([], style: [{:col_span, :auto}]))
 
     assert {:error, {:invalid_style_op, :bogus}} =
              Guppy.IR.validate(Guppy.IR.div([], active_style: [:bogus]))

@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-strikethrough-detail-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration/strikethrough colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness plus strikethrough colors/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-strikethrough-detail-line-clamp-grid-placement-full-span-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration/strikethrough colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness plus strikethrough colors/thickness, line clamp, grid count/span/full-span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -3983,7 +3983,7 @@
       "name": "col_span",
       "tuple_schema": [
         "col_span",
-        "positive_integer"
+        "positive_integer_or_full"
       ],
       "class_prefixes": {
         "col-span": null
@@ -3992,6 +3992,11 @@
         {
           "name": "col_span",
           "kind": "integer"
+        },
+        {
+          "name": "col_span_full",
+          "kind": "value",
+          "value": "full"
         }
       ],
       "integer": {
@@ -4000,13 +4005,16 @@
       },
       "node_applicability": "all_nodes",
       "refinement_support": false,
-      "gpui_mapping": "Styled col_span"
+      "gpui_mapping": "Styled col_span/col_span_full",
+      "class_tokens": {
+        "col-span-full": "full"
+      }
     },
     {
       "name": "row_span",
       "tuple_schema": [
         "row_span",
-        "positive_integer"
+        "positive_integer_or_full"
       ],
       "class_prefixes": {
         "row-span": null
@@ -4015,6 +4023,11 @@
         {
           "name": "row_span",
           "kind": "integer"
+        },
+        {
+          "name": "row_span_full",
+          "kind": "value",
+          "value": "full"
         }
       ],
       "integer": {
@@ -4023,7 +4036,10 @@
       },
       "node_applicability": "all_nodes",
       "refinement_support": false,
-      "gpui_mapping": "Styled row_span"
+      "gpui_mapping": "Styled row_span/row_span_full",
+      "class_tokens": {
+        "row-span-full": "full"
+      }
     },
     {
       "name": "object_fit",
