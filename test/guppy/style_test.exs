@@ -22,6 +22,8 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "overflow"))
     assert Enum.any?(operations, &(&1["name"] == "allow_concurrent_scroll"))
     assert Enum.any?(operations, &(&1["name"] == "restrict_scroll_to_axis"))
+    assert Enum.any?(operations, &(&1["name"] == "debug"))
+    assert Enum.any?(operations, &(&1["name"] == "debug_below"))
     assert Enum.any?(operations, &(&1["name"] == "cursor"))
     assert Enum.any?(operations, &(&1["name"] == "border_width"))
     assert Enum.any?(operations, &(&1["name"] == "border_radius"))
@@ -138,6 +140,9 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.restrict_scroll_to_axis() == {:restrict_scroll_to_axis, true}
     assert Guppy.Style.allow_cross_axis_scroll() == {:restrict_scroll_to_axis, false}
     assert_raise ArgumentError, fn -> Guppy.Style.allow_concurrent_scroll(:yes) end
+    assert Guppy.Style.debug() == {:debug, true}
+    assert Guppy.Style.debug(false) == {:debug, false}
+    assert Guppy.Style.debug_below() == {:debug_below, true}
 
     assert Guppy.Style.cursor(:pointer) == {:cursor, :pointer}
     assert Guppy.Style.cursor_pointer() == {:cursor, :pointer}
@@ -319,6 +324,11 @@ defmodule Guppy.StyleTest do
              {:ok, {:border_color_hex, "#abcdef"}}
 
     assert Guppy.Style.class_token_to_style("bg-[#12]") == :error
+  end
+
+  test "debug classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("debug") == {:ok, {:debug, true}}
+    assert Guppy.Style.class_token_to_style("debug-below") == {:ok, {:debug_below, true}}
   end
 
   test "box shadow classes normalize through the catalog parser" do

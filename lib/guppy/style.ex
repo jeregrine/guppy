@@ -87,7 +87,9 @@ defmodule Guppy.Style do
   @boolean_operations Enum.filter(@catalog["operations"], fn operation ->
                         operation["name"] in [
                           "allow_concurrent_scroll",
-                          "restrict_scroll_to_axis"
+                          "restrict_scroll_to_axis",
+                          "debug",
+                          "debug_below"
                         ]
                       end)
 

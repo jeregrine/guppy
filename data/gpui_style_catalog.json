@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-pattern-opacity-scrollbar-shadow-box-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-strikethrough-detail-line-clamp-grid-placement-full-span-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient/pattern background/text/border/text-background/text-decoration/strikethrough colors, opacity, scrollbar width, named and arbitrary box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness plus strikethrough colors/thickness, line clamp, grid count/span/full-span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-debug-cursor-border-radius-color-hex-gradient-pattern-opacity-scrollbar-shadow-box-shadow-flex-grow-shrink-basis-alignment-text-bg-font-size-arbitrary-line-height-weight-family-fallbacks-features-decoration-detail-strikethrough-detail-line-clamp-grid-placement-full-span-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, debug/debug-below flags, cursor, border width/style, border radius, named/hex/linear-gradient/pattern background/text/border/text-background/text-decoration/strikethrough colors, opacity, scrollbar width, named and arbitrary box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font size/line-height/weight/family/fallbacks/features, text decoration lines/colors/styles/thickness plus strikethrough colors/thickness, line clamp, grid count/span/full-span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -1469,6 +1469,54 @@
       "node_applicability": "all_nodes",
       "refinement_support": false,
       "gpui_mapping": "Style restrict_scroll_to_axis boolean overflow behavior"
+    },
+    {
+      "name": "debug",
+      "tuple_schema": [
+        "debug",
+        "boolean"
+      ],
+      "class_tokens": {
+        "debug": true
+      },
+      "helpers": [
+        {
+          "name": "debug",
+          "kind": "exact"
+        },
+        {
+          "name": "debug",
+          "kind": "value",
+          "value": true
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled debug (debug_assertions only; release no-op)"
+    },
+    {
+      "name": "debug_below",
+      "tuple_schema": [
+        "debug_below",
+        "boolean"
+      ],
+      "class_tokens": {
+        "debug-below": true
+      },
+      "helpers": [
+        {
+          "name": "debug_below",
+          "kind": "exact"
+        },
+        {
+          "name": "debug_below",
+          "kind": "value",
+          "value": true
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "Styled debug_below (debug_assertions only; release no-op)"
     },
     {
       "name": "cursor",

@@ -202,6 +202,8 @@ defmodule Guppy.IR do
           | {:overflow, :all | :x | :y, :visible | :clip | :hidden | :scroll}
           | {:allow_concurrent_scroll, boolean()}
           | {:restrict_scroll_to_axis, boolean()}
+          | {:debug, boolean()}
+          | {:debug_below, boolean()}
           | {:cursor, atom()}
           | {:border_width, style_axis(), {:px | :rem, number()}}
           | {:border_radius, border_radius_axis(), {:px | :rem, number()}}
@@ -2755,7 +2757,8 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op({key, value})
-       when key in [:allow_concurrent_scroll, :restrict_scroll_to_axis] and is_boolean(value),
+       when key in [:allow_concurrent_scroll, :restrict_scroll_to_axis, :debug, :debug_below] and
+              is_boolean(value),
        do: :ok
 
   defp validate_style_op({:cursor, value}) when value in @cursor_value_tokens, do: :ok

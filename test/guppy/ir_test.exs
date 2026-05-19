@@ -183,6 +183,8 @@ defmodule Guppy.IRTest do
       {:overflow, :all, :visible},
       {:allow_concurrent_scroll, true},
       {:restrict_scroll_to_axis, true},
+      {:debug, true},
+      {:debug_below, true},
       {:cursor, :pointer},
       {:cursor, :not_allowed},
       {:border_width, :all, {:px, 1}},
@@ -252,6 +254,8 @@ defmodule Guppy.IRTest do
           {:overflow, :x, :auto},
           {:allow_concurrent_scroll, :yes},
           {:restrict_scroll_to_axis, :yes},
+          {:debug, :yes},
+          {:debug_below, :yes},
           {:cursor, :bad},
           {:border_width, :center, {:px, 1}},
           {:border_width, :all, {:fraction, 1}},
@@ -935,6 +939,8 @@ defmodule Guppy.IRTest do
           :overflow_y_scroll,
           {:allow_concurrent_scroll, true},
           {:restrict_scroll_to_axis, true},
+          {:debug, true},
+          {:debug_below, true},
           {:bg, :blue}
         ]
       )
@@ -1121,6 +1127,8 @@ defmodule Guppy.IRTest do
              :overflow_y_scroll,
              {:allow_concurrent_scroll, true},
              {:restrict_scroll_to_axis, true},
+             {:debug, true},
+             {:debug_below, true},
              {:bg, :blue}
            ]
 

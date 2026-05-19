@@ -265,6 +265,8 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::BorderColorHex(_)
         | StyleOp::BgLinearGradient { .. }
         | StyleOp::BgPatternSlash(_)
+        | StyleOp::Debug(_)
+        | StyleOp::DebugBelow(_)
         | StyleOp::Opacity(_)
         | StyleOp::WPx(_)
         | StyleOp::WRem(_)
@@ -363,6 +365,8 @@ where
             pattern.width,
             pattern.interval,
         )),
+        StyleOp::Debug(value) => apply_debug(style, *value),
+        StyleOp::DebugBelow(value) => apply_debug_below(style, *value),
         StyleOp::Opacity(value) => style.opacity(*value),
         StyleOp::Visibility(visibility) => apply_visibility(style, *visibility),
         StyleOp::Cursor(cursor) => apply_cursor(style, *cursor),
@@ -824,6 +828,42 @@ where
         BorderLineStyle::Dashed => gpui::BorderStyle::Dashed,
     });
 
+    element
+}
+
+#[cfg(debug_assertions)]
+fn apply_debug<E>(mut element: E, value: bool) -> E
+where
+    E: Styled,
+{
+    element.style().debug = Some(value);
+    element
+}
+
+#[cfg(not(debug_assertions))]
+fn apply_debug<E>(element: E, value: bool) -> E
+where
+    E: Styled,
+{
+    let _ = value;
+    element
+}
+
+#[cfg(debug_assertions)]
+fn apply_debug_below<E>(mut element: E, value: bool) -> E
+where
+    E: Styled,
+{
+    element.style().debug_below = Some(value);
+    element
+}
+
+#[cfg(not(debug_assertions))]
+fn apply_debug_below<E>(element: E, value: bool) -> E
+where
+    E: Styled,
+{
+    let _ = value;
     element
 }
 
@@ -1508,6 +1548,13 @@ mod tests {
                 spread_radius: px(-1.0),
             }])
         );
+
+        #[cfg(debug_assertions)]
+        {
+            let style = apply_debug_below(apply_debug(StyleRefinement::default(), true), true);
+            assert_eq!(style.debug, Some(true));
+            assert_eq!(style.debug_below, Some(true));
+        }
 
         let style =
             apply_flex_direction(StyleRefinement::default(), FlexDirectionStyle::RowReverse);

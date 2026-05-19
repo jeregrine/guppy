@@ -1145,6 +1145,14 @@ fn parses_canonical_box_spacing_style_ops() {
         .unwrap(),
         StyleOp::RestrictScrollToAxis(true)
     );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("debug"), bool_atom(true)])).unwrap(),
+        StyleOp::Debug(true)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![atom("debug_below"), bool_atom(true)])).unwrap(),
+        StyleOp::DebugBelow(true)
+    );
 
     assert_eq!(
         parse_style_op(&tuple(vec![atom("cursor"), atom("not_allowed")])).unwrap(),
@@ -1431,6 +1439,8 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("overflow"), atom("x"), atom("auto")]),
         tuple(vec![atom("allow_concurrent_scroll"), atom("yes")]),
         tuple(vec![atom("restrict_scroll_to_axis"), atom("yes")]),
+        tuple(vec![atom("debug"), atom("yes")]),
+        tuple(vec![atom("debug_below"), atom("yes")]),
         tuple(vec![atom("cursor"), atom("bad")]),
         tuple(vec![
             atom("border_width"),
@@ -1595,6 +1605,16 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "restrict_scroll_to_axis")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "debug")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "debug_below")
     );
     assert!(
         operations

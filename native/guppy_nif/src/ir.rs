@@ -645,6 +645,8 @@ pub enum StyleOp {
     },
     AllowConcurrentScroll(bool),
     RestrictScrollToAxis(bool),
+    Debug(bool),
+    DebugBelow(bool),
     Cursor(MouseCursorStyle),
     BorderWidth {
         axis: StyleAxis,
@@ -2964,6 +2966,11 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "restrict_scroll_to_axis" => Ok(StyleOp::RestrictScrollToAxis(parse_style_bool(
                     &elements[1],
                     "restrict_scroll_to_axis",
+                )?)),
+                "debug" => Ok(StyleOp::Debug(parse_style_bool(&elements[1], "debug")?)),
+                "debug_below" => Ok(StyleOp::DebugBelow(parse_style_bool(
+                    &elements[1],
+                    "debug_below",
                 )?)),
                 "cursor" => Ok(StyleOp::Cursor(parse_mouse_cursor_style(&elements[1])?)),
                 "border_style" => Ok(StyleOp::BorderStyle(parse_border_line_style(&elements[1])?)),
