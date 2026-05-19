@@ -52,7 +52,11 @@ defmodule Guppy.Component do
           assign: 3,
           update: 3,
           put_private: 3,
-          put_window_opts: 2
+          put_window_opts: 2,
+          theme_color: 1,
+          theme_color!: 1,
+          theme_style: 1,
+          theme_style!: 1
         ]
     end
   end
@@ -136,6 +140,10 @@ defmodule Guppy.Component do
   def update(window, key, fun), do: Guppy.Window.update(window, key, fun)
   def put_private(window, key, value), do: Guppy.Window.put_private(window, key, value)
   def put_window_opts(window, opts), do: Guppy.Window.put_window_opts(window, opts)
+  def theme_color(token), do: Guppy.App.theme_color(token)
+  def theme_color!(token), do: Guppy.App.theme_color!(token)
+  def theme_style(token), do: Guppy.App.theme_style(token)
+  def theme_style!(token), do: Guppy.App.theme_style!(token)
 
   def maybe_entry(_key, nil), do: nil
   def maybe_entry(key, value), do: {key, value}

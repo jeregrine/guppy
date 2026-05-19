@@ -83,8 +83,26 @@ defmodule Guppy.AppTest do
     send(app_name, {:guppy_menu_event, %{id: "new_file", callback: "new_file"}})
     assert_receive {:app_command, "new_file", %{id: "new_file", callback: "new_file"}}
 
-    assert :ok = Guppy.App.set_theme(app_name, %{id: "light", name: "Light", appearance: :light})
+    assert :ok =
+             Guppy.App.set_theme(app_name, %{
+               id: "light",
+               name: "Light",
+               appearance: :light,
+               colors: %{surface: "#ffffff", text: :black},
+               styles: %{
+                 panel: ["p-2", {:theme_color, :bg, :surface}, {:theme_color, :text_color, :text}]
+               }
+             })
+
     assert Guppy.App.theme(app_name).id == "light"
+    assert {:ok, "#ffffff"} = Guppy.App.theme_color(app_name, :surface)
+    assert {:ok, panel_style} = Guppy.App.theme_style(app_name, "panel")
+    assert {:bg_hex, "#ffffff"} in panel_style
+    assert {:text_color, :black} in panel_style
+
+    Guppy.App.put_window_context(app_name, "test")
+    assert {:ok, ^panel_style} = Guppy.Component.theme_style(:panel)
+    assert "#ffffff" = Guppy.Component.theme_color!(:surface)
 
     assert :ok = Guppy.App.set_stylesheet(app_name, %{classes: %{"pill" => "px-2 bg-green"}})
     assert {:style, style} = app_name |> Guppy.App.styles("pill") |> List.keyfind(:style, 0)

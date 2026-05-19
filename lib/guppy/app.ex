@@ -25,7 +25,7 @@ defmodule Guppy.App do
   `Guppy.Window` modules.
   """
 
-  alias Guppy.App.{Config, Coordinator, Stylesheet}
+  alias Guppy.App.{Config, Coordinator, Stylesheet, Theme}
 
   @type app_ref :: GenServer.server()
 
@@ -136,6 +136,46 @@ defmodule Guppy.App do
 
   @doc "Returns the active app theme."
   def theme(app \\ nil), do: call(app, :theme)
+
+  @doc "Looks up a semantic color token in the active app theme."
+  def theme_color(token), do: theme_color(nil, token)
+
+  def theme_color(app, token) do
+    case theme(app) do
+      %Theme{} = theme -> Theme.color(theme, token)
+      nil -> {:error, :no_active_theme}
+    end
+  end
+
+  @doc "Looks up a semantic color token or raises when it is unavailable."
+  def theme_color!(token), do: theme_color!(nil, token)
+
+  def theme_color!(app, token) do
+    case theme_color(app, token) do
+      {:ok, value} -> value
+      {:error, reason} -> raise ArgumentError, "theme color lookup failed: #{inspect(reason)}"
+    end
+  end
+
+  @doc "Looks up a resolved semantic style token in the active app theme."
+  def theme_style(token), do: theme_style(nil, token)
+
+  def theme_style(app, token) do
+    case theme(app) do
+      %Theme{} = theme -> Theme.style(theme, token)
+      nil -> {:error, :no_active_theme}
+    end
+  end
+
+  @doc "Looks up a semantic style token or raises when it is unavailable."
+  def theme_style!(token), do: theme_style!(nil, token)
+
+  def theme_style!(app, token) do
+    case theme_style(app, token) do
+      {:ok, value} -> value
+      {:error, reason} -> raise ArgumentError, "theme style lookup failed: #{inspect(reason)}"
+    end
+  end
 
   @doc "Replaces the app theme after validation."
   def set_theme(app, theme), do: call(app, {:set_theme, theme})
