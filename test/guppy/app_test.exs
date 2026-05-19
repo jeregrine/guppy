@@ -207,6 +207,7 @@ defmodule Guppy.AppTest do
     {:ok, _pid} =
       start_supervised({Guppy.TestApp, name: app_name, parent: self(), runtime_server: server})
 
+    assert Guppy.App.theme(app_name).id == "test-dark"
     assert_receive {:guppy_test_native_request, {:set_menus, [_menus]}, _timeout}
 
     server_pid = Process.whereis(server)
@@ -218,6 +219,7 @@ defmodule Guppy.AppTest do
     end)
 
     assert_receive {:guppy_test_native_request, {:set_menus, [_menus]}, _timeout}, 500
+    assert Guppy.App.theme(app_name).id == "test-dark"
   end
 
   test "server enforces a single native app owner for native-global resources" do
