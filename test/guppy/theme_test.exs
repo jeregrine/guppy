@@ -57,6 +57,30 @@ defmodule Guppy.ThemeTest do
              })
   end
 
+  test "themes can refine defaults with explicit color and style overrides" do
+    base = Theme.default(:dark)
+
+    assert {:ok, refined} =
+             Theme.refine(base,
+               id: "custom-dark",
+               name: "Custom Dark",
+               colors: %{surface: "#111827", accent: :green},
+               styles: %{badge: ["px-2", {:theme_color, :bg, :accent}]},
+               metadata: %{source: :test}
+             )
+
+    assert refined.id == "custom-dark"
+    assert refined.name == "Custom Dark"
+    assert refined.appearance == :dark
+    assert refined.metadata == %{source: :test}
+    assert {:ok, "#111827"} = Theme.color(refined, :surface)
+    assert {:ok, :green} = Theme.color(refined, :accent)
+    assert {:ok, window_style} = Theme.style(refined, :window)
+    assert {:bg_hex, "#0f172a"} in window_style
+    assert {:ok, badge_style} = Theme.style(refined, :badge)
+    assert {:bg, :green} in badge_style
+  end
+
   test "built-in light and dark themes expose semantic defaults" do
     assert %Theme{id: "guppy.dark", appearance: :dark} = dark = Theme.default(:dark)
     assert %Theme{id: "guppy.light", appearance: :light} = light = Theme.default(:light)

@@ -110,6 +110,29 @@ defmodule Guppy.App.Theme do
   def default(:dark), do: validate_default!(@dark_theme)
   def default(:light), do: validate_default!(@light_theme)
 
+  @doc "Returns a validated theme refined from an existing theme and override data."
+  @spec refine(t(), map() | keyword()) :: {:ok, t()} | {:error, term()}
+  def refine(%__MODULE__{} = theme, overrides) when is_list(overrides) do
+    refine(theme, Map.new(overrides))
+  end
+
+  def refine(%__MODULE__{} = theme, %{} = overrides) do
+    with {:ok, colors} <- normalize_override_map(Map.get(overrides, :colors, %{})),
+         {:ok, styles} <- normalize_override_map(Map.get(overrides, :styles, %{})) do
+      merged =
+        theme
+        |> Map.from_struct()
+        |> Map.merge(Map.drop(overrides, [:colors, :styles, :metadata]))
+        |> Map.put(:colors, Map.merge(theme.colors, colors))
+        |> Map.put(:styles, Map.merge(theme.styles, styles))
+        |> Map.put(:metadata, Map.merge(theme.metadata, Map.get(overrides, :metadata, %{})))
+
+      validate(merged)
+    end
+  end
+
+  def refine(_theme, overrides), do: {:error, {:invalid_theme_refinement, overrides}}
+
   @doc false
   def validate(nil), do: {:ok, nil}
   def validate(%__MODULE__{} = theme), do: validate(Map.from_struct(theme))
@@ -169,6 +192,20 @@ defmodule Guppy.App.Theme do
     {:ok, theme} = validate(theme)
     theme
   end
+
+  defp normalize_override_map(value) when is_list(value),
+    do: value |> Map.new() |> normalize_override_map()
+
+  defp normalize_override_map(%{} = value) do
+    Enum.reduce_while(value, {:ok, %{}}, fn {key, item}, {:ok, acc} ->
+      case normalize_token_key(key) do
+        {:ok, key} -> {:cont, {:ok, Map.put(acc, key, item)}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp normalize_override_map(value), do: {:error, {:invalid_theme_refinement, value}}
 
   defp validate_keys(theme) do
     case Map.keys(theme) -- @supported_keys do
