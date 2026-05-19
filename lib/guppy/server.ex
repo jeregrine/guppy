@@ -16,7 +16,9 @@ defmodule Guppy.Server do
             owners: %{},
             monitors: %{},
             menu_owner: nil,
-            menu_monitor: nil
+            menu_monitor: nil,
+            app_owner: nil,
+            app_owner_monitor: nil
 
   @type view_id :: pos_integer()
 
@@ -34,7 +36,9 @@ defmodule Guppy.Server do
           owners: %{optional(pid()) => owner_entry()},
           monitors: %{optional(reference()) => pid()},
           menu_owner: pid() | nil,
-          menu_monitor: reference() | nil
+          menu_monitor: reference() | nil,
+          app_owner: pid() | nil,
+          app_owner_monitor: reference() | nil
         }
 
   def start_link(opts \\ []) do
@@ -63,6 +67,14 @@ defmodule Guppy.Server do
 
   def set_menus(server \\ __MODULE__, owner, menus, timeout \\ 5_000) do
     GenServer.call(server, {:set_menus, owner, menus, timeout}, gen_call_timeout(timeout))
+  end
+
+  def claim_app_owner(server \\ __MODULE__, owner) when is_pid(owner) do
+    GenServer.call(server, {:claim_app_owner, owner})
+  end
+
+  def release_app_owner(server \\ __MODULE__, owner) when is_pid(owner) do
+    GenServer.call(server, {:release_app_owner, owner})
   end
 
   def view_count(server \\ __MODULE__, timeout \\ 5_000) do
@@ -163,20 +175,49 @@ defmodule Guppy.Server do
 
   def handle_call({:set_menus, owner, menus, timeout}, {caller, _tag}, state)
       when is_pid(owner) do
-    if owner != caller do
-      {:reply, {:error, :owner_mismatch}, state}
-    else
-      case validate_menus(menus) do
-        {:ok, menus} ->
-          case native_request(state, :set_menus, {:set_menus, [menus]}, timeout) do
-            :ok -> {:reply, :ok, put_menu_owner(state, owner, menus)}
-            {:ok, _payload} -> {:reply, :ok, put_menu_owner(state, owner, menus)}
-            {:error, reason} -> {:reply, {:error, reason}, state}
-          end
+    cond do
+      owner != caller ->
+        {:reply, {:error, :owner_mismatch}, state}
 
-        error ->
-          {:reply, error, state}
-      end
+      app_owner_conflict?(state, owner) ->
+        {:reply, {:error, :native_app_owner_already_claimed}, state}
+
+      true ->
+        case validate_menus(menus) do
+          {:ok, menus} ->
+            case native_request(state, :set_menus, {:set_menus, [menus]}, timeout) do
+              :ok -> {:reply, :ok, put_menu_owner(state, owner, menus)}
+              {:ok, _payload} -> {:reply, :ok, put_menu_owner(state, owner, menus)}
+              {:error, reason} -> {:reply, {:error, reason}, state}
+            end
+
+          error ->
+            {:reply, error, state}
+        end
+    end
+  end
+
+  def handle_call({:claim_app_owner, owner}, {caller, _tag}, state) when is_pid(owner) do
+    cond do
+      owner != caller ->
+        {:reply, {:error, :owner_mismatch}, state}
+
+      state.app_owner == owner ->
+        {:reply, :ok, state}
+
+      is_pid(state.app_owner) ->
+        {:reply, {:error, :native_app_owner_already_claimed}, state}
+
+      true ->
+        {:reply, :ok, put_app_owner(state, owner)}
+    end
+  end
+
+  def handle_call({:release_app_owner, owner}, {caller, _tag}, state) when is_pid(owner) do
+    cond do
+      owner != caller -> {:reply, {:error, :owner_mismatch}, state}
+      state.app_owner == owner -> {:reply, :ok, clear_app_owner(state)}
+      true -> {:reply, :ok, state}
     end
   end
 
@@ -270,6 +311,7 @@ defmodule Guppy.Server do
 
   def handle_info({:DOWN, monitor_ref, :process, owner, _reason}, state) do
     state = maybe_clear_dead_menu_owner(state, owner, monitor_ref)
+    state = maybe_clear_dead_app_owner(state, owner, monitor_ref)
 
     case Map.fetch(state.monitors, monitor_ref) do
       {:ok, ^owner} ->
@@ -409,6 +451,36 @@ defmodule Guppy.Server do
     state = clear_menu_owner_monitor(state)
     %{state | menu_owner: owner, menu_monitor: Process.monitor(owner)}
   end
+
+  defp app_owner_conflict?(%{app_owner: nil}, _owner), do: false
+  defp app_owner_conflict?(%{app_owner: owner}, owner), do: false
+  defp app_owner_conflict?(%{app_owner: app_owner}, _owner) when is_pid(app_owner), do: true
+
+  defp put_app_owner(%{app_owner: owner} = state, owner) when is_pid(owner), do: state
+
+  defp put_app_owner(state, owner) do
+    state = clear_app_owner(state)
+    %{state | app_owner: owner, app_owner_monitor: Process.monitor(owner)}
+  end
+
+  defp maybe_clear_dead_app_owner(
+         %{app_owner: owner, app_owner_monitor: monitor_ref} = state,
+         owner,
+         monitor_ref
+       )
+       when is_pid(owner) do
+    clear_app_owner(state)
+  end
+
+  defp maybe_clear_dead_app_owner(state, _owner, _monitor_ref), do: state
+
+  defp clear_app_owner(%{app_owner_monitor: monitor_ref} = state)
+       when is_reference(monitor_ref) do
+    Process.demonitor(monitor_ref, [:flush])
+    %{state | app_owner: nil, app_owner_monitor: nil}
+  end
+
+  defp clear_app_owner(state), do: %{state | app_owner: nil, app_owner_monitor: nil}
 
   defp maybe_clear_dead_menu_owner(
          %{menu_owner: owner, menu_monitor: monitor_ref} = state,

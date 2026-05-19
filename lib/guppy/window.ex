@@ -46,7 +46,7 @@ defmodule Guppy.Window do
 
   defmodule State do
     @moduledoc false
-    defstruct module: nil, window: nil, server_monitor: nil
+    defstruct module: nil, window: nil, server_monitor: nil, app: nil, app_window_id: nil
   end
 
   defmacro __using__(_opts) do
@@ -67,12 +67,22 @@ defmodule Guppy.Window do
 
       defoverridable child_spec: 1
 
-      def start_link(arg, opts \\ []) do
+      def start_link(arg, opts \\ [])
+
+      def start_link({:guppy_app_window, _app, _window_id, _arg} = arg, opts) do
+        GenServer.start_link(__MODULE__, arg, opts)
+      end
+
+      def start_link(arg, opts) do
         GenServer.start_link(__MODULE__, {:guppy_window, arg}, opts)
       end
 
       def init({:guppy_window, arg}) do
         Guppy.Window.init_window(__MODULE__, arg)
+      end
+
+      def init({:guppy_app_window, app, window_id, arg}) do
+        Guppy.Window.init_window(__MODULE__, arg, app: app, app_window_id: window_id)
       end
 
       def handle_info(message, %Guppy.Window.State{} = state) do
@@ -81,12 +91,16 @@ defmodule Guppy.Window do
     end
   end
 
-  def init_window(module, arg) do
+  def init_window(module, arg, opts \\ []) do
+    app = Keyword.get(opts, :app)
+    app_window_id = Keyword.get(opts, :app_window_id)
+    put_app_context(app, app_window_id)
+
     window = %__MODULE__{}
 
     case module.mount(arg, window) do
       {:ok, window} ->
-        ir = module.render(window)
+        ir = render_with_context(module, window, app, app_window_id)
         window_options = Map.get(window.private, :window_options, [])
 
         case Guppy.open_window(ir, window_options) do
@@ -95,7 +109,9 @@ defmodule Guppy.Window do
              %State{
                module: module,
                window: %{window | view_id: view_id},
-               server_monitor: monitor_server()
+               server_monitor: monitor_server(),
+               app: app,
+               app_window_id: app_window_id
              }}
 
           {:error, reason} ->
@@ -125,6 +141,8 @@ defmodule Guppy.Window do
         %State{window: %__MODULE__{view_id: view_id} = window} = state
       )
       when is_map(event) do
+    put_app_context(state.app, state.app_window_id)
+
     callback_result =
       case event do
         %{type: :window_closed} ->
@@ -142,6 +160,8 @@ defmodule Guppy.Window do
   end
 
   def handle_window_message(module, message, state) do
+    put_app_context(state.app, state.app_window_id)
+
     state
     |> apply_callback(invoke_callback(module, :handle_info, [message, state.window]), false)
   end
@@ -208,11 +228,13 @@ defmodule Guppy.Window do
   end
 
   defp reopen(%State{module: module, window: window, server_monitor: old_monitor} = state) do
+    put_app_context(state.app, state.app_window_id)
+
     if is_reference(old_monitor) do
       Process.demonitor(old_monitor, [:flush])
     end
 
-    ir = module.render(window)
+    ir = render_with_context(module, window, state.app, state.app_window_id)
     window_options = Map.get(window.private, :window_options, [])
 
     case safe_open_window(ir, window_options) do
@@ -244,8 +266,12 @@ defmodule Guppy.Window do
   end
 
   defp rerender(%State{window: %__MODULE__{view_id: view_id} = window, module: module} = state) do
+    put_app_context(state.app, state.app_window_id)
     start_time = System.monotonic_time()
-    result = Guppy.render(view_id, module.render(window))
+
+    result =
+      Guppy.render(view_id, render_with_context(module, window, state.app, state.app_window_id))
+
     duration = System.monotonic_time() - start_time
 
     :telemetry.execute(
@@ -259,6 +285,15 @@ defmodule Guppy.Window do
       {:error, :unknown_view_id} -> {:stop, :normal, state}
       {:error, reason} -> {:stop, {:render_failed, reason}, state}
     end
+  end
+
+  defp put_app_context(nil, _window_id), do: :ok
+
+  defp put_app_context(app, window_id), do: Guppy.App.put_window_context(app, window_id)
+
+  defp render_with_context(module, window, app, window_id) do
+    put_app_context(app, window_id)
+    module.render(window)
   end
 
   defp telemetry_status(:ok), do: :ok

@@ -46,6 +46,83 @@ defmodule Guppy.WindowAssignsTemplateExample do
   end
 end
 
+defmodule Guppy.AppContextWindow do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(parent, window) do
+    send(parent, {:app_context_mount, Guppy.App.current_app(), Guppy.App.current_window_id()})
+    {:ok, assign(window, :parent, parent)}
+  end
+
+  @impl Guppy.Window
+  def render(window) do
+    send(
+      window.assigns.parent,
+      {:app_context_render, Guppy.App.current_app(), Guppy.App.current_window_id()}
+    )
+
+    Guppy.IR.text("app context window")
+  end
+end
+
+defmodule Guppy.AppPlainWindow do
+  use GenServer
+
+  def start_link({:guppy_app_window, app, window_id, arg}, opts) do
+    GenServer.start_link(__MODULE__, {app, window_id, arg}, opts)
+  end
+
+  def init(state), do: {:ok, state}
+end
+
+defmodule Guppy.ExitOnLastWindowApp do
+  use Guppy.App,
+    windows: [%{id: "plain", module: Guppy.AppPlainWindow, start: false}],
+    exit_on_last_window_closed: true
+end
+
+defmodule Guppy.KeepAliveOnLastWindowApp do
+  use Guppy.App,
+    windows: [%{id: "plain", module: Guppy.AppPlainWindow, start: false}]
+end
+
+defmodule Guppy.TestApp do
+  use Guppy.App,
+    windows: [
+      %{id: "main", module: Guppy.AppContextWindow, start: false}
+    ],
+    theme: %{id: "test-dark", name: "Test Dark", appearance: :dark},
+    stylesheet: %{
+      classes: %{
+        "card" => %{style: "p-2 bg-blue", hover_style: "bg-red"}
+      }
+    },
+    commands: [%{id: "new_file", label: "New File"}],
+    keymap: [%{key: "cmd-n", command: "new_file"}],
+    menus: [%{label: "File", items: [%{id: "new_file", label: "New", callback: "new_file"}]}],
+    metadata: %{name: "Test App"},
+    package: %{bundle_id: "dev.guppy.test"}
+
+  @impl Guppy.App
+  def init(opts) do
+    parent = Keyword.fetch!(opts, :parent)
+
+    opts =
+      opts
+      |> Keyword.delete(:parent)
+      |> Keyword.put(:metadata, %{parent: parent})
+
+    {:ok, opts}
+  end
+
+  @impl Guppy.App
+  def handle_command(command_id, payload, state) do
+    send(state.config.metadata.parent, {:app_command, command_id, payload})
+    {:noreply, state}
+  end
+end
+
 defmodule Guppy.CrashingNative do
   def request(_server, _request, _timeout), do: exit(:native_down)
 end

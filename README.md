@@ -109,6 +109,12 @@ mix run examples/menu_demo.exs
 App-level menu example with callback actions routed to the installing window process and Edit menu items wired to focused text input actions.
 
 ```bash
+mix run examples/multi_window_app.exs
+```
+
+`Guppy.App` example with app-owned window supervision, stylesheet/theme resources, commands, menus, keymap data, a secondary window, and the built-in command-palette overlay.
+
+```bash
 mix run examples/data_table_tree.exs
 ```
 
@@ -184,6 +190,34 @@ Popovers support optional anchor corner, anchor position/offset, local/window an
 `Guppy.set_menus/1` installs app/runtime menus for the calling process. Custom menu actions use `%{id:, label:, callback:}` and arrive as `{:guppy_menu_event, %{type: :menu_action, id: id, callback: callback}}`; Edit menu items can use `%{id:, label:, os_action: :cut | :copy | :paste | :select_all}` to target focused native text inputs. Call `Guppy.set_menus([])` to clear menus; menus are also cleared when the installing process exits.
 
 `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
+
+## App processes
+
+`Guppy.App` is the optional app-level coordinator for larger programs. A `Guppy.App` process owns app-global resources such as configured windows, themes, stylesheets, commands, keymaps, menus, and packaging metadata. `Guppy.Window` remains the rendering/process abstraction for each window.
+
+```elixir
+defmodule MyApp do
+  use Guppy.App,
+    windows: [%{id: "main", module: MyApp.MainWindow}],
+    commands: [%{id: "new_file", label: "New File"}],
+    keymap: [%{key: "cmd-n", command: "new_file"}],
+    menus: [%{label: "File", items: [%{id: "new_file", label: "New", callback: "new_file"}]}],
+    stylesheet: %{classes: %{"card" => %{style: "p-4 rounded-lg", hover_style: "bg-blue"}}},
+    package: %{bundle_id: "dev.example.my_app"},
+    exit_on_last_window_closed: true
+
+  def handle_command("new_file", payload, state) do
+    # menu/keymap/palette dispatch lands here asynchronously
+    {:noreply, state}
+  end
+end
+
+{:ok, _supervisor} = MyApp.start_link([])
+```
+
+Window ids are strings. The first configured window starts by default unless `start: false`; additional windows start when `Guppy.App.open_window/3` is called or when their spec sets `start: true`. App windows run under an app-owned `DynamicSupervisor`; the coordinator registry exposes `Guppy.App.windows/1`, `Guppy.App.window_pid/2`, `Guppy.App.open_window/3`, and `Guppy.App.close_window/2`. Set `exit_on_last_window_closed: true` for example-style apps that should terminate their app supervisor when the last app-owned window closes.
+
+App config is plain Elixir data validated into structs. Use child-spec/start options and optional `init/1` for final config assembly. App-owned menus dispatch callbacks to `handle_command/3`; `Guppy.App.open_command_palette/1` opens a minimal built-in command-palette overlay backed by the same command registry. Standalone `Guppy.Window` modules and low-level `Guppy.open_window/1..3` continue to work without an app.
 
 ## Window processes
 
