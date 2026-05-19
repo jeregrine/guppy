@@ -1,8 +1,8 @@
 {
   "gpui_version": "0.2.2",
   "catalog_version": 1,
-  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-family-fallbacks-decoration-detail-line-clamp-grid-placement-image-slice",
-  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font family/fallbacks, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
+  "coverage": "box-size-aspect-position-overflow-visible-clip-scroll-behavior-cursor-border-radius-color-hex-gradient-opacity-scrollbar-shadow-flex-grow-shrink-basis-alignment-text-bg-font-family-fallbacks-features-decoration-detail-line-clamp-grid-placement-image-slice",
+  "notes": "Source-of-truth catalog for the style parity pass. It currently covers GPUI 0.2.2 padding, margin, gap, size/aspect ratio, position/inset, display, visibility, overflow visible/clip/hidden/scroll, scroll behavior booleans, cursor, border width/style, border radius, named/hex/linear-gradient background/text/border/text-background/text-decoration colors, opacity, scrollbar width, box shadows, flex grow/shrink/alignment/self-alignment/basis, core text/font family/fallbacks/features, text decoration lines/colors/styles/thickness, line clamp, grid count/span/line-placement helpers, and image-only object-fit/grayscale options plus the shared GPUI spacing scale; additional Style, Styled, StyleRefinement, and node-specific operations should be added here before they are exposed.",
   "length_units": [
     "px",
     "rem",
@@ -3366,6 +3366,49 @@
       "node_applicability": "all_nodes",
       "refinement_support": true,
       "gpui_mapping": "TextStyle font_fallbacks FontFallbacks::from_fonts"
+    },
+    {
+      "name": "font_features",
+      "tuple_schema": [
+        "font_features",
+        "font_feature_list"
+      ],
+      "font_features": {
+        "min_items": 1,
+        "tag_pattern": "^[0-9A-Za-z]{4}$",
+        "min_value": 0,
+        "max_value": 4294967295
+      },
+      "class_tokens": {
+        "font-ligatures-none": [
+          [
+            "calt",
+            0
+          ]
+        ]
+      },
+      "class_prefixes": {
+        "font-features": null
+      },
+      "helpers": [
+        {
+          "name": "font_features",
+          "kind": "font_features"
+        },
+        {
+          "name": "disable_ligatures",
+          "kind": "value",
+          "value": [
+            [
+              "calt",
+              0
+            ]
+          ]
+        }
+      ],
+      "node_applicability": "all_nodes",
+      "refinement_support": true,
+      "gpui_mapping": "TextStyle font_features FontFeatures OpenType tag/value list"
     },
     {
       "name": "text_decoration",

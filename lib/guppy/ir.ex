@@ -211,6 +211,7 @@ defmodule Guppy.IR do
           | {:text_bg, color_token()}
           | {:font_family, String.t()}
           | {:font_fallbacks, [String.t()]}
+          | {:font_features, [{String.t(), non_neg_integer()}]}
           | {:border_color, color_token()}
           | {:bg_hex, String.t()}
           | {:text_color_hex, String.t()}
@@ -934,6 +935,7 @@ defmodule Guppy.IR do
     :black
   ]
   @font_style_value_tokens [:italic, :normal]
+  @font_feature_tag_regex ~r/^[0-9A-Za-z]{4}$/
   @text_decoration_value_tokens [:underline, :line_through, :none]
   @text_decoration_style_value_tokens [:solid, :wavy]
 
@@ -2792,6 +2794,14 @@ defmodule Guppy.IR do
     end
   end
 
+  defp validate_style_op({:font_features, values}) when is_list(values) do
+    if values != [] and Enum.all?(values, &valid_font_feature?/1) do
+      :ok
+    else
+      {:error, {:invalid_style_op, {:font_features, values}}}
+    end
+  end
+
   defp validate_style_op({:text_decoration, value})
        when value in @text_decoration_value_tokens,
        do: :ok
@@ -2858,6 +2868,12 @@ defmodule Guppy.IR do
        do: :ok
 
   defp validate_style_op(other), do: {:error, {:invalid_style_op, other}}
+
+  defp valid_font_feature?({tag, value}) when is_binary(tag) and is_integer(value) do
+    Regex.match?(@font_feature_tag_regex, tag) and value >= 0 and value <= 4_294_967_295
+  end
+
+  defp valid_font_feature?(_feature), do: false
 
   defp valid_length?(:auto, true), do: true
   defp valid_length?(length, allow_negative), do: valid_definite_length?(length, allow_negative)

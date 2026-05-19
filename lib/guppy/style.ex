@@ -126,6 +126,10 @@ defmodule Guppy.Style do
                             operation["name"] in ["font_fallbacks"]
                           end)
 
+  @font_feature_operations Enum.filter(@catalog["operations"], fn operation ->
+                             operation["name"] in ["font_features"]
+                           end)
+
   @grid_line_operations Enum.filter(@catalog["operations"], fn operation ->
                           operation["name"] in ["col_start", "col_end", "row_start", "row_end"]
                         end)
@@ -355,6 +359,48 @@ defmodule Guppy.Style do
                                     }
                                   end)
                                   |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+
+  @font_feature_config Map.new(@font_feature_operations, fn operation ->
+                         font_features = operation["font_features"]
+
+                         {String.to_atom(operation["name"]),
+                          %{
+                            min_items: font_features["min_items"],
+                            tag_pattern: Regex.compile!(font_features["tag_pattern"]),
+                            min_value: font_features["min_value"],
+                            max_value: font_features["max_value"]
+                          }}
+                       end)
+
+  @font_feature_class_tokens Enum.flat_map(@font_feature_operations, fn operation ->
+                               operation_name = String.to_atom(operation["name"])
+
+                               Enum.map(operation["class_tokens"], fn {token, value} ->
+                                 {token, {operation_name, Enum.map(value, &List.to_tuple/1)}}
+                               end)
+                             end)
+                             |> Map.new()
+
+  @font_feature_class_prefix_specs @font_feature_operations
+                                   |> Enum.map(fn operation ->
+                                     config =
+                                       Map.fetch!(
+                                         @font_feature_config,
+                                         String.to_atom(operation["name"])
+                                       )
+
+                                     {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+                                     %{
+                                       prefix: prefix,
+                                       operation: String.to_atom(operation["name"]),
+                                       min_items: config.min_items,
+                                       tag_pattern: config.tag_pattern,
+                                       min_value: config.min_value,
+                                       max_value: config.max_value
+                                     }
+                                   end)
+                                   |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
   @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
   @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
@@ -611,6 +657,26 @@ defmodule Guppy.Style do
       do: {unquote(operation_name), normalize_string_list!(unquote(operation_name), value)}
   end
 
+  for operation <- @font_feature_operations,
+      %{"kind" => "font_features", "name" => name} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    @doc "Returns a canonical #{operation_name} OpenType feature tuple."
+    def unquote(function)(value),
+      do: {unquote(operation_name), normalize_font_features!(unquote(operation_name), value)}
+  end
+
+  for operation <- @font_feature_operations,
+      %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+    value = Enum.map(value, &List.to_tuple/1)
+
+    @doc "Returns canonical #{operation_name} OpenType feature style."
+    def unquote(function)(), do: {unquote(operation_name), unquote(Macro.escape(value))}
+  end
+
   @doc "Returns a canonical overflow tuple."
   def overflow(axis, value) when axis in @overflow_axes and value in @overflow_values,
     do: {:overflow, axis, value}
@@ -715,7 +781,8 @@ defmodule Guppy.Style do
          :error <- parse_number_class(token),
          :error <- parse_unit_length_class(token),
          :error <- parse_string_class(token),
-         :error <- parse_string_list_class(token) do
+         :error <- parse_string_list_class(token),
+         :error <- parse_font_feature_class(token) do
       parse_box_class(token)
     end
   end
@@ -890,6 +957,29 @@ defmodule Guppy.Style do
              String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
            payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
            {:ok, value} <- normalize_string_list(spec.operation, String.split(payload, ",")) do
+        {:ok, {spec.operation, value}}
+      else
+        _ -> false
+      end
+    end)
+  end
+
+  defp parse_font_feature_class(token) do
+    case Map.fetch(@font_feature_class_tokens, token) do
+      {:ok, {operation, value}} ->
+        {:ok, {operation, value}}
+
+      :error ->
+        parse_arbitrary_font_feature_class(token)
+    end
+  end
+
+  defp parse_arbitrary_font_feature_class(token) do
+    Enum.find_value(@font_feature_class_prefix_specs, :error, fn spec ->
+      with true <-
+             String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
+           payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
+           {:ok, value} <- parse_font_feature_payload(spec, payload) do
         {:ok, {spec.operation, value}}
       else
         _ -> false
@@ -1202,6 +1292,79 @@ defmodule Guppy.Style do
   end
 
   defp normalize_string_list(_operation, _value), do: :error
+
+  defp normalize_font_features!(operation, value) do
+    case normalize_font_features(operation, value) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "invalid #{operation} value: #{inspect(value)}"
+    end
+  end
+
+  defp normalize_font_features(operation, values) when is_list(values) do
+    config = Map.fetch!(@font_feature_config, operation)
+
+    cond do
+      length(values) < config.min_items ->
+        :error
+
+      Enum.all?(values, &valid_font_feature?(&1, config)) ->
+        {:ok, values}
+
+      true ->
+        :error
+    end
+  end
+
+  defp normalize_font_features(_operation, _value), do: :error
+
+  defp valid_font_feature?({tag, value}, config) when is_binary(tag) and is_integer(value) do
+    Regex.match?(config.tag_pattern, tag) and value >= config.min_value and
+      value <= config.max_value
+  end
+
+  defp valid_font_feature?(_feature, _config), do: false
+
+  defp parse_font_feature_payload(_spec, ""), do: :error
+
+  defp parse_font_feature_payload(spec, payload) do
+    payload
+    |> String.split(",")
+    |> Enum.map(&parse_font_feature_entry(&1, spec))
+    |> collect_results()
+  end
+
+  defp parse_font_feature_entry(entry, spec) do
+    with [tag, value] <- String.split(entry, "=", parts: 2),
+         true <- Regex.match?(spec.tag_pattern, tag),
+         {:ok, value} <- parse_font_feature_value(value, spec) do
+      {:ok, {tag, value}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_font_feature_value("true", spec), do: parse_font_feature_value("1", spec)
+  defp parse_font_feature_value("false", spec), do: parse_font_feature_value("0", spec)
+
+  defp parse_font_feature_value(value, spec) do
+    with {parsed, ""} <- Integer.parse(value),
+         true <- parsed >= spec.min_value and parsed <= spec.max_value do
+      {:ok, parsed}
+    else
+      _ -> :error
+    end
+  end
+
+  defp collect_results(results) do
+    Enum.reduce_while(results, {:ok, []}, fn
+      {:ok, value}, {:ok, values} -> {:cont, {:ok, [value | values]}}
+      :error, _acc -> {:halt, :error}
+    end)
+    |> case do
+      {:ok, values} -> {:ok, Enum.reverse(values)}
+      :error -> :error
+    end
+  end
 
   defp unit_length_style_tuple(:scrollbar_width, {:px, value}), do: {:scrollbar_width_px, value}
   defp unit_length_style_tuple(:scrollbar_width, {:rem, value}), do: {:scrollbar_width_rem, value}

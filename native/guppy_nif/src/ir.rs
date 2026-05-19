@@ -675,6 +675,7 @@ pub enum StyleOp {
     FontStyle(FontStyleValue),
     FontFamily(String),
     FontFallbacks(Vec<String>),
+    FontFeatures(Vec<(String, u32)>),
     TextDecoration(TextDecorationStyle),
     TextDecorationColor(ColorToken),
     TextDecorationColorHex(u32),
@@ -2987,6 +2988,7 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                     &elements[1],
                     "font_fallbacks",
                 )?)),
+                "font_features" => Ok(StyleOp::FontFeatures(parse_font_features(&elements[1])?)),
                 "text_decoration" => Ok(StyleOp::TextDecoration(parse_text_decoration_style(
                     &elements[1],
                 )?)),
@@ -3711,6 +3713,58 @@ fn parse_non_empty_style_string_list(term: &Term, key: &str) -> Result<Vec<Strin
         ))
     } else {
         Ok(values)
+    }
+}
+
+fn parse_font_features(term: &Term) -> Result<Vec<(String, u32)>, String> {
+    let values = get_list(term)?
+        .iter()
+        .map(parse_font_feature)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if values.is_empty() {
+        Err("invalid font_features: expected at least one feature".into())
+    } else {
+        Ok(values)
+    }
+}
+
+fn parse_font_feature(term: &Term) -> Result<(String, u32), String> {
+    let Term::Tuple(Tuple { elements }) = term else {
+        return Err(format!("invalid font feature entry: {term}"));
+    };
+
+    let [tag_term, value_term] = elements.as_slice() else {
+        return Err(format!("invalid font feature entry arity: {term}"));
+    };
+
+    let tag = term_to_string(tag_term)?;
+    if !valid_font_feature_tag(&tag) {
+        return Err(format!("invalid font feature tag: {tag}"));
+    }
+
+    Ok((tag, parse_non_negative_u32(value_term, "font_features")?))
+}
+
+fn valid_font_feature_tag(tag: &str) -> bool {
+    tag.len() == 4
+        && tag
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+}
+
+fn parse_non_negative_u32(term: &Term, key: &str) -> Result<u32, String> {
+    match term {
+        Term::FixInteger(value) => u32::try_from(value.value)
+            .map_err(|_| format!("expected non-negative u32 style {key}, got {term}")),
+        Term::BigInteger(value) => value
+            .value
+            .clone()
+            .try_into()
+            .map_err(|_| format!("expected non-negative u32 style {key}, got {term}")),
+        other => Err(format!(
+            "expected non-negative u32 style {key}, got {other}"
+        )),
     }
 }
 

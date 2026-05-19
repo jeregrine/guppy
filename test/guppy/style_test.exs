@@ -57,6 +57,7 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "font_style"))
     assert Enum.any?(operations, &(&1["name"] == "font_family"))
     assert Enum.any?(operations, &(&1["name"] == "font_fallbacks"))
+    assert Enum.any?(operations, &(&1["name"] == "font_features"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration_color"))
     assert Enum.any?(operations, &(&1["name"] == "text_decoration_color_hex"))
@@ -223,6 +224,13 @@ defmodule Guppy.StyleTest do
 
     assert_raise ArgumentError, fn -> Guppy.Style.font_fallbacks([]) end
     assert_raise ArgumentError, fn -> Guppy.Style.font_fallbacks([""]) end
+
+    assert Guppy.Style.font_features([{"calt", 0}, {"kern", 1}]) ==
+             {:font_features, [{"calt", 0}, {"kern", 1}]}
+
+    assert Guppy.Style.disable_ligatures() == {:font_features, [{"calt", 0}]}
+    assert_raise ArgumentError, fn -> Guppy.Style.font_features([]) end
+    assert_raise ArgumentError, fn -> Guppy.Style.font_features([{"bad", 1}]) end
     assert Guppy.Style.text_decoration(:underline) == {:text_decoration, :underline}
     assert Guppy.Style.underline() == {:text_decoration, :underline}
     assert Guppy.Style.no_underline() == {:text_decoration, :none}
@@ -344,6 +352,20 @@ defmodule Guppy.StyleTest do
 
     assert Guppy.Style.class_token_to_style("font-fallbacks-[]") == :error
     assert Guppy.Style.class_token_to_style("font-fallbacks-[Monaco,]") == :error
+  end
+
+  test "font feature classes normalize through the catalog parser" do
+    assert Guppy.Style.class_token_to_style("font-features-[calt=0,kern=1]") ==
+             {:ok, {:font_features, [{"calt", 0}, {"kern", 1}]}}
+
+    assert Guppy.Style.class_token_to_style("font-features-[liga=false]") ==
+             {:ok, {:font_features, [{"liga", 0}]}}
+
+    assert Guppy.Style.class_token_to_style("font-ligatures-none") ==
+             {:ok, {:font_features, [{"calt", 0}]}}
+
+    assert Guppy.Style.class_token_to_style("font-features-[]") == :error
+    assert Guppy.Style.class_token_to_style("font-features-[bad=1]") == :error
   end
 
   test "aspect ratio classes normalize through the catalog parser" do

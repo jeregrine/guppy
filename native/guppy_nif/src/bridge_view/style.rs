@@ -7,10 +7,11 @@ use crate::ir::{
     TextOverflowStyle, VisibilityStyle, WhiteSpaceStyle,
 };
 use gpui::{
-    DefiniteLength, FontFallbacks, FontStyle, FontWeight, HighlightStyle, Length,
+    DefiniteLength, FontFallbacks, FontFeatures, FontStyle, FontWeight, HighlightStyle, Length,
     StatefulInteractiveElement, StrikethroughStyle, StyleRefinement, Styled, UnderlineStyle,
     linear_color_stop, linear_gradient, px, relative, rems, rgb,
 };
+use std::sync::Arc;
 
 pub(crate) fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
 where
@@ -240,6 +241,7 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::FontStyle(_)
         | StyleOp::FontFamily(_)
         | StyleOp::FontFallbacks(_)
+        | StyleOp::FontFeatures(_)
         | StyleOp::TextDecoration(_)
         | StyleOp::TextDecorationColor(_)
         | StyleOp::TextDecorationColorHex(_)
@@ -363,6 +365,7 @@ where
         StyleOp::FontStyle(font_style) => apply_font_style(style, *font_style),
         StyleOp::FontFamily(family) => style.font_family(family.clone()),
         StyleOp::FontFallbacks(fallbacks) => apply_font_fallbacks(style, fallbacks),
+        StyleOp::FontFeatures(features) => apply_font_features(style, features),
         StyleOp::TextDecoration(decoration) => apply_text_decoration(style, *decoration),
         StyleOp::TextDecorationColor(color) => {
             style.text_decoration_color(color_token_to_color(*color))
@@ -1039,6 +1042,17 @@ where
     element
 }
 
+fn apply_font_features<E>(mut element: E, features: &[(String, u32)]) -> E
+where
+    E: Styled,
+{
+    element
+        .text_style()
+        .get_or_insert_with(Default::default)
+        .font_features = Some(FontFeatures(Arc::new(features.to_vec())));
+    element
+}
+
 fn apply_text_decoration<E>(element: E, decoration: TextDecorationStyle) -> E
 where
     E: Styled,
@@ -1417,6 +1431,18 @@ mod tests {
                 .and_then(|text| text.font_fallbacks)
                 .map(|fallbacks| fallbacks.fallback_list().to_vec()),
             Some(vec!["Monaco".to_string(), "Menlo".to_string()])
+        );
+
+        let style = apply_font_features(
+            StyleRefinement::default(),
+            &[("calt".to_string(), 0), ("kern".to_string(), 1)],
+        );
+        assert_eq!(
+            style
+                .text
+                .and_then(|text| text.font_features)
+                .map(|features| features.tag_value_list().to_vec()),
+            Some(vec![("calt".to_string(), 0), ("kern".to_string(), 1)])
         );
 
         let style = apply_text_decoration(StyleRefinement::default(), TextDecorationStyle::None);

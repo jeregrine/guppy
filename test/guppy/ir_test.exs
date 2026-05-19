@@ -218,6 +218,7 @@ defmodule Guppy.IRTest do
       {:font_weight, :bold},
       {:font_style, :italic},
       {:font_fallbacks, ["Monaco", "Menlo"]},
+      {:font_features, [{"calt", 0}, {"kern", 1}]},
       {:text_decoration, :underline},
       {:text_decoration, :none}
     ]
@@ -269,6 +270,9 @@ defmodule Guppy.IRTest do
           {:font_style, :oblique},
           {:font_fallbacks, []},
           {:font_fallbacks, [""]},
+          {:font_features, []},
+          {:font_features, [{"bad", 1}]},
+          {:font_features, [{"calt", -1}]},
           {:text_decoration, :blink}
         ] do
       assert {:error, {:invalid_style_op, ^invalid}} =
@@ -839,6 +843,7 @@ defmodule Guppy.IRTest do
           :not_italic,
           {:font_family, "Monaco"},
           {:font_fallbacks, ["Monaco", "Menlo"]},
+          {:font_features, [{"calt", 0}, {"kern", 1}]},
           :underline,
           {:text_decoration_color, :red},
           {:text_decoration_color_hex, "#abcdef"},
@@ -1017,6 +1022,7 @@ defmodule Guppy.IRTest do
              :not_italic,
              {:font_family, "Monaco"},
              {:font_fallbacks, ["Monaco", "Menlo"]},
+             {:font_features, [{"calt", 0}, {"kern", 1}]},
              :underline,
              {:text_decoration_color, :red},
              {:text_decoration_color_hex, "#abcdef"},
