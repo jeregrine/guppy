@@ -83,6 +83,13 @@ defmodule Guppy.Style do
                              operation["name"] in ["object_fit", "grayscale"]
                            end)
 
+  @boolean_operations Enum.filter(@catalog["operations"], fn operation ->
+                        operation["name"] in [
+                          "allow_concurrent_scroll",
+                          "restrict_scroll_to_axis"
+                        ]
+                      end)
+
   @hex_color_operations Enum.filter(@catalog["operations"], fn operation ->
                           operation["name"] in [
                             "bg_hex",
@@ -172,6 +179,15 @@ defmodule Guppy.Style do
                                end)
                              end)
                              |> Map.new()
+
+  @boolean_class_tokens Enum.flat_map(@boolean_operations, fn operation ->
+                          operation_name = String.to_atom(operation["name"])
+
+                          Enum.map(operation["class_tokens"], fn {token, value} ->
+                            {token, {operation_name, value}}
+                          end)
+                        end)
+                        |> Map.new()
 
   @hex_color_class_prefixes Map.new(@hex_color_operations, fn operation ->
                               {operation["class_prefix"], String.to_atom(operation["name"])}
@@ -467,6 +483,27 @@ defmodule Guppy.Style do
       do: raise(ArgumentError, "invalid #{unquote(operation)} value: #{inspect(value)}")
   end
 
+  for operation <- @boolean_operations,
+      %{"kind" => "exact", "name" => name} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    @doc "Returns a canonical #{operation_name} boolean tuple."
+    def unquote(function)(value) when is_boolean(value), do: {unquote(operation_name), value}
+
+    def unquote(function)(value),
+      do: raise(ArgumentError, "invalid #{unquote(operation_name)} value: #{inspect(value)}")
+  end
+
+  for operation <- @boolean_operations,
+      %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
+    operation_name = String.to_atom(operation["name"])
+    function = String.to_atom(name)
+
+    @doc "Returns canonical #{inspect(value)} #{operation_name} style."
+    def unquote(function)(), do: {unquote(operation_name), unquote(value)}
+  end
+
   for operation <- @image_option_operations,
       %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
     operation_name = String.to_atom(operation["name"])
@@ -627,6 +664,7 @@ defmodule Guppy.Style do
   def class_token_to_style(token) when is_binary(token) do
     with :error <- parse_enum_class(token),
          :error <- parse_overflow_class(token),
+         :error <- parse_boolean_class(token),
          :error <- parse_integer_class(token),
          :error <- parse_grid_line_class(token),
          :error <- parse_hex_color_class(token),
@@ -660,6 +698,13 @@ defmodule Guppy.Style do
   defp parse_overflow_class(token) do
     case Map.fetch(@overflow_class_tokens, token) do
       {:ok, {axis, value}} -> {:ok, {:overflow, axis, value}}
+      :error -> :error
+    end
+  end
+
+  defp parse_boolean_class(token) do
+    case Map.fetch(@boolean_class_tokens, token) do
+      {:ok, {operation, value}} -> {:ok, {operation, value}}
       :error -> :error
     end
   end

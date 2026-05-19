@@ -138,6 +138,8 @@ fn refinement_style_support(op: &StyleOp) -> RefinementStyleSupport {
         | StyleOp::Inset { .. }
         | StyleOp::Display(_)
         | StyleOp::Overflow { .. }
+        | StyleOp::AllowConcurrentScroll(_)
+        | StyleOp::RestrictScrollToAxis(_)
         | StyleOp::FlexDirection(_)
         | StyleOp::FlexWrapValue(_)
         | StyleOp::FlexItem(_)
@@ -497,6 +499,8 @@ where
         StyleOp::Display(display) => apply_display(element, *display),
         StyleOp::Visibility(visibility) => apply_visibility(element, *visibility),
         StyleOp::Overflow { axis, behavior } => apply_overflow(element, *axis, *behavior),
+        StyleOp::AllowConcurrentScroll(value) => apply_allow_concurrent_scroll(element, *value),
+        StyleOp::RestrictScrollToAxis(value) => apply_restrict_scroll_to_axis(element, *value),
         StyleOp::Cursor(cursor) => apply_cursor(element, *cursor),
         StyleOp::BorderWidth { axis, length } => apply_border_width(element, *axis, *length),
         StyleOp::BorderRadius { axis, length } => apply_border_radius(element, *axis, *length),
@@ -658,6 +662,22 @@ where
         _ => {}
     }
 
+    element
+}
+
+fn apply_allow_concurrent_scroll<E>(mut element: E, value: bool) -> E
+where
+    E: Styled,
+{
+    element.style().allow_concurrent_scroll = Some(value);
+    element
+}
+
+fn apply_restrict_scroll_to_axis<E>(mut element: E, value: bool) -> E
+where
+    E: Styled,
+{
+    element.style().restrict_scroll_to_axis = Some(value);
     element
 }
 
@@ -1289,6 +1309,12 @@ mod tests {
         );
         assert_eq!(style.overflow.x, Some(gpui::Overflow::Visible));
         assert_eq!(style.overflow.y, Some(gpui::Overflow::Visible));
+
+        let style = apply_allow_concurrent_scroll(StyleRefinement::default(), true);
+        assert_eq!(style.allow_concurrent_scroll, Some(true));
+
+        let style = apply_restrict_scroll_to_axis(StyleRefinement::default(), true);
+        assert_eq!(style.restrict_scroll_to_axis, Some(true));
 
         let style = apply_cursor(StyleRefinement::default(), MouseCursorStyle::NotAllowed);
         assert_eq!(

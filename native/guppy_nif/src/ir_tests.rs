@@ -1128,6 +1128,22 @@ fn parses_canonical_box_spacing_style_ops() {
             behavior: super::OverflowStyle::Visible,
         }
     );
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("allow_concurrent_scroll"),
+            bool_atom(true)
+        ]))
+        .unwrap(),
+        StyleOp::AllowConcurrentScroll(true)
+    );
+    assert_eq!(
+        parse_style_op(&tuple(vec![
+            atom("restrict_scroll_to_axis"),
+            bool_atom(true)
+        ]))
+        .unwrap(),
+        StyleOp::RestrictScrollToAxis(true)
+    );
 
     assert_eq!(
         parse_style_op(&tuple(vec![atom("cursor"), atom("not_allowed")])).unwrap(),
@@ -1329,6 +1345,8 @@ fn rejects_invalid_canonical_length_style_ops() {
         tuple(vec![atom("display"), atom("inline")]),
         tuple(vec![atom("visibility"), atom("collapsed")]),
         tuple(vec![atom("overflow"), atom("x"), atom("auto")]),
+        tuple(vec![atom("allow_concurrent_scroll"), atom("yes")]),
+        tuple(vec![atom("restrict_scroll_to_axis"), atom("yes")]),
         tuple(vec![atom("cursor"), atom("bad")]),
         tuple(vec![
             atom("border_width"),
@@ -1391,7 +1409,8 @@ fn rejects_invalid_canonical_length_style_ops() {
                 || err.contains("line")
                 || err.contains("length")
                 || err.contains("aspect")
-                || err.contains("numeric"),
+                || err.contains("numeric")
+                || err.contains("boolean"),
             "unexpected error: {err}"
         );
     }
@@ -1438,6 +1457,16 @@ fn native_style_catalog_loads() {
         operations
             .iter()
             .any(|operation| operation["name"] == "cursor")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "allow_concurrent_scroll")
+    );
+    assert!(
+        operations
+            .iter()
+            .any(|operation| operation["name"] == "restrict_scroll_to_axis")
     );
     assert!(
         operations

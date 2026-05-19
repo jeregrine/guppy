@@ -643,6 +643,8 @@ pub enum StyleOp {
         axis: StyleAxis,
         behavior: OverflowStyle,
     },
+    AllowConcurrentScroll(bool),
+    RestrictScrollToAxis(bool),
     Cursor(MouseCursorStyle),
     BorderWidth {
         axis: StyleAxis,
@@ -2929,6 +2931,14 @@ fn parse_style_op(term: &Term) -> Result<StyleOp, String> {
                 "position" => Ok(StyleOp::Position(parse_position_style(&elements[1])?)),
                 "display" => Ok(StyleOp::Display(parse_display_style(&elements[1])?)),
                 "visibility" => Ok(StyleOp::Visibility(parse_visibility_style(&elements[1])?)),
+                "allow_concurrent_scroll" => Ok(StyleOp::AllowConcurrentScroll(parse_style_bool(
+                    &elements[1],
+                    "allow_concurrent_scroll",
+                )?)),
+                "restrict_scroll_to_axis" => Ok(StyleOp::RestrictScrollToAxis(parse_style_bool(
+                    &elements[1],
+                    "restrict_scroll_to_axis",
+                )?)),
                 "cursor" => Ok(StyleOp::Cursor(parse_mouse_cursor_style(&elements[1])?)),
                 "border_style" => Ok(StyleOp::BorderStyle(parse_border_line_style(&elements[1])?)),
                 "shadow" => Ok(StyleOp::Shadow(parse_shadow_style(&elements[1])?)),
@@ -3413,6 +3423,14 @@ fn parse_visibility_style(term: &Term) -> Result<VisibilityStyle, String> {
         Term::Atom(atom) if atom.name == "visible" => Ok(VisibilityStyle::Visible),
         Term::Atom(atom) if atom.name == "hidden" => Ok(VisibilityStyle::Hidden),
         other => Err(format!("invalid visibility style: {other}")),
+    }
+}
+
+fn parse_style_bool(term: &Term, key: &str) -> Result<bool, String> {
+    match term {
+        Term::Atom(atom) if atom.name == "true" => Ok(true),
+        Term::Atom(atom) if atom.name == "false" => Ok(false),
+        other => Err(format!("invalid boolean style {key}: {other}")),
     }
 }
 

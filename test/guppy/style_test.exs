@@ -20,6 +20,8 @@ defmodule Guppy.StyleTest do
     assert Enum.any?(operations, &(&1["name"] == "display"))
     assert Enum.any?(operations, &(&1["name"] == "visibility"))
     assert Enum.any?(operations, &(&1["name"] == "overflow"))
+    assert Enum.any?(operations, &(&1["name"] == "allow_concurrent_scroll"))
+    assert Enum.any?(operations, &(&1["name"] == "restrict_scroll_to_axis"))
     assert Enum.any?(operations, &(&1["name"] == "cursor"))
     assert Enum.any?(operations, &(&1["name"] == "border_width"))
     assert Enum.any?(operations, &(&1["name"] == "border_radius"))
@@ -119,6 +121,13 @@ defmodule Guppy.StyleTest do
     assert Guppy.Style.overflow_hidden() == {:overflow, :all, :hidden}
     assert Guppy.Style.overflow_visible() == {:overflow, :all, :visible}
     assert Guppy.Style.overflow_x_clip() == {:overflow, :x, :clip}
+    assert Guppy.Style.allow_concurrent_scroll(true) == {:allow_concurrent_scroll, true}
+    assert Guppy.Style.allow_concurrent_scroll() == {:allow_concurrent_scroll, true}
+    assert Guppy.Style.disallow_concurrent_scroll() == {:allow_concurrent_scroll, false}
+    assert Guppy.Style.restrict_scroll_to_axis(true) == {:restrict_scroll_to_axis, true}
+    assert Guppy.Style.restrict_scroll_to_axis() == {:restrict_scroll_to_axis, true}
+    assert Guppy.Style.allow_cross_axis_scroll() == {:restrict_scroll_to_axis, false}
+    assert_raise ArgumentError, fn -> Guppy.Style.allow_concurrent_scroll(:yes) end
 
     assert Guppy.Style.cursor(:pointer) == {:cursor, :pointer}
     assert Guppy.Style.cursor_pointer() == {:cursor, :pointer}
@@ -346,6 +355,18 @@ defmodule Guppy.StyleTest do
              {:ok, {:overflow, :all, :visible}}
 
     assert Guppy.Style.class_token_to_style("overflow-x-clip") == {:ok, {:overflow, :x, :clip}}
+
+    assert Guppy.Style.class_token_to_style("scroll-concurrent") ==
+             {:ok, {:allow_concurrent_scroll, true}}
+
+    assert Guppy.Style.class_token_to_style("scroll-concurrent-off") ==
+             {:ok, {:allow_concurrent_scroll, false}}
+
+    assert Guppy.Style.class_token_to_style("scroll-axis-restricted") ==
+             {:ok, {:restrict_scroll_to_axis, true}}
+
+    assert Guppy.Style.class_token_to_style("scroll-axis-free") ==
+             {:ok, {:restrict_scroll_to_axis, false}}
   end
 
   test "flex grow and shrink classes normalize through the catalog parser" do
