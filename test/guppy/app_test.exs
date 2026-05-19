@@ -69,6 +69,7 @@ defmodule Guppy.AppTest do
 
     assert %Guppy.App.Config{} = config = Guppy.App.config(app_name)
     assert config.metadata.parent == self()
+    assert config.theme_families == %{}
     assert Guppy.App.theme(app_name).id == "test-dark"
     assert Guppy.App.package(app_name).bundle_id == "dev.guppy.test"
     assert Map.has_key?(Guppy.App.commands(app_name), "new_file")
@@ -95,6 +96,31 @@ defmodule Guppy.AppTest do
              })
 
     assert Guppy.App.theme(app_name).id == "light"
+
+    assert :ok =
+             Guppy.App.register_theme_family(app_name, %{
+               id: "builtin",
+               name: "Built-in",
+               themes: [Guppy.App.Theme.default(:dark), Guppy.App.Theme.default(:light)]
+             })
+
+    assert %{"builtin" => family} = Guppy.App.theme_families(app_name)
+    assert Map.has_key?(family.themes, "guppy.dark")
+    assert :ok = Guppy.App.set_theme(app_name, "guppy.dark")
+    assert Guppy.App.theme(app_name).id == "guppy.dark"
+    assert {:error, {:unknown_theme, "missing"}} = Guppy.App.set_theme(app_name, "missing")
+
+    assert :ok =
+             Guppy.App.set_theme(app_name, %{
+               id: "light",
+               name: "Light",
+               appearance: :light,
+               colors: %{surface: "#ffffff", text: :black},
+               styles: %{
+                 panel: ["p-2", {:theme_color, :bg, :surface}, {:theme_color, :text_color, :text}]
+               }
+             })
+
     assert {:ok, "#ffffff"} = Guppy.App.theme_color(app_name, :surface)
     assert {:ok, panel_style} = Guppy.App.theme_style(app_name, "panel")
     assert {:bg_hex, "#ffffff"} in panel_style

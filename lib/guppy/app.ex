@@ -137,6 +137,12 @@ defmodule Guppy.App do
   @doc "Returns the active app theme."
   def theme(app \\ nil), do: call(app, :theme)
 
+  @doc "Returns registered app theme families keyed by family id."
+  def theme_families(app \\ nil), do: call(app, :theme_families)
+
+  @doc "Registers a theme family for later lookup by theme id."
+  def register_theme_family(app, family), do: call(app, {:register_theme_family, family})
+
   @doc "Looks up a semantic color token in the active app theme."
   def theme_color(token), do: theme_color(nil, token)
 

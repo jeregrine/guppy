@@ -7,12 +7,13 @@ defmodule Guppy.App.Config do
   Guppy validates the final shape instead of owning complex merge semantics.
   """
 
-  alias Guppy.App.{Command, Stylesheet, Theme, WindowSpec}
+  alias Guppy.App.{Command, Stylesheet, Theme, ThemeFamily, WindowSpec}
 
   @enforce_keys [:id]
   defstruct id: nil,
             windows: [],
             theme: nil,
+            theme_families: %{},
             stylesheet: %Stylesheet{},
             commands: %{},
             keymap: [],
@@ -25,6 +26,7 @@ defmodule Guppy.App.Config do
           id: String.t(),
           windows: [WindowSpec.t()],
           theme: Theme.t() | nil,
+          theme_families: %{optional(String.t()) => ThemeFamily.t()},
           stylesheet: Stylesheet.t(),
           commands: %{optional(String.t()) => Command.t()},
           keymap: [map()],
@@ -38,6 +40,7 @@ defmodule Guppy.App.Config do
     :id,
     :windows,
     :theme,
+    :theme_families,
     :stylesheet,
     :commands,
     :keymap,
@@ -60,7 +63,8 @@ defmodule Guppy.App.Config do
     with :ok <- validate_keys(config),
          {:ok, id} <- validate_id(Map.get(config, :id, default_id(app_module))),
          {:ok, windows} <- validate_windows(Map.get(config, :windows, [])),
-         {:ok, theme} <- Theme.validate(Map.get(config, :theme)),
+         {:ok, theme_families} <- validate_theme_families(Map.get(config, :theme_families, %{})),
+         {:ok, theme} <- validate_theme(Map.get(config, :theme), theme_families),
          {:ok, stylesheet} <- Stylesheet.validate(Map.get(config, :stylesheet)),
          {:ok, commands} <- validate_commands(Map.get(config, :commands, %{})),
          {:ok, keymap} <- validate_keymap(Map.get(config, :keymap, []), commands),
@@ -77,6 +81,7 @@ defmodule Guppy.App.Config do
          id: id,
          windows: windows,
          theme: theme,
+         theme_families: theme_families,
          stylesheet: stylesheet,
          commands: commands,
          keymap: keymap,
@@ -130,6 +135,65 @@ defmodule Guppy.App.Config do
     else
       :ok
     end
+  end
+
+  defp validate_theme_families(families) when is_map(families) do
+    families
+    |> Enum.map(fn
+      {id, family} when is_binary(id) and is_map(family) ->
+        Map.put(family, :id, Map.get(family, :id, id))
+
+      {_id, %ThemeFamily{} = family} ->
+        family
+
+      {_id, family} ->
+        family
+    end)
+    |> validate_theme_families()
+  end
+
+  defp validate_theme_families(families) when is_list(families) do
+    Enum.reduce_while(families, {:ok, %{}}, fn family, {:ok, acc} ->
+      with {:ok, family} <- ThemeFamily.validate(family),
+           :ok <- validate_unique_theme_family_id(family.id, acc) do
+        {:cont, {:ok, Map.put(acc, family.id, family)}}
+      else
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_theme_families(_families), do: {:error, :invalid_theme_families}
+
+  defp validate_unique_theme_family_id(id, families) do
+    if Map.has_key?(families, id) do
+      {:error, {:duplicate_theme_family_id, id}}
+    else
+      :ok
+    end
+  end
+
+  defp validate_theme(nil, _theme_families), do: {:ok, nil}
+  defp validate_theme(%Theme{} = theme, _theme_families), do: {:ok, theme}
+
+  defp validate_theme(theme_id, theme_families) when is_binary(theme_id) or is_atom(theme_id) do
+    case find_theme(theme_families, theme_id) do
+      {:ok, theme} -> {:ok, theme}
+      error -> error
+    end
+  end
+
+  defp validate_theme(theme, _theme_families), do: Theme.validate(theme)
+
+  defp find_theme(theme_families, theme_id) do
+    theme_id = if is_atom(theme_id), do: Atom.to_string(theme_id), else: theme_id
+
+    Enum.find_value(theme_families, {:error, {:unknown_theme, theme_id}}, fn {_family_id, family} ->
+      case ThemeFamily.get(family, theme_id) do
+        {:ok, theme} -> {:ok, theme}
+        {:error, _reason} -> false
+      end
+    end)
   end
 
   defp validate_commands(commands) when is_map(commands) do

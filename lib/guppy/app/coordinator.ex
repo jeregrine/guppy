@@ -3,7 +3,7 @@ defmodule Guppy.App.Coordinator do
 
   use GenServer
 
-  alias Guppy.App.{Command, Config, Stylesheet, Theme, WindowSpec}
+  alias Guppy.App.{Command, Config, Stylesheet, Theme, ThemeFamily, WindowSpec}
 
   defstruct module: nil,
             app_ref: nil,
@@ -61,6 +61,7 @@ defmodule Guppy.App.Coordinator do
   @impl true
   def handle_call(:config, _from, state), do: {:reply, state.config, state}
   def handle_call(:theme, _from, state), do: {:reply, state.config.theme, state}
+  def handle_call(:theme_families, _from, state), do: {:reply, state.config.theme_families, state}
   def handle_call(:stylesheet, _from, state), do: {:reply, state.config.stylesheet, state}
   def handle_call(:commands, _from, state), do: {:reply, state.config.commands, state}
   def handle_call(:keymap, _from, state), do: {:reply, state.config.keymap, state}
@@ -110,9 +111,24 @@ defmodule Guppy.App.Coordinator do
   end
 
   def handle_call({:set_theme, theme}, _from, state) do
-    case Theme.validate(theme) do
+    case resolve_theme(state, theme) do
       {:ok, theme} -> {:reply, :ok, put_config(state, %{state.config | theme: theme})}
       error -> {:reply, error, state}
+    end
+  end
+
+  def handle_call({:register_theme_family, family}, _from, state) do
+    case ThemeFamily.validate(family) do
+      {:ok, family} ->
+        config = %{
+          state.config
+          | theme_families: Map.put(state.config.theme_families, family.id, family)
+        }
+
+        {:reply, :ok, put_config(state, config)}
+
+      error ->
+        {:reply, error, state}
     end
   end
 
@@ -428,6 +444,20 @@ defmodule Guppy.App.Coordinator do
   end
 
   defp put_config(state, config), do: %{state | config: config}
+
+  defp resolve_theme(state, theme_id) when is_binary(theme_id) or is_atom(theme_id) do
+    theme_id = if is_atom(theme_id), do: Atom.to_string(theme_id), else: theme_id
+
+    Enum.find_value(state.config.theme_families, {:error, {:unknown_theme, theme_id}}, fn {_id,
+                                                                                           family} ->
+      case ThemeFamily.get(family, theme_id) do
+        {:ok, theme} -> {:ok, theme}
+        {:error, _reason} -> false
+      end
+    end)
+  end
+
+  defp resolve_theme(_state, theme), do: Theme.validate(theme)
 
   defp invoke_callback(module, function, args) do
     apply(module, function, args)
