@@ -115,6 +115,12 @@ mix run examples/multi_window_app.exs
 `Guppy.App` example with app-owned window supervision, stylesheet/theme resources, commands, menus, keymap data, a secondary window, and the built-in command-palette overlay.
 
 ```bash
+mix run examples/overlay_demo.exs
+```
+
+Overlay hardening example with form-like select keyboard behavior, popover positioning/close semantics, element-local context menus, and nested non-overlay panels.
+
+```bash
 mix run examples/data_table_tree.exs
 ```
 
