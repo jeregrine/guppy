@@ -350,6 +350,12 @@ defmodule Guppy.Server do
     end
   end
 
+  def handle_info({:guppy_native_event, view_id, type, payload}, state)
+      when is_integer(view_id) and
+             type in [:window_focused, :window_blurred, :window_moved, :window_resized] do
+    route_window_lifecycle_event(state, view_id, type, payload)
+  end
+
   def handle_info({:guppy_native_event, view_id, :window_close_requested, _payload}, state)
       when is_integer(view_id) do
     case Map.fetch(state.views, view_id) do
@@ -460,6 +466,26 @@ defmodule Guppy.Server do
 
     reply
   end
+
+  defp route_window_lifecycle_event(state, view_id, type, payload) do
+    case Map.fetch(state.views, view_id) do
+      {:ok, owner} ->
+        send(
+          owner,
+          {:guppy_event, view_id, Map.put(window_lifecycle_payload(payload), :type, type)}
+        )
+
+        emit_event_route_telemetry(view_id, type, :ok)
+        {:noreply, state}
+
+      :error ->
+        emit_event_route_telemetry(view_id, type, :unknown_view_id)
+        {:noreply, state}
+    end
+  end
+
+  defp window_lifecycle_payload(payload) when is_map(payload), do: payload
+  defp window_lifecycle_payload(_payload), do: %{}
 
   defp emit_event_route_telemetry(view_id, type, status) do
     :telemetry.execute(

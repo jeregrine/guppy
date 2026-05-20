@@ -36,6 +36,14 @@ pub(crate) struct ContextMenuEventPayload {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct WindowBoundsEventPayload {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct DragMoveEventPayload<'a> {
     pub source_id: &'a str,
     pub pressed_button_code: i32,
@@ -96,6 +104,42 @@ pub(crate) fn send_window_closed_event(view_id: u64) -> i32 {
 
     send_event(view_id, window_closed, |env| {
         rustler::types::atom::undefined().encode(env)
+    })
+}
+
+pub(crate) fn send_window_focused_event(view_id: u64) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("window_focused", view_id, None, None, None, None);
+
+    send_event(view_id, window_focused, |env| {
+        rustler::types::atom::undefined().encode(env)
+    })
+}
+
+pub(crate) fn send_window_blurred_event(view_id: u64) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("window_blurred", view_id, None, None, None, None);
+
+    send_event(view_id, window_blurred, |env| {
+        rustler::types::atom::undefined().encode(env)
+    })
+}
+
+pub(crate) fn send_window_moved_event(view_id: u64, payload: WindowBoundsEventPayload) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("window_moved", view_id, None, None, None, None);
+
+    send_event(view_id, window_moved, move |env| {
+        window_bounds_payload_map(env, payload)
+    })
+}
+
+pub(crate) fn send_window_resized_event(view_id: u64, payload: WindowBoundsEventPayload) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("window_resized", view_id, None, None, None, None);
+
+    send_event(view_id, window_resized, move |env| {
+        window_bounds_payload_map(env, payload)
     })
 }
 
@@ -778,6 +822,18 @@ pub(crate) fn send_scroll_wheel_event(
     })
 }
 
+fn window_bounds_payload_map<'a>(env: Env<'a>, payload: WindowBoundsEventPayload) -> Term<'a> {
+    map_from_pairs(
+        env,
+        [
+            (x().encode(env), payload.x.encode(env)),
+            (y().encode(env), payload.y.encode(env)),
+            (width().encode(env), payload.width.encode(env)),
+            (height().encode(env), payload.height.encode(env)),
+        ],
+    )
+}
+
 fn send_event(
     view_id: u64,
     event: impl FnOnce() -> Atom,
@@ -1108,5 +1164,18 @@ mod tests {
         assert_eq!(closed.view_id, 11);
         assert_eq!(closed.node_id, None);
         assert_eq!(closed.callback_id, None);
+
+        let _ = send_window_resized_event(
+            12,
+            WindowBoundsEventPayload {
+                x: 1.0,
+                y: 2.0,
+                width: 640.0,
+                height: 480.0,
+            },
+        );
+        let resized = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(resized.event, "window_resized");
+        assert_eq!(resized.view_id, 12);
     }
 }

@@ -177,7 +177,7 @@ Template tags:
 - `<text_input />`
 - `<textarea />`
 
-Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, canvas clicks, popover callbacks, text input/textarea changes and focus/blur, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops; nodes with `context_menu` handlers can also invoke that event from the keyboard with Shift-F10 or the context-menu key.
+Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, canvas clicks, popover callbacks, text input/textarea changes and focus/blur, and window lifecycle events (`window_focused`, `window_blurred`, `window_moved`, `window_resized`, `window_close_requested`, `window_closed`). Tab and Shift-Tab traverse retained GPUI tab stops; nodes with `context_menu` handlers can also invoke that event from the keyboard with Shift-F10 or the context-menu key.
 
 `Guppy.ContextMenu.render/2` renders validated item data into ordinary IR buttons/dividers for element-local menus. Pair it with a node's `context_menu` event and keep open/close/selection state in the owning process.
 
@@ -195,7 +195,7 @@ Popovers support optional anchor corner, anchor position/offset, local/window an
 
 `Guppy.read_clipboard_text/0` and `Guppy.write_clipboard_text/1` provide narrow text clipboard access through the native runtime. Reads return `{:ok, text}` or `{:ok, nil}` when no text is available; writes accept binaries only.
 
-`window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
+`window_focused`/`window_blurred` are emitted from GPUI window activation changes. `window_moved`/`window_resized` include `x`, `y`, `width`, and `height` in logical pixels when GPUI reports bounds changes. `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 
 ## App processes
 

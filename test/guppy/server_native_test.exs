@@ -423,6 +423,45 @@ defmodule Guppy.ServerNativeTest do
                     }}
   end
 
+  test "window lifecycle native events route to the owning process" do
+    server = :"guppy_lifecycle_event_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    ir = Guppy.IR.text("Lifecycle")
+    assert {:ok, view_id} = Guppy.Server.open_window(server, self(), ir, [], 25)
+    assert_receive {:guppy_test_native_request, {:open_window, [^view_id, ^ir, %{}]}, 25}
+
+    send(Process.whereis(server), {:guppy_native_event, view_id, :window_focused, :undefined})
+    assert_receive {:guppy_event, ^view_id, %{type: :window_focused}}
+
+    send(Process.whereis(server), {:guppy_native_event, view_id, :window_blurred, :undefined})
+    assert_receive {:guppy_event, ^view_id, %{type: :window_blurred}}
+
+    moved_payload = %{x: 12.0, y: 24.0, width: 640.0, height: 480.0}
+    send(Process.whereis(server), {:guppy_native_event, view_id, :window_moved, moved_payload})
+    assert_receive {:guppy_event, ^view_id, %{type: :window_moved, x: 12.0, y: 24.0}}
+
+    resized_payload = %{x: 12.0, y: 24.0, width: 800.0, height: 600.0}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      view_id,
+      :window_resized,
+      resized_payload
+    })
+
+    assert_receive {:guppy_event, ^view_id, %{type: :window_resized, width: 800.0, height: 600.0}}
+  end
+
   test "native request timeout is passed through the server to the native bridge" do
     server = :"guppy_timeout_recording_native_#{System.unique_integer([:positive])}"
 

@@ -66,7 +66,7 @@ Important current invariants:
 - `Guppy.IR.validated/1` and `Guppy.IR.validated!/1` wrap trusted/static IR after one validation pass; server APIs unwrap before native dispatch
 - `Guppy.Window` monitors the Guppy runtime server and reopens from current assigns after supervised server restart; while reopen retry has `view_id: nil`, rerenders are skipped/deferred instead of rendering to an unknown view
 - runtime telemetry events exist for native NIF calls (`[:guppy, :native, :nif]`), server-mediated native requests (`[:guppy, :native, :request]`), native event routing (`[:guppy, :event, :route]`), and `Guppy.Window` rerenders (`[:guppy, :window, :rerender]`)
-- native root views bind Tab/Shift-Tab for GPUI tab-stop traversal and track keyboard-vs-mouse focus-visible state for `focus_visible_style`
+- native root views bind Tab/Shift-Tab for GPUI tab-stop traversal, track keyboard-vs-mouse focus-visible state for `focus_visible_style`, and emit window focus/blur/move/resize lifecycle events from GPUI window observers
 - div-like nodes support a narrow native opacity animation spec keyed by stable animation id
 - app/runtime menus are process-owned via `Guppy.set_menus/1` / `Guppy.set_menus/2`; menu callback actions route back through `Guppy.Server` and menus are cleared when the owner exits
 - app command helpers include `Guppy.App.command_bindings/1`, `Guppy.App.open_command_palette/1`, and `Guppy.App.open_context_menu/3` for command-backed shortcuts and transient overlays

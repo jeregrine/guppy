@@ -21,9 +21,10 @@ mod style;
 
 use crate::bridge_text_input::BridgeTextInput;
 use crate::ir::IrNode;
+use crate::native_events::{self, WindowBoundsEventPayload};
 use gpui::{
-    App, Context, Entity, FocusHandle, KeyBinding, ListState, MouseDownEvent, Render, ScrollAnchor,
-    ScrollHandle, Subscription, Window, actions, div, prelude::*,
+    App, Bounds, Context, Entity, FocusHandle, KeyBinding, ListState, MouseDownEvent, Pixels,
+    Render, ScrollAnchor, ScrollHandle, Subscription, Window, actions, div, prelude::*,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -46,6 +47,9 @@ pub(crate) struct BridgeRetainedState {
     pub list_states: HashMap<String, ListState>,
     pub focus_handles: HashMap<String, FocusHandle>,
     pub focus_subscriptions: Vec<Subscription>,
+    pub lifecycle_subscriptions: Vec<Subscription>,
+    pub last_window_bounds: Option<Bounds<Pixels>>,
+    pub last_window_active: Option<bool>,
     pub text_inputs: HashMap<String, Entity<BridgeTextInput>>,
 }
 
@@ -55,9 +59,19 @@ pub struct BridgeView {
     pub retained: BridgeRetainedState,
 }
 
+fn window_bounds_payload(bounds: Bounds<Pixels>) -> WindowBoundsEventPayload {
+    WindowBoundsEventPayload {
+        x: f64::from(bounds.origin.x),
+        y: f64::from(bounds.origin.y),
+        width: f64::from(bounds.size.width),
+        height: f64::from(bounds.size.height),
+    }
+}
+
 impl Render for BridgeView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.retained.focus_subscriptions.clear();
+        self.ensure_window_lifecycle_observers(window, cx);
 
         let root = {
             let mut pass = render_pass::RenderPass::new(self.view_id, &mut self.retained);
@@ -88,6 +102,55 @@ impl Render for BridgeView {
 }
 
 impl BridgeView {
+    fn ensure_window_lifecycle_observers(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.retained.lifecycle_subscriptions.is_empty() {
+            return;
+        }
+
+        self.retained.last_window_bounds = Some(window.bounds());
+        self.retained.last_window_active = Some(window.is_window_active());
+
+        self.retained
+            .lifecycle_subscriptions
+            .push(cx.observe_window_bounds(window, Self::window_bounds_changed));
+        self.retained
+            .lifecycle_subscriptions
+            .push(cx.observe_window_activation(window, Self::window_activation_changed));
+    }
+
+    fn window_bounds_changed(&mut self, window: &mut Window, _: &mut Context<Self>) {
+        let bounds = window.bounds();
+        let previous = self.retained.last_window_bounds.replace(bounds);
+
+        let Some(previous) = previous else {
+            return;
+        };
+
+        let payload = window_bounds_payload(bounds);
+
+        if previous.origin != bounds.origin {
+            let _ = native_events::send_window_moved_event(self.view_id, payload);
+        }
+
+        if previous.size != bounds.size {
+            let _ = native_events::send_window_resized_event(self.view_id, payload);
+        }
+    }
+
+    fn window_activation_changed(&mut self, window: &mut Window, _: &mut Context<Self>) {
+        let active = window.is_window_active();
+
+        if self.retained.last_window_active.replace(active) == Some(active) {
+            return;
+        }
+
+        let _ = if active {
+            native_events::send_window_focused_event(self.view_id)
+        } else {
+            native_events::send_window_blurred_event(self.view_id)
+        };
+    }
+
     fn focus_next(&mut self, _: &FocusNext, window: &mut Window, _: &mut Context<Self>) {
         self.retained.focus_visible = true;
         window.focus_next();

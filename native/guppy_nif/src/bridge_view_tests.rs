@@ -4,7 +4,9 @@ use crate::ir::{
     DataTableNode, DataTableRow, DivNode, IrNode, ListItem, ScrollAxis, StyleColor, StyleOp,
     TreeItem, TreeNode,
 };
-use gpui::{ListAlignment, ListState, Modifiers, MouseButton, Render, ScrollHandle, point, px};
+use gpui::{
+    ListAlignment, ListState, Modifiers, MouseButton, Render, ScrollHandle, point, px, size,
+};
 
 #[test]
 fn prune_retained_state_drops_dead_scroll_handles() {
@@ -96,6 +98,37 @@ fn keyboard_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppConte
     assert_eq!(event.view_id, 46);
     assert_eq!(event.node_id.as_deref(), Some("click_target"));
     assert_eq!(event.callback_id.as_deref(), Some("contexted"));
+}
+
+#[gpui::test]
+fn window_lifecycle_observers_reach_native_event_bridge(cx: &mut gpui::TestAppContext) {
+    let _ = crate::take_basic_event_snapshot_for_test();
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 48,
+        ir: IrNode::text("Lifecycle"),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.update(|window, _| window.activate_window());
+    cx.run_until_parked();
+
+    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "window_focused");
+    assert_eq!(event.view_id, 48);
+
+    cx.deactivate_window();
+
+    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "window_blurred");
+    assert_eq!(event.view_id, 48);
+
+    let _ = crate::take_basic_event_snapshot_for_test();
+    cx.simulate_resize(size(px(320.0), px(240.0)));
+
+    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "window_resized");
+    assert_eq!(event.view_id, 48);
 }
 
 #[gpui::test]
