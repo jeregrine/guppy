@@ -158,6 +158,38 @@ defmodule Guppy.App do
     )
   end
 
+  @doc "Opens an app-owned transient context-menu popup for command items."
+  def open_context_menu(items) when is_list(items), do: open_context_menu(nil, items, [])
+
+  def open_context_menu(app, items) when is_list(items), do: open_context_menu(app, items, [])
+
+  def open_context_menu(app, items, opts) when is_list(items) and is_list(opts) do
+    app = app || current_app!()
+    menu_id = Keyword.get(opts, :id, unique_context_menu_id())
+
+    open_window(
+      app,
+      menu_id,
+      [
+        module: Guppy.App.ContextMenu,
+        arg: %{
+          app: app,
+          id: menu_id,
+          items: items,
+          style: Keyword.get(opts, :style),
+          item_style: Keyword.get(opts, :item_style),
+          disabled_item_style: Keyword.get(opts, :disabled_item_style),
+          separator_style: Keyword.get(opts, :separator_style),
+          payload: Keyword.get(opts, :payload, %{}),
+          window_options: context_menu_window_options(opts)
+        },
+        restart: :temporary,
+        metadata: context_menu_metadata(app)
+      ],
+      Keyword.get(opts, :timeout, 30_000)
+    )
+  end
+
   @doc "Returns the active app theme."
   def theme(app \\ nil), do: call(app, :theme)
 
@@ -255,7 +287,15 @@ defmodule Guppy.App do
   end
 
   defp command_palette_metadata(app) do
-    base = %{role: :command_palette, transient: true}
+    transient_window_metadata(app, :command_palette)
+  end
+
+  defp context_menu_metadata(app) do
+    transient_window_metadata(app, :context_menu)
+  end
+
+  defp transient_window_metadata(app, role) do
+    base = %{role: role, transient: true}
     parent_window_id = current_window_id()
 
     if current_app() == app and is_binary(parent_window_id) do
@@ -263,6 +303,20 @@ defmodule Guppy.App do
     else
       base
     end
+  end
+
+  defp unique_context_menu_id do
+    "__context_menu__" <> Integer.to_string(System.unique_integer([:positive]))
+  end
+
+  defp context_menu_window_options(opts) do
+    opts
+    |> Keyword.get(:window_options, [])
+    |> Keyword.put_new(:kind, :popup)
+    |> Keyword.put_new(:focus, true)
+    |> Keyword.put_new(:show, true)
+    |> Keyword.put_new(:titlebar, false)
+    |> Keyword.put_new(:window_bounds, Keyword.get(opts, :window_bounds, width: 220, height: 240))
   end
 
   @doc "Returns the app ref for the current app-supervised window process, if any."

@@ -188,6 +188,64 @@ defmodule Guppy.AppTest do
     refute_receive {:app_command, "new_file", _payload}, 100
   end
 
+  test "app context menu renders command items and dispatches selection" do
+    app_name = :"guppy_context_menu_app_#{System.unique_integer([:positive])}"
+    {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
+
+    assert :ok =
+             Guppy.App.set_commands(app_name, [
+               %{id: "new_file", label: "New File"},
+               %{id: "delete_file", label: "Delete File", enabled: false}
+             ])
+
+    window = %Guppy.Window{
+      assigns: %{
+        app: app_name,
+        id: "file_menu",
+        items: [%{command: "new_file"}, :separator, %{command: "delete_file"}]
+      }
+    }
+
+    ir = Guppy.App.ContextMenu.render(window)
+    assert :ok = Guppy.IR.validate(ir)
+
+    assert [new_file, _separator, delete_file] = ir.children
+    assert new_file.id == "file_menu.new_file"
+    assert new_file.label == "New File"
+    assert new_file.events == %{click: "run_context_menu_command"}
+    assert delete_file.disabled == true
+
+    assert {:stop, :normal, ^window} =
+             Guppy.App.ContextMenu.handle_event(
+               "run_context_menu_command",
+               %{id: "file_menu.new_file"},
+               window
+             )
+
+    assert_receive {:app_command, "new_file", %{source: :context_menu, menu_id: "file_menu"}}
+  end
+
+  test "app opens context menu as a transient popup window" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        app_name = :"guppy_context_menu_window_app_#{System.unique_integer([:positive])}"
+        {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
+
+        assert {:ok, menu_pid} =
+                 Guppy.App.open_context_menu(app_name, [%{command: "new_file"}],
+                   id: "test_context_menu",
+                   window_options: [show: false, window_bounds: [width: 180, height: 100]]
+                 )
+
+        assert Guppy.App.window_pid(app_name, "test_context_menu") == menu_pid
+        assert :ok = Guppy.App.close_window(app_name, "test_context_menu")
+        wait_until(fn -> Guppy.App.window_pid(app_name, "test_context_menu") == nil end)
+
+      {:error, _reason} ->
+        :ok
+    end
+  end
+
   test "app command bindings produce root IR shortcut options" do
     app_name = :"guppy_command_bindings_app_#{System.unique_integer([:positive])}"
     {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
