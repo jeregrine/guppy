@@ -150,6 +150,10 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_focus_window(_view_id, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_close_all(_timeout) do
     {:error, :nif_not_loaded}
   end
@@ -299,6 +303,12 @@ defmodule Guppy.Native.Nif do
   defp dispatch({:close_window, [view_id]}, timeout) do
     with_loaded(fn ->
       native_call(:close_window, fn -> normalize_status(native_close_window(view_id, timeout)) end)
+    end)
+  end
+
+  defp dispatch({:focus_window, [view_id]}, timeout) do
+    with_loaded(fn ->
+      native_call(:focus_window, fn -> normalize_status(native_focus_window(view_id, timeout)) end)
     end)
   end
 

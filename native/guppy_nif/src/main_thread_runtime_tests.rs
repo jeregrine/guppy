@@ -25,6 +25,19 @@ fn file_dialog_owner_view_id_requires_live_native_window() {
 }
 
 #[test]
+fn expired_focus_window_requests_do_not_reply() {
+    let (reply, receiver) = mpsc::channel();
+
+    handle_request(MainThreadRequest::FocusWindow {
+        deadline: RequestDeadline::after(Duration::from_millis(0)),
+        view_id: 7,
+        reply,
+    });
+
+    assert!(receiver.try_recv().is_err());
+}
+
+#[test]
 fn expired_app_badge_requests_do_not_reply() {
     let (reply, receiver) = mpsc::channel();
 

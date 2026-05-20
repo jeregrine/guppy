@@ -73,6 +73,10 @@ defmodule Guppy.Server do
     GenServer.call(server, {:close_window, view_id, timeout}, gen_call_timeout(timeout))
   end
 
+  def focus_window(server \\ __MODULE__, view_id, timeout \\ 5_000) do
+    GenServer.call(server, {:focus_window, view_id, timeout}, gen_call_timeout(timeout))
+  end
+
   def set_menus(server \\ __MODULE__, owner, menus, timeout \\ 5_000) do
     GenServer.call(server, {:set_menus, owner, menus, timeout}, gen_call_timeout(timeout))
   end
@@ -203,6 +207,17 @@ defmodule Guppy.Server do
           {:ok, _payload} -> {:reply, :ok, delete_view(state, view_id)}
           {:error, reason} -> {:reply, {:error, reason}, state}
         end
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:focus_window, view_id, timeout}, {caller, _tag}, state) do
+    case validate_owned_view(state, caller, view_id) do
+      :ok ->
+        reply = native_request(state, :focus_window, {:focus_window, [view_id]}, timeout)
+        {:reply, normalize_native_reply(reply), state}
 
       error ->
         {:reply, error, state}

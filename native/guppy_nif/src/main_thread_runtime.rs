@@ -80,6 +80,11 @@ pub(crate) enum MainThreadRequest {
         view_id: u64,
         reply: Sender<i32>,
     },
+    FocusWindow {
+        deadline: RequestDeadline,
+        view_id: u64,
+        reply: Sender<i32>,
+    },
     CloseAll {
         deadline: RequestDeadline,
         reply: Sender<i32>,
@@ -137,6 +142,7 @@ impl MainThreadRequest {
             MainThreadRequest::OpenWindow { deadline, .. }
             | MainThreadRequest::SetIr { deadline, .. }
             | MainThreadRequest::CloseWindow { deadline, .. }
+            | MainThreadRequest::FocusWindow { deadline, .. }
             | MainThreadRequest::CloseAll { deadline, .. }
             | MainThreadRequest::SetMenus { deadline, .. }
             | MainThreadRequest::SetDockMenu { deadline, .. }
@@ -293,6 +299,27 @@ pub fn update_ir(view_id: u64, ir: IrNode) -> i32 {
             view.ir = ir;
             cx.notify();
         }) {
+            Ok(_) => 1,
+            Err(_) => -1,
+        }
+    })
+}
+
+pub fn focus_window(view_id: u64) -> i32 {
+    let handle = WINDOWS.with(|windows| windows.borrow().get(&view_id).cloned());
+
+    let Some(handle) = handle else {
+        return 0;
+    };
+
+    APP.with(|app| {
+        let app = app.borrow().as_ref().cloned();
+
+        let Some(mut app) = app else {
+            return -1;
+        };
+
+        match handle.update(&mut app, |_, window, _| window.activate_window()) {
             Ok(_) => 1,
             Err(_) => -1,
         }
@@ -626,6 +653,15 @@ fn handle_request(request: MainThreadRequest) {
         } => {
             if !deadline.expired() {
                 let _ = reply.send(close_window(view_id));
+            }
+        }
+        MainThreadRequest::FocusWindow {
+            deadline,
+            view_id,
+            reply,
+        } => {
+            if !deadline.expired() {
+                let _ = reply.send(focus_window(view_id));
             }
         }
         MainThreadRequest::CloseAll { deadline, reply } => {

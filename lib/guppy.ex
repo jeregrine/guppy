@@ -50,6 +50,11 @@ defmodule Guppy do
     Server.close_window(Server, view_id, timeout)
   end
 
+  @doc "Activates/focuses a previously opened native window owned by the calling process."
+  def focus_window(view_id, timeout \\ 5_000) do
+    Server.focus_window(Server, view_id, timeout)
+  end
+
   @doc "Replaces the application menu bar for the calling process."
   def set_menus(menus, timeout \\ 5_000) do
     Server.set_menus(Server, self(), menus, timeout)

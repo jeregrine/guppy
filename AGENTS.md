@@ -127,6 +127,8 @@ Useful top-level API:
 - `Guppy.render/3`
 - `Guppy.close_window/1`
 - `Guppy.close_window/2`
+- `Guppy.focus_window/1`
+- `Guppy.focus_window/2`
 - `Guppy.set_menus/1`
 - `Guppy.set_menus/2`
 - `Guppy.set_dock_menu/1`

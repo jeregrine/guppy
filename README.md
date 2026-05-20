@@ -197,7 +197,7 @@ Popovers support optional anchor corner, anchor position/offset, local/window an
 
 `Guppy.read_clipboard_text/0` and `Guppy.write_clipboard_text/1` provide narrow text clipboard access through the native runtime. Reads return `{:ok, text}` or `{:ok, nil}` when no text is available; writes accept binaries only.
 
-`app_activated`/`app_deactivated` are sent to the claimed app owner as `{:guppy_app_event, event}` when native window activation changes make the app active/inactive; `use Guppy.App` modules can handle them as `handle_event("app_activated", data, state)` / `handle_event("app_deactivated", data, state)`. `window_focused`/`window_blurred` are emitted from GPUI window activation changes. `window_moved`/`window_resized` include `x`, `y`, `width`, and `height` in logical pixels when GPUI reports bounds changes. `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
+`app_activated`/`app_deactivated` are sent to the claimed app owner as `{:guppy_app_event, event}` when native window activation changes make the app active/inactive; `use Guppy.App` modules can handle them as `handle_event("app_activated", data, state)` / `handle_event("app_deactivated", data, state)`. `window_focused`/`window_blurred` are emitted from GPUI window activation changes, and `Guppy.focus_window/1` activates a caller-owned native window. `window_moved`/`window_resized` include `x`, `y`, `width`, and `height` in logical pixels when GPUI reports bounds changes. `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.
 
 ## App processes
 

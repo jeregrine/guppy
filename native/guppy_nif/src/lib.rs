@@ -497,6 +497,19 @@ fn native_close_window<'a>(env: Env<'a>, view_id: u64, timeout_ms: u64) -> Term<
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+fn native_focus_window<'a>(env: Env<'a>, view_id: u64, timeout_ms: u64) -> Term<'a> {
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::FocusWindow {
+            deadline,
+            view_id,
+            reply,
+        }
+    });
+
+    status_result(env, result, unknown_view_id())
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
 fn native_close_all<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
     let result = request_i32(timeout_ms, |reply, deadline| {
         main_thread_runtime::MainThreadRequest::CloseAll { deadline, reply }

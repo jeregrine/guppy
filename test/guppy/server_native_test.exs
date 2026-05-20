@@ -97,6 +97,29 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  test "focus_window validates ownership and routes through native" do
+    server = :"guppy_focus_window_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    ir = Guppy.IR.text("Focusable")
+    assert {:ok, view_id} = Guppy.Server.open_window(server, self(), ir, [], 25)
+    assert_receive {:guppy_test_native_request, {:open_window, [^view_id, ^ir, %{}]}, 25}
+
+    assert :ok = Guppy.Server.focus_window(server, view_id, 37)
+    assert_receive {:guppy_test_native_request, {:focus_window, [^view_id]}, 37}
+
+    assert {:error, :unknown_view_id} = Guppy.Server.focus_window(server, view_id + 1, 37)
+  end
+
   test "file dialog APIs validate options and route through native" do
     server = :"guppy_file_dialog_native_#{System.unique_integer([:positive])}"
 
