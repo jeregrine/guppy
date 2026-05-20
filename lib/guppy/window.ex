@@ -148,6 +148,10 @@ defmodule Guppy.Window do
         %{type: :window_closed} ->
           {:noreply, window, :skip_render}
 
+        %{type: :action, callback: callback, action: command_id}
+        when is_binary(callback) and is_binary(command_id) ->
+          route_action_event(module, callback, command_id, event, state, window)
+
         %{callback: callback} when is_binary(callback) ->
           invoke_callback(module, :handle_event, [callback, event_data(event), window])
 
@@ -321,6 +325,31 @@ defmodule Guppy.Window do
   defp callback_error?(error, module, function, args) do
     error.module == module and error.function == function and error.arity == length(args)
   end
+
+  defp route_action_event(module, callback, command_id, event, state, window) do
+    if app_command_action?(callback, state.app) do
+      :ok = Guppy.App.dispatch(state.app, command_id, app_command_payload(event, state))
+      {:noreply, window, :skip_render}
+    else
+      invoke_callback(module, :handle_event, [callback, event_data(event), window])
+    end
+  end
+
+  defp app_command_action?(callback, app) do
+    not is_nil(app) and callback == Guppy.App.command_callback()
+  end
+
+  defp app_command_payload(event, state) do
+    event
+    |> event_data()
+    |> Map.put_new(:source, :window_shortcut)
+    |> maybe_put_window_id(state.app_window_id)
+  end
+
+  defp maybe_put_window_id(payload, window_id) when is_binary(window_id),
+    do: Map.put(payload, :window_id, window_id)
+
+  defp maybe_put_window_id(payload, _window_id), do: payload
 
   defp event_data(event) do
     Map.drop(event, [:type, :callback])

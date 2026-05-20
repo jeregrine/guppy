@@ -159,6 +159,42 @@ defmodule Guppy.AppTest do
     assert :ok = Guppy.IR.validate(palette_ir)
   end
 
+  test "app-supervised windows route command shortcut actions to the app coordinator" do
+    app_name = :"guppy_window_command_app_#{System.unique_integer([:positive])}"
+    {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
+
+    state = %Guppy.Window.State{
+      module: Guppy.AppContextWindow,
+      window: %Guppy.Window{view_id: 321},
+      app: app_name,
+      app_window_id: "main"
+    }
+
+    assert {:noreply, next_state} =
+             Guppy.Window.handle_window_message(
+               Guppy.AppContextWindow,
+               {:guppy_event, 321,
+                %{
+                  type: :action,
+                  id: "root",
+                  callback: Guppy.App.command_callback(),
+                  action: "new_file",
+                  shortcut: "cmd-n"
+                }},
+               state
+             )
+
+    assert next_state.window == state.window
+
+    assert_receive {:app_command, "new_file",
+                    %{
+                      action: "new_file",
+                      shortcut: "cmd-n",
+                      source: :window_shortcut,
+                      window_id: "main"
+                    }}
+  end
+
   test "app-owned menus derive enabled state from command registry" do
     server = :"guppy_app_command_menu_native_#{System.unique_integer([:positive])}"
 

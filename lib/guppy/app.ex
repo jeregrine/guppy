@@ -27,6 +27,8 @@ defmodule Guppy.App do
 
   alias Guppy.App.{Config, Coordinator, Stylesheet, Theme}
 
+  @command_callback "guppy.app.command"
+
   @type app_ref :: GenServer.server()
 
   @callback init(keyword()) ::
@@ -106,6 +108,9 @@ defmodule Guppy.App do
   def close_window(app, window_id) when is_binary(window_id) do
     call(app, {:close_window, window_id})
   end
+
+  @doc "Returns the native action callback id that routes shortcut actions to `handle_command/3`."
+  def command_callback, do: @command_callback
 
   @doc "Dispatches an app command asynchronously."
   def dispatch(app, command_id, payload \\ %{}) when is_binary(command_id) and is_map(payload) do
