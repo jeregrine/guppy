@@ -145,8 +145,9 @@ fn prepare_div<'a>(view_id: u64, path: &str, node: &'a DivNode) -> DivPrepared<'
     let disabled = DisabledEventFilter::new(node.disabled);
 
     let click = disabled.callback(node.click.as_deref());
+    let context_menu = disabled.callback(node.context_menu.as_deref());
     let shortcuts = disabled.shortcuts(&node.shortcuts);
-    let keyboard_actionable = click.is_some() || !shortcuts.is_empty();
+    let keyboard_actionable = click.is_some() || context_menu.is_some() || !shortcuts.is_empty();
 
     let focusable = disabled.focusable(node.focusable);
     let tab_stop = disabled.tab_stop(node.tab_stop);
@@ -164,7 +165,7 @@ fn prepare_div<'a>(view_id: u64, path: &str, node: &'a DivNode) -> DivPrepared<'
         blur: disabled.callback(node.blur.as_deref()),
         key_down: disabled.callback(node.key_down.as_deref()),
         key_up: disabled.callback(node.key_up.as_deref()),
-        context_menu: disabled.callback(node.context_menu.as_deref()),
+        context_menu,
         drag_start: disabled.callback(node.drag_start.as_deref()),
         drag_move: disabled.callback(node.drag_move.as_deref()),
         drop: disabled.callback(node.drop.as_deref()),
@@ -379,14 +380,26 @@ fn attach_pointer_and_keyboard_interactions(
         None => styled_div,
     };
 
-    let styled_div = if interactions.key_down.is_some() || !interactions.shortcuts.is_empty() {
+    let styled_div = if interactions.key_down.is_some()
+        || interactions.context_menu.is_some()
+        || !interactions.shortcuts.is_empty()
+    {
         let key_down_callback_id = interactions.key_down.map(str::to_owned);
+        let context_menu_callback_id = interactions.context_menu.map(str::to_owned);
         let key_down_node_id = node_key.clone();
         let shortcut_bindings = interactions.shortcuts.clone();
 
         styled_div.on_key_down(move |event: &KeyDownEvent, _, cx| {
             if let Some(callback_id) = key_down_callback_id.as_ref() {
                 events::emit_key_down(view_id, &key_down_node_id, callback_id, event);
+            }
+
+            if let Some(callback_id) = context_menu_callback_id.as_ref()
+                && events::is_context_menu_key(event)
+            {
+                events::emit_keyboard_context_menu(view_id, &key_down_node_id, callback_id, event);
+                cx.stop_propagation();
+                return;
             }
 
             if let Some(shortcut) = events::matching_shortcut(event, &shortcut_bindings) {
@@ -651,9 +664,61 @@ fn animated_opacity_value(from: f32, to: f32, delta: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{DisabledEventFilter, animated_opacity_value};
-    use crate::ir::ShortcutBinding;
+    use super::{DisabledEventFilter, animated_opacity_value, prepare_div};
+    use crate::ir::{DivNode, IrNode, ShortcutBinding};
     use std::sync::Arc;
+
+    fn test_div_node() -> DivNode {
+        DivNode {
+            id: Some("test_div".into()),
+            style: Arc::new([]),
+            hover_style: Arc::new([]),
+            focus_style: Arc::new([]),
+            focus_visible_style: Arc::new([]),
+            in_focus_style: Arc::new([]),
+            active_style: Arc::new([]),
+            disabled_style: Arc::new([]),
+            animation: None,
+            disabled: false,
+            stack_priority: None,
+            occlude: false,
+            focusable: false,
+            tab_stop: None,
+            tab_index: None,
+            track_scroll: false,
+            anchor_scroll: false,
+            scroll_to: false,
+            tooltip: None,
+            shortcuts: Arc::new([]),
+            children: Vec::<IrNode>::new().into(),
+            click: None,
+            hover: None,
+            focus: None,
+            blur: None,
+            key_down: None,
+            key_up: None,
+            context_menu: None,
+            drag_start: None,
+            drag_move: None,
+            drop: None,
+            mouse_down: None,
+            mouse_up: None,
+            mouse_move: None,
+            scroll_wheel: None,
+        }
+    }
+
+    #[test]
+    fn context_menu_callbacks_are_keyboard_actionable() {
+        let mut node = test_div_node();
+        node.context_menu = Some("open_context_menu".into());
+
+        let prepared = prepare_div(7, "root", &node);
+
+        assert!(prepared.interactions.keyboard_actionable);
+        assert!(prepared.focus.needs_focus_handle);
+        assert_eq!(prepared.focus.tab_stop, Some(true));
+    }
 
     #[test]
     fn disabled_shortcuts_reuse_empty_slice() {

@@ -78,6 +78,27 @@ fn simulated_gpui_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContex
 }
 
 #[gpui::test]
+fn keyboard_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let _ = crate::take_basic_event_snapshot_for_test();
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 46,
+        ir: context_menu_div(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("shift-f10");
+
+    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "context_menu");
+    assert_eq!(event.view_id, 46);
+    assert_eq!(event.node_id.as_deref(), Some("click_target"));
+    assert_eq!(event.callback_id.as_deref(), Some("contexted"));
+}
+
+#[gpui::test]
 fn simulated_canvas_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
     let before = crate::native_event_send_snapshot_for_test();
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
@@ -523,6 +544,16 @@ fn list_with_row_button() -> IrNode {
         item_style: Vec::new().into(),
         click: None,
     }
+}
+
+fn context_menu_div() -> IrNode {
+    let mut node = clickable_div();
+
+    if let IrNode::Div(div) = &mut node {
+        div.context_menu = Some("contexted".into());
+    }
+
+    node
 }
 
 fn clickable_div() -> IrNode {

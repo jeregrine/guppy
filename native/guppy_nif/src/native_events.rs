@@ -518,6 +518,16 @@ pub(crate) fn send_context_menu_event(
     callback_id: &str,
     payload: ContextMenuEventPayload,
 ) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "context_menu",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        None,
+        None,
+    );
+
     send_event(view_id, context_menu, move |env| {
         map_from_pairs(
             env,

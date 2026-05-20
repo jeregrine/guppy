@@ -196,6 +196,24 @@ pub(crate) fn emit_context_menu(
     );
 }
 
+pub(crate) fn emit_keyboard_context_menu(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    event: &KeyDownEvent,
+) {
+    let _ = native_events::send_context_menu_event(
+        view_id,
+        node_id,
+        callback_id,
+        ContextMenuEventPayload {
+            x: 0.0,
+            y: 0.0,
+            modifiers: modifier_flags(&event.keystroke.modifiers),
+        },
+    );
+}
+
 pub(crate) fn emit_drag_start(view_id: u64, node_id: &str, callback_id: &str, source_id: &str) {
     let _ = native_events::send_drag_start_event(view_id, node_id, callback_id, source_id);
 }
@@ -316,6 +334,22 @@ pub(crate) fn matching_shortcut<'a>(
     shortcuts
         .iter()
         .find(|shortcut| event.keystroke.should_match(&shortcut.parsed))
+}
+
+pub(crate) fn is_context_menu_key(event: &KeyDownEvent) -> bool {
+    if event.is_held {
+        return false;
+    }
+
+    let keystroke = &event.keystroke;
+
+    keystroke.key == "context_menu"
+        || (keystroke.key == "f10"
+            && keystroke.modifiers.shift
+            && !keystroke.modifiers.control
+            && !keystroke.modifiers.alt
+            && !keystroke.modifiers.platform
+            && !keystroke.modifiers.function)
 }
 
 fn modifier_flags(modifiers: &Modifiers) -> EventModifiers {

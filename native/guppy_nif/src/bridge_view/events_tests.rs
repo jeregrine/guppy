@@ -1,4 +1,4 @@
-use super::matching_shortcut;
+use super::{is_context_menu_key, matching_shortcut};
 use crate::ir::ShortcutBinding;
 use gpui::{KeyDownEvent, KeybindingKeystroke, Keystroke};
 
@@ -10,6 +10,24 @@ fn shortcut(shortcut: &str, action: &str, callback: &str) -> ShortcutBinding {
         callback: callback.to_owned(),
         parsed: KeybindingKeystroke::from_keystroke(parsed),
     }
+}
+
+#[test]
+fn context_menu_key_matches_shift_f10_and_menu_key() {
+    assert!(is_context_menu_key(&KeyDownEvent {
+        keystroke: Keystroke::parse("shift-f10").expect("valid keystroke"),
+        is_held: false,
+    }));
+
+    assert!(is_context_menu_key(&KeyDownEvent {
+        keystroke: Keystroke::parse("context_menu").expect("valid keystroke"),
+        is_held: false,
+    }));
+
+    assert!(!is_context_menu_key(&KeyDownEvent {
+        keystroke: Keystroke::parse("f10").expect("valid keystroke"),
+        is_held: false,
+    }));
 }
 
 #[test]
