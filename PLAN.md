@@ -17,7 +17,7 @@ These are the biggest missing pieces for building real desktop apps. Add them as
 
 - [x] App/window command model: command registry, keyboard shortcut registration, routing priority, enable/disable state, and `Guppy.Window` integration.
 - [x] Element-local/context menus: right-click/context menu primitives for rows, trees, canvas items, editors, and general elements; include keyboard invocation and app context-menu focus return.
-- [ ] File dialogs: open file(s), save file, choose directory, filters, default paths/names, cancellation semantics, and owner-window association.
+- [x] File dialogs: open file(s), save file, choose directory, extension filters, default directories/names, cancellation semantics, and caller-owned `owner_view_id` liveness/ownership association; native sheet parenting remains deferred because GPUI 0.2.2 exposes no sheet-style owner-window API.
 - [x] Clipboard APIs: read/write text, later images/files if GPUI/platform support is practical; define permission/error behavior.
 - [x] App/window lifecycle events: app activated/deactivated and window focused/blurred/moved/resized are routed; app hidden/unhidden is documented as deferred because GPUI 0.2.2 exposes hide actions but no lifecycle notification hook.
 - [x] Notifications/badges where platform support is practical; app/Dock badge labels are process-owned and app-owned, while desktop notifications are documented as deferred because GPUI 0.2.2 exposes no notification API.
