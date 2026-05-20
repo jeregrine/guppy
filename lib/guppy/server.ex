@@ -849,6 +849,13 @@ defmodule Guppy.Server do
     end
   end
 
+  defp validate_menu_item(%{label: label, system_menu: :services} = item, seen_ids)
+       when is_binary(label) do
+    with :ok <- validate_menu_keys(item, [:label, :system_menu], {:invalid_menu_item, item}) do
+      {:ok, seen_ids}
+    end
+  end
+
   defp validate_menu_item(%{id: id, label: label} = item, seen_ids)
        when is_binary(id) and is_binary(label) do
     with :ok <-

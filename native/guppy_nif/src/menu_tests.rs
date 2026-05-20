@@ -56,6 +56,10 @@ fn sample_menus() -> Vec<MenuSpec> {
                         ])]),
                     ),
                 ]),
+                map(vec![
+                    ("label", binary("Services")),
+                    ("system_menu", atom("services")),
+                ]),
             ]),
         ),
     ])])))
@@ -85,6 +89,7 @@ fn decodes_menu_specs() {
         },
         other => panic!("expected submenu, got {other:?}"),
     }
+    assert!(matches!(menus[0].items[3], MenuItemSpec::SystemMenu(_)));
 }
 
 #[test]
@@ -176,6 +181,11 @@ fn maps_custom_and_os_actions_to_gpui_menu_items() {
             other => panic!("expected submenu action, got {}", menu_item_name(other)),
         },
         other => panic!("expected submenu, got {}", menu_item_name(other)),
+    }
+
+    match &gpui_menus[0].items[3] {
+        MenuItem::SystemMenu(menu) => assert_eq!(menu.name.as_ref(), "Services"),
+        other => panic!("expected system menu, got {}", menu_item_name(other)),
     }
 }
 

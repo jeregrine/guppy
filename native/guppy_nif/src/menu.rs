@@ -5,7 +5,9 @@ use crate::{
     etf_decode,
 };
 use eetf::Term;
-use gpui::{Action, App, KeyBinding, Keystroke, Menu, MenuItem, OsAction, SharedString};
+use gpui::{
+    Action, App, KeyBinding, Keystroke, Menu, MenuItem, OsAction, SharedString, SystemMenuType,
+};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -18,7 +20,19 @@ pub(crate) struct MenuSpec {
 pub(crate) enum MenuItemSpec {
     Separator,
     Submenu(MenuSpec),
+    SystemMenu(MenuSystemMenuSpec),
     Action(MenuActionSpec),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct MenuSystemMenuSpec {
+    pub label: String,
+    pub menu_type: MenuSystemMenuType,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum MenuSystemMenuType {
+    Services,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -136,6 +150,7 @@ fn collect_key_bindings(items: &[MenuItemSpec], bindings: &mut Vec<KeyBinding>) 
                 }
             }
             MenuItemSpec::Submenu(menu) => collect_key_bindings(&menu.items, bindings),
+            MenuItemSpec::SystemMenu(_) => {}
             _ => {}
         }
     }
@@ -166,6 +181,7 @@ fn to_gpui_menu_item(item: MenuItemSpec) -> MenuItem {
     match item {
         MenuItemSpec::Separator => MenuItem::separator(),
         MenuItemSpec::Submenu(menu) => MenuItem::submenu(to_gpui_menu(menu)),
+        MenuItemSpec::SystemMenu(menu) => to_gpui_system_menu_item(menu),
         MenuItemSpec::Action(action) => to_gpui_action_item(action),
     }
 }
@@ -177,7 +193,18 @@ fn to_gpui_dock_menu_item(item: MenuItemSpec) -> MenuItem {
             name: SharedString::from(menu.label),
             items: menu.items.into_iter().map(to_gpui_dock_menu_item).collect(),
         }),
+        MenuItemSpec::SystemMenu(menu) => to_gpui_system_menu_item(menu),
         MenuItemSpec::Action(action) => to_gpui_dock_action_item(action),
+    }
+}
+
+fn to_gpui_system_menu_item(menu: MenuSystemMenuSpec) -> MenuItem {
+    MenuItem::os_submenu(menu.label, to_gpui_system_menu_type(menu.menu_type))
+}
+
+fn to_gpui_system_menu_type(menu_type: MenuSystemMenuType) -> SystemMenuType {
+    match menu_type {
+        MenuSystemMenuType::Services => SystemMenuType::Services,
     }
 }
 
@@ -402,6 +429,14 @@ fn decode_menu_item(term: &Term) -> Result<MenuItemSpec, String> {
         }));
     }
 
+    if get_field(map, "system_menu").is_some() {
+        ensure_allowed_fields(map, &["label", "system_menu"], "menu item system menu")?;
+        return Ok(MenuItemSpec::SystemMenu(MenuSystemMenuSpec {
+            label: get_string_field(map, "label")?,
+            menu_type: get_system_menu_type_field(map, "system_menu")?,
+        }));
+    }
+
     ensure_allowed_fields(
         map,
         &[
@@ -447,6 +482,23 @@ fn get_optional_shortcut_field(
             Ok(Some(shortcut))
         }
         None => Ok(None),
+    }
+}
+
+fn get_system_menu_type_field(
+    map: &HashMap<Term, Term>,
+    key: &str,
+) -> Result<MenuSystemMenuType, String> {
+    match get_required_field(map, key)? {
+        Term::Atom(atom) => parse_system_menu_type(&atom.name),
+        other => Err(format!("expected system_menu atom, got {other}")),
+    }
+}
+
+fn parse_system_menu_type(menu_type: &str) -> Result<MenuSystemMenuType, String> {
+    match menu_type {
+        "services" => Ok(MenuSystemMenuType::Services),
+        other => Err(format!("unsupported system_menu: {other}")),
     }
 }
 

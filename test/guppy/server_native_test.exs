@@ -201,7 +201,8 @@ defmodule Guppy.ServerNativeTest do
               %{id: "copy", label: "Copy", os_action: :copy},
               %{id: "disabled", label: "Disabled", callback: "disabled", enabled: false}
             ]
-          }
+          },
+          %{label: "Services", system_menu: :services}
         ]
       }
     ]
