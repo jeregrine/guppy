@@ -187,7 +187,7 @@ Native event coverage includes click, close, hover, focus/blur, key down/up, sho
 
 `Guppy.ContextMenu.render/2` renders validated item data into ordinary IR buttons/dividers for element-local menus. Pair it with a node's `context_menu` event and keep open/close/selection state in the owning process. `Guppy.App.open_context_menu/3` returns focus to the source app window by default when opened from an app-supervised window; pass `return_focus_to: window_id` to choose a specific app window.
 
-Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
+Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, Escape/outside-click close behavior, and deferred-layer priority. Select list overlays support keyboard navigation/typeahead plus anchor offset/fit/margin controls. See `docs/overlays.md` for lifecycle, positioning, focus-return, and nested-overlay semantics.
 
 `list` rows support static/layout children (`text`, `spacer`, and nested static `div`) plus row-local `button`, `checkbox`, and `radio` controls with explicit control ids. List rows accept `:click` and `:context_menu` callbacks. Row-control events include `list_id`, `row_id`, and `control_id`; Elixir remains the source of truth for checked/selected values.
 

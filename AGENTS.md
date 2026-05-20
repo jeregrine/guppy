@@ -73,6 +73,7 @@ Important current invariants:
 - `use Guppy.App` modules own app menus, Dock menus, and app badges from config/runtime setters, and handle app lifecycle events such as `"app_activated"` / `"app_deactivated"` with optional `handle_event/3`
 - app command helpers include `Guppy.App.command_bindings/1`, `Guppy.App.open_command_palette/1`, `Guppy.App.open_context_menu/3`, and `Guppy.App.focus_window/2` for command-backed shortcuts, transient overlays with focus return, and app-window activation
 - semantic `data_table` and `tree` primitives are first-pass virtualized/list-backed nodes; Elixir owns sort, selection, expansion, and context-menu state
+- overlay semantics are documented in `docs/overlays.md`: Elixir owns open/close state, select/popover support keyboard close/navigation, select/popover positioning is typed, and nested native overlays inside popovers are rejected until a full overlay stack model exists
 - `canvas` is a bounded data-only native painting primitive for rect, rounded-rect, and slash-pattern rect commands with coarse click/context-menu events
 
 ### Native side
