@@ -150,7 +150,7 @@ defmodule Guppy.App.Coordinator do
 
   def handle_call({:set_commands, commands}, _from, state) do
     case Config.validate(%{state.config | commands: commands}) do
-      {:ok, config} -> {:reply, :ok, put_config(state, config)}
+      {:ok, config} -> {:reply, :ok, state |> put_config(config) |> install_menus()}
       error -> {:reply, error, state}
     end
   end
@@ -167,7 +167,13 @@ defmodule Guppy.App.Coordinator do
         case Map.fetch(state.config.commands, command_id) do
           {:ok, command} ->
             commands = Map.put(state.config.commands, command_id, %{command | enabled: enabled})
-            {:reply, :ok, put_config(state, %{state.config | commands: commands})}
+
+            state =
+              state
+              |> put_config(%{state.config | commands: commands})
+              |> install_menus()
+
+            {:reply, :ok, state}
 
           :error ->
             {:reply, {:error, {:unknown_command, command_id}}, state}
@@ -187,7 +193,7 @@ defmodule Guppy.App.Coordinator do
       {:ok, config} ->
         state = put_config(state, config)
 
-        case Guppy.Server.set_menus(state.runtime_server, self(), config.menus) do
+        case set_native_menus(state) do
           :ok -> {:reply, :ok, state}
           error -> {:reply, error, state}
         end
@@ -305,9 +311,37 @@ defmodule Guppy.App.Coordinator do
   defp install_menus(%{config: %{menus: []}} = state), do: state
 
   defp install_menus(state) do
-    _ = Guppy.Server.set_menus(state.runtime_server, self(), state.config.menus)
+    _ = set_native_menus(state)
     state
   end
+
+  defp set_native_menus(state) do
+    Guppy.Server.set_menus(state.runtime_server, self(), effective_menus(state.config))
+  end
+
+  defp effective_menus(%Config{menus: menus, commands: commands}) do
+    Enum.map(menus, &effective_menu(&1, commands))
+  end
+
+  defp effective_menu(%{items: items} = menu, commands) when is_list(items) do
+    %{menu | items: Enum.map(items, &effective_menu_item(&1, commands))}
+  end
+
+  defp effective_menu(menu, _commands), do: menu
+
+  defp effective_menu_item(%{items: items} = item, commands) when is_list(items) do
+    %{item | items: Enum.map(items, &effective_menu_item(&1, commands))}
+  end
+
+  defp effective_menu_item(%{callback: command_id} = item, commands) when is_binary(command_id) do
+    case Map.fetch(commands, command_id) do
+      {:ok, %Command{enabled: false}} -> Map.put(item, :enabled, false)
+      {:ok, %Command{enabled: true}} -> item
+      :error -> item
+    end
+  end
+
+  defp effective_menu_item(item, _commands), do: item
 
   defp open_startup_windows(state) do
     Enum.reduce(state.config.windows, state, fn

@@ -159,6 +159,36 @@ defmodule Guppy.AppTest do
     assert :ok = Guppy.IR.validate(palette_ir)
   end
 
+  test "app-owned menus derive enabled state from command registry" do
+    server = :"guppy_app_command_menu_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    app_name = :"guppy_command_menu_app_#{System.unique_integer([:positive])}"
+    {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self(), runtime_server: server})
+
+    assert_receive {:guppy_test_native_request, {:set_menus, [initial_menus]}, _timeout}
+    assert [%{items: [%{id: "new_file"} = initial_item]}] = initial_menus
+    refute Map.get(initial_item, :enabled) == false
+
+    assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", false)
+    assert_receive {:guppy_test_native_request, {:set_menus, [disabled_menus]}, _timeout}, 500
+    assert [%{items: [%{id: "new_file", enabled: false}]}] = disabled_menus
+
+    assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", true)
+    assert_receive {:guppy_test_native_request, {:set_menus, [reenabled_menus]}, _timeout}, 500
+    assert [%{items: [%{id: "new_file"} = reenabled_item]}] = reenabled_menus
+    refute Map.get(reenabled_item, :enabled) == false
+  end
+
   test "app can stop when the last app-supervised window closes" do
     app_name = :"guppy_exit_app_#{System.unique_integer([:positive])}"
     {:ok, app_pid} = Guppy.ExitOnLastWindowApp.start_link(name: app_name)
