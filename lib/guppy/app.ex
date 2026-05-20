@@ -112,6 +112,24 @@ defmodule Guppy.App do
   @doc "Returns the native action callback id that routes shortcut actions to `handle_command/3`."
   def command_callback, do: @command_callback
 
+  @doc "Returns `Guppy.IR.div/2` action/shortcut options for the app command registry."
+  def command_bindings(app \\ nil) do
+    app = app || current_app!()
+
+    actions =
+      app
+      |> commands()
+      |> Map.keys()
+      |> Map.new(&{&1, command_callback()})
+
+    shortcuts =
+      app
+      |> keymap()
+      |> Enum.map(&{&1.key, &1.command})
+
+    [actions: actions, shortcuts: shortcuts]
+  end
+
   @doc "Dispatches an app command asynchronously."
   def dispatch(app, command_id, payload \\ %{}) when is_binary(command_id) and is_map(payload) do
     GenServer.cast(app || current_app!(), {:dispatch_command, command_id, payload})

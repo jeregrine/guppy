@@ -159,6 +159,17 @@ defmodule Guppy.AppTest do
     assert :ok = Guppy.IR.validate(palette_ir)
   end
 
+  test "app command bindings produce root IR shortcut options" do
+    app_name = :"guppy_command_bindings_app_#{System.unique_integer([:positive])}"
+    {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
+
+    assert [actions: %{"new_file" => callback}, shortcuts: [{"cmd-n", "new_file"}]] =
+             Guppy.App.command_bindings(app_name)
+
+    assert callback == Guppy.App.command_callback()
+    assert :ok = Guppy.IR.validate(Guppy.IR.div([], Guppy.App.command_bindings(app_name)))
+  end
+
   test "app-supervised windows route command shortcut actions to the app coordinator" do
     app_name = :"guppy_window_command_app_#{System.unique_integer([:positive])}"
     {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
@@ -209,7 +220,9 @@ defmodule Guppy.AppTest do
     assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
 
     app_name = :"guppy_command_menu_app_#{System.unique_integer([:positive])}"
-    {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self(), runtime_server: server})
+
+    {:ok, _pid} =
+      start_supervised({Guppy.TestApp, name: app_name, parent: self(), runtime_server: server})
 
     assert_receive {:guppy_test_native_request, {:set_menus, [initial_menus]}, _timeout}
     assert [%{items: [%{id: "new_file"} = initial_item]}] = initial_menus

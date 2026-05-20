@@ -17,9 +17,12 @@ defmodule Guppy.Examples.MultiWindowApp.MainWindow do
     theme_window_style = theme_style!(:window)
     theme_card_style = theme_style!(:card)
     app_styles = Guppy.App.styles(Guppy.App.current_app(), "card hover:bg-blue")
+    command_bindings = Guppy.App.command_bindings(Guppy.App.current_app())
+    command_actions = Keyword.fetch!(command_bindings, :actions)
+    command_shortcuts = Keyword.fetch!(command_bindings, :shortcuts)
 
     ~GUI"""
-    <div id="main" class="flex flex-col gap-3 p-4" style={theme_window_style}>
+    <div id="main" class="flex flex-col gap-3 p-4" style={theme_window_style} actions={command_actions} shortcuts={command_shortcuts}>
       <text id="title" class="text-3xl font-bold">Guppy.App multi-window demo</text>
       <text id="message">{@message}</text>
       <button id="palette" click="palette" class="p-2 rounded-md border-1">Open command palette</button>
