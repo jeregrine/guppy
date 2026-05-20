@@ -2,7 +2,7 @@ use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
 use crate::ir::{
     CanvasCommand, CanvasNode, ColorToken, DataTableCell, DataTableColumn, DataTableColumnWidth,
     DataTableNode, DataTableRow, DivNode, IrNode, ListItem, ScrollAxis, StyleColor, StyleOp,
-    TreeItem, TreeNode,
+    TreeItem, TreeNode, UniformListItem,
 };
 use gpui::{
     ListAlignment, ListState, Modifiers, MouseButton, Render, ScrollHandle, point, px, size,
@@ -239,6 +239,38 @@ fn simulated_list_row_button_click_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn simulated_uniform_list_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 51,
+        ir: IrNode::UniformList {
+            id: Some("uniform_items".into()),
+            items: vec![UniformListItem {
+                id: "item_1".into(),
+                label: "Item 1".into(),
+            }]
+            .into(),
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            item_style: Vec::new().into(),
+            click: None,
+            context_menu: Some("uniform_context".into()),
+        },
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_mouse_down(
+        point(px(10.), px(10.)),
+        MouseButton::Right,
+        Modifiers::none(),
+    );
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 51).unwrap();
+    assert_eq!(event.event, "context_menu");
+    assert_eq!(event.node_id.as_deref(), Some("uniform_items.item_1"));
+    assert_eq!(event.callback_id.as_deref(), Some("uniform_context"));
+}
+
+#[gpui::test]
 fn simulated_list_row_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 49,
@@ -390,6 +422,38 @@ fn simulated_text_input_context_menu_reaches_native_event_bridge(cx: &mut gpui::
     assert_eq!(event.view_id, 50);
     assert_eq!(event.node_id.as_deref(), Some("name_input"));
     assert_eq!(event.callback_id.as_deref(), Some("name_context"));
+}
+
+#[gpui::test]
+fn simulated_textarea_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 52,
+        ir: IrNode::Textarea {
+            id: Some("notes_input".into()),
+            value: "Notes".into(),
+            placeholder: "Notes".into(),
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            disabled: false,
+            tab_index: None,
+            change: None,
+            focus: None,
+            blur: None,
+            context_menu: Some("notes_context".into()),
+        },
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_mouse_down(
+        point(px(10.), px(10.)),
+        MouseButton::Right,
+        Modifiers::none(),
+    );
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 52).unwrap();
+    assert_eq!(event.event, "context_menu");
+    assert_eq!(event.node_id.as_deref(), Some("notes_input"));
+    assert_eq!(event.callback_id.as_deref(), Some("notes_context"));
 }
 
 #[gpui::test]
