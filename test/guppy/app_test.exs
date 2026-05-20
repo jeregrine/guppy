@@ -250,6 +250,32 @@ defmodule Guppy.AppTest do
     assert_receive {:app_command, "new_file", %{source: :context_menu, menu_id: "file_menu"}}
   end
 
+  test "app context menu returns focus to the source app window after selection" do
+    app_name = :"guppy_context_menu_focus_app_#{System.unique_integer([:positive])}"
+    {:ok, _pid} = start_supervised({Guppy.ContextMenuFocusApp, name: app_name, parent: self()})
+
+    window = %Guppy.Window{
+      assigns: %{
+        app: app_name,
+        id: "focus_menu",
+        items: [%{command: "new_file"}],
+        return_focus_to: "main"
+      }
+    }
+
+    assert {:stop, :normal, ^window} =
+             Guppy.App.ContextMenu.handle_event(
+               "run_context_menu_command",
+               %{id: "focus_menu.new_file"},
+               window
+             )
+
+    assert_receive {:fake_app_command, "new_file",
+                    %{source: :context_menu, menu_id: "focus_menu"}}
+
+    assert_receive {:fake_app_focus_window, "main"}
+  end
+
   test "app opens context menu as a transient popup window" do
     case Guppy.Native.Nif.load_status() do
       :ok ->

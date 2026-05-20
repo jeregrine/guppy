@@ -87,6 +87,37 @@ defmodule Guppy.KeepAliveOnLastWindowApp do
     windows: [%{id: "plain", module: Guppy.AppPlainWindow, start: false}]
 end
 
+defmodule Guppy.ContextMenuFocusApp do
+  use GenServer
+
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: Keyword.fetch!(opts, :name))
+  end
+
+  @impl GenServer
+  def init(opts), do: {:ok, %{parent: Keyword.fetch!(opts, :parent)}}
+
+  @impl GenServer
+  def handle_call(:commands, _from, state) do
+    commands = %{
+      "new_file" => %Guppy.App.Command{id: "new_file", label: "New File", enabled: true}
+    }
+
+    {:reply, commands, state}
+  end
+
+  def handle_call({:focus_window, window_id}, _from, state) do
+    send(state.parent, {:fake_app_focus_window, window_id})
+    {:reply, :ok, state}
+  end
+
+  @impl GenServer
+  def handle_cast({:dispatch_command, command_id, payload}, state) do
+    send(state.parent, {:fake_app_command, command_id, payload})
+    {:noreply, state}
+  end
+end
+
 defmodule Guppy.TestApp do
   use Guppy.App,
     windows: [

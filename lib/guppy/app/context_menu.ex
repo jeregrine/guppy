@@ -23,6 +23,7 @@ defmodule Guppy.App.ContextMenu do
      |> assign(:disabled_item_style, Map.get(arg, :disabled_item_style))
      |> assign(:separator_style, Map.get(arg, :separator_style))
      |> assign(:payload, Map.get(arg, :payload, %{}))
+     |> assign(:return_focus_to, Map.get(arg, :return_focus_to))
      |> put_window_opts(Map.get(arg, :window_options, default_window_options()))}
   end
 
@@ -48,6 +49,7 @@ defmodule Guppy.App.ContextMenu do
           |> Map.put(:menu_id, window.assigns.id)
 
         :ok = Guppy.App.dispatch(window.assigns.app, command_id, payload)
+        maybe_return_focus(window.assigns.app, Map.get(window.assigns, :return_focus_to))
         {:stop, :normal, window}
 
       :error ->
@@ -56,6 +58,13 @@ defmodule Guppy.App.ContextMenu do
   end
 
   def handle_event(@callback_id, _event, window), do: {:noreply, window, :skip_render}
+
+  defp maybe_return_focus(app, window_id) when is_binary(window_id) do
+    _ = Guppy.App.focus_window(app, window_id)
+    :ok
+  end
+
+  defp maybe_return_focus(_app, _window_id), do: :ok
 
   defp default_window_options do
     [

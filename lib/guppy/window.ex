@@ -179,6 +179,13 @@ defmodule Guppy.Window do
     view_id
   end
 
+  def focus(server, timeout \\ 5_000) do
+    case view_id(server) do
+      view_id when is_integer(view_id) -> Guppy.focus_window(view_id, timeout)
+      nil -> {:error, :unknown_view_id}
+    end
+  end
+
   def state(server) do
     %State{window: window} = :sys.get_state(server)
     window

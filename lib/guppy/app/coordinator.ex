@@ -118,6 +118,15 @@ defmodule Guppy.App.Coordinator do
     end
   end
 
+  def handle_call({:focus_window, window_id}, _from, state) do
+    state = refresh_windows(state)
+
+    case Map.fetch(state.windows, window_id) do
+      {:ok, %{pid: pid}} -> {:reply, Guppy.Window.focus(pid), state}
+      :error -> {:reply, {:error, :unknown_window_id}, state}
+    end
+  end
+
   def handle_call({:set_theme, theme}, _from, state) do
     case resolve_theme(state, theme) do
       {:ok, theme} -> {:reply, :ok, put_config(state, %{state.config | theme: theme})}

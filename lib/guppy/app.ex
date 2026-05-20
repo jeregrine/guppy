@@ -111,6 +111,13 @@ defmodule Guppy.App do
     call(app, {:close_window, window_id})
   end
 
+  @doc "Activates/focuses an app-owned window by string id."
+  def focus_window(window_id) when is_binary(window_id), do: focus_window(nil, window_id)
+
+  def focus_window(app, window_id) when is_binary(window_id) do
+    call(app, {:focus_window, window_id})
+  end
+
   @doc "Returns the native action callback id that routes shortcut actions to `handle_command/3`."
   def command_callback, do: @command_callback
 
@@ -183,6 +190,7 @@ defmodule Guppy.App do
           disabled_item_style: Keyword.get(opts, :disabled_item_style),
           separator_style: Keyword.get(opts, :separator_style),
           payload: Keyword.get(opts, :payload, %{}),
+          return_focus_to: Keyword.get(opts, :return_focus_to, default_context_menu_focus(app)),
           window_options: context_menu_window_options(opts)
         },
         restart: :temporary,
@@ -306,6 +314,12 @@ defmodule Guppy.App do
 
   defp context_menu_metadata(app) do
     transient_window_metadata(app, :context_menu)
+  end
+
+  defp default_context_menu_focus(app) do
+    if current_app() == app do
+      current_window_id()
+    end
   end
 
   defp transient_window_metadata(app, role) do
