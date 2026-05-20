@@ -21,7 +21,7 @@ These are the biggest missing pieces for building real desktop apps. Add them as
 - [x] Clipboard APIs: read/write text, later images/files if GPUI/platform support is practical; define permission/error behavior.
 - [ ] App/window lifecycle events: app activated/deactivated, hidden/unhidden, window focused/blurred, moved/resized if available and useful.
 - [ ] Notifications/badges where platform support is practical; keep optional and well-documented.
-- [ ] Dock/system menu follow-ups: dock menus, Services submenu, and dynamic menu enablement only after the command model is in place.
+- [x] Dock/system menu follow-ups: dock menus, Services submenu, and dynamic menu enablement only after the command model is in place.
 
 ## Priority 2: Overlay, popover, and select hardening
 
