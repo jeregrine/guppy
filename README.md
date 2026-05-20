@@ -264,7 +264,7 @@ Helpers imported by `use Guppy.Window` include:
 
 `Guppy.Window` monitors the Guppy runtime server. If the supervised server restarts, the window process reopens from its current assigns. Lower-level callers using `Guppy.open_window/1..3` own their own recovery policy.
 
-Preferred `Guppy.Window` modules treat `window_closed` as lifecycle-driving today. `window_close_requested` remains informational for lower-level owners and is not exposed as a veto callback by `Guppy.Window`.
+Preferred `Guppy.Window` modules may handle `"window_focused"`, `"window_blurred"`, `"window_moved"`, and `"window_resized"` in `handle_event/3`; `window_closed` remains lifecycle-driving and stops the window process. `window_close_requested` remains informational for lower-level owners and is not exposed as a veto callback by `Guppy.Window`.
 
 ## Templates and components
 

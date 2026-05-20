@@ -8,6 +8,21 @@ defmodule Guppy.DefaultCallbackWindow do
   def render(_window), do: Guppy.IR.text("default callback window")
 end
 
+defmodule Guppy.LifecycleCallbackWindow do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(:ok, window), do: {:ok, window}
+
+  @impl Guppy.Window
+  def render(_window), do: Guppy.IR.text("lifecycle callback window")
+
+  @impl Guppy.Window
+  def handle_event(name, event_data, window) when name in ["window_focused", "window_resized"] do
+    {:noreply, assign(window, :last_lifecycle, {name, event_data}), :skip_render}
+  end
+end
+
 defmodule Guppy.WindowTest do
   use ExUnit.Case
 
@@ -60,6 +75,24 @@ defmodule Guppy.WindowTest do
              Guppy.Window.handle_window_message(Guppy.DefaultCallbackWindow, :ignored, state)
 
     assert message_state.window.assigns == %{mounted: true}
+  end
+
+  test "Guppy.Window routes window lifecycle events to handle_event by type name" do
+    state = %Guppy.Window.State{
+      module: Guppy.LifecycleCallbackWindow,
+      window: %Guppy.Window{view_id: 123, assigns: %{}},
+      server_monitor: nil
+    }
+
+    assert {:noreply, next_state} =
+             Guppy.Window.handle_window_message(
+               Guppy.LifecycleCallbackWindow,
+               {:guppy_event, 123, %{type: :window_resized, width: 800.0, height: 600.0}},
+               state
+             )
+
+    assert next_state.window.assigns.last_lifecycle ==
+             {"window_resized", %{width: 800.0, height: 600.0}}
   end
 
   test "Guppy.Window skips rerender while reopen retry has no native view" do

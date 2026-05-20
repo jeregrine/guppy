@@ -155,6 +155,10 @@ defmodule Guppy.Window do
         %{callback: callback} when is_binary(callback) ->
           invoke_callback(module, :handle_event, [callback, event_data(event), window])
 
+        %{type: type}
+        when type in [:window_focused, :window_blurred, :window_moved, :window_resized] ->
+          invoke_callback(module, :handle_event, [Atom.to_string(type), event_data(event), window])
+
         _ ->
           {:noreply, window, :skip_render}
       end

@@ -222,10 +222,10 @@ Current `Guppy.Window` callback shape:
 
 - `mount(arg, window)`
 - `render(window)`
-- optional `handle_event(event_name, event_data, window)`
+- optional `handle_event(event_name, event_data, window)` (including `"window_focused"`, `"window_blurred"`, `"window_moved"`, and `"window_resized"` lifecycle events)
 - optional/conventional `handle_info(message, window)` without `@impl Guppy.Window`
 
-`use Guppy.Window` generates `child_spec/1`; missing optional callbacks and unmatched callback clauses are no-op handlers that skip rerendering. Preferred `Guppy.Window` modules currently drive lifecycle from `window_closed`; `window_close_requested` remains lower-level informational state and is not exposed as a veto callback.
+`use Guppy.Window` generates `child_spec/1`; missing optional callbacks and unmatched callback clauses are no-op handlers that skip rerendering. Preferred `Guppy.Window` modules currently drive close lifecycle from `window_closed`; `window_close_requested` remains lower-level informational state and is not exposed as a veto callback.
 
 ## Window options
 
