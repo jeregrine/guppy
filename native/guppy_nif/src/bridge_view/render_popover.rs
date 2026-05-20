@@ -3,8 +3,8 @@ use crate::bridge_view::BridgeView;
 use crate::ir::{DivStyle, IrNode, PopoverAnchor, PopoverAnchorFit, PopoverAnchorPositionMode};
 use gpui::{
     AnchoredPositionMode, AnyElement, Context, Corner, InteractiveElement, IntoElement,
-    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, anchored, deferred,
-    div, point, px, rgb,
+    KeyDownEvent, ParentElement, SharedString, StatefulInteractiveElement, Styled, Window,
+    anchored, deferred, div, point, px, rgb,
 };
 
 pub(crate) struct PopoverSpec<'a> {
@@ -38,6 +38,12 @@ pub(crate) fn render(
     let node_id = NodeIdentity::new(view_id, spec.path, spec.id);
     let node_key = node_id.to_string();
 
+    let focus_handle = if spec.disabled {
+        None
+    } else {
+        Some(pass.ensure_focus_handle(&node_key, cx, Some(true), None))
+    };
+
     let mut trigger = apply_div_style(
         div()
             .id(node_id.to_shared_string())
@@ -58,6 +64,21 @@ pub(crate) fn render(
             .child(spec.label.to_owned()),
         spec.style,
     );
+
+    if let Some(handle) = focus_handle.as_ref() {
+        let handle = handle.clone();
+        trigger =
+            trigger
+                .track_focus(&handle)
+                .focusable()
+                .on_any_mouse_down(move |_, window, _| {
+                    handle.focus(window);
+                });
+    }
+
+    if !spec.disabled {
+        trigger = attach_keyboard_actions(trigger, view_id, &node_key, &spec);
+    }
 
     if !spec.disabled
         && let Some(callback_id) = spec.click
@@ -136,6 +157,65 @@ fn build_anchored_popover(spec: &PopoverSpec<'_>) -> gpui::Anchored {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum PopoverKeyboardAction {
+    Toggle,
+    Close,
+}
+
+fn attach_keyboard_actions(
+    mut trigger: gpui::Stateful<gpui::Div>,
+    view_id: u64,
+    node_key: &str,
+    spec: &PopoverSpec<'_>,
+) -> gpui::Stateful<gpui::Div> {
+    let click = spec.click.map(str::to_owned);
+    let close = spec.close.map(str::to_owned);
+    let open = spec.open;
+    let key_node_id = node_key.to_owned();
+
+    if click.is_some() || close.is_some() {
+        trigger = trigger.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            let Some(action) = popover_keyboard_action(event, open) else {
+                return;
+            };
+
+            let emitted = match action {
+                PopoverKeyboardAction::Toggle => {
+                    if let Some(callback_id) = click.as_ref() {
+                        events::emit_click(view_id, &key_node_id, callback_id);
+                        true
+                    } else {
+                        false
+                    }
+                }
+                PopoverKeyboardAction::Close => {
+                    if let Some(callback_id) = close.as_ref() {
+                        events::emit_close(view_id, &key_node_id, callback_id);
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+
+            if emitted {
+                cx.stop_propagation();
+            }
+        });
+    }
+
+    trigger
+}
+
+fn popover_keyboard_action(event: &KeyDownEvent, open: bool) -> Option<PopoverKeyboardAction> {
+    match event.keystroke.key.as_str() {
+        "space" | "enter" => Some(PopoverKeyboardAction::Toggle),
+        "escape" if open => Some(PopoverKeyboardAction::Close),
+        _ => None,
+    }
+}
+
 fn to_gpui_corner(anchor: PopoverAnchor) -> Corner {
     match anchor {
         PopoverAnchor::TopLeft => Corner::TopLeft,
@@ -154,8 +234,27 @@ fn to_gpui_position_mode(mode: PopoverAnchorPositionMode) -> AnchoredPositionMod
 
 #[cfg(test)]
 mod tests {
-    use super::PopoverSpec;
+    use super::{PopoverKeyboardAction, PopoverSpec, popover_keyboard_action};
     use crate::ir::{PopoverAnchor, PopoverAnchorFit, PopoverAnchorPositionMode};
+    use gpui::{KeyDownEvent, Keystroke};
+
+    #[test]
+    fn popover_keyboard_action_matches_toggle_and_escape() {
+        assert_eq!(
+            popover_keyboard_action(&key_event("space"), false),
+            Some(PopoverKeyboardAction::Toggle)
+        );
+        assert_eq!(
+            popover_keyboard_action(&key_event("enter"), true),
+            Some(PopoverKeyboardAction::Toggle)
+        );
+        assert_eq!(
+            popover_keyboard_action(&key_event("escape"), true),
+            Some(PopoverKeyboardAction::Close)
+        );
+        assert_eq!(popover_keyboard_action(&key_event("escape"), false), None);
+        assert_eq!(popover_keyboard_action(&key_event("down"), true), None);
+    }
 
     #[test]
     fn popover_spec_tracks_open_and_callbacks() {
@@ -189,5 +288,12 @@ mod tests {
         assert!(!spec.close_on_click_outside);
         assert_eq!(spec.click, Some("open_menu"));
         assert_eq!(spec.close, Some("close_menu"));
+    }
+
+    fn key_event(key: &str) -> KeyDownEvent {
+        KeyDownEvent {
+            keystroke: Keystroke::parse(key).unwrap(),
+            is_held: false,
+        }
     }
 }
