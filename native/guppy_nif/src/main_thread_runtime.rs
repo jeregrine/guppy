@@ -6,18 +6,22 @@ use crate::window_options::WindowOptionsConfig;
 use async_task::spawn;
 #[cfg(target_os = "macos")]
 use cocoa::{
-    appkit::NSApp,
-    base::{id, nil},
-    foundation::{NSAutoreleasePool, NSString},
+    appkit::{NSApp, NSModalResponse, NSOpenPanel, NSSavePanel},
+    base::{BOOL, NO, YES, id, nil},
+    foundation::{NSArray, NSAutoreleasePool, NSString, NSURL},
 };
-use gpui::{
-    App, AppContext, Application, AsyncApp, ClipboardItem, PathPromptOptions, PlatformDispatcher,
-    SharedString,
-};
+use gpui::{App, AppContext, Application, AsyncApp, ClipboardItem, PlatformDispatcher};
+#[cfg(not(target_os = "macos"))]
+use gpui::{PathPromptOptions, SharedString};
 #[cfg(target_os = "macos")]
 use objc::{msg_send, sel, sel_impl};
 use std::cell::RefCell;
 use std::collections::HashMap;
+#[cfg(target_os = "macos")]
+use std::ffi::CStr;
+#[cfg(target_os = "macos")]
+use std::os::raw::c_char;
+#[cfg(not(target_os = "macos"))]
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -110,6 +114,8 @@ pub(crate) enum MainThreadRequest {
         directories: bool,
         multiple: bool,
         prompt: Option<String>,
+        directory: Option<String>,
+        filters: Vec<String>,
         owner_view_id: Option<u64>,
         reply: Sender<Result<Option<Vec<String>>, ()>>,
     },
@@ -117,6 +123,7 @@ pub(crate) enum MainThreadRequest {
         deadline: RequestDeadline,
         directory: Option<String>,
         default_name: Option<String>,
+        filters: Vec<String>,
         owner_view_id: Option<u64>,
         reply: Sender<Result<Option<String>, ()>>,
     },
@@ -415,6 +422,8 @@ pub fn open_file_dialog(
     directories: bool,
     multiple: bool,
     prompt: Option<String>,
+    directory: Option<String>,
+    filters: Vec<String>,
     owner_view_id: Option<u64>,
     reply: Sender<Result<Option<Vec<String>>, ()>>,
 ) {
@@ -429,37 +438,66 @@ pub fn open_file_dialog(
             return;
         }
 
-        let options = PathPromptOptions {
-            files,
-            directories,
-            multiple,
-            prompt: prompt.map(SharedString::from),
-        };
+        #[cfg(target_os = "macos")]
+        let _ = app;
 
-        let receiver = match app.update(move |cx| cx.prompt_for_paths(options)) {
-            Ok(receiver) => receiver,
-            Err(_) => {
+        #[cfg(target_os = "macos")]
+        {
+            let result = run_open_file_dialog_macos(
+                files,
+                directories,
+                multiple,
+                prompt,
+                directory,
+                filters,
+            );
+
+            if !deadline.expired() {
+                let _ = reply.send(result);
+            }
+
+            return;
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            if directory.is_some() || !filters.is_empty() {
                 let _ = reply.send(Err(()));
                 return;
             }
-        };
 
-        let executor = app.background_executor().clone();
-        executor
-            .spawn(async move {
-                let result = match receiver.await {
-                    Ok(Ok(Some(paths))) => {
-                        Ok(Some(paths.into_iter().map(path_to_string).collect()))
-                    }
-                    Ok(Ok(None)) => Ok(None),
-                    Ok(Err(_)) | Err(_) => Err(()),
-                };
+            let options = PathPromptOptions {
+                files,
+                directories,
+                multiple,
+                prompt: prompt.map(SharedString::from),
+            };
 
-                if !deadline.expired() {
-                    let _ = reply.send(result);
+            let receiver = match app.update(move |cx| cx.prompt_for_paths(options)) {
+                Ok(receiver) => receiver,
+                Err(_) => {
+                    let _ = reply.send(Err(()));
+                    return;
                 }
-            })
-            .detach();
+            };
+
+            let executor = app.background_executor().clone();
+            executor
+                .spawn(async move {
+                    let result = match receiver.await {
+                        Ok(Ok(Some(paths))) => {
+                            Ok(Some(paths.into_iter().map(path_to_string).collect()))
+                        }
+                        Ok(Ok(None)) => Ok(None),
+                        Ok(Err(_)) | Err(_) => Err(()),
+                    };
+
+                    if !deadline.expired() {
+                        let _ = reply.send(result);
+                    }
+                })
+                .detach();
+        }
     });
 }
 
@@ -467,6 +505,7 @@ pub fn save_file_dialog(
     deadline: RequestDeadline,
     directory: Option<String>,
     default_name: Option<String>,
+    filters: Vec<String>,
     owner_view_id: Option<u64>,
     reply: Sender<Result<Option<String>, ()>>,
 ) {
@@ -481,36 +520,188 @@ pub fn save_file_dialog(
             return;
         }
 
-        let directory = directory
-            .map(PathBuf::from)
-            .or_else(|| std::env::current_dir().ok())
-            .unwrap_or_else(|| PathBuf::from("."));
+        #[cfg(target_os = "macos")]
+        let _ = app;
 
-        let receiver = match app.update(move |cx| {
-            cx.prompt_for_new_path(Path::new(&directory), default_name.as_deref())
-        }) {
-            Ok(receiver) => receiver,
-            Err(_) => {
+        #[cfg(target_os = "macos")]
+        {
+            let result = run_save_file_dialog_macos(directory, default_name, filters);
+
+            if !deadline.expired() {
+                let _ = reply.send(result);
+            }
+
+            return;
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            if !filters.is_empty() {
                 let _ = reply.send(Err(()));
                 return;
             }
-        };
 
-        let executor = app.background_executor().clone();
-        executor
-            .spawn(async move {
-                let result = match receiver.await {
-                    Ok(Ok(Some(path))) => Ok(Some(path_to_string(path))),
-                    Ok(Ok(None)) => Ok(None),
-                    Ok(Err(_)) | Err(_) => Err(()),
-                };
+            let directory = directory
+                .map(PathBuf::from)
+                .or_else(|| std::env::current_dir().ok())
+                .unwrap_or_else(|| PathBuf::from("."));
 
-                if !deadline.expired() {
-                    let _ = reply.send(result);
+            let receiver = match app.update(move |cx| {
+                cx.prompt_for_new_path(Path::new(&directory), default_name.as_deref())
+            }) {
+                Ok(receiver) => receiver,
+                Err(_) => {
+                    let _ = reply.send(Err(()));
+                    return;
                 }
-            })
-            .detach();
+            };
+
+            let executor = app.background_executor().clone();
+            executor
+                .spawn(async move {
+                    let result = match receiver.await {
+                        Ok(Ok(Some(path))) => Ok(Some(path_to_string(path))),
+                        Ok(Ok(None)) => Ok(None),
+                        Ok(Err(_)) | Err(_) => Err(()),
+                    };
+
+                    if !deadline.expired() {
+                        let _ = reply.send(result);
+                    }
+                })
+                .detach();
+        }
     });
+}
+
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+fn run_open_file_dialog_macos(
+    files: bool,
+    directories: bool,
+    multiple: bool,
+    prompt: Option<String>,
+    directory: Option<String>,
+    filters: Vec<String>,
+) -> Result<Option<Vec<String>>, ()> {
+    unsafe {
+        let panel = NSOpenPanel::openPanel(nil);
+        panel.setCanChooseDirectories_(objc_bool(directories));
+        panel.setCanChooseFiles_(objc_bool(files));
+        panel.setAllowsMultipleSelection_(objc_bool(multiple));
+        panel.setCanCreateDirectories(objc_bool(true));
+        panel.setResolvesAliases_(objc_bool(false));
+
+        if let Some(prompt) = prompt.as_deref() {
+            let _: () = msg_send![panel, setPrompt: ns_string(prompt)];
+        }
+
+        set_panel_directory(panel, directory.as_deref());
+        set_allowed_file_types(panel, &filters);
+
+        let response: NSModalResponse = msg_send![panel, runModal];
+        if response != NSModalResponse::NSModalResponseOk {
+            return Ok(None);
+        }
+
+        let urls = panel.URLs();
+        let mut paths = Vec::new();
+        for index in 0..urls.count() {
+            let url = urls.objectAtIndex(index);
+            if let Some(path) = ns_url_to_path_string(url) {
+                paths.push(path);
+            }
+        }
+
+        Ok(Some(paths))
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+fn run_save_file_dialog_macos(
+    directory: Option<String>,
+    default_name: Option<String>,
+    filters: Vec<String>,
+) -> Result<Option<String>, ()> {
+    unsafe {
+        let panel = NSSavePanel::savePanel(nil);
+        set_panel_directory(panel, directory.as_deref());
+        set_allowed_file_types(panel, &filters);
+
+        if let Some(default_name) = default_name.as_deref() {
+            let _: () = msg_send![panel, setNameFieldStringValue: ns_string(default_name)];
+        }
+
+        let response: NSModalResponse = msg_send![panel, runModal];
+        if response != NSModalResponse::NSModalResponseOk {
+            return Ok(None);
+        }
+
+        let url: id = msg_send![panel, URL];
+        Ok(ns_url_to_path_string(url))
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+unsafe fn set_panel_directory(panel: id, directory: Option<&str>) {
+    if let Some(directory) = directory {
+        unsafe {
+            let path = ns_string(directory);
+            let url = NSURL::fileURLWithPath_isDirectory_(nil, path, objc_bool(true));
+            let _: () = msg_send![panel, setDirectoryURL: url];
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+unsafe fn set_allowed_file_types(panel: id, filters: &[String]) {
+    if filters.is_empty() {
+        return;
+    }
+
+    unsafe {
+        let objects = filters
+            .iter()
+            .map(|filter| ns_string(filter))
+            .collect::<Vec<_>>();
+        let file_types = NSArray::arrayWithObjects(nil, &objects);
+        let _: () = msg_send![panel, setAllowedFileTypes: file_types];
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+unsafe fn ns_url_to_path_string(url: id) -> Option<String> {
+    if url == nil {
+        return None;
+    }
+
+    unsafe {
+        let path: id = msg_send![url, path];
+        if path == nil {
+            return None;
+        }
+
+        let bytes: *const c_char = msg_send![path, UTF8String];
+        if bytes.is_null() {
+            return None;
+        }
+
+        Some(CStr::from_ptr(bytes).to_string_lossy().into_owned())
+    }
+}
+
+#[cfg(target_os = "macos")]
+unsafe fn ns_string(string: &str) -> id {
+    unsafe { NSString::alloc(nil).init_str(string).autorelease() }
+}
+
+#[cfg(target_os = "macos")]
+fn objc_bool(value: bool) -> BOOL {
+    if value { YES } else { NO }
 }
 
 fn owner_view_id_exists(owner_view_id: Option<u64>) -> bool {
@@ -520,6 +711,7 @@ fn owner_view_id_exists(owner_view_id: Option<u64>) -> bool {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn path_to_string(path: PathBuf) -> String {
     path.to_string_lossy().into_owned()
 }
@@ -702,6 +894,8 @@ fn handle_request(request: MainThreadRequest) {
             directories,
             multiple,
             prompt,
+            directory,
+            filters,
             owner_view_id,
             reply,
         } => {
@@ -712,6 +906,8 @@ fn handle_request(request: MainThreadRequest) {
                     directories,
                     multiple,
                     prompt,
+                    directory,
+                    filters,
                     owner_view_id,
                     reply,
                 );
@@ -721,11 +917,19 @@ fn handle_request(request: MainThreadRequest) {
             deadline,
             directory,
             default_name,
+            filters,
             owner_view_id,
             reply,
         } => {
             if !deadline.expired() {
-                save_file_dialog(deadline, directory, default_name, owner_view_id, reply);
+                save_file_dialog(
+                    deadline,
+                    directory,
+                    default_name,
+                    filters,
+                    owner_view_id,
+                    reply,
+                );
             }
         }
         MainThreadRequest::ReadClipboardText { deadline, reply } => {

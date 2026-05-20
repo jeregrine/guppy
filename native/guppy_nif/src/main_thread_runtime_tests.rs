@@ -59,6 +59,8 @@ fn expired_file_dialog_requests_do_not_reply() {
         directories: false,
         multiple: true,
         prompt: Some("Open".into()),
+        directory: Some("/tmp".into()),
+        filters: vec!["ex".into()],
         owner_view_id: Some(123),
         reply: open_reply,
     });
@@ -70,6 +72,7 @@ fn expired_file_dialog_requests_do_not_reply() {
         deadline: RequestDeadline::after(Duration::from_millis(0)),
         directory: Some("/tmp".into()),
         default_name: Some("guppy.txt".into()),
+        filters: vec!["txt".into()],
         owner_view_id: Some(123),
         reply: save_reply,
     });

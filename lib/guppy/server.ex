@@ -857,9 +857,18 @@ defmodule Guppy.Server do
     do: opts |> Map.new() |> validate_open_file_dialog_options(state, caller, mode)
 
   defp validate_open_file_dialog_options(opts, state, caller, mode) when is_map(opts) do
-    with :ok <- validate_file_dialog_keys(opts, [:multiple, :prompt, :owner_view_id]),
+    with :ok <-
+           validate_file_dialog_keys(opts, [
+             :multiple,
+             :prompt,
+             :directory,
+             :filters,
+             :owner_view_id
+           ]),
          {:ok, multiple} <- validate_optional_boolean(Map.get(opts, :multiple, false), :multiple),
          {:ok, prompt} <- validate_optional_string(Map.get(opts, :prompt), :prompt),
+         {:ok, directory} <- validate_optional_string(Map.get(opts, :directory), :directory),
+         {:ok, filters} <- validate_file_dialog_filters(Map.get(opts, :filters)),
          {:ok, owner_view_id} <- validate_file_dialog_owner_view_id(state, caller, opts) do
       {:ok,
        %{
@@ -868,6 +877,8 @@ defmodule Guppy.Server do
          multiple: multiple
        }
        |> maybe_put_window_option(:prompt, prompt)
+       |> maybe_put_window_option(:directory, directory)
+       |> maybe_put_window_option(:filters, filters)
        |> maybe_put_window_option(:owner_view_id, owner_view_id)}
     else
       {:error, :unknown_view_id} -> {:error, :unknown_view_id}
@@ -883,15 +894,18 @@ defmodule Guppy.Server do
     do: opts |> Map.new() |> validate_save_file_dialog_options(state, caller)
 
   defp validate_save_file_dialog_options(opts, state, caller) when is_map(opts) do
-    with :ok <- validate_file_dialog_keys(opts, [:directory, :default_name, :owner_view_id]),
+    with :ok <-
+           validate_file_dialog_keys(opts, [:directory, :default_name, :filters, :owner_view_id]),
          {:ok, directory} <- validate_optional_string(Map.get(opts, :directory), :directory),
          {:ok, default_name} <-
            validate_optional_string(Map.get(opts, :default_name), :default_name),
+         {:ok, filters} <- validate_file_dialog_filters(Map.get(opts, :filters)),
          {:ok, owner_view_id} <- validate_file_dialog_owner_view_id(state, caller, opts) do
       {:ok,
        %{}
        |> maybe_put_window_option(:directory, directory)
        |> maybe_put_window_option(:default_name, default_name)
+       |> maybe_put_window_option(:filters, filters)
        |> maybe_put_window_option(:owner_view_id, owner_view_id)}
     else
       {:error, :unknown_view_id} -> {:error, :unknown_view_id}
@@ -902,6 +916,19 @@ defmodule Guppy.Server do
 
   defp validate_save_file_dialog_options(_opts, _state, _caller),
     do: {:error, :invalid_file_dialog_options}
+
+  defp validate_file_dialog_filters(nil), do: {:ok, nil}
+  defp validate_file_dialog_filters([]), do: {:ok, nil}
+
+  defp validate_file_dialog_filters(filters) when is_list(filters) do
+    if Enum.all?(filters, &(is_binary(&1) and &1 != "")) do
+      {:ok, filters}
+    else
+      {:error, :invalid_file_dialog_options}
+    end
+  end
+
+  defp validate_file_dialog_filters(_filters), do: {:error, :invalid_file_dialog_options}
 
   defp validate_file_dialog_owner_view_id(state, caller, opts) do
     case Map.fetch(opts, :owner_view_id) do

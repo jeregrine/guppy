@@ -373,6 +373,8 @@ fn native_open_file_dialog<'a>(
     directories: bool,
     multiple: bool,
     prompt: Option<String>,
+    directory: Option<String>,
+    filters: Vec<String>,
     owner_view_id: Option<u64>,
     timeout_ms: u64,
 ) -> Term<'a> {
@@ -383,6 +385,8 @@ fn native_open_file_dialog<'a>(
             directories,
             multiple,
             prompt,
+            directory,
+            filters,
             owner_view_id,
             reply,
         }
@@ -402,6 +406,7 @@ fn native_save_file_dialog<'a>(
     env: Env<'a>,
     directory: Option<String>,
     default_name: Option<String>,
+    filters: Vec<String>,
     owner_view_id: Option<u64>,
     timeout_ms: u64,
 ) -> Term<'a> {
@@ -410,6 +415,7 @@ fn native_save_file_dialog<'a>(
             deadline,
             directory,
             default_name,
+            filters,
             owner_view_id,
             reply,
         }

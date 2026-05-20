@@ -140,7 +140,13 @@ defmodule Guppy.ServerNativeTest do
     assert {:ok, :pong} =
              Guppy.Server.open_file_dialog(
                server,
-               [multiple: true, prompt: "Open files", owner_view_id: view_id],
+               [
+                 multiple: true,
+                 prompt: "Open files",
+                 directory: "/tmp",
+                 filters: ["ex", "exs"],
+                 owner_view_id: view_id
+               ],
                37
              )
 
@@ -152,6 +158,8 @@ defmodule Guppy.ServerNativeTest do
                          directories: false,
                          multiple: true,
                          prompt: "Open files",
+                         directory: "/tmp",
+                         filters: ["ex", "exs"],
                          owner_view_id: ^view_id
                        }
                      ]}, 37}
@@ -165,20 +173,34 @@ defmodule Guppy.ServerNativeTest do
     assert {:ok, :pong} =
              Guppy.Server.save_file_dialog(
                server,
-               [directory: "/tmp", default_name: "guppy.txt", owner_view_id: view_id],
+               [
+                 directory: "/tmp",
+                 default_name: "guppy.txt",
+                 filters: ["txt"],
+                 owner_view_id: view_id
+               ],
                39
              )
 
     assert_receive {:guppy_test_native_request,
                     {:save_file_dialog,
-                     [%{directory: "/tmp", default_name: "guppy.txt", owner_view_id: ^view_id}]},
-                    39}
+                     [
+                       %{
+                         directory: "/tmp",
+                         default_name: "guppy.txt",
+                         filters: ["txt"],
+                         owner_view_id: ^view_id
+                       }
+                     ]}, 39}
 
     assert {:error, :unknown_view_id} =
              Guppy.Server.open_file_dialog(server, [owner_view_id: view_id + 1], 37)
 
     assert {:error, :invalid_file_dialog_options} =
              Guppy.Server.open_file_dialog(server, [multiple: :yes], 37)
+
+    assert {:error, :invalid_file_dialog_options} =
+             Guppy.Server.save_file_dialog(server, [filters: [""]], 37)
 
     refute_receive {:guppy_test_native_request, {:open_file_dialog, _}, _}
   end

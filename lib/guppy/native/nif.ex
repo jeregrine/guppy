@@ -114,11 +114,20 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
-  def native_open_file_dialog(_files, _directories, _multiple, _prompt, _owner_view_id, _timeout) do
+  def native_open_file_dialog(
+        _files,
+        _directories,
+        _multiple,
+        _prompt,
+        _directory,
+        _filters,
+        _owner_view_id,
+        _timeout
+      ) do
     {:error, :nif_not_loaded}
   end
 
-  def native_save_file_dialog(_directory, _default_name, _owner_view_id, _timeout) do
+  def native_save_file_dialog(_directory, _default_name, _filters, _owner_view_id, _timeout) do
     {:error, :nif_not_loaded}
   end
 
@@ -249,6 +258,8 @@ defmodule Guppy.Native.Nif do
             Map.fetch!(opts, :directories),
             Map.fetch!(opts, :multiple),
             Map.get(opts, :prompt),
+            Map.get(opts, :directory),
+            Map.get(opts, :filters, []),
             Map.get(opts, :owner_view_id),
             timeout
           )
@@ -264,6 +275,7 @@ defmodule Guppy.Native.Nif do
           native_save_file_dialog(
             Map.get(opts, :directory),
             Map.get(opts, :default_name),
+            Map.get(opts, :filters, []),
             Map.get(opts, :owner_view_id),
             timeout
           )
