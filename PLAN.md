@@ -20,7 +20,7 @@ These are the biggest missing pieces for building real desktop apps. Add them as
 - [ ] File dialogs: open file(s), save file, choose directory, filters, default paths/names, cancellation semantics, and owner-window association.
 - [x] Clipboard APIs: read/write text, later images/files if GPUI/platform support is practical; define permission/error behavior.
 - [ ] App/window lifecycle events: app activated/deactivated, hidden/unhidden, window focused/blurred, moved/resized if available and useful.
-- [ ] Notifications/badges where platform support is practical; keep optional and well-documented.
+- [x] Notifications/badges where platform support is practical; app/Dock badge labels are process-owned and app-owned, while desktop notifications are documented as deferred because GPUI 0.2.2 exposes no notification API.
 - [x] Dock/system menu follow-ups: dock menus, Services submenu, and dynamic menu enablement only after the command model is in place.
 
 ## Priority 2: Overlay, popover, and select hardening
