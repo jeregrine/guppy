@@ -4,7 +4,7 @@ use crate::ir::{
     DataTableNode, DataTableRow, DivNode, IrNode, ListItem, ScrollAxis, StyleColor, StyleOp,
     TreeItem, TreeNode,
 };
-use gpui::{ListAlignment, ListState, Modifiers, Render, ScrollHandle, point, px};
+use gpui::{ListAlignment, ListState, Modifiers, MouseButton, Render, ScrollHandle, point, px};
 
 #[test]
 fn prune_retained_state_drops_dead_scroll_handles() {
@@ -113,6 +113,29 @@ fn simulated_canvas_click_reaches_native_event_bridge(cx: &mut gpui::TestAppCont
     let after = crate::native_event_send_snapshot_for_test();
     assert!(after.0 > before.0);
     assert!(after.1 > before.1);
+}
+
+#[gpui::test]
+fn simulated_canvas_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+    let _ = crate::take_basic_event_snapshot_for_test();
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 47,
+        ir: canvas_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_mouse_down(
+        point(px(10.), px(10.)),
+        MouseButton::Right,
+        Modifiers::none(),
+    );
+
+    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "context_menu");
+    assert_eq!(event.view_id, 47);
+    assert_eq!(event.node_id.as_deref(), Some("summary_canvas"));
+    assert_eq!(event.callback_id.as_deref(), Some("canvas_context_menu"));
 }
 
 #[gpui::test]
@@ -492,6 +515,7 @@ fn canvas_ir() -> IrNode {
         .into(),
         style: vec![StyleOp::WPx(120.0), StyleOp::HPx(80.0)].into(),
         click: Some("canvas_clicked".into()),
+        context_menu: Some("canvas_context_menu".into()),
     }))
 }
 

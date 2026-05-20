@@ -708,7 +708,13 @@ fn decodes_canvas_commands() {
                 ]),
             ]),
         ),
-        (atom("events"), events(vec![("click", "canvas_clicked")])),
+        (
+            atom("events"),
+            events(vec![
+                ("click", "canvas_clicked"),
+                ("context_menu", "canvas_context_menu"),
+            ]),
+        ),
     ]);
 
     match IrNode::from_term(&node).unwrap() {
@@ -724,6 +730,7 @@ fn decodes_canvas_commands() {
                 } if line_width == 0.05 && interval == 0.12
             ));
             assert_eq!(canvas.click.as_deref(), Some("canvas_clicked"));
+            assert_eq!(canvas.context_menu.as_deref(), Some("canvas_context_menu"));
         }
         other => panic!("expected canvas, got {other:?}"),
     }

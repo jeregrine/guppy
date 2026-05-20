@@ -8,9 +8,8 @@ use crate::{
     ir::{CanvasCommand, CanvasNode},
 };
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement,
-    StatefulInteractiveElement, Styled, Window, bounds, canvas, div, fill, pattern_slash, point,
-    px, size,
+    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, Styled,
+    Window, bounds, canvas, div, fill, pattern_slash, point, px, size,
 };
 
 pub(crate) fn render(
@@ -41,8 +40,17 @@ pub(crate) fn render(
 
     if let Some(callback_id) = node.click.as_ref() {
         let callback_id = callback_id.clone();
-        wrapper = wrapper.on_click(move |_, _, _| {
-            events::emit_click(view_id, &canvas_id, &callback_id);
+        let click_canvas_id = canvas_id.clone();
+        wrapper = wrapper.on_mouse_down(MouseButton::Left, move |_, _, _| {
+            events::emit_click(view_id, &click_canvas_id, &callback_id);
+        });
+    }
+
+    if let Some(callback_id) = node.context_menu.as_ref() {
+        let callback_id = callback_id.clone();
+        let context_canvas_id = canvas_id.clone();
+        wrapper = wrapper.on_mouse_down(MouseButton::Right, move |event, _, _| {
+            events::emit_context_menu(view_id, &context_canvas_id, &callback_id, event);
         });
     }
 
@@ -140,5 +148,25 @@ mod tests {
         events::emit_click(11, "summary_canvas", "canvas_clicked");
         let after = crate::native_event_send_snapshot_for_test();
         assert!(after.0 > 0);
+    }
+
+    #[test]
+    fn canvas_context_menu_event_uses_canvas_identity() {
+        use gpui::{KeyDownEvent, Keystroke};
+
+        events::emit_keyboard_context_menu(
+            11,
+            "summary_canvas",
+            "canvas_context_menu",
+            &KeyDownEvent {
+                keystroke: Keystroke::parse("shift-f10").expect("valid keystroke"),
+                is_held: false,
+            },
+        );
+
+        let event = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(event.event, "context_menu");
+        assert_eq!(event.node_id.as_deref(), Some("summary_canvas"));
+        assert_eq!(event.callback_id.as_deref(), Some("canvas_context_menu"));
     }
 }

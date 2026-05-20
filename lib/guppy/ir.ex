@@ -683,7 +683,7 @@ defmodule Guppy.IR do
   @type canvas_command ::
           canvas_rect_command() | canvas_rounded_rect_command() | canvas_pattern_rect_command()
 
-  @type canvas_events :: %{optional(:click) => String.t()}
+  @type canvas_events :: %{optional(:click) => String.t(), optional(:context_menu) => String.t()}
 
   @type canvas_node :: %{
           required(:kind) => :canvas,
@@ -1785,7 +1785,7 @@ defmodule Guppy.IR do
     with :ok <- validate_node_keys(node),
          :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
-         :ok <- validate_events(Map.get(node, :events), [:click]),
+         :ok <- validate_events(Map.get(node, :events), [:click, :context_menu]),
          :ok <- validate_canvas_commands(commands) do
       :ok
     end

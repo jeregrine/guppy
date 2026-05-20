@@ -396,7 +396,7 @@ defmodule Guppy.ComponentTest do
     assert canvas.kind == :canvas
     assert canvas.id == "summary_canvas"
     assert length(canvas.commands) == 2
-    assert canvas.events == %{click: "canvas_clicked"}
+    assert canvas.events == %{click: "canvas_clicked", context_menu: "canvas_context_menu"}
     assert {:width, {:px, 120}} in canvas.style
     assert {:height, {:px, 80}} in canvas.style
 

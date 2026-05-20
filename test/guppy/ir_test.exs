@@ -381,10 +381,11 @@ defmodule Guppy.IRTest do
         ],
         id: "summary_canvas",
         style: [{:w_px, 120}, {:h_px, 80}],
-        events: %{click: "canvas_clicked"}
+        events: %{click: "canvas_clicked", context_menu: "canvas_context_menu"}
       )
 
     assert :ok = Guppy.IR.validate(ir)
+    assert ir.events == %{click: "canvas_clicked", context_menu: "canvas_context_menu"}
 
     assert {:error, {:invalid_canvas_command, %{op: :rect, width: 10}}} =
              Guppy.IR.validate(Guppy.IR.canvas([%{op: :rect, width: 10}]))

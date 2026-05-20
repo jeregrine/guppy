@@ -314,7 +314,7 @@ defmodule Guppy.Component.Compiler do
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
         style_entry(attrs, "class", "style", :style),
-        events_entry(attrs, ["click"], caller)
+        events_entry(attrs, ["click", "context_menu"], caller)
       ])
 
     quote do
@@ -1538,7 +1538,7 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp canvas_allowed_attrs do
-    [":if", ":for", "id", "commands", "class", "style", "click"]
+    [":if", ":for", "id", "commands", "class", "style", "click", "context_menu"]
   end
 
   defp popover_allowed_attrs do

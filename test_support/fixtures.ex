@@ -208,7 +208,7 @@ defmodule Guppy.TemplateExample do
       <list id="generic_items" items={@generic_items} class="h-[140px]" item_class="p-2 border-b-1" click="generic_item_clicked" />
       <data_table id="task_table" columns={@table_columns} rows={@table_rows} selected_row_id={@selected_row_id} selected_cell={@selected_cell} sort_state={@table_sort} class="h-[140px]" header_class="p-2" row_class="border-b-1" cell_class="p-2" row_click="table_row_clicked" cell_click="table_cell_clicked" sort="table_sorted" />
       <tree id="task_tree" nodes={@tree_nodes} selected_id={@selected_tree_id} class="h-[140px]" row_class="p-2" select="tree_selected" toggle="tree_toggled" />
-      <canvas id="summary_canvas" commands={@canvas_commands} class="w-[120px] h-[80px]" click="canvas_clicked" />
+      <canvas id="summary_canvas" commands={@canvas_commands} class="w-[120px] h-[80px]" click="canvas_clicked" context_menu="canvas_context_menu" />
       <popover id="help_popover" label="Help" open={@popover_open} click="open_help" close="close_help" popover_class="p-4" anchor="bottom_right" anchor_position_mode="local" anchor_fit="snap_to_window_with_margin" anchor_offset={{0, 12}} snap_margin="12" close_on_click_outside="false" stack_priority="2">
         <text>Popover content</text>
       </popover>

@@ -194,7 +194,7 @@ pub(crate) fn allowed_node_event_fields(
         "list" => (&["click"], "list events"),
         "data_table" => (&["row_click", "cell_click", "sort"], "data_table events"),
         "tree" => (&["select", "toggle"], "tree events"),
-        "canvas" => (&["click"], "canvas events"),
+        "canvas" => (&["click", "context_menu"], "canvas events"),
         "select" => (
             &["click", "change", "close", "focus", "blur"],
             "select events",

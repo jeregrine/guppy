@@ -37,6 +37,7 @@ fn expired_canvas_set_ir_requests_do_not_reply_or_mutate_state() {
             .into(),
             style: Vec::new().into(),
             click: None,
+            context_menu: None,
         })),
         reply,
     });

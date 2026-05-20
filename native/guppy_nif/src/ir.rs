@@ -976,6 +976,7 @@ pub struct CanvasNode {
     pub commands: Arc<[CanvasCommand]>,
     pub style: DivStyle,
     pub click: Option<String>,
+    pub context_menu: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -1297,6 +1298,7 @@ impl IrNode {
                 commands: get_canvas_commands_field(map)?,
                 style: get_div_style(map)?,
                 click: get_click_event(map)?,
+                context_menu: get_context_menu_event(map)?,
             }))),
             "select" => Ok(Self::Select(Box::new(SelectNode {
                 id,
