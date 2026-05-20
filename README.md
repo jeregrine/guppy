@@ -179,6 +179,8 @@ Template tags:
 
 Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item clicks, canvas clicks, popover callbacks, text input/textarea changes and focus/blur, and window close lifecycle events. Tab and Shift-Tab traverse retained GPUI tab stops; nodes with `context_menu` handlers can also invoke that event from the keyboard with Shift-F10 or the context-menu key.
 
+`Guppy.ContextMenu.render/2` renders validated item data into ordinary IR buttons/dividers for element-local menus. Pair it with a node's `context_menu` event and keep open/close/selection state in the owning process.
+
 Popovers support optional anchor corner, anchor position/offset, local/window anchor positioning, snap-fit mode, snap margin, close-on-outside-click behavior, and deferred-layer priority.
 
 `list` rows support static/layout children (`text`, `spacer`, and nested static `div`) plus row-local `button`, `checkbox`, and `radio` controls with explicit control ids. Row-control events include `list_id`, `row_id`, and `control_id`; Elixir remains the source of truth for checked/selected values.

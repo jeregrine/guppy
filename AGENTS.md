@@ -154,6 +154,7 @@ Useful IR helpers today:
 - `Guppy.IR.tree/2`
 - `Guppy.IR.canvas/2`
 - `Guppy.IR.popover/4`
+- `Guppy.ContextMenu.render/2`
 - `Guppy.IR.select/2`
 - `Guppy.IR.button/2`
 - `Guppy.IR.checkbox/3`
