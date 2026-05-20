@@ -784,6 +784,53 @@ fn rejects_tree_selected_id_that_is_not_in_decoded_nodes() {
 }
 
 #[test]
+fn rejects_nested_overlay_nodes_inside_popover() {
+    let nested_select = map(vec![
+        (atom("kind"), atom("select")),
+        (
+            atom("options"),
+            list(vec![map(vec![
+                (atom("value"), binary("one")),
+                (atom("label"), binary("One")),
+            ])]),
+        ),
+    ]);
+
+    let node = map(vec![
+        (atom("kind"), atom("popover")),
+        (atom("label"), binary("Menu")),
+        (atom("open"), bool_atom(true)),
+        (
+            atom("children"),
+            list(vec![map(vec![
+                (atom("kind"), atom("div")),
+                (atom("children"), list(vec![nested_select])),
+            ])]),
+        ),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(err.contains("nested overlay not supported: select"));
+
+    let nested_popover = map(vec![
+        (atom("kind"), atom("popover")),
+        (atom("label"), binary("Nested")),
+        (atom("open"), bool_atom(false)),
+        (atom("children"), list(vec![])),
+    ]);
+
+    let node = map(vec![
+        (atom("kind"), atom("popover")),
+        (atom("label"), binary("Menu")),
+        (atom("open"), bool_atom(true)),
+        (atom("children"), list(vec![nested_popover])),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(err.contains("nested overlay not supported: popover"));
+}
+
+#[test]
 fn decodes_canvas_commands() {
     let node = map(vec![
         (atom("kind"), atom("canvas")),

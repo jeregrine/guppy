@@ -1336,26 +1336,31 @@ impl IrNode {
                 focus: get_focus_event(map)?,
                 blur: get_blur_event(map)?,
             }))),
-            "popover" => Ok(Self::Popover {
-                id,
-                label: get_string_field(map, "label")?,
-                open: get_required_boolean_field(map, "open")?,
-                style: get_div_style(map)?,
-                popover_style: get_style_list_field(map, "popover_style")?,
-                anchor: get_popover_anchor_field(map)?,
-                anchor_position: get_optional_point_field(map, "anchor_position")?,
-                anchor_offset: get_optional_point_field(map, "anchor_offset")?,
-                anchor_position_mode: get_popover_anchor_position_mode_field(map)?,
-                anchor_fit: get_popover_anchor_fit_field(map)?,
-                snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
-                close_on_click_outside: get_boolean_field(map, "close_on_click_outside")?
-                    || get_field(map, "close_on_click_outside").is_none(),
-                stack_priority: get_optional_usize_field(map, "stack_priority")?.or(Some(1)),
-                disabled: get_boolean_field(map, "disabled")?,
-                click: get_click_event(map)?,
-                close: get_close_event(map)?,
-                children: get_child_nodes_field(map)?,
-            }),
+            "popover" => {
+                let children = get_child_nodes_field(map)?;
+                ensure_no_nested_overlay_nodes(&children)?;
+
+                Ok(Self::Popover {
+                    id,
+                    label: get_string_field(map, "label")?,
+                    open: get_required_boolean_field(map, "open")?,
+                    style: get_div_style(map)?,
+                    popover_style: get_style_list_field(map, "popover_style")?,
+                    anchor: get_popover_anchor_field(map)?,
+                    anchor_position: get_optional_point_field(map, "anchor_position")?,
+                    anchor_offset: get_optional_point_field(map, "anchor_offset")?,
+                    anchor_position_mode: get_popover_anchor_position_mode_field(map)?,
+                    anchor_fit: get_popover_anchor_fit_field(map)?,
+                    snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
+                    close_on_click_outside: get_boolean_field(map, "close_on_click_outside")?
+                        || get_field(map, "close_on_click_outside").is_none(),
+                    stack_priority: get_optional_usize_field(map, "stack_priority")?.or(Some(1)),
+                    disabled: get_boolean_field(map, "disabled")?,
+                    click: get_click_event(map)?,
+                    close: get_close_event(map)?,
+                    children,
+                })
+            }
             "image" => Ok(Self::Image {
                 id,
                 source: get_image_source_field(map)?,
@@ -1428,6 +1433,20 @@ fn get_child_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, Str
     };
 
     collect_arc(get_list(children_term)?.iter().map(IrNode::from_term))
+}
+
+fn ensure_no_nested_overlay_nodes(children: &[IrNode]) -> Result<(), String> {
+    for child in children {
+        match child {
+            IrNode::Select(_) => return Err("nested overlay not supported: select".into()),
+            IrNode::Popover { .. } => return Err("nested overlay not supported: popover".into()),
+            IrNode::Div(div) => ensure_no_nested_overlay_nodes(&div.children)?,
+            IrNode::Scroll { children, .. } => ensure_no_nested_overlay_nodes(children)?,
+            _ => {}
+        }
+    }
+
+    Ok(())
 }
 
 fn collect_arc<T, E>(items: impl Iterator<Item = Result<T, E>>) -> Result<Arc<[T]>, E> {

@@ -1731,7 +1731,8 @@ defmodule Guppy.IR do
          :ok <- validate_optional_non_neg_integer(Map.get(node, :stack_priority), :stack_priority),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_events(Map.get(node, :events), [:click, :close]),
-         :ok <- validate_children(children) do
+         :ok <- validate_children(children),
+         :ok <- validate_no_nested_overlays(children) do
       :ok
     end
   end
@@ -2502,6 +2503,24 @@ defmodule Guppy.IR do
       end
     end)
   end
+
+  defp validate_no_nested_overlays(children) do
+    Enum.reduce_while(children, :ok, fn child, :ok ->
+      case nested_overlay_error(child) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp nested_overlay_error(%{kind: kind}) when kind in [:popover, :select],
+    do: {:error, {:nested_overlay_not_supported, kind}}
+
+  defp nested_overlay_error(%{kind: kind, children: children})
+       when kind in [:div, :scroll] and is_list(children),
+       do: validate_no_nested_overlays(children)
+
+  defp nested_overlay_error(_node), do: :ok
 
   defp validate_unique_ids(ir) do
     case collect_ids(ir, MapSet.new()) do

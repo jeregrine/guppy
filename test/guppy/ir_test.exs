@@ -1304,6 +1304,18 @@ defmodule Guppy.IRTest do
     assert {:error, {:snap_margin, -1}} =
              Guppy.IR.validate(Guppy.IR.popover("Help", true, [], snap_margin: -1))
 
+    assert {:error, {:nested_overlay_not_supported, :select}} =
+             Guppy.IR.validate(
+               Guppy.IR.popover("Help", true, [
+                 Guppy.IR.div([Guppy.IR.select([%{value: "one", label: "One"}])])
+               ])
+             )
+
+    assert {:error, {:nested_overlay_not_supported, :popover}} =
+             Guppy.IR.validate(
+               Guppy.IR.popover("Help", true, [Guppy.IR.popover("Nested", false, [])])
+             )
+
     assert {:error, {:invalid_ir, %{kind: :text_input, value: 123}}} =
              Guppy.IR.validate(%{kind: :text_input, value: 123})
 
