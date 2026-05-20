@@ -159,6 +159,14 @@ defmodule Guppy.AppTest do
     assert :ok = Guppy.IR.validate(palette_ir)
   end
 
+  test "runtime command replacement preserves compiled app resources" do
+    app_name = :"guppy_runtime_commands_app_#{System.unique_integer([:positive])}"
+    {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
+
+    assert :ok = Guppy.App.set_commands(app_name, [%{id: "new_file", label: "New File"}])
+    assert Map.has_key?(Guppy.App.commands(app_name), "new_file")
+  end
+
   test "app command bindings produce root IR shortcut options" do
     app_name = :"guppy_command_bindings_app_#{System.unique_integer([:positive])}"
     {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})

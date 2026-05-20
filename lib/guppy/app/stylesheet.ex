@@ -50,7 +50,7 @@ defmodule Guppy.App.Stylesheet do
 
   @doc false
   def validate(nil), do: {:ok, %__MODULE__{}}
-  def validate(%__MODULE__{} = stylesheet), do: validate(Map.from_struct(stylesheet))
+  def validate(%__MODULE__{} = stylesheet), do: {:ok, stylesheet}
   def validate(stylesheet) when is_list(stylesheet), do: stylesheet |> Map.new() |> validate()
 
   def validate(%{} = stylesheet) do
