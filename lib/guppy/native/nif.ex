@@ -106,6 +106,10 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_set_dock_menu(_items, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_open_file_dialog(_files, _directories, _multiple, _prompt, _timeout) do
     {:error, :nif_not_loaded}
   end
@@ -213,6 +217,12 @@ defmodule Guppy.Native.Nif do
   defp dispatch({:set_menus, [menus]}, timeout) do
     with_loaded(fn ->
       native_call(:set_menus, fn -> normalize_status(native_set_menus(menus, timeout)) end)
+    end)
+  end
+
+  defp dispatch({:set_dock_menu, [items]}, timeout) do
+    with_loaded(fn ->
+      native_call(:set_dock_menu, fn -> normalize_status(native_set_dock_menu(items, timeout)) end)
     end)
   end
 

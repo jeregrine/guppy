@@ -48,6 +48,12 @@ pub(crate) struct GuppyMenuAction {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct GuppyDockMenuAction {
+    pub id: String,
+    pub callback: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct GuppyDisabledMenuAction {
     id: String,
     callback: Option<String>,
@@ -60,9 +66,20 @@ impl MenuSpec {
     }
 }
 
+impl MenuItemSpec {
+    pub fn decode_list_etf(bytes: &[u8]) -> Result<Vec<Self>, String> {
+        let term = etf_decode::decode_term(bytes)?;
+        decode_menu_items(&term)
+    }
+}
+
 pub(crate) fn bind_menu_action(cx: &mut App) {
     cx.on_action(|action: &GuppyMenuAction, _cx| {
         let _ = crate::send_menu_action_event(&action.id, &action.callback);
+    });
+
+    cx.on_action(|action: &GuppyDockMenuAction, _cx| {
+        let _ = crate::send_dock_menu_action_event(&action.id, &action.callback);
     });
 }
 
@@ -81,6 +98,10 @@ pub(crate) fn install_menus(cx: &mut App, menus: Vec<MenuSpec>) {
 
 pub(crate) fn to_gpui_menus(menus: Vec<MenuSpec>) -> Vec<Menu> {
     menus.into_iter().map(to_gpui_menu).collect()
+}
+
+pub(crate) fn to_gpui_dock_menu_items(items: Vec<MenuItemSpec>) -> Vec<MenuItem> {
+    items.into_iter().map(to_gpui_dock_menu_item).collect()
 }
 
 pub(crate) fn key_bindings(menus: &[MenuSpec]) -> Vec<KeyBinding> {
@@ -149,6 +170,17 @@ fn to_gpui_menu_item(item: MenuItemSpec) -> MenuItem {
     }
 }
 
+fn to_gpui_dock_menu_item(item: MenuItemSpec) -> MenuItem {
+    match item {
+        MenuItemSpec::Separator => MenuItem::separator(),
+        MenuItemSpec::Submenu(menu) => MenuItem::submenu(Menu {
+            name: SharedString::from(menu.label),
+            items: menu.items.into_iter().map(to_gpui_dock_menu_item).collect(),
+        }),
+        MenuItemSpec::Action(action) => to_gpui_dock_action_item(action),
+    }
+}
+
 fn to_gpui_action_item(action: MenuActionSpec) -> MenuItem {
     if !action.enabled {
         return disabled_action_item(action);
@@ -169,6 +201,34 @@ fn to_gpui_action_item(action: MenuActionSpec) -> MenuItem {
             MenuItem::action(
                 action.label,
                 GuppyMenuAction {
+                    id: action.id,
+                    callback,
+                },
+            )
+        }
+    }
+}
+
+fn to_gpui_dock_action_item(action: MenuActionSpec) -> MenuItem {
+    if !action.enabled {
+        return disabled_action_item(action);
+    }
+
+    match action.os_action {
+        Some(MenuOsAction::Cut) => MenuItem::os_action(action.label, TextCut, OsAction::Cut),
+        Some(MenuOsAction::Copy) => MenuItem::os_action(action.label, TextCopy, OsAction::Copy),
+        Some(MenuOsAction::Paste) => MenuItem::os_action(action.label, TextPaste, OsAction::Paste),
+        Some(MenuOsAction::SelectAll) => {
+            MenuItem::os_action(action.label, TextSelectAll, OsAction::SelectAll)
+        }
+        Some(MenuOsAction::Undo) | Some(MenuOsAction::Redo) => disabled_action_item(action),
+        None => {
+            let callback = action
+                .callback
+                .expect("menu callback actions are validated before native rendering");
+            MenuItem::action(
+                action.label,
+                GuppyDockMenuAction {
                     id: action.id,
                     callback,
                 },
@@ -234,6 +294,36 @@ impl Action for GuppyMenuAction {
     {
         Err(anyhow::anyhow!(
             "Guppy menu actions are data-only native actions"
+        ))
+    }
+}
+
+impl Action for GuppyDockMenuAction {
+    fn boxed_clone(&self) -> Box<dyn Action> {
+        Box::new(self.clone())
+    }
+
+    fn partial_eq(&self, action: &dyn Action) -> bool {
+        action.as_any().downcast_ref::<Self>() == Some(self)
+    }
+
+    fn name(&self) -> &'static str {
+        Self::name_for_type()
+    }
+
+    fn name_for_type() -> &'static str
+    where
+        Self: Sized,
+    {
+        "guppy::DockMenuAction"
+    }
+
+    fn build(_value: serde_json::Value) -> anyhow::Result<Box<dyn Action>>
+    where
+        Self: Sized,
+    {
+        Err(anyhow::anyhow!(
+            "Guppy dock menu actions are data-only native actions"
         ))
     }
 }

@@ -175,6 +175,20 @@ pub(crate) fn send_menu_action_event(action_id: &str, callback_id: &str) -> i32 
     })
 }
 
+pub(crate) fn send_dock_menu_action_event(action_id: &str, callback_id: &str) -> i32 {
+    #[cfg(test)]
+    {
+        record_menu_event_snapshot_for_test(action_id.to_owned(), callback_id.to_owned());
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(0, dock_menu_action, move |env| {
+        base_payload_map(env, action_id, callback_id)
+    })
+}
+
 pub(crate) fn send_click_event(view_id: u64, node_id: &str, callback_id: &str) -> i32 {
     #[cfg(test)]
     record_basic_event_snapshot_for_test(

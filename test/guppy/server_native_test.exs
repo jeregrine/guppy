@@ -255,6 +255,104 @@ defmodule Guppy.ServerNativeTest do
     assert_receive {:guppy_test_native_request, {:set_menus, [[]]}, 25}
   end
 
+  test "set_dock_menu validates item specs and routes through native" do
+    server = :"guppy_dock_menu_recording_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    items = [
+      %{id: "new_window", label: "New Window", callback: "new_window"},
+      :separator,
+      %{id: "copy", label: "Copy", os_action: :copy}
+    ]
+
+    assert :ok = Guppy.Server.set_dock_menu(server, self(), items, 37)
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [^items]}, 37}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      0,
+      :dock_menu_action,
+      %{id: "new_window", callback: "new_window"}
+    })
+
+    assert_receive {:guppy_menu_event,
+                    %{type: :dock_menu_action, id: "new_window", callback: "new_window"}}
+  end
+
+  test "set_dock_menu clears the dock menu when registering owner exits" do
+    server = :"guppy_dock_menu_owner_native_#{System.unique_integer([:positive])}"
+    test_pid = self()
+    items = [%{id: "new_window", label: "New Window", callback: "new_window"}]
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    owner =
+      spawn(fn ->
+        receive do
+          :register ->
+            send(
+              test_pid,
+              {:set_dock_menu_result, Guppy.Server.set_dock_menu(server, self(), items, 25)}
+            )
+
+            receive do
+              :stop -> :ok
+            end
+        end
+      end)
+
+    send(owner, :register)
+    assert_receive {:set_dock_menu_result, :ok}
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [^items]}, 25}
+
+    send(owner, :stop)
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [[]]}, 25}
+  end
+
+  test "set_dock_menu rejects invalid specs without native dispatch" do
+    server = :"guppy_invalid_dock_menu_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    assert {:error, {:invalid_menu_item, %{label: "Missing callback"}}} =
+             Guppy.Server.set_dock_menu(server, self(), [%{label: "Missing callback"}])
+
+    assert {:error, {:duplicate_menu_id, "dup"}} =
+             Guppy.Server.set_dock_menu(server, self(), [
+               %{id: "dup", label: "One", callback: "one"},
+               %{id: "dup", label: "Two", callback: "two"}
+             ])
+
+    assert {:error, :invalid_dock_menu} = Guppy.Server.set_dock_menu(server, self(), :bad)
+
+    refute_receive {:guppy_test_native_request, {:set_dock_menu, _}, _}
+  end
+
   test "set_menus rejects invalid specs without native dispatch" do
     server = :"guppy_invalid_menu_native_#{System.unique_integer([:positive])}"
 

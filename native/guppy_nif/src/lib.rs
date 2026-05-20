@@ -9,7 +9,7 @@ mod native_events;
 mod window_options;
 
 use crate::ir::IrNode;
-use crate::menu::MenuSpec;
+use crate::menu::{MenuItemSpec, MenuSpec};
 use crate::window_options::WindowOptionsConfig;
 use rustler::{Atom, Encoder, Env, LocalPid, Monitor, Resource, ResourceArc, Term};
 use std::ffi::{CString, c_char, c_void};
@@ -52,6 +52,7 @@ rustler::atoms! {
     control,
     delta_kind,
     delta_x,
+    dock_menu_action,
     delta_y,
     data_table_cell_click,
     data_table_row_click,
@@ -314,6 +315,25 @@ fn native_set_menus<'a>(env: Env<'a>, menus: Term<'a>, timeout_ms: u64) -> Term<
         main_thread_runtime::MainThreadRequest::SetMenus {
             deadline,
             menus,
+            reply,
+        }
+    });
+
+    status_result(env, result, runtime_unavailable())
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+fn native_set_dock_menu<'a>(env: Env<'a>, items: Term<'a>, timeout_ms: u64) -> Term<'a> {
+    let items_binary = items.to_binary();
+    let items = match MenuItemSpec::decode_list_etf(items_binary.as_slice()) {
+        Ok(items) => items,
+        Err(reason) => return error_reason_tuple(env, menus_decode_error(), reason),
+    };
+
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::SetDockMenu {
+            deadline,
+            items,
             reply,
         }
     });
@@ -654,7 +674,8 @@ pub(crate) fn notify_gui_started(status: i32) {
 }
 
 pub(crate) use native_events::{
-    send_menu_action_event, send_window_close_requested_event, send_window_closed_event,
+    send_dock_menu_action_event, send_menu_action_event, send_window_close_requested_event,
+    send_window_closed_event,
 };
 
 fn map_from_pairs<'a>(env: Env<'a>, pairs: impl AsRef<[(Term<'a>, Term<'a>)]>) -> Term<'a> {

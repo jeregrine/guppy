@@ -1,7 +1,7 @@
 use crate::bridge_text_input;
 use crate::bridge_view::BridgeView;
 use crate::ir::IrNode;
-use crate::menu::{self, MenuSpec};
+use crate::menu::{self, MenuItemSpec, MenuSpec};
 use crate::window_options::WindowOptionsConfig;
 use async_task::spawn;
 use gpui::{
@@ -81,6 +81,11 @@ pub(crate) enum MainThreadRequest {
         menus: Vec<MenuSpec>,
         reply: Sender<i32>,
     },
+    SetDockMenu {
+        deadline: RequestDeadline,
+        items: Vec<MenuItemSpec>,
+        reply: Sender<i32>,
+    },
     OpenFileDialog {
         deadline: RequestDeadline,
         files: bool,
@@ -119,6 +124,7 @@ impl MainThreadRequest {
             | MainThreadRequest::CloseWindow { deadline, .. }
             | MainThreadRequest::CloseAll { deadline, .. }
             | MainThreadRequest::SetMenus { deadline, .. }
+            | MainThreadRequest::SetDockMenu { deadline, .. }
             | MainThreadRequest::OpenFileDialog { deadline, .. }
             | MainThreadRequest::SaveFileDialog { deadline, .. }
             | MainThreadRequest::ReadClipboardText { deadline, .. }
@@ -290,6 +296,23 @@ pub fn set_menus(menus: Vec<MenuSpec>) -> i32 {
         };
 
         let result = app.update(move |cx| menu::install_menus(cx, menus));
+
+        match result {
+            Ok(_) => 1,
+            Err(_) => -1,
+        }
+    })
+}
+
+pub fn set_dock_menu(items: Vec<MenuItemSpec>) -> i32 {
+    APP.with(|app| {
+        let app = app.borrow().as_ref().cloned();
+
+        let Some(app) = app else {
+            return -1;
+        };
+
+        let result = app.update(move |cx| cx.set_dock_menu(menu::to_gpui_dock_menu_items(items)));
 
         match result {
             Ok(_) => 1,
@@ -539,6 +562,15 @@ fn handle_request(request: MainThreadRequest) {
                 let _ = reply.send(set_menus(menus));
             }
         }
+        MainThreadRequest::SetDockMenu {
+            deadline,
+            items,
+            reply,
+        } => {
+            if !deadline.expired() {
+                let _ = reply.send(set_dock_menu(items));
+            }
+        }
         MainThreadRequest::OpenFileDialog {
             deadline,
             files,
@@ -577,6 +609,7 @@ fn handle_request(request: MainThreadRequest) {
         }
         MainThreadRequest::CloseAllNoReply => {
             let _ = set_menus(Vec::new());
+            let _ = set_dock_menu(Vec::new());
             let _ = close_all_windows();
         }
         MainThreadRequest::ViewCount { deadline, reply } => {

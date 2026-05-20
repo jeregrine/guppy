@@ -55,6 +55,11 @@ defmodule Guppy do
     Server.set_menus(Server, self(), menus, timeout)
   end
 
+  @doc "Replaces the Dock/app-icon menu for the calling process."
+  def set_dock_menu(items, timeout \\ 5_000) do
+    Server.set_dock_menu(Server, self(), items, timeout)
+  end
+
   @doc "Opens a platform dialog for choosing one or more files."
   def open_file_dialog(opts \\ [], timeout \\ 30_000) do
     Server.open_file_dialog(Server, opts, timeout)

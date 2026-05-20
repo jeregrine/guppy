@@ -1,4 +1,4 @@
-use super::{GuppyMenuAction, MenuItemSpec, MenuOsAction, MenuSpec};
+use super::{GuppyDockMenuAction, GuppyMenuAction, MenuItemSpec, MenuOsAction, MenuSpec};
 use crate::bridge_text_input;
 use eetf::{Atom, Binary, List, Map, Term};
 use gpui::{Action, MenuItem, OsAction};
@@ -180,6 +180,36 @@ fn maps_custom_and_os_actions_to_gpui_menu_items() {
 }
 
 #[test]
+fn decodes_and_maps_dock_menu_items_to_dock_actions() {
+    let items = MenuItemSpec::decode_list_etf(&encode(list(vec![map(vec![
+        ("id", binary("new_window")),
+        ("label", binary("New Window")),
+        ("callback", binary("new_window")),
+    ])])))
+    .unwrap();
+
+    let gpui_items = super::to_gpui_dock_menu_items(items);
+
+    match &gpui_items[0] {
+        MenuItem::Action {
+            name,
+            action,
+            os_action,
+        } => {
+            assert_eq!(name.as_ref(), "New Window");
+            assert!(os_action.is_none());
+            let action = action
+                .as_any()
+                .downcast_ref::<GuppyDockMenuAction>()
+                .unwrap();
+            assert_eq!(action.id, "new_window");
+            assert_eq!(action.callback, "new_window");
+        }
+        other => panic!("expected action, got {}", menu_item_name(other)),
+    }
+}
+
+#[test]
 fn key_bindings_are_derived_from_current_menu_specs() {
     let menus = sample_menus();
     let bindings = super::key_bindings(&menus);
@@ -219,6 +249,11 @@ fn send_menu_action_records_callback_payload() {
     let event = crate::take_menu_event_snapshot_for_test().unwrap();
     assert_eq!(event.action_id, "new_file");
     assert_eq!(event.callback_id, "new_file");
+
+    let _ = crate::send_dock_menu_action_event("new_window", "new_window");
+    let event = crate::take_menu_event_snapshot_for_test().unwrap();
+    assert_eq!(event.action_id, "new_window");
+    assert_eq!(event.callback_id, "new_window");
 }
 
 fn menu_item_name(item: &MenuItem) -> &'static str {

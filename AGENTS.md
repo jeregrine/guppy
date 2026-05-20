@@ -68,7 +68,7 @@ Important current invariants:
 - runtime telemetry events exist for native NIF calls (`[:guppy, :native, :nif]`), server-mediated native requests (`[:guppy, :native, :request]`), native event routing (`[:guppy, :event, :route]`), and `Guppy.Window` rerenders (`[:guppy, :window, :rerender]`)
 - native root views bind Tab/Shift-Tab for GPUI tab-stop traversal, track keyboard-vs-mouse focus-visible state for `focus_visible_style`, and emit app/window activation and window move/resize lifecycle events from GPUI window observers
 - div-like nodes support a narrow native opacity animation spec keyed by stable animation id
-- app/runtime menus are process-owned via `Guppy.set_menus/1` / `Guppy.set_menus/2`; menu callback actions route back through `Guppy.Server` and menus are cleared when the owner exits
+- app/runtime menus and Dock menus are process-owned via `Guppy.set_menus/1` / `Guppy.set_menus/2` and `Guppy.set_dock_menu/1` / `Guppy.set_dock_menu/2`; callback actions route back through `Guppy.Server` and menus are cleared when the owner exits
 - `use Guppy.App` modules handle app lifecycle events such as `"app_activated"` / `"app_deactivated"` with optional `handle_event/3`
 - app command helpers include `Guppy.App.command_bindings/1`, `Guppy.App.open_command_palette/1`, and `Guppy.App.open_context_menu/3` for command-backed shortcuts and transient overlays
 - semantic `data_table` and `tree` primitives are first-pass virtualized/list-backed nodes; Elixir owns sort, selection, expansion, and context-menu state
@@ -129,6 +129,8 @@ Useful top-level API:
 - `Guppy.close_window/2`
 - `Guppy.set_menus/1`
 - `Guppy.set_menus/2`
+- `Guppy.set_dock_menu/1`
+- `Guppy.set_dock_menu/2`
 - `Guppy.open_file_dialog/0`
 - `Guppy.open_file_dialog/1`
 - `Guppy.open_file_dialog/2`

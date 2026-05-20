@@ -17,6 +17,8 @@ defmodule Guppy.Server do
             monitors: %{},
             menu_owner: nil,
             menu_monitor: nil,
+            dock_menu_owner: nil,
+            dock_menu_monitor: nil,
             app_owner: nil,
             app_owner_monitor: nil
 
@@ -37,6 +39,8 @@ defmodule Guppy.Server do
           monitors: %{optional(reference()) => pid()},
           menu_owner: pid() | nil,
           menu_monitor: reference() | nil,
+          dock_menu_owner: pid() | nil,
+          dock_menu_monitor: reference() | nil,
           app_owner: pid() | nil,
           app_owner_monitor: reference() | nil
         }
@@ -67,6 +71,10 @@ defmodule Guppy.Server do
 
   def set_menus(server \\ __MODULE__, owner, menus, timeout \\ 5_000) do
     GenServer.call(server, {:set_menus, owner, menus, timeout}, gen_call_timeout(timeout))
+  end
+
+  def set_dock_menu(server \\ __MODULE__, owner, items, timeout \\ 5_000) do
+    GenServer.call(server, {:set_dock_menu, owner, items, timeout}, gen_call_timeout(timeout))
   end
 
   def open_file_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
@@ -266,6 +274,30 @@ defmodule Guppy.Server do
     end
   end
 
+  def handle_call({:set_dock_menu, owner, items, timeout}, {caller, _tag}, state)
+      when is_pid(owner) do
+    cond do
+      owner != caller ->
+        {:reply, {:error, :owner_mismatch}, state}
+
+      app_owner_conflict?(state, owner) ->
+        {:reply, {:error, :native_app_owner_already_claimed}, state}
+
+      true ->
+        case validate_dock_menu(items) do
+          {:ok, items} ->
+            case native_request(state, :set_dock_menu, {:set_dock_menu, [items]}, timeout) do
+              :ok -> {:reply, :ok, put_dock_menu_owner(state, owner, items)}
+              {:ok, _payload} -> {:reply, :ok, put_dock_menu_owner(state, owner, items)}
+              {:error, reason} -> {:reply, {:error, reason}, state}
+            end
+
+          error ->
+            {:reply, error, state}
+        end
+    end
+  end
+
   def handle_call({:claim_app_owner, owner}, {caller, _tag}, state) when is_pid(owner) do
     cond do
       owner != caller ->
@@ -318,6 +350,23 @@ defmodule Guppy.Server do
 
       nil ->
         emit_event_route_telemetry(0, :menu_action, :unknown_menu_owner)
+        {:noreply, state}
+    end
+  end
+
+  def handle_info(
+        {:guppy_native_event, 0, :dock_menu_action, %{id: id, callback: callback_id} = payload},
+        state
+      )
+      when is_binary(id) and is_binary(callback_id) do
+    case state.dock_menu_owner do
+      owner when is_pid(owner) ->
+        send(owner, {:guppy_menu_event, Map.put(payload, :type, :dock_menu_action)})
+        emit_event_route_telemetry(0, :dock_menu_action, :ok)
+        {:noreply, state}
+
+      nil ->
+        emit_event_route_telemetry(0, :dock_menu_action, :unknown_dock_menu_owner)
         {:noreply, state}
     end
   end
@@ -400,6 +449,7 @@ defmodule Guppy.Server do
 
   def handle_info({:DOWN, monitor_ref, :process, owner, _reason}, state) do
     state = maybe_clear_dead_menu_owner(state, owner, monitor_ref)
+    state = maybe_clear_dead_dock_menu_owner(state, owner, monitor_ref)
     state = maybe_clear_dead_app_owner(state, owner, monitor_ref)
 
     case Map.fetch(state.monitors, monitor_ref) do
@@ -561,6 +611,20 @@ defmodule Guppy.Server do
     %{state | menu_owner: owner, menu_monitor: Process.monitor(owner)}
   end
 
+  defp put_dock_menu_owner(state, _owner, []) do
+    clear_dock_menu_owner_monitor(state)
+  end
+
+  defp put_dock_menu_owner(%{dock_menu_owner: owner} = state, owner, _items)
+       when is_pid(owner) do
+    state
+  end
+
+  defp put_dock_menu_owner(state, owner, _items) do
+    state = clear_dock_menu_owner_monitor(state)
+    %{state | dock_menu_owner: owner, dock_menu_monitor: Process.monitor(owner)}
+  end
+
   defp app_owner_conflict?(%{app_owner: nil}, _owner), do: false
   defp app_owner_conflict?(%{app_owner: owner}, owner), do: false
   defp app_owner_conflict?(%{app_owner: app_owner}, _owner) when is_pid(app_owner), do: true
@@ -603,6 +667,20 @@ defmodule Guppy.Server do
 
   defp maybe_clear_dead_menu_owner(state, _owner, _monitor_ref), do: state
 
+  defp maybe_clear_dead_dock_menu_owner(
+         %{dock_menu_owner: owner, dock_menu_monitor: monitor_ref} = state,
+         owner,
+         monitor_ref
+       )
+       when is_pid(owner) do
+    _ =
+      native_request(state, :set_dock_menu, {:set_dock_menu, [[]]}, state.native_request_timeout)
+
+    %{state | dock_menu_owner: nil, dock_menu_monitor: nil}
+  end
+
+  defp maybe_clear_dead_dock_menu_owner(state, _owner, _monitor_ref), do: state
+
   defp clear_menu_owner_monitor(%{menu_monitor: monitor_ref} = state)
        when is_reference(monitor_ref) do
     Process.demonitor(monitor_ref, [:flush])
@@ -610,6 +688,14 @@ defmodule Guppy.Server do
   end
 
   defp clear_menu_owner_monitor(state), do: state
+
+  defp clear_dock_menu_owner_monitor(%{dock_menu_monitor: monitor_ref} = state)
+       when is_reference(monitor_ref) do
+    Process.demonitor(monitor_ref, [:flush])
+    %{state | dock_menu_owner: nil, dock_menu_monitor: nil}
+  end
+
+  defp clear_dock_menu_owner_monitor(state), do: state
 
   defp delete_view(state, view_id) do
     case Map.pop(state.views, view_id) do
@@ -665,6 +751,14 @@ defmodule Guppy.Server do
   end
 
   defp validate_menus(_menus), do: {:error, :invalid_menus}
+
+  defp validate_dock_menu(items) when is_list(items) do
+    with {:ok, _ids} <- validate_menu_items(items, MapSet.new()) do
+      {:ok, items}
+    end
+  end
+
+  defp validate_dock_menu(_items), do: {:error, :invalid_dock_menu}
 
   defp validate_open_file_dialog_options(opts, mode) when is_list(opts),
     do: opts |> Map.new() |> validate_open_file_dialog_options(mode)
