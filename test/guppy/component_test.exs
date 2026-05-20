@@ -391,7 +391,12 @@ defmodule Guppy.ComponentTest do
     assert tree.id == "task_tree"
     assert Enum.map(tree.nodes, & &1.id) == ["tree_root"]
     assert tree.selected_id == "tree_child"
-    assert tree.events == %{select: "tree_selected", toggle: "tree_toggled"}
+
+    assert tree.events == %{
+             select: "tree_selected",
+             toggle: "tree_toggled",
+             context_menu: "tree_context_menu"
+           }
 
     assert canvas.kind == :canvas
     assert canvas.id == "summary_canvas"

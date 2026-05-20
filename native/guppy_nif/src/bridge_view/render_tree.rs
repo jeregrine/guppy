@@ -4,7 +4,7 @@ use crate::{
     ir::{DivStyle, TreeItem, TreeNode},
 };
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
+    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, Window, div, list,
 };
 const SELECT_EVENT: i32 = 1;
@@ -35,6 +35,7 @@ pub(crate) fn render(
     let row_style = tree.row_style.clone();
     let select = tree.select.clone();
     let toggle = tree.toggle.clone();
+    let context_menu = tree.context_menu.clone();
     let tree_id_for_rows = tree_id.clone();
 
     let rows = list(state, move |index, _window, _cx| {
@@ -48,6 +49,7 @@ pub(crate) fn render(
                     &row_style,
                     select.as_deref(),
                     toggle.as_deref(),
+                    context_menu.as_deref(),
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -101,6 +103,7 @@ fn render_row(
     row_style: &crate::ir::DivStyle,
     select: Option<&str>,
     toggle: Option<&str>,
+    context_menu: Option<&str>,
 ) -> AnyElement {
     let row_id = format!("{tree_id}.row.{}", item.id);
     let disclosure_id = format!("{row_id}.toggle");
@@ -157,16 +160,29 @@ fn render_row(
         });
     }
 
-    apply_tree_row_styles(
-        div()
-            .id(SharedString::from(row_id))
-            .flex()
-            .flex_row()
-            .children([disclosure.into_any_element(), label.into_any_element()]),
-        row_style,
-        &item.style,
-    )
-    .into_any_element()
+    let mut row = div()
+        .id(SharedString::from(row_id.clone()))
+        .flex()
+        .flex_row()
+        .children([disclosure.into_any_element(), label.into_any_element()]);
+
+    if let Some(callback_id) = context_menu {
+        let callback_id = callback_id.to_owned();
+        let tree_id = tree_id.to_owned();
+        let item_id = item.id.clone();
+        row = row.on_mouse_down(MouseButton::Right, move |event, _, _| {
+            events::emit_tree_context_menu(
+                view_id,
+                &row_id,
+                &callback_id,
+                &tree_id,
+                &item_id,
+                event,
+            );
+        });
+    }
+
+    apply_tree_row_styles(row, row_style, &item.style).into_any_element()
 }
 
 fn apply_tree_row_styles<E>(element: E, row_style: &DivStyle, item_style: &DivStyle) -> E
@@ -258,6 +274,8 @@ mod tests {
 
     #[test]
     fn tree_events_include_semantic_identity() {
+        use gpui::{Modifiers, MouseButton, MouseDownEvent, point, px};
+
         events::emit_tree_event(
             9,
             SELECT_EVENT,
@@ -282,6 +300,26 @@ mod tests {
         );
         let event = crate::take_semantic_event_snapshot_for_test().unwrap();
         assert_eq!(event.event, "tree_toggle");
+        assert_eq!(event.tree_id.as_deref(), Some("tree"));
+        assert_eq!(event.item_id.as_deref(), Some("child"));
+
+        events::emit_tree_context_menu(
+            9,
+            "tree.row.child",
+            "tree_context_menu",
+            "tree",
+            "child",
+            &MouseDownEvent {
+                position: point(px(12.0), px(8.0)),
+                modifiers: Modifiers::none(),
+                button: MouseButton::Right,
+                click_count: 1,
+                first_mouse: false,
+            },
+        );
+
+        let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+        assert_eq!(event.event, "context_menu");
         assert_eq!(event.tree_id.as_deref(), Some("tree"));
         assert_eq!(event.item_id.as_deref(), Some("child"));
     }

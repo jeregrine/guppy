@@ -946,6 +946,7 @@ pub struct TreeNode {
     pub selected_id: Option<String>,
     pub select: Option<String>,
     pub toggle: Option<String>,
+    pub context_menu: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -1291,6 +1292,7 @@ impl IrNode {
                     selected_id,
                     select: get_optional_event(map, "select")?,
                     toggle: get_optional_event(map, "toggle")?,
+                    context_menu: get_context_menu_event(map)?,
                 })))
             }
             "canvas" => Ok(Self::Canvas(Box::new(CanvasNode {

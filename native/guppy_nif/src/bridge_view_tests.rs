@@ -486,6 +486,7 @@ fn tree_ir() -> IrNode {
         selected_id: Some("child".into()),
         select: Some("select_node".into()),
         toggle: Some("toggle_node".into()),
+        context_menu: Some("tree_context_menu".into()),
     }))
 }
 

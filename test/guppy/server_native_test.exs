@@ -276,7 +276,7 @@ defmodule Guppy.ServerNativeTest do
         ),
         Guppy.IR.tree([%{id: "root", label: "Root"}],
           id: "outline",
-          events: %{select: "select_node", toggle: "toggle_node"}
+          events: %{select: "select_node", toggle: "toggle_node", context_menu: "tree_context"}
         )
       ])
 
@@ -323,6 +323,30 @@ defmodule Guppy.ServerNativeTest do
                       callback: "toggle_node",
                       tree_id: "outline",
                       item_id: "root"
+                    }}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      view_id,
+      :context_menu,
+      %{
+        id: "outline.row.root",
+        callback: "tree_context",
+        tree_id: "outline",
+        item_id: "root",
+        x: 12.0,
+        y: 8.0
+      }
+    })
+
+    assert_receive {:guppy_event, ^view_id,
+                    %{
+                      type: :context_menu,
+                      callback: "tree_context",
+                      tree_id: "outline",
+                      item_id: "root",
+                      x: 12.0,
+                      y: 8.0
                     }}
   end
 

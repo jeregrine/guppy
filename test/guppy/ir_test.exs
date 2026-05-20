@@ -81,10 +81,11 @@ defmodule Guppy.IRTest do
         ],
         id: "project_tree",
         selected_id: "child",
-        events: %{select: "select_node", toggle: "toggle_node"}
+        events: %{select: "select_node", toggle: "toggle_node", context_menu: "tree_context_menu"}
       )
 
     assert :ok = Guppy.IR.validate(ir)
+    assert ir.events.context_menu == "tree_context_menu"
   end
 
   test "tree rejects duplicate node ids and invalid expansion state" do

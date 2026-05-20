@@ -635,7 +635,11 @@ fn decodes_tree_node() {
         (atom("selected_id"), binary("child")),
         (
             atom("events"),
-            events(vec![("select", "select_node"), ("toggle", "toggle_node")]),
+            events(vec![
+                ("select", "select_node"),
+                ("toggle", "toggle_node"),
+                ("context_menu", "tree_context_menu"),
+            ]),
         ),
     ]);
 
@@ -648,6 +652,7 @@ fn decodes_tree_node() {
             assert_eq!(tree.selected_id.as_deref(), Some("child"));
             assert_eq!(tree.select.as_deref(), Some("select_node"));
             assert_eq!(tree.toggle.as_deref(), Some("toggle_node"));
+            assert_eq!(tree.context_menu.as_deref(), Some("tree_context_menu"));
         }
         other => panic!("expected tree, got {other:?}"),
     }

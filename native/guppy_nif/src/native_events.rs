@@ -406,6 +406,50 @@ pub(crate) fn send_data_table_event(
     }
 }
 
+pub(crate) fn send_tree_context_menu_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    tree_id_value: &str,
+    item_id_value: &str,
+    payload: ContextMenuEventPayload,
+) -> i32 {
+    #[cfg(test)]
+    {
+        let _ = payload;
+
+        record_semantic_event_snapshot_for_test(
+            "context_menu",
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            None,
+            None,
+            None,
+            Some(tree_id_value.to_owned()),
+            Some(item_id_value.to_owned()),
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, context_menu, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (tree_id().encode(env), tree_id_value.encode(env)),
+                (item_id().encode(env), item_id_value.encode(env)),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
 pub(crate) fn send_tree_event(
     view_id: u64,
     event_code: i32,

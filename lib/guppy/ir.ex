@@ -634,7 +634,11 @@ defmodule Guppy.IR do
           optional(:style) => style()
         }
 
-  @type tree_events :: %{optional(:select) => String.t(), optional(:toggle) => String.t()}
+  @type tree_events :: %{
+          optional(:select) => String.t(),
+          optional(:toggle) => String.t(),
+          optional(:context_menu) => String.t()
+        }
 
   @type tree_node :: %{
           required(:kind) => :tree,
@@ -1774,9 +1778,9 @@ defmodule Guppy.IR do
          :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :row_style)),
-         :ok <- validate_events(Map.get(node, :events), [:select, :toggle]),
          {:ok, node_ids} <- validate_tree_nodes(nodes),
-         :ok <- validate_tree_selected_id(Map.get(node, :selected_id), node_ids) do
+         :ok <- validate_tree_selected_id(Map.get(node, :selected_id), node_ids),
+         :ok <- validate_events(Map.get(node, :events), [:select, :toggle, :context_menu]) do
       :ok
     end
   end

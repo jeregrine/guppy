@@ -297,7 +297,7 @@ defmodule Guppy.Component.Compiler do
         style_entry(attrs, "class", "style", :style),
         style_entry(attrs, "row_class", "row_style", :row_style),
         maybe_attr_entry(attrs, "selected_id", :string_or_expr, caller),
-        events_entry(attrs, ["select", "toggle"], caller)
+        events_entry(attrs, ["select", "toggle", "context_menu"], caller)
       ])
 
     quote do
@@ -1533,7 +1533,8 @@ defmodule Guppy.Component.Compiler do
       "row_style",
       "selected_id",
       "select",
-      "toggle"
+      "toggle",
+      "context_menu"
     ]
   end
 

@@ -76,6 +76,28 @@ pub(crate) fn emit_tree_event(
         native_events::send_tree_event(view_id, event_code, node_id, callback_id, tree_id, item_id);
 }
 
+pub(crate) fn emit_tree_context_menu(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    tree_id: &str,
+    item_id: &str,
+    event: &MouseDownEvent,
+) {
+    let _ = native_events::send_tree_context_menu_event(
+        view_id,
+        node_id,
+        callback_id,
+        tree_id,
+        item_id,
+        ContextMenuEventPayload {
+            x: pixel_to_f64(event.position.x),
+            y: pixel_to_f64(event.position.y),
+            modifiers: modifier_flags(&event.modifiers),
+        },
+    );
+}
+
 pub(crate) fn emit_row_control_change(
     view_id: u64,
     context: &RowControlEventContext,
