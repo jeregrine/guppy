@@ -784,6 +784,38 @@ fn rejects_tree_selected_id_that_is_not_in_decoded_nodes() {
 }
 
 #[test]
+fn decodes_select_positioning_fields() {
+    let node = map(vec![
+        (atom("kind"), atom("select")),
+        (atom("id"), binary("status")),
+        (
+            atom("options"),
+            list(vec![map(vec![
+                (atom("value"), binary("todo")),
+                (atom("label"), binary("Todo")),
+            ])]),
+        ),
+        (atom("anchor"), atom("bottom_left")),
+        (atom("anchor_offset"), tuple(vec![integer(0), integer(10)])),
+        (atom("anchor_fit"), atom("snap_to_window_with_margin")),
+        (atom("snap_margin"), integer(10)),
+    ]);
+
+    match IrNode::from_term(&node).unwrap() {
+        IrNode::Select(select) => {
+            assert_eq!(select.anchor, super::PopoverAnchor::BottomLeft);
+            assert_eq!(select.anchor_offset, Some((0.0, 10.0)));
+            assert_eq!(
+                select.anchor_fit,
+                super::PopoverAnchorFit::SnapToWindowWithMargin
+            );
+            assert_eq!(select.snap_margin, 10.0);
+        }
+        other => panic!("expected select, got {other:?}"),
+    }
+}
+
+#[test]
 fn rejects_nested_overlay_nodes_inside_popover() {
     let nested_select = map(vec![
         (atom("kind"), atom("select")),

@@ -379,6 +379,10 @@ defmodule Guppy.Component.Compiler do
         style_entry(attrs, "class", "style", :style),
         style_entry(attrs, "list_class", "list_style", :list_style),
         style_entry(attrs, "option_class", "option_style", :option_style),
+        maybe_attr_entry(attrs, "anchor", :popover_anchor, caller),
+        maybe_attr_entry(attrs, "anchor_offset", :expr_only, caller),
+        maybe_attr_entry(attrs, "anchor_fit", :popover_anchor_fit, caller),
+        maybe_attr_entry(attrs, "snap_margin", :number, caller),
         maybe_attr_entry(attrs, "disabled", :boolean, caller),
         maybe_attr_entry(attrs, "tab_index", :integer, caller),
         events_entry(attrs, @select_events, caller)
@@ -1492,6 +1496,10 @@ defmodule Guppy.Component.Compiler do
       "list_style",
       "option_class",
       "option_style",
+      "anchor",
+      "anchor_offset",
+      "anchor_fit",
+      "snap_margin",
       "disabled",
       "tab_index"
     ] ++ @select_events

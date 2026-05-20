@@ -432,6 +432,10 @@ defmodule Guppy.ComponentTest do
     assert select.open == true
     assert select.placeholder == "Pick status"
     assert Enum.map(select.options, & &1.value) == ["todo", "done"]
+    assert select.anchor == :bottom_left
+    assert select.anchor_offset == {0, 10}
+    assert select.anchor_fit == :snap_to_window_with_margin
+    assert select.snap_margin == 10
 
     assert select.events == %{
              click: "toggle_status",

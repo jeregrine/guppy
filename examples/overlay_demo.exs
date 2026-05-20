@@ -48,6 +48,10 @@ defmodule Guppy.Examples.OverlayDemoWindow do
           class="w-[260px] border-1 border-[#60a5fa] bg-[#0b1220]"
           list_class="p-1 shadow-lg"
           option_class="p-2"
+          anchor="bottom_left"
+          anchor_offset={{0, 10}}
+          anchor_fit="snap_to_window_with_margin"
+          snap_margin="12"
         />
         <text id="selected_status" class="text-sm text-[#bfdbfe]">Selected: {@status}</text>
       </div>

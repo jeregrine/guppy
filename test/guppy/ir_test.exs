@@ -649,6 +649,10 @@ defmodule Guppy.IRTest do
         style: [:p_2, :border_1],
         list_style: [:p_1, :shadow_lg],
         option_style: [:p_2],
+        anchor: :bottom_left,
+        anchor_offset: {0, 10},
+        anchor_fit: :snap_to_window_with_margin,
+        snap_margin: 10,
         disabled: false,
         tab_index: 6,
         events: %{
@@ -666,6 +670,10 @@ defmodule Guppy.IRTest do
     assert select_ir.open == true
     assert select_ir.placeholder == "Pick status"
     assert Enum.map(select_ir.options, & &1.value) == ["todo", "done"]
+    assert select_ir.anchor == :bottom_left
+    assert select_ir.anchor_offset == {0, 10}
+    assert select_ir.anchor_fit == :snap_to_window_with_margin
+    assert select_ir.snap_margin == 10
     assert select_ir.tab_index == 6
 
     icon_ir =
@@ -1350,6 +1358,15 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_event, :hover, "hover_status"}} =
              Guppy.IR.validate(Guppy.IR.select([], events: %{hover: "hover_status"}))
+
+    assert {:error, {:invalid_popover_anchor, :middle}} =
+             Guppy.IR.validate(Guppy.IR.select([], anchor: :middle))
+
+    assert {:error, {:invalid_point, :anchor_offset, {0, "down"}}} =
+             Guppy.IR.validate(Guppy.IR.select([], anchor_offset: {0, "down"}))
+
+    assert {:error, {:snap_margin, -1}} =
+             Guppy.IR.validate(Guppy.IR.select([], snap_margin: -1))
 
     assert {:error, {:placeholder, 123}} =
              Guppy.IR.validate(Guppy.IR.text_input("Jason", placeholder: 123))

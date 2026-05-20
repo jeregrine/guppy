@@ -470,6 +470,10 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:list_style) => style(),
           optional(:option_style) => style(),
+          optional(:anchor) => popover_anchor(),
+          optional(:anchor_offset) => point(),
+          optional(:anchor_fit) => popover_anchor_fit(),
+          optional(:snap_margin) => number(),
           optional(:disabled) => boolean(),
           optional(:tab_index) => integer(),
           optional(:events) => select_events()
@@ -1325,6 +1329,10 @@ defmodule Guppy.IR do
     style = Keyword.get(opts, :style)
     list_style = Keyword.get(opts, :list_style)
     option_style = Keyword.get(opts, :option_style)
+    anchor = Keyword.get(opts, :anchor)
+    anchor_offset = Keyword.get(opts, :anchor_offset)
+    anchor_fit = Keyword.get(opts, :anchor_fit)
+    snap_margin = Keyword.get(opts, :snap_margin)
     disabled = Keyword.get(opts, :disabled)
     tab_index = Keyword.get(opts, :tab_index)
     events = Keyword.get(opts, :events)
@@ -1337,6 +1345,10 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
     |> maybe_put(:list_style, list_style)
     |> maybe_put(:option_style, option_style)
+    |> maybe_put(:anchor, anchor)
+    |> maybe_put(:anchor_offset, anchor_offset)
+    |> maybe_put(:anchor_fit, anchor_fit)
+    |> maybe_put(:snap_margin, snap_margin)
     |> maybe_put(:disabled, disabled)
     |> maybe_put(:tab_index, tab_index)
     |> maybe_put(:events, events)
@@ -1584,6 +1596,10 @@ defmodule Guppy.IR do
       :style,
       :list_style,
       :option_style,
+      :anchor,
+      :anchor_offset,
+      :anchor_fit,
+      :snap_margin,
       :disabled,
       :tab_index,
       :events
@@ -1816,6 +1832,10 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :list_style)),
          :ok <- validate_style(Map.get(node, :option_style)),
+         :ok <- validate_popover_anchor(Map.get(node, :anchor)),
+         :ok <- validate_optional_point(Map.get(node, :anchor_offset), :anchor_offset),
+         :ok <- validate_popover_anchor_fit(Map.get(node, :anchor_fit)),
+         :ok <- validate_optional_non_neg_number(Map.get(node, :snap_margin), :snap_margin),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
          :ok <- validate_events(Map.get(node, :events), [:click, :change, :close, :focus, :blur]),

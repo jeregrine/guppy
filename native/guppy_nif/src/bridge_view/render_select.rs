@@ -1,7 +1,7 @@
 use super::{
     BridgeView, events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style,
 };
-use crate::ir::{DivStyle, SelectNode, SelectOption};
+use crate::ir::{DivStyle, PopoverAnchor, PopoverAnchorFit, SelectNode, SelectOption};
 use gpui::{
     AnyElement, Context, Corner, InteractiveElement, IntoElement, KeyDownEvent, ParentElement,
     SharedString, StatefulInteractiveElement, Styled, Window, anchored, deferred, div, point, px,
@@ -89,20 +89,36 @@ pub(crate) fn render(
 
     if node.open {
         let list = render_option_list(view_id, &node_key, node);
-        trigger = trigger.child(
-            deferred(
-                anchored()
-                    .anchor(Corner::TopLeft)
-                    .position_mode(gpui::AnchoredPositionMode::Local)
-                    .offset(point(px(0.0), px(32.0)))
-                    .snap_to_window_with_margin(px(8.0))
-                    .child(list),
-            )
-            .priority(2),
-        );
+        trigger = trigger.child(deferred(build_anchored_select(node).child(list)).priority(2));
     }
 
     trigger.into_any_element()
+}
+
+fn build_anchored_select(node: &SelectNode) -> gpui::Anchored {
+    let (offset_x, offset_y) = node.anchor_offset.unwrap_or((0.0, 32.0));
+
+    let anchored = anchored()
+        .anchor(to_gpui_corner(node.anchor))
+        .position_mode(gpui::AnchoredPositionMode::Local)
+        .offset(point(px(offset_x), px(offset_y)));
+
+    match node.anchor_fit {
+        PopoverAnchorFit::SwitchAnchor => anchored,
+        PopoverAnchorFit::SnapToWindow => anchored.snap_to_window(),
+        PopoverAnchorFit::SnapToWindowWithMargin => {
+            anchored.snap_to_window_with_margin(px(node.snap_margin))
+        }
+    }
+}
+
+fn to_gpui_corner(anchor: PopoverAnchor) -> Corner {
+    match anchor {
+        PopoverAnchor::TopLeft => Corner::TopLeft,
+        PopoverAnchor::TopRight => Corner::TopRight,
+        PopoverAnchor::BottomLeft => Corner::BottomLeft,
+        PopoverAnchor::BottomRight => Corner::BottomRight,
+    }
 }
 
 fn selected_label(node: &SelectNode) -> String {

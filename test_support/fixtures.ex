@@ -250,7 +250,7 @@ defmodule Guppy.TemplateExample do
       <popover id="help_popover" label="Help" open={@popover_open} click="open_help" close="close_help" popover_class="p-4" anchor="bottom_right" anchor_position_mode="local" anchor_fit="snap_to_window_with_margin" anchor_offset={{0, 12}} snap_margin="12" close_on_click_outside="false" stack_priority="2">
         <text>Popover content</text>
       </popover>
-      <select id="status_select" value={@status} open={@status_open} options={@status_options} placeholder="Pick status" click="toggle_status" change="status_changed" close="close_status" class="w-[240px]" list_class="p-1 shadow-lg" option_class="p-2" />
+      <select id="status_select" value={@status} open={@status_open} options={@status_options} placeholder="Pick status" click="toggle_status" change="status_changed" close="close_status" class="w-[240px]" list_class="p-1 shadow-lg" option_class="p-2" anchor="bottom_left" anchor_offset={{0, 10}} anchor_fit="snap_to_window_with_margin" snap_margin="10" />
       <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" focus="name_focused" blur="name_blurred" context_menu="name_context" />
       <textarea id="notes_input" value={@notes} placeholder="Notes" class="w-[240px] h-[120px]" change="notes_changed" focus="notes_focused" blur="notes_blurred" context_menu="notes_context" />
       {if @show_footer, do: Guppy.IR.text("Footer ready", id: "footer")}
