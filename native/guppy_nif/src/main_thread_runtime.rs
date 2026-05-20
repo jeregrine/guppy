@@ -4,7 +4,7 @@ use crate::ir::IrNode;
 use crate::menu::{self, MenuSpec};
 use crate::window_options::WindowOptionsConfig;
 use async_task::spawn;
-use gpui::{App, AppContext, Application, AsyncApp, PlatformDispatcher};
+use gpui::{App, AppContext, Application, AsyncApp, ClipboardItem, PlatformDispatcher};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -77,6 +77,15 @@ pub(crate) enum MainThreadRequest {
         menus: Vec<MenuSpec>,
         reply: Sender<i32>,
     },
+    ReadClipboardText {
+        deadline: RequestDeadline,
+        reply: Sender<Result<Option<String>, ()>>,
+    },
+    WriteClipboardText {
+        deadline: RequestDeadline,
+        text: String,
+        reply: Sender<i32>,
+    },
     CloseAllNoReply,
     ViewCount {
         deadline: RequestDeadline,
@@ -92,6 +101,8 @@ impl MainThreadRequest {
             | MainThreadRequest::CloseWindow { deadline, .. }
             | MainThreadRequest::CloseAll { deadline, .. }
             | MainThreadRequest::SetMenus { deadline, .. }
+            | MainThreadRequest::ReadClipboardText { deadline, .. }
+            | MainThreadRequest::WriteClipboardText { deadline, .. }
             | MainThreadRequest::ViewCount { deadline, .. } => Some(deadline),
             MainThreadRequest::CloseAllNoReply => None,
         }
@@ -267,6 +278,32 @@ pub fn set_menus(menus: Vec<MenuSpec>) -> i32 {
     })
 }
 
+pub fn read_clipboard_text() -> Result<Option<String>, ()> {
+    APP.with(|app| {
+        let app = app.borrow().as_ref().cloned().ok_or(())?;
+
+        app.update(|cx| cx.read_from_clipboard().and_then(|item| item.text()))
+            .map_err(|_| ())
+    })
+}
+
+pub fn write_clipboard_text(text: String) -> i32 {
+    APP.with(|app| {
+        let app = app.borrow().as_ref().cloned();
+
+        let Some(app) = app else {
+            return -1;
+        };
+
+        let result = app.update(move |cx| cx.write_to_clipboard(ClipboardItem::new_string(text)));
+
+        match result {
+            Ok(_) => 1,
+            Err(_) => -1,
+        }
+    })
+}
+
 pub(crate) fn init_request_queue() {
     if REQUEST_TX.get().is_none() {
         let (tx, rx) = mpsc::channel();
@@ -384,6 +421,20 @@ fn handle_request(request: MainThreadRequest) {
         } => {
             if !deadline.expired() {
                 let _ = reply.send(set_menus(menus));
+            }
+        }
+        MainThreadRequest::ReadClipboardText { deadline, reply } => {
+            if !deadline.expired() {
+                let _ = reply.send(read_clipboard_text());
+            }
+        }
+        MainThreadRequest::WriteClipboardText {
+            deadline,
+            text,
+            reply,
+        } => {
+            if !deadline.expired() {
+                let _ = reply.send(write_clipboard_text(text));
             }
         }
         MainThreadRequest::CloseAllNoReply => {

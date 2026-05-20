@@ -97,6 +97,42 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  test "clipboard text API reads through native when loaded" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        assert {:ok, text} = Guppy.read_clipboard_text()
+        assert is_binary(text) or is_nil(text)
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.read_clipboard_text()
+    end
+  end
+
+  test "clipboard text APIs validate and route through native" do
+    server = :"guppy_clipboard_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    assert {:ok, :pong} = Guppy.Server.read_clipboard_text(server, 37)
+    assert_receive {:guppy_test_native_request, {:read_clipboard_text, []}, 37}
+
+    assert :ok = Guppy.Server.write_clipboard_text(server, "copied text", 38)
+    assert_receive {:guppy_test_native_request, {:write_clipboard_text, ["copied text"]}, 38}
+
+    assert {:error, :invalid_clipboard_text} =
+             Guppy.Server.write_clipboard_text(server, :not_text, 38)
+
+    refute_receive {:guppy_test_native_request, {:write_clipboard_text, [:not_text]}, 38}
+  end
+
   test "set_menus validates menu specs and routes through native" do
     server = :"guppy_menu_recording_native_#{System.unique_integer([:positive])}"
 

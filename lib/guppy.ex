@@ -55,6 +55,16 @@ defmodule Guppy do
     Server.set_menus(Server, self(), menus, timeout)
   end
 
+  @doc "Reads text from the platform clipboard, returning `nil` when no text is available."
+  def read_clipboard_text(timeout \\ 5_000) do
+    Server.read_clipboard_text(Server, timeout)
+  end
+
+  @doc "Writes text to the platform clipboard."
+  def write_clipboard_text(text, timeout \\ 5_000) do
+    Server.write_clipboard_text(Server, text, timeout)
+  end
+
   @doc "Returns the active theme for the current app context."
   def active_theme, do: Guppy.App.theme()
 

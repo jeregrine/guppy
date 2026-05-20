@@ -106,6 +106,14 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_read_clipboard_text(_timeout) do
+    {:error, :nif_not_loaded}
+  end
+
+  def native_write_clipboard_text(_text, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_event_target_status do
     {:error, :nif_not_loaded}
   end
@@ -200,6 +208,22 @@ defmodule Guppy.Native.Nif do
     end)
   end
 
+  defp dispatch({:read_clipboard_text, []}, timeout) do
+    with_loaded(fn ->
+      native_call(:read_clipboard_text, fn ->
+        normalize_clipboard_text(native_read_clipboard_text(timeout))
+      end)
+    end)
+  end
+
+  defp dispatch({:write_clipboard_text, [text]}, timeout) when is_binary(text) do
+    with_loaded(fn ->
+      native_call(:write_clipboard_text, fn ->
+        normalize_status(native_write_clipboard_text(text, timeout))
+      end)
+    end)
+  end
+
   defp dispatch({:event_target_status, []}, _timeout) do
     with_loaded(fn ->
       native_call(:event_target_status, fn -> {:ok, native_event_target_status()} end)
@@ -263,6 +287,11 @@ defmodule Guppy.Native.Nif do
   defp normalize_status({:error, reason}), do: {:error, reason}
   defp normalize_status(status) when is_atom(status), do: status
   defp normalize_status(other), do: {:ok, other}
+
+  defp normalize_clipboard_text({:error, reason}), do: {:error, reason}
+  defp normalize_clipboard_text(value) when is_nil(value), do: {:ok, nil}
+  defp normalize_clipboard_text(text) when is_binary(text), do: {:ok, text}
+  defp normalize_clipboard_text(_other), do: {:error, :runtime_unavailable}
 
   defp status_from_load_status(:ok), do: :loaded
   defp status_from_load_status(_), do: :not_loaded

@@ -69,6 +69,14 @@ defmodule Guppy.Server do
     GenServer.call(server, {:set_menus, owner, menus, timeout}, gen_call_timeout(timeout))
   end
 
+  def read_clipboard_text(server \\ __MODULE__, timeout \\ 5_000) do
+    GenServer.call(server, {:read_clipboard_text, timeout}, gen_call_timeout(timeout))
+  end
+
+  def write_clipboard_text(server \\ __MODULE__, text, timeout \\ 5_000) do
+    GenServer.call(server, {:write_clipboard_text, text, timeout}, gen_call_timeout(timeout))
+  end
+
   def claim_app_owner(server \\ __MODULE__, owner) when is_pid(owner) do
     GenServer.call(server, {:claim_app_owner, owner})
   end
@@ -170,6 +178,22 @@ defmodule Guppy.Server do
 
       error ->
         {:reply, error, state}
+    end
+  end
+
+  def handle_call({:read_clipboard_text, timeout}, _from, state) do
+    reply = native_request(state, :read_clipboard_text, {:read_clipboard_text, []}, timeout)
+    {:reply, reply, state}
+  end
+
+  def handle_call({:write_clipboard_text, text, timeout}, _from, state) do
+    if is_binary(text) do
+      reply =
+        native_request(state, :write_clipboard_text, {:write_clipboard_text, [text]}, timeout)
+
+      {:reply, normalize_native_reply(reply), state}
+    else
+      {:reply, {:error, :invalid_clipboard_text}, state}
     end
   end
 

@@ -127,6 +127,10 @@ Useful top-level API:
 - `Guppy.close_window/2`
 - `Guppy.set_menus/1`
 - `Guppy.set_menus/2`
+- `Guppy.read_clipboard_text/0`
+- `Guppy.read_clipboard_text/1`
+- `Guppy.write_clipboard_text/1`
+- `Guppy.write_clipboard_text/2`
 - `Guppy.native_view_count/0`
 - `Guppy.native_view_count/1`
 - `Guppy.native_build_info/0`

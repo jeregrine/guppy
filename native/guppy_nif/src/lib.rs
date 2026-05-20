@@ -326,6 +326,34 @@ fn native_event_target_status<'a>(env: Env<'a>) -> Term<'a> {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+fn native_read_clipboard_text<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
+    let result = request_with_timeout(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::ReadClipboardText { deadline, reply }
+    });
+
+    match result {
+        NativeRequestResult::Reply(Ok(Some(text))) => text.encode(env),
+        NativeRequestResult::Reply(Ok(None)) => nil().encode(env),
+        NativeRequestResult::Reply(Err(())) => error_tuple(env, runtime_unavailable()),
+        NativeRequestResult::Timeout => error_tuple(env, native_timeout()),
+        NativeRequestResult::Unavailable => error_tuple(env, runtime_unavailable()),
+    }
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+fn native_write_clipboard_text<'a>(env: Env<'a>, text: String, timeout_ms: u64) -> Term<'a> {
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::WriteClipboardText {
+            deadline,
+            text,
+            reply,
+        }
+    });
+
+    status_result(env, result, runtime_unavailable())
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
 fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>, timeout_ms: u64) -> Term<'a> {
     let to_binary_started_at = Instant::now();
     let ir_binary = ir.to_binary();
