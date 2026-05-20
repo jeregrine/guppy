@@ -102,7 +102,13 @@ defmodule Guppy.App.Coordinator do
     case Map.fetch(state.windows, window_id) do
       {:ok, %{pid: pid}} ->
         reply = DynamicSupervisor.terminate_child(state.window_supervisor, pid)
-        next_state = state |> delete_window(window_id) |> maybe_stop_app_after_last_window()
+
+        next_state =
+          state
+          |> delete_window(window_id)
+          |> close_dependent_windows(window_id)
+          |> maybe_stop_app_after_last_window()
+
         {:reply, reply, next_state}
 
       :error ->
@@ -221,7 +227,12 @@ defmodule Guppy.App.Coordinator do
         {:noreply, state}
 
       window_id ->
-        next_state = state |> delete_window(window_id) |> maybe_stop_app_after_last_window()
+        next_state =
+          state
+          |> delete_window(window_id)
+          |> close_dependent_windows(window_id)
+          |> maybe_stop_app_after_last_window()
+
         {:noreply, next_state}
     end
   end
@@ -377,16 +388,60 @@ defmodule Guppy.App.Coordinator do
     end)
   end
 
-  defp maybe_stop_app_after_last_window(
-         %{config: %{exit_on_last_window_closed: true}, windows: windows} = state
-       )
-       when map_size(windows) == 0 do
-    app_supervisor = state.app_supervisor
-    Task.start(fn -> Supervisor.stop(app_supervisor, :normal) end)
-    state
+  defp close_dependent_windows(state, parent_window_id) do
+    state.windows
+    |> Enum.filter(fn {window_id, entry} ->
+      window_id != parent_window_id and close_with_parent?(entry.spec, parent_window_id)
+    end)
+    |> Enum.map(fn {window_id, _entry} -> window_id end)
+    |> Enum.reduce(state, fn window_id, acc -> close_tracked_window(acc, window_id) end)
+  end
+
+  defp close_transient_windows(state) do
+    state.windows
+    |> Enum.filter(fn {_window_id, entry} -> transient_window?(entry.spec) end)
+    |> Enum.map(fn {window_id, _entry} -> window_id end)
+    |> Enum.reduce(state, fn window_id, acc -> close_tracked_window(acc, window_id) end)
+  end
+
+  defp close_tracked_window(state, window_id) do
+    case Map.fetch(state.windows, window_id) do
+      {:ok, %{pid: pid}} ->
+        _ = DynamicSupervisor.terminate_child(state.window_supervisor, pid)
+
+        state
+        |> delete_window(window_id)
+        |> close_dependent_windows(window_id)
+
+      :error ->
+        state
+    end
+  end
+
+  defp close_with_parent?(%WindowSpec{metadata: metadata}, parent_window_id) do
+    Map.get(metadata, :close_with_parent) == true and
+      Map.get(metadata, :parent_window_id) == parent_window_id
+  end
+
+  defp transient_window?(%WindowSpec{metadata: metadata}),
+    do: Map.get(metadata, :transient) == true
+
+  defp maybe_stop_app_after_last_window(%{config: %{exit_on_last_window_closed: true}} = state) do
+    if root_window_count(state.windows) == 0 do
+      state = close_transient_windows(state)
+      app_supervisor = state.app_supervisor
+      Task.start(fn -> Supervisor.stop(app_supervisor, :normal) end)
+      state
+    else
+      state
+    end
   end
 
   defp maybe_stop_app_after_last_window(state), do: state
+
+  defp root_window_count(windows) do
+    Enum.count(windows, fn {_window_id, entry} -> not transient_window?(entry.spec) end)
+  end
 
   defp refresh_windows(state) do
     supervised = supervised_window_pids(state.window_supervisor)

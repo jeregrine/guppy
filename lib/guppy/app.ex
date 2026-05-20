@@ -128,7 +128,8 @@ defmodule Guppy.App do
         module: Guppy.App.CommandPalette,
         arg: app,
         opts: [kind: :popup, focus: true, show: true],
-        restart: :temporary
+        restart: :temporary,
+        metadata: command_palette_metadata(app)
       ],
       30_000
     )
@@ -221,6 +222,17 @@ defmodule Guppy.App do
     Process.put(:guppy_app, app)
     Process.put(:guppy_app_window_id, window_id)
     :ok
+  end
+
+  defp command_palette_metadata(app) do
+    base = %{role: :command_palette, transient: true}
+    parent_window_id = current_window_id()
+
+    if current_app() == app and is_binary(parent_window_id) do
+      Map.merge(base, %{close_with_parent: true, parent_window_id: parent_window_id})
+    else
+      base
+    end
   end
 
   @doc "Returns the app ref for the current app-supervised window process, if any."

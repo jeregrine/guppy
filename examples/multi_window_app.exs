@@ -74,7 +74,7 @@ defmodule Guppy.Examples.MultiWindowApp do
       %{id: "main", module: Guppy.Examples.MultiWindowApp.MainWindow, start: false},
       %{id: "secondary", module: Guppy.Examples.MultiWindowApp.SecondaryWindow, start: false}
     ],
-    theme: %{id: "demo-dark", name: "Demo Dark", appearance: :dark},
+    theme: %{Guppy.App.Theme.default(:dark) | id: "demo-dark", name: "Demo Dark"},
     stylesheet: %{
       classes: %{
         "card" => %{

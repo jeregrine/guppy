@@ -169,6 +169,47 @@ defmodule Guppy.AppTest do
     assert Process.alive?(app_pid)
   end
 
+  test "app closes dependent windows when their parent window closes" do
+    app_name = :"guppy_parent_child_app_#{System.unique_integer([:positive])}"
+    {:ok, _app_pid} = start_supervised({Guppy.KeepAliveOnLastWindowApp, name: app_name})
+
+    assert {:ok, parent_pid} =
+             Guppy.App.open_window(app_name, "parent", module: Guppy.AppPlainWindow)
+
+    assert {:ok, child_pid} =
+             Guppy.App.open_window(app_name, "child",
+               module: Guppy.AppPlainWindow,
+               metadata: %{close_with_parent: true, parent_window_id: "parent"}
+             )
+
+    assert Guppy.App.windows(app_name) == %{"child" => child_pid, "parent" => parent_pid}
+
+    assert :ok = Guppy.App.close_window(app_name, "parent")
+    wait_until(fn -> Guppy.App.windows(app_name) == %{} end)
+    refute Process.alive?(parent_pid)
+    refute Process.alive?(child_pid)
+  end
+
+  test "transient app windows do not keep exit-on-last-window apps alive" do
+    app_name = :"guppy_transient_exit_app_#{System.unique_integer([:positive])}"
+    {:ok, app_pid} = Guppy.ExitOnLastWindowApp.start_link(name: app_name)
+    app_ref = Process.monitor(app_pid)
+
+    assert {:ok, _root_pid} = Guppy.App.open_window(app_name, "plain")
+
+    assert {:ok, transient_pid} =
+             Guppy.App.open_window(app_name, "palette",
+               module: Guppy.AppPlainWindow,
+               metadata: %{transient: true}
+             )
+
+    transient_ref = Process.monitor(transient_pid)
+
+    assert :ok = Guppy.App.close_window(app_name, "plain")
+    assert_receive {:DOWN, ^transient_ref, :process, ^transient_pid, _reason}, 1_000
+    assert_receive {:DOWN, ^app_ref, :process, ^app_pid, :normal}, 1_000
+  end
+
   test "app-supervised windows are registered and receive app context" do
     case Guppy.Native.Nif.load_status() do
       :ok ->
