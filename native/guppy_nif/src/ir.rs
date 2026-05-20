@@ -1079,6 +1079,7 @@ pub enum IrNode {
         change: Option<String>,
         focus: Option<String>,
         blur: Option<String>,
+        context_menu: Option<String>,
     },
     Textarea {
         id: Option<String>,
@@ -1090,6 +1091,7 @@ pub enum IrNode {
         change: Option<String>,
         focus: Option<String>,
         blur: Option<String>,
+        context_menu: Option<String>,
     },
     Scroll {
         id: Option<String>,
@@ -1207,6 +1209,7 @@ impl IrNode {
                 change: get_change_event(map)?,
                 focus: get_focus_event(map)?,
                 blur: get_blur_event(map)?,
+                context_menu: get_optional_event(map, "context_menu")?,
             }),
             "textarea" => Ok(Self::Textarea {
                 id,
@@ -1218,6 +1221,7 @@ impl IrNode {
                 change: get_change_event(map)?,
                 focus: get_focus_event(map)?,
                 blur: get_blur_event(map)?,
+                context_menu: get_optional_event(map, "context_menu")?,
             }),
             "scroll" => Ok(Self::Scroll {
                 id,

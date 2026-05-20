@@ -177,7 +177,7 @@ Template tags:
 - `<text_input />`
 - `<textarea />`
 
-Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item click/context-menu callbacks, canvas clicks, popover callbacks, text input/textarea changes and focus/blur, app lifecycle events (`app_activated`, `app_deactivated`), and window lifecycle events (`window_focused`, `window_blurred`, `window_moved`, `window_resized`, `window_close_requested`, `window_closed`). Tab and Shift-Tab traverse retained GPUI tab stops; nodes with `context_menu` handlers can also invoke that event from the keyboard with Shift-F10 or the context-menu key.
+Native event coverage includes click, close, hover, focus/blur, key down/up, shortcut actions, app-menu callback actions, context menu, drag/drop, mouse down/up/move, scroll wheel, checkbox/radio/select changes, uniform-list item click/context-menu callbacks, canvas clicks, popover callbacks, text input/textarea changes, focus/blur, and context menus, app lifecycle events (`app_activated`, `app_deactivated`), and window lifecycle events (`window_focused`, `window_blurred`, `window_moved`, `window_resized`, `window_close_requested`, `window_closed`). Tab and Shift-Tab traverse retained GPUI tab stops; nodes with `context_menu` handlers can also invoke that event from the keyboard with Shift-F10 or the context-menu key.
 
 `Guppy.ContextMenu.render/2` renders validated item data into ordinary IR buttons/dividers for element-local menus. Pair it with a node's `context_menu` event and keep open/close/selection state in the owning process.
 

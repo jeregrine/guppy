@@ -735,7 +735,8 @@ defmodule Guppy.IR do
   @type text_input_events :: %{
           optional(:change) => String.t(),
           optional(:focus) => String.t(),
-          optional(:blur) => String.t()
+          optional(:blur) => String.t(),
+          optional(:context_menu) => String.t()
         }
 
   @type text_input_node :: %{
@@ -1900,7 +1901,7 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
-         :ok <- validate_events(Map.get(node, :events), [:change, :focus, :blur]) do
+         :ok <- validate_events(Map.get(node, :events), [:change, :focus, :blur, :context_menu]) do
       :ok
     end
   end

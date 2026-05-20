@@ -715,7 +715,12 @@ defmodule Guppy.IRTest do
         style: [{:w_px, 240}],
         disabled: false,
         tab_index: 4,
-        events: %{change: "name_changed", focus: "name_focused", blur: "name_blurred"}
+        events: %{
+          change: "name_changed",
+          focus: "name_focused",
+          blur: "name_blurred",
+          context_menu: "name_context"
+        }
       )
 
     assert :ok = Guppy.IR.validate(text_input_ir)
@@ -725,7 +730,8 @@ defmodule Guppy.IRTest do
     assert text_input_ir.events == %{
              change: "name_changed",
              focus: "name_focused",
-             blur: "name_blurred"
+             blur: "name_blurred",
+             context_menu: "name_context"
            }
 
     textarea_ir =
@@ -736,7 +742,12 @@ defmodule Guppy.IRTest do
         style: [{:w_px, 320}, {:h_px, 120}],
         disabled: false,
         tab_index: 5,
-        events: %{change: "notes_changed", focus: "notes_focused", blur: "notes_blurred"}
+        events: %{
+          change: "notes_changed",
+          focus: "notes_focused",
+          blur: "notes_blurred",
+          context_menu: "notes_context"
+        }
       )
 
     assert :ok = Guppy.IR.validate(textarea_ir)
@@ -748,7 +759,8 @@ defmodule Guppy.IRTest do
     assert textarea_ir.events == %{
              change: "notes_changed",
              focus: "notes_focused",
-             blur: "notes_blurred"
+             blur: "notes_blurred",
+             context_menu: "notes_context"
            }
 
     styled_ir =

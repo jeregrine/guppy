@@ -364,6 +364,46 @@ fn rejects_text_run_content_mismatches() {
 }
 
 #[test]
+fn decodes_text_input_context_menu_events() {
+    let input = map(vec![
+        (atom("kind"), atom("text_input")),
+        (atom("value"), binary("Jason")),
+        (
+            atom("events"),
+            events(vec![("change", "changed"), ("context_menu", "contexted")]),
+        ),
+    ]);
+
+    match IrNode::from_term(&input).unwrap() {
+        IrNode::TextInput {
+            change,
+            context_menu,
+            ..
+        } => {
+            assert_eq!(change.as_deref(), Some("changed"));
+            assert_eq!(context_menu.as_deref(), Some("contexted"));
+        }
+        other => panic!("expected text input, got {other:?}"),
+    }
+
+    let textarea = map(vec![
+        (atom("kind"), atom("textarea")),
+        (atom("value"), binary("Notes")),
+        (
+            atom("events"),
+            events(vec![("context_menu", "notes_context")]),
+        ),
+    ]);
+
+    match IrNode::from_term(&textarea).unwrap() {
+        IrNode::Textarea { context_menu, .. } => {
+            assert_eq!(context_menu.as_deref(), Some("notes_context"));
+        }
+        other => panic!("expected textarea, got {other:?}"),
+    }
+}
+
+#[test]
 fn decodes_list_context_menu_events() {
     let uniform = map(vec![
         (atom("kind"), atom("uniform_list")),
@@ -2010,6 +2050,7 @@ fn list_row_validation_rejects_stateful_controls() {
         change: None,
         focus: None,
         blur: None,
+        context_menu: None,
     })
     .unwrap_err();
 

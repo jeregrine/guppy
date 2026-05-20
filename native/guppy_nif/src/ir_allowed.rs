@@ -225,8 +225,14 @@ pub(crate) fn allowed_node_event_fields(
             ],
             "button events",
         ),
-        "text_input" => (&["change", "focus", "blur"], "text_input events"),
-        "textarea" => (&["change", "focus", "blur"], "textarea events"),
+        "text_input" => (
+            &["change", "focus", "blur", "context_menu"],
+            "text_input events",
+        ),
+        "textarea" => (
+            &["change", "focus", "blur", "context_menu"],
+            "textarea events",
+        ),
         _ => return None,
     })
 }

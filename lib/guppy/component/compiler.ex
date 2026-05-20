@@ -70,7 +70,7 @@ defmodule Guppy.Component.Compiler do
   @checkbox_events ["change", "focus", "blur"]
   @radio_events ["change", "focus", "blur"]
   @select_events ["click", "change", "close", "focus", "blur"]
-  @text_input_events ["change", "focus", "blur"]
+  @text_input_events ["change", "focus", "blur", "context_menu"]
   @input_attrs ["id", "value", "placeholder", "class", "style", "disabled", "tab_index"]
 
   @local_component_prefix "guppy-local-"

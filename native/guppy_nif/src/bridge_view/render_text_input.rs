@@ -2,7 +2,9 @@ use super::{identity::NodeIdentity, render_pass::RenderPass, style::apply_div_st
 use crate::bridge_text_input::{BridgeTextInput, BridgeTextInputOptions};
 use crate::bridge_view::BridgeView;
 use crate::ir::DivStyle;
-use gpui::{AnyElement, Context, InteractiveElement, IntoElement, ParentElement, Window, div};
+use gpui::{
+    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, Window, div,
+};
 
 pub(crate) struct TextInputSpec<'a> {
     pub path: &'a str,
@@ -15,6 +17,7 @@ pub(crate) struct TextInputSpec<'a> {
     pub change: Option<&'a str>,
     pub focus: Option<&'a str>,
     pub blur: Option<&'a str>,
+    pub context_menu: Option<&'a str>,
     pub multiline: bool,
 }
 
@@ -80,11 +83,18 @@ pub(crate) fn render(
         cx,
     );
 
-    apply_div_style(
-        div().id(node_id.to_shared_string()).child(entity),
-        spec.style,
-    )
-    .into_any_element()
+    let mut wrapper = div().id(node_id.to_shared_string()).child(entity);
+
+    if let Some(callback_id) = spec.context_menu {
+        let view_id = pass.view_id();
+        let node_id = node_id.to_string();
+        let callback_id = callback_id.to_owned();
+        wrapper = wrapper.on_mouse_down(MouseButton::Right, move |event, _, _| {
+            super::events::emit_context_menu(view_id, &node_id, &callback_id, event);
+        });
+    }
+
+    apply_div_style(wrapper, spec.style).into_any_element()
 }
 
 #[cfg(test)]
@@ -121,6 +131,7 @@ mod tests {
                     change: Some("name_changed"),
                     focus: Some("name_focused"),
                     blur: Some("name_blurred"),
+                    context_menu: Some("name_context"),
                     multiline: false,
                 },
                 view_cx,
@@ -140,6 +151,7 @@ mod tests {
                     change: Some("person_changed"),
                     focus: Some("person_focused"),
                     blur: Some("person_blurred"),
+                    context_menu: Some("person_context"),
                     multiline: true,
                 },
                 view_cx,
@@ -188,6 +200,7 @@ mod tests {
                     change: Some("name_changed"),
                     focus: Some("name_focused"),
                     blur: Some("name_blurred"),
+                    context_menu: Some("name_context"),
                     multiline: false,
                 },
                 window,

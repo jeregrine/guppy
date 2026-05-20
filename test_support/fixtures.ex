@@ -219,8 +219,8 @@ defmodule Guppy.TemplateExample do
         <text>Popover content</text>
       </popover>
       <select id="status_select" value={@status} open={@status_open} options={@status_options} placeholder="Pick status" click="toggle_status" change="status_changed" close="close_status" class="w-[240px]" list_class="p-1 shadow-lg" option_class="p-2" />
-      <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" focus="name_focused" blur="name_blurred" />
-      <textarea id="notes_input" value={@notes} placeholder="Notes" class="w-[240px] h-[120px]" change="notes_changed" focus="notes_focused" blur="notes_blurred" />
+      <text_input id="name_input" value={@value} placeholder="Type here" class="w-[240px]" change="name_changed" focus="name_focused" blur="name_blurred" context_menu="name_context" />
+      <textarea id="notes_input" value={@notes} placeholder="Notes" class="w-[240px] h-[120px]" change="notes_changed" focus="notes_focused" blur="notes_blurred" context_menu="notes_context" />
       {if @show_footer, do: Guppy.IR.text("Footer ready", id: "footer")}
     </div>
     """

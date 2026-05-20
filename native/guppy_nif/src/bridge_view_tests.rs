@@ -365,6 +365,40 @@ fn render_retains_scroll_and_focus_state_for_compliance_smoke(cx: &mut gpui::Tes
 }
 
 #[gpui::test]
+fn simulated_text_input_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+    let _ = crate::take_basic_event_snapshot_for_test();
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 50,
+        ir: IrNode::TextInput {
+            id: Some("name_input".into()),
+            value: "Jason".into(),
+            placeholder: "Name".into(),
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            disabled: false,
+            tab_index: None,
+            change: None,
+            focus: None,
+            blur: None,
+            context_menu: Some("name_context".into()),
+        },
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_mouse_down(
+        point(px(10.), px(10.)),
+        MouseButton::Right,
+        Modifiers::none(),
+    );
+
+    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "context_menu");
+    assert_eq!(event.view_id, 50);
+    assert_eq!(event.node_id.as_deref(), Some("name_input"));
+    assert_eq!(event.callback_id.as_deref(), Some("name_context"));
+}
+
+#[gpui::test]
 fn render_retains_data_table_and_tree_list_states(cx: &mut gpui::TestAppContext) {
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 55,
@@ -429,6 +463,7 @@ fn render_prunes_dead_text_input_entities(cx: &mut gpui::TestAppContext) {
             change: Some("name_changed".into()),
             focus: Some("name_focused".into()),
             blur: Some("name_blurred".into()),
+            context_menu: Some("name_context".into()),
         },
         retained: BridgeRetainedState::default(),
     });
