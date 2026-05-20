@@ -22,7 +22,8 @@ defmodule Guppy.App do
 
   App modules usually start under the module name as the registered coordinator
   process, similar to `Ecto.Repo`. The process is non-rendering; windows remain
-  `Guppy.Window` modules.
+  `Guppy.Window` modules. App lifecycle events such as `"app_activated"` and
+  `"app_deactivated"` are delivered to optional `handle_event/3` callbacks.
   """
 
   alias Guppy.App.{Config, Coordinator, Stylesheet, Theme}
@@ -39,9 +40,10 @@ defmodule Guppy.App do
               | {:stop, term()}
   @callback handle_command(String.t(), map(), Coordinator.state()) ::
               Coordinator.callback_result()
+  @callback handle_event(String.t(), map(), Coordinator.state()) :: Coordinator.callback_result()
   @callback handle_info(term(), Coordinator.state()) :: Coordinator.callback_result()
 
-  @optional_callbacks init: 1, handle_command: 3, handle_info: 2
+  @optional_callbacks init: 1, handle_command: 3, handle_event: 3, handle_info: 2
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do

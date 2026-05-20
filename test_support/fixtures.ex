@@ -121,6 +121,12 @@ defmodule Guppy.TestApp do
     send(state.config.metadata.parent, {:app_command, command_id, payload})
     {:noreply, state}
   end
+
+  @impl Guppy.App
+  def handle_event(event_name, payload, state) do
+    send(state.config.metadata.parent, {:app_event, event_name, payload})
+    {:noreply, state}
+  end
 end
 
 defmodule Guppy.CrashingNative do

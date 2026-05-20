@@ -69,6 +69,7 @@ Important current invariants:
 - native root views bind Tab/Shift-Tab for GPUI tab-stop traversal, track keyboard-vs-mouse focus-visible state for `focus_visible_style`, and emit app/window activation and window move/resize lifecycle events from GPUI window observers
 - div-like nodes support a narrow native opacity animation spec keyed by stable animation id
 - app/runtime menus are process-owned via `Guppy.set_menus/1` / `Guppy.set_menus/2`; menu callback actions route back through `Guppy.Server` and menus are cleared when the owner exits
+- `use Guppy.App` modules handle app lifecycle events such as `"app_activated"` / `"app_deactivated"` with optional `handle_event/3`
 - app command helpers include `Guppy.App.command_bindings/1`, `Guppy.App.open_command_palette/1`, and `Guppy.App.open_context_menu/3` for command-backed shortcuts and transient overlays
 - semantic `data_table` and `tree` primitives are first-pass virtualized/list-backed nodes; Elixir owns sort, selection, expansion, and context-menu state
 - `canvas` is a bounded data-only native painting primitive for rect, rounded-rect, and slash-pattern rect commands with coarse click/context-menu events

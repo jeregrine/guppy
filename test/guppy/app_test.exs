@@ -84,6 +84,9 @@ defmodule Guppy.AppTest do
     send(app_name, {:guppy_menu_event, %{id: "new_file", callback: "new_file"}})
     assert_receive {:app_command, "new_file", %{id: "new_file", callback: "new_file"}}
 
+    send(app_name, {:guppy_app_event, %{type: :app_activated}})
+    assert_receive {:app_event, "app_activated", %{}}
+
     assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", false)
     assert Guppy.App.commands(app_name)["new_file"].enabled == false
     assert :ok = Guppy.App.dispatch(app_name, "new_file", %{source: :disabled})

@@ -224,6 +224,17 @@ defmodule Guppy.App.Coordinator do
     {:noreply, dispatch_command(state, command_id, payload)}
   end
 
+  def handle_info({:guppy_app_event, %{type: type} = payload}, state) when is_atom(type) do
+    apply_callback(
+      state,
+      invoke_callback(state.module, :handle_event, [
+        Atom.to_string(type),
+        event_data(payload),
+        state
+      ])
+    )
+  end
+
   def handle_info(
         {:DOWN, monitor_ref, :process, _pid, _reason},
         %{server_monitor: monitor_ref} = state
@@ -561,6 +572,8 @@ defmodule Guppy.App.Coordinator do
         state
     end
   end
+
+  defp event_data(event), do: Map.drop(event, [:type])
 
   defp put_config(state, config), do: %{state | config: config}
 
