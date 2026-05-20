@@ -201,8 +201,8 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:open_file_dialog, opts, timeout}, _from, state) do
-    case validate_open_file_dialog_options(opts, files: true, directories: false) do
+  def handle_call({:open_file_dialog, opts, timeout}, {caller, _tag}, state) do
+    case validate_open_file_dialog_options(state, caller, opts, files: true, directories: false) do
       {:ok, opts} ->
         reply = native_request(state, :open_file_dialog, {:open_file_dialog, [opts]}, timeout)
         {:reply, reply, state}
@@ -212,8 +212,8 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:choose_directory_dialog, opts, timeout}, _from, state) do
-    case validate_open_file_dialog_options(opts, files: false, directories: true) do
+  def handle_call({:choose_directory_dialog, opts, timeout}, {caller, _tag}, state) do
+    case validate_open_file_dialog_options(state, caller, opts, files: false, directories: true) do
       {:ok, opts} ->
         reply = native_request(state, :open_file_dialog, {:open_file_dialog, [opts]}, timeout)
         {:reply, reply, state}
@@ -223,8 +223,8 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:save_file_dialog, opts, timeout}, _from, state) do
-    case validate_save_file_dialog_options(opts) do
+  def handle_call({:save_file_dialog, opts, timeout}, {caller, _tag}, state) do
+    case validate_save_file_dialog_options(state, caller, opts) do
       {:ok, opts} ->
         reply = native_request(state, :save_file_dialog, {:save_file_dialog, [opts]}, timeout)
         {:reply, reply, state}
@@ -760,45 +760,71 @@ defmodule Guppy.Server do
 
   defp validate_dock_menu(_items), do: {:error, :invalid_dock_menu}
 
-  defp validate_open_file_dialog_options(opts, mode) when is_list(opts),
-    do: opts |> Map.new() |> validate_open_file_dialog_options(mode)
+  defp validate_open_file_dialog_options(state, caller, opts, mode) when is_list(opts),
+    do: opts |> Map.new() |> validate_open_file_dialog_options(state, caller, mode)
 
-  defp validate_open_file_dialog_options(opts, mode) when is_map(opts) do
-    with :ok <- validate_file_dialog_keys(opts, [:multiple, :prompt]),
+  defp validate_open_file_dialog_options(opts, state, caller, mode) when is_map(opts) do
+    with :ok <- validate_file_dialog_keys(opts, [:multiple, :prompt, :owner_view_id]),
          {:ok, multiple} <- validate_optional_boolean(Map.get(opts, :multiple, false), :multiple),
-         {:ok, prompt} <- validate_optional_string(Map.get(opts, :prompt), :prompt) do
+         {:ok, prompt} <- validate_optional_string(Map.get(opts, :prompt), :prompt),
+         {:ok, owner_view_id} <- validate_file_dialog_owner_view_id(state, caller, opts) do
       {:ok,
        %{
          files: Keyword.fetch!(mode, :files),
          directories: Keyword.fetch!(mode, :directories),
          multiple: multiple
        }
-       |> maybe_put_window_option(:prompt, prompt)}
+       |> maybe_put_window_option(:prompt, prompt)
+       |> maybe_put_window_option(:owner_view_id, owner_view_id)}
     else
+      {:error, :unknown_view_id} -> {:error, :unknown_view_id}
+      {:error, :not_view_owner} -> {:error, :not_view_owner}
       _error -> {:error, :invalid_file_dialog_options}
     end
   end
 
-  defp validate_open_file_dialog_options(_opts, _mode), do: {:error, :invalid_file_dialog_options}
+  defp validate_open_file_dialog_options(_opts, _state, _caller, _mode),
+    do: {:error, :invalid_file_dialog_options}
 
-  defp validate_save_file_dialog_options(opts) when is_list(opts),
-    do: opts |> Map.new() |> validate_save_file_dialog_options()
+  defp validate_save_file_dialog_options(state, caller, opts) when is_list(opts),
+    do: opts |> Map.new() |> validate_save_file_dialog_options(state, caller)
 
-  defp validate_save_file_dialog_options(opts) when is_map(opts) do
-    with :ok <- validate_file_dialog_keys(opts, [:directory, :default_name]),
+  defp validate_save_file_dialog_options(opts, state, caller) when is_map(opts) do
+    with :ok <- validate_file_dialog_keys(opts, [:directory, :default_name, :owner_view_id]),
          {:ok, directory} <- validate_optional_string(Map.get(opts, :directory), :directory),
          {:ok, default_name} <-
-           validate_optional_string(Map.get(opts, :default_name), :default_name) do
+           validate_optional_string(Map.get(opts, :default_name), :default_name),
+         {:ok, owner_view_id} <- validate_file_dialog_owner_view_id(state, caller, opts) do
       {:ok,
        %{}
        |> maybe_put_window_option(:directory, directory)
-       |> maybe_put_window_option(:default_name, default_name)}
+       |> maybe_put_window_option(:default_name, default_name)
+       |> maybe_put_window_option(:owner_view_id, owner_view_id)}
     else
+      {:error, :unknown_view_id} -> {:error, :unknown_view_id}
+      {:error, :not_view_owner} -> {:error, :not_view_owner}
       _error -> {:error, :invalid_file_dialog_options}
     end
   end
 
-  defp validate_save_file_dialog_options(_opts), do: {:error, :invalid_file_dialog_options}
+  defp validate_save_file_dialog_options(_opts, _state, _caller),
+    do: {:error, :invalid_file_dialog_options}
+
+  defp validate_file_dialog_owner_view_id(state, caller, opts) do
+    case Map.fetch(opts, :owner_view_id) do
+      {:ok, view_id} when is_integer(view_id) and view_id > 0 ->
+        case validate_owned_view(state, caller, view_id) do
+          :ok -> {:ok, view_id}
+          error -> error
+        end
+
+      {:ok, _view_id} ->
+        {:error, :invalid_file_dialog_options}
+
+      :error ->
+        {:ok, nil}
+    end
+  end
 
   defp validate_file_dialog_keys(opts, allowed_keys) do
     case Map.keys(opts) -- allowed_keys do

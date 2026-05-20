@@ -360,6 +360,7 @@ fn native_open_file_dialog<'a>(
     directories: bool,
     multiple: bool,
     prompt: Option<String>,
+    owner_view_id: Option<u64>,
     timeout_ms: u64,
 ) -> Term<'a> {
     let result = request_with_timeout(timeout_ms, |reply, deadline| {
@@ -369,6 +370,7 @@ fn native_open_file_dialog<'a>(
             directories,
             multiple,
             prompt,
+            owner_view_id,
             reply,
         }
     });
@@ -387,6 +389,7 @@ fn native_save_file_dialog<'a>(
     env: Env<'a>,
     directory: Option<String>,
     default_name: Option<String>,
+    owner_view_id: Option<u64>,
     timeout_ms: u64,
 ) -> Term<'a> {
     let result = request_with_timeout(timeout_ms, |reply, deadline| {
@@ -394,6 +397,7 @@ fn native_save_file_dialog<'a>(
             deadline,
             directory,
             default_name,
+            owner_view_id,
             reply,
         }
     });

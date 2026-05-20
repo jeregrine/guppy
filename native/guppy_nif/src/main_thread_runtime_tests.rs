@@ -1,6 +1,6 @@
 use super::{
     APP, MainThreadRequest, RequestDeadline, close_window, enqueue_request, handle_request,
-    init_request_queue, open_window, try_next_request, view_count,
+    init_request_queue, open_window, owner_view_id_exists, try_next_request, view_count,
 };
 use crate::ir::{CanvasCommand, CanvasNode, IrNode, StyleColor};
 use crate::window_options::WindowOptionsConfig;
@@ -19,6 +19,12 @@ fn expired_requests_do_not_reply_or_mutate_state() {
 }
 
 #[test]
+fn file_dialog_owner_view_id_requires_live_native_window() {
+    assert!(owner_view_id_exists(None));
+    assert!(!owner_view_id_exists(Some(9_999)));
+}
+
+#[test]
 fn expired_file_dialog_requests_do_not_reply() {
     let (open_reply, open_rx) = mpsc::channel();
     handle_request(MainThreadRequest::OpenFileDialog {
@@ -27,6 +33,7 @@ fn expired_file_dialog_requests_do_not_reply() {
         directories: false,
         multiple: true,
         prompt: Some("Open".into()),
+        owner_view_id: Some(123),
         reply: open_reply,
     });
 
@@ -37,6 +44,7 @@ fn expired_file_dialog_requests_do_not_reply() {
         deadline: RequestDeadline::after(Duration::from_millis(0)),
         directory: Some("/tmp".into()),
         default_name: Some("guppy.txt".into()),
+        owner_view_id: Some(123),
         reply: save_reply,
     });
 

@@ -92,12 +92,14 @@ pub(crate) enum MainThreadRequest {
         directories: bool,
         multiple: bool,
         prompt: Option<String>,
+        owner_view_id: Option<u64>,
         reply: Sender<Result<Option<Vec<String>>, ()>>,
     },
     SaveFileDialog {
         deadline: RequestDeadline,
         directory: Option<String>,
         default_name: Option<String>,
+        owner_view_id: Option<u64>,
         reply: Sender<Result<Option<String>, ()>>,
     },
     ReadClipboardText {
@@ -327,6 +329,7 @@ pub fn open_file_dialog(
     directories: bool,
     multiple: bool,
     prompt: Option<String>,
+    owner_view_id: Option<u64>,
     reply: Sender<Result<Option<Vec<String>>, ()>>,
 ) {
     APP.with(|app| {
@@ -334,6 +337,11 @@ pub fn open_file_dialog(
             let _ = reply.send(Err(()));
             return;
         };
+
+        if !owner_view_id_exists(owner_view_id) {
+            let _ = reply.send(Err(()));
+            return;
+        }
 
         let options = PathPromptOptions {
             files,
@@ -373,6 +381,7 @@ pub fn save_file_dialog(
     deadline: RequestDeadline,
     directory: Option<String>,
     default_name: Option<String>,
+    owner_view_id: Option<u64>,
     reply: Sender<Result<Option<String>, ()>>,
 ) {
     APP.with(|app| {
@@ -380,6 +389,11 @@ pub fn save_file_dialog(
             let _ = reply.send(Err(()));
             return;
         };
+
+        if !owner_view_id_exists(owner_view_id) {
+            let _ = reply.send(Err(()));
+            return;
+        }
 
         let directory = directory
             .map(PathBuf::from)
@@ -411,6 +425,13 @@ pub fn save_file_dialog(
             })
             .detach();
     });
+}
+
+fn owner_view_id_exists(owner_view_id: Option<u64>) -> bool {
+    match owner_view_id {
+        Some(view_id) => WINDOWS.with(|windows| windows.borrow().contains_key(&view_id)),
+        None => true,
+    }
 }
 
 fn path_to_string(path: PathBuf) -> String {
@@ -577,20 +598,30 @@ fn handle_request(request: MainThreadRequest) {
             directories,
             multiple,
             prompt,
+            owner_view_id,
             reply,
         } => {
             if !deadline.expired() {
-                open_file_dialog(deadline, files, directories, multiple, prompt, reply);
+                open_file_dialog(
+                    deadline,
+                    files,
+                    directories,
+                    multiple,
+                    prompt,
+                    owner_view_id,
+                    reply,
+                );
             }
         }
         MainThreadRequest::SaveFileDialog {
             deadline,
             directory,
             default_name,
+            owner_view_id,
             reply,
         } => {
             if !deadline.expired() {
-                save_file_dialog(deadline, directory, default_name, reply);
+                save_file_dialog(deadline, directory, default_name, owner_view_id, reply);
             }
         }
         MainThreadRequest::ReadClipboardText { deadline, reply } => {
