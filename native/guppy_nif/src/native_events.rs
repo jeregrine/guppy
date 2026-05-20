@@ -1144,7 +1144,7 @@ mod tests {
     #[test]
     fn basic_event_snapshots_cover_click_change_and_window_lifecycle_payloads() {
         let _ = send_click_event(7, "button", "clicked");
-        let click = crate::take_basic_event_snapshot_for_test().unwrap();
+        let click = crate::take_basic_event_snapshot_matching_for_test("click", 7).unwrap();
         assert_eq!(click.event, "click");
         assert_eq!(click.view_id, 7);
         assert_eq!(click.node_id.as_deref(), Some("button"));
@@ -1153,7 +1153,7 @@ mod tests {
         assert_eq!(click.checked, None);
 
         let _ = send_checkbox_change_event(8, "done", "toggle_done", true);
-        let checkbox = crate::take_basic_event_snapshot_for_test().unwrap();
+        let checkbox = crate::take_basic_event_snapshot_matching_for_test("change", 8).unwrap();
         assert_eq!(checkbox.event, "change");
         assert_eq!(checkbox.view_id, 8);
         assert_eq!(checkbox.node_id.as_deref(), Some("done"));
@@ -1161,7 +1161,7 @@ mod tests {
         assert_eq!(checkbox.checked, Some(true));
 
         let _ = send_change_event(9, "name", "name_changed", "Jason");
-        let change = crate::take_basic_event_snapshot_for_test().unwrap();
+        let change = crate::take_basic_event_snapshot_matching_for_test("change", 9).unwrap();
         assert_eq!(change.event, "change");
         assert_eq!(change.view_id, 9);
         assert_eq!(change.node_id.as_deref(), Some("name"));
@@ -1170,19 +1170,23 @@ mod tests {
         assert_eq!(change.checked, None);
 
         let _ = send_app_activated_event();
-        let app_activated = crate::take_basic_event_snapshot_for_test().unwrap();
+        let app_activated =
+            crate::take_basic_event_snapshot_matching_for_test("app_activated", 0).unwrap();
         assert_eq!(app_activated.event, "app_activated");
         assert_eq!(app_activated.view_id, 0);
 
         let _ = send_window_close_requested_event(10);
-        let requested = crate::take_basic_event_snapshot_for_test().unwrap();
+        let requested =
+            crate::take_basic_event_snapshot_matching_for_test("window_close_requested", 10)
+                .unwrap();
         assert_eq!(requested.event, "window_close_requested");
         assert_eq!(requested.view_id, 10);
         assert_eq!(requested.node_id, None);
         assert_eq!(requested.callback_id, None);
 
         let _ = send_window_closed_event(11);
-        let closed = crate::take_basic_event_snapshot_for_test().unwrap();
+        let closed =
+            crate::take_basic_event_snapshot_matching_for_test("window_closed", 11).unwrap();
         assert_eq!(closed.event, "window_closed");
         assert_eq!(closed.view_id, 11);
         assert_eq!(closed.node_id, None);
@@ -1197,7 +1201,8 @@ mod tests {
                 height: 480.0,
             },
         );
-        let resized = crate::take_basic_event_snapshot_for_test().unwrap();
+        let resized =
+            crate::take_basic_event_snapshot_matching_for_test("window_resized", 12).unwrap();
         assert_eq!(resized.event, "window_resized");
         assert_eq!(resized.view_id, 12);
     }

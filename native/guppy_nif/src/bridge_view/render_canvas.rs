@@ -164,7 +164,7 @@ mod tests {
             },
         );
 
-        let event = crate::take_basic_event_snapshot_for_test().unwrap();
+        let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 11).unwrap();
         assert_eq!(event.event, "context_menu");
         assert_eq!(event.node_id.as_deref(), Some("summary_canvas"));
         assert_eq!(event.callback_id.as_deref(), Some("canvas_context_menu"));

@@ -82,7 +82,6 @@ fn simulated_gpui_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContex
 #[gpui::test]
 fn keyboard_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
-    let _ = crate::take_basic_event_snapshot_for_test();
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 46,
         ir: context_menu_div(),
@@ -93,7 +92,7 @@ fn keyboard_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppConte
     cx.simulate_keystrokes("tab");
     cx.simulate_keystrokes("shift-f10");
 
-    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 46).unwrap();
     assert_eq!(event.event, "context_menu");
     assert_eq!(event.view_id, 46);
     assert_eq!(event.node_id.as_deref(), Some("click_target"));
@@ -102,7 +101,6 @@ fn keyboard_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppConte
 
 #[gpui::test]
 fn window_lifecycle_observers_reach_native_event_bridge(cx: &mut gpui::TestAppContext) {
-    let _ = crate::take_basic_event_snapshot_for_test();
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 48,
         ir: IrNode::text("Lifecycle"),
@@ -116,20 +114,19 @@ fn window_lifecycle_observers_reach_native_event_bridge(cx: &mut gpui::TestAppCo
     let after_activation = crate::native_event_send_snapshot_for_test();
     assert!(after_activation.0 >= before_activation.0 + 2);
 
-    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    let event = crate::take_basic_event_snapshot_matching_for_test("window_focused", 48).unwrap();
     assert_eq!(event.event, "window_focused");
     assert_eq!(event.view_id, 48);
 
     cx.deactivate_window();
 
-    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    let event = crate::take_basic_event_snapshot_matching_for_test("window_blurred", 48).unwrap();
     assert_eq!(event.event, "window_blurred");
     assert_eq!(event.view_id, 48);
 
-    let _ = crate::take_basic_event_snapshot_for_test();
     cx.simulate_resize(size(px(320.0), px(240.0)));
 
-    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    let event = crate::take_basic_event_snapshot_matching_for_test("window_resized", 48).unwrap();
     assert_eq!(event.event, "window_resized");
     assert_eq!(event.view_id, 48);
 }
@@ -153,7 +150,6 @@ fn simulated_canvas_click_reaches_native_event_bridge(cx: &mut gpui::TestAppCont
 
 #[gpui::test]
 fn simulated_canvas_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
-    let _ = crate::take_basic_event_snapshot_for_test();
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 47,
         ir: canvas_ir(),
@@ -167,7 +163,7 @@ fn simulated_canvas_context_menu_reaches_native_event_bridge(cx: &mut gpui::Test
         Modifiers::none(),
     );
 
-    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 47).unwrap();
     assert_eq!(event.event, "context_menu");
     assert_eq!(event.view_id, 47);
     assert_eq!(event.node_id.as_deref(), Some("summary_canvas"));
@@ -244,7 +240,6 @@ fn simulated_list_row_button_click_reaches_native_event_bridge(cx: &mut gpui::Te
 
 #[gpui::test]
 fn simulated_list_row_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
-    let _ = crate::take_basic_event_snapshot_for_test();
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 49,
         ir: list_with_row_button(),
@@ -258,7 +253,7 @@ fn simulated_list_row_context_menu_reaches_native_event_bridge(cx: &mut gpui::Te
         Modifiers::none(),
     );
 
-    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 49).unwrap();
     assert_eq!(event.event, "context_menu");
     assert_eq!(event.view_id, 49);
     assert_eq!(event.node_id.as_deref(), Some("todo_list.row_1"));
@@ -366,7 +361,6 @@ fn render_retains_scroll_and_focus_state_for_compliance_smoke(cx: &mut gpui::Tes
 
 #[gpui::test]
 fn simulated_text_input_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
-    let _ = crate::take_basic_event_snapshot_for_test();
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 50,
         ir: IrNode::TextInput {
@@ -391,7 +385,7 @@ fn simulated_text_input_context_menu_reaches_native_event_bridge(cx: &mut gpui::
         Modifiers::none(),
     );
 
-    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 50).unwrap();
     assert_eq!(event.event, "context_menu");
     assert_eq!(event.view_id, 50);
     assert_eq!(event.node_id.as_deref(), Some("name_input"));

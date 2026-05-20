@@ -1,4 +1,5 @@
 use super::{NATIVE_EVENT_SEND_COUNT, NATIVE_EVENT_SEND_FAILURE_COUNT};
+use std::collections::VecDeque;
 use std::sync::Mutex;
 use std::sync::atomic::Ordering;
 
@@ -44,7 +45,7 @@ pub(crate) struct SemanticEventSnapshot {
     pub item_id: Option<String>,
 }
 
-static BASIC_EVENT_SNAPSHOT: Mutex<Option<BasicEventSnapshot>> = Mutex::new(None);
+static BASIC_EVENT_SNAPSHOT: Mutex<VecDeque<BasicEventSnapshot>> = Mutex::new(VecDeque::new());
 static ROW_CONTROL_EVENT_SNAPSHOT: Mutex<Option<RowControlEventSnapshot>> = Mutex::new(None);
 static MENU_EVENT_SNAPSHOT: Mutex<Option<MenuEventSnapshot>> = Mutex::new(None);
 static SEMANTIC_EVENT_SNAPSHOT: Mutex<Option<SemanticEventSnapshot>> = Mutex::new(None);
@@ -56,8 +57,15 @@ pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
     )
 }
 
-pub(crate) fn take_basic_event_snapshot_for_test() -> Option<BasicEventSnapshot> {
-    BASIC_EVENT_SNAPSHOT.lock().ok()?.take()
+pub(crate) fn take_basic_event_snapshot_matching_for_test(
+    event: &'static str,
+    view_id: u64,
+) -> Option<BasicEventSnapshot> {
+    let mut snapshots = BASIC_EVENT_SNAPSHOT.lock().ok()?;
+    let position = snapshots
+        .iter()
+        .position(|snapshot| snapshot.event == event && snapshot.view_id == view_id)?;
+    snapshots.remove(position)
 }
 
 pub(crate) fn take_row_control_event_snapshot_for_test() -> Option<RowControlEventSnapshot> {
@@ -80,8 +88,8 @@ pub(super) fn record_basic_event_snapshot_for_test(
     value: Option<String>,
     checked: Option<bool>,
 ) {
-    if let Ok(mut snapshot) = BASIC_EVENT_SNAPSHOT.lock() {
-        *snapshot = Some(BasicEventSnapshot {
+    if let Ok(mut snapshots) = BASIC_EVENT_SNAPSHOT.lock() {
+        snapshots.push_back(BasicEventSnapshot {
             event,
             view_id,
             node_id,

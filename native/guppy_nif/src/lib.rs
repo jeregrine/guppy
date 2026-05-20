@@ -700,7 +700,7 @@ use native_event_test_support::{
 
 #[cfg(test)]
 pub(crate) use native_event_test_support::{
-    native_event_send_snapshot_for_test, take_basic_event_snapshot_for_test,
+    native_event_send_snapshot_for_test, take_basic_event_snapshot_matching_for_test,
     take_menu_event_snapshot_for_test, take_row_control_event_snapshot_for_test,
     take_semantic_event_snapshot_for_test,
 };
