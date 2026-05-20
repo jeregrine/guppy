@@ -121,22 +121,47 @@ fn attach_keyboard_navigation(
 ) -> gpui::Stateful<gpui::Div> {
     let click = node.click.clone();
     let change = node.change.clone();
+    let close = node.close.clone();
     let options = node.options.clone();
     let value = node.value.clone();
+    let open = node.open;
     let key_node_id = node_key.to_owned();
 
-    if click.is_some() || change.is_some() {
+    if click.is_some() || change.is_some() || close.is_some() {
         trigger = trigger.on_key_down(move |event: &KeyDownEvent, _, cx| {
-            if is_select_toggle_key(event) {
-                if let Some(callback_id) = click.as_ref() {
-                    events::emit_click(view_id, &key_node_id, callback_id);
-                    cx.stop_propagation();
+            let Some(action) = select_keyboard_action(event, open, &options, value.as_deref())
+            else {
+                return;
+            };
+
+            let emitted = match action {
+                SelectKeyboardAction::Toggle => {
+                    if let Some(callback_id) = click.as_ref() {
+                        events::emit_click(view_id, &key_node_id, callback_id);
+                        true
+                    } else {
+                        false
+                    }
                 }
-            } else if let Some(direction) = select_navigation_direction(event)
-                && let Some(callback_id) = change.as_ref()
-                && let Some(next) = adjacent_enabled_option(&options, value.as_deref(), direction)
-            {
-                events::emit_change(view_id, &key_node_id, callback_id, &next.value);
+                SelectKeyboardAction::Close => {
+                    if let Some(callback_id) = close.as_ref() {
+                        events::emit_close(view_id, &key_node_id, callback_id);
+                        true
+                    } else {
+                        false
+                    }
+                }
+                SelectKeyboardAction::Change(value) => {
+                    if let Some(callback_id) = change.as_ref() {
+                        events::emit_change(view_id, &key_node_id, callback_id, &value);
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+
+            if emitted {
                 cx.stop_propagation();
             }
         });
@@ -222,6 +247,13 @@ fn render_option(
     row.into_any_element()
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum SelectKeyboardAction {
+    Toggle,
+    Close,
+    Change(String),
+}
+
 #[derive(Clone, Copy)]
 enum SelectNavigationDirection {
     Previous,
@@ -238,6 +270,65 @@ fn select_navigation_direction(event: &KeyDownEvent) -> Option<SelectNavigationD
         "down" => Some(SelectNavigationDirection::Next),
         _ => None,
     }
+}
+
+fn select_keyboard_action(
+    event: &KeyDownEvent,
+    open: bool,
+    options: &[SelectOption],
+    value: Option<&str>,
+) -> Option<SelectKeyboardAction> {
+    if is_select_toggle_key(event) {
+        return Some(SelectKeyboardAction::Toggle);
+    }
+
+    match event.keystroke.key.as_str() {
+        "escape" if open => Some(SelectKeyboardAction::Close),
+        "home" => first_enabled_option(options)
+            .map(|option| SelectKeyboardAction::Change(option.value.clone())),
+        "end" => last_enabled_option(options)
+            .map(|option| SelectKeyboardAction::Change(option.value.clone())),
+        _ => select_navigation_direction(event)
+            .and_then(|direction| adjacent_enabled_option(options, value, direction))
+            .or_else(|| typeahead_enabled_option(options, value, &event.keystroke.key))
+            .map(|option| SelectKeyboardAction::Change(option.value.clone())),
+    }
+}
+
+fn first_enabled_option(options: &[SelectOption]) -> Option<&SelectOption> {
+    options.iter().find(|option| !option.disabled)
+}
+
+fn last_enabled_option(options: &[SelectOption]) -> Option<&SelectOption> {
+    options.iter().rev().find(|option| !option.disabled)
+}
+
+fn typeahead_enabled_option<'a>(
+    options: &'a [SelectOption],
+    value: Option<&str>,
+    key: &str,
+) -> Option<&'a SelectOption> {
+    if key.chars().count() != 1 {
+        return None;
+    }
+
+    let key = key.to_lowercase();
+    let enabled = options
+        .iter()
+        .filter(|option| !option.disabled)
+        .collect::<Vec<_>>();
+
+    if enabled.is_empty() {
+        return None;
+    }
+
+    let current = value
+        .and_then(|value| enabled.iter().position(|option| option.value == value))
+        .unwrap_or(enabled.len() - 1);
+
+    (1..=enabled.len())
+        .map(|offset| enabled[(current + offset) % enabled.len()])
+        .find(|option| option.label.to_lowercase().starts_with(&key))
 }
 
 fn adjacent_enabled_option<'a>(
@@ -271,8 +362,8 @@ fn adjacent_enabled_option<'a>(
 #[cfg(test)]
 mod tests {
     use super::{
-        SelectNavigationDirection, adjacent_enabled_option, is_select_toggle_key,
-        select_navigation_direction,
+        SelectKeyboardAction, SelectNavigationDirection, adjacent_enabled_option,
+        is_select_toggle_key, select_keyboard_action, select_navigation_direction,
     };
     use crate::ir::SelectOption;
     use gpui::{KeyDownEvent, Keystroke};
@@ -314,6 +405,41 @@ mod tests {
             adjacent_enabled_option(&options, Some("missing"), SelectNavigationDirection::Next)
                 .map(|option| option.value.as_str()),
             Some("done")
+        );
+    }
+
+    #[test]
+    fn select_keyboard_action_supports_escape_home_end_and_typeahead() {
+        let options = vec![
+            option("alpha", "Alpha", false),
+            option("archived", "Archived", false),
+            option("blocked", "Blocked", true),
+            option("done", "Done", false),
+        ];
+
+        assert_eq!(
+            select_keyboard_action(&key_event("escape"), true, &options, Some("alpha")),
+            Some(SelectKeyboardAction::Close)
+        );
+        assert_eq!(
+            select_keyboard_action(&key_event("home"), true, &options, Some("done")),
+            Some(SelectKeyboardAction::Change("alpha".into()))
+        );
+        assert_eq!(
+            select_keyboard_action(&key_event("end"), true, &options, Some("alpha")),
+            Some(SelectKeyboardAction::Change("done".into()))
+        );
+        assert_eq!(
+            select_keyboard_action(&key_event("a"), true, &options, Some("alpha")),
+            Some(SelectKeyboardAction::Change("archived".into()))
+        );
+        assert_eq!(
+            select_keyboard_action(&key_event("b"), true, &options, Some("alpha")),
+            None
+        );
+        assert_eq!(
+            select_keyboard_action(&key_event("escape"), false, &options, Some("alpha")),
+            None
         );
     }
 
