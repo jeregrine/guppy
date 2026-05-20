@@ -167,6 +167,27 @@ defmodule Guppy.AppTest do
     assert Map.has_key?(Guppy.App.commands(app_name), "new_file")
   end
 
+  test "keymap routing skips disabled commands in priority order" do
+    app_name = :"guppy_keymap_priority_app_#{System.unique_integer([:positive])}"
+    {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
+
+    assert :ok =
+             Guppy.App.set_commands(app_name, [
+               %{id: "new_file", label: "New File", enabled: false},
+               %{id: "open_file", label: "Open File"}
+             ])
+
+    assert :ok =
+             Guppy.App.set_keymap(app_name, [
+               %{key: "cmd-o", command: "new_file"},
+               %{key: "cmd-o", command: "open_file"}
+             ])
+
+    assert :ok = Guppy.App.dispatch_key(app_name, "cmd-o", %{source: :priority_test})
+    assert_receive {:app_command, "open_file", %{source: :priority_test, key: "cmd-o"}}
+    refute_receive {:app_command, "new_file", _payload}, 100
+  end
+
   test "app command bindings produce root IR shortcut options" do
     app_name = :"guppy_command_bindings_app_#{System.unique_integer([:positive])}"
     {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})

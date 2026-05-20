@@ -209,10 +209,7 @@ defmodule Guppy.App.Coordinator do
   end
 
   def handle_cast({:dispatch_key, key, payload}, state) do
-    command_id =
-      state.config.keymap
-      |> Enum.find(%{}, &(&1.key == key))
-      |> Map.get(:command)
+    command_id = first_enabled_key_command(state, key)
 
     if is_binary(command_id) do
       {:noreply, dispatch_command(state, command_id, Map.put(payload, :key, key))}
@@ -533,6 +530,19 @@ defmodule Guppy.App.Coordinator do
     end)
   catch
     :exit, _reason -> %{}
+  end
+
+  defp first_enabled_key_command(state, key) do
+    Enum.find_value(state.config.keymap, fn
+      %{key: ^key, command: command_id} ->
+        case Map.fetch(state.config.commands, command_id) do
+          {:ok, %Command{enabled: true}} -> command_id
+          _missing_or_disabled -> nil
+        end
+
+      _entry ->
+        nil
+    end)
   end
 
   defp dispatch_command(state, command_id, payload) do
