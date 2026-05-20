@@ -379,10 +379,8 @@ pub fn set_app_badge(label: Option<String>) -> i32 {
             return -1;
         };
 
-        match app.update(move |_| set_platform_app_badge(label)) {
-            Ok(status) => status,
-            Err(_) => -1,
-        }
+        app.update(move |_| set_platform_app_badge(label))
+            .unwrap_or(-1)
     })
 }
 
@@ -416,6 +414,7 @@ fn set_platform_app_badge(_label: Option<String>) -> i32 {
     -1
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn open_file_dialog(
     deadline: RequestDeadline,
     files: bool,
@@ -455,8 +454,6 @@ pub fn open_file_dialog(
             if !deadline.expired() {
                 let _ = reply.send(result);
             }
-
-            return;
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -530,8 +527,6 @@ pub fn save_file_dialog(
             if !deadline.expired() {
                 let _ = reply.send(result);
             }
-
-            return;
         }
 
         #[cfg(not(target_os = "macos"))]

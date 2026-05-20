@@ -247,6 +247,7 @@ fn ordered_row_cells(
     ordered_cells
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_cell(
     view_id: u64,
     table_id: &str,

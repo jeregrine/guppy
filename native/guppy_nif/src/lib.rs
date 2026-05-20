@@ -367,6 +367,7 @@ fn native_event_target_status<'a>(env: Env<'a>) -> Term<'a> {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+#[allow(clippy::too_many_arguments)]
 fn native_open_file_dialog<'a>(
     env: Env<'a>,
     files: bool,

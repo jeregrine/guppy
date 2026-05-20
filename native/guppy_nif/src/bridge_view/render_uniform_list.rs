@@ -9,6 +9,7 @@ use gpui::{
 };
 use std::sync::Arc;
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
     path: &str,
