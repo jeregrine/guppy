@@ -276,6 +276,66 @@ defmodule Guppy.ServerNativeTest do
     assert_receive {:guppy_test_native_request, {:set_menus, [[]]}, 25}
   end
 
+  test "set_app_badge validates label specs and routes through native" do
+    server = :"guppy_app_badge_recording_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    assert :ok = Guppy.Server.set_app_badge(server, self(), "7", 37)
+    assert_receive {:guppy_test_native_request, {:set_app_badge, ["7"]}, 37}
+
+    assert :ok = Guppy.Server.set_app_badge(server, self(), nil, 37)
+    assert_receive {:guppy_test_native_request, {:set_app_badge, [nil]}, 37}
+
+    assert {:error, :invalid_app_badge} = Guppy.Server.set_app_badge(server, self(), 7, 37)
+    refute_receive {:guppy_test_native_request, {:set_app_badge, [_]}, _}
+  end
+
+  test "set_app_badge clears the badge when registering owner exits" do
+    server = :"guppy_app_badge_owner_native_#{System.unique_integer([:positive])}"
+    test_pid = self()
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    owner =
+      spawn(fn ->
+        receive do
+          :register ->
+            send(
+              test_pid,
+              {:set_app_badge_result, Guppy.Server.set_app_badge(server, self(), "3", 25)}
+            )
+
+            receive do
+              :stop -> :ok
+            end
+        end
+      end)
+
+    send(owner, :register)
+    assert_receive {:set_app_badge_result, :ok}
+    assert_receive {:guppy_test_native_request, {:set_app_badge, ["3"]}, 25}
+
+    send(owner, :stop)
+    assert_receive {:guppy_test_native_request, {:set_app_badge, [nil]}, 25}
+  end
+
   test "set_dock_menu validates item specs and routes through native" do
     server = :"guppy_dock_menu_recording_native_#{System.unique_integer([:positive])}"
 

@@ -4,10 +4,18 @@ use crate::ir::IrNode;
 use crate::menu::{self, MenuItemSpec, MenuSpec};
 use crate::window_options::WindowOptionsConfig;
 use async_task::spawn;
+#[cfg(target_os = "macos")]
+use cocoa::{
+    appkit::NSApp,
+    base::{id, nil},
+    foundation::{NSAutoreleasePool, NSString},
+};
 use gpui::{
     App, AppContext, Application, AsyncApp, ClipboardItem, PathPromptOptions, PlatformDispatcher,
     SharedString,
 };
+#[cfg(target_os = "macos")]
+use objc::{msg_send, sel, sel_impl};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -86,6 +94,11 @@ pub(crate) enum MainThreadRequest {
         items: Vec<MenuItemSpec>,
         reply: Sender<i32>,
     },
+    SetAppBadge {
+        deadline: RequestDeadline,
+        label: Option<String>,
+        reply: Sender<i32>,
+    },
     OpenFileDialog {
         deadline: RequestDeadline,
         files: bool,
@@ -127,6 +140,7 @@ impl MainThreadRequest {
             | MainThreadRequest::CloseAll { deadline, .. }
             | MainThreadRequest::SetMenus { deadline, .. }
             | MainThreadRequest::SetDockMenu { deadline, .. }
+            | MainThreadRequest::SetAppBadge { deadline, .. }
             | MainThreadRequest::OpenFileDialog { deadline, .. }
             | MainThreadRequest::SaveFileDialog { deadline, .. }
             | MainThreadRequest::ReadClipboardText { deadline, .. }
@@ -321,6 +335,51 @@ pub fn set_dock_menu(items: Vec<MenuItemSpec>) -> i32 {
             Err(_) => -1,
         }
     })
+}
+
+pub fn set_app_badge(label: Option<String>) -> i32 {
+    APP.with(|app| {
+        let app = app.borrow().as_ref().cloned();
+
+        let Some(app) = app else {
+            return -1;
+        };
+
+        match app.update(move |_| set_platform_app_badge(label)) {
+            Ok(status) => status,
+            Err(_) => -1,
+        }
+    })
+}
+
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+fn set_platform_app_badge(label: Option<String>) -> i32 {
+    unsafe {
+        let app: id = NSApp();
+        if app == nil {
+            return -1;
+        }
+
+        let dock_tile: id = msg_send![app, dockTile];
+        if dock_tile == nil {
+            return -1;
+        }
+
+        let badge_label = label
+            .as_deref()
+            .map(|label| NSString::alloc(nil).init_str(label).autorelease())
+            .unwrap_or(nil);
+
+        let _: () = msg_send![dock_tile, setBadgeLabel: badge_label];
+        let _: () = msg_send![dock_tile, display];
+        1
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn set_platform_app_badge(_label: Option<String>) -> i32 {
+    -1
 }
 
 pub fn open_file_dialog(
@@ -592,6 +651,15 @@ fn handle_request(request: MainThreadRequest) {
                 let _ = reply.send(set_dock_menu(items));
             }
         }
+        MainThreadRequest::SetAppBadge {
+            deadline,
+            label,
+            reply,
+        } => {
+            if !deadline.expired() {
+                let _ = reply.send(set_app_badge(label));
+            }
+        }
         MainThreadRequest::OpenFileDialog {
             deadline,
             files,
@@ -641,6 +709,7 @@ fn handle_request(request: MainThreadRequest) {
         MainThreadRequest::CloseAllNoReply => {
             let _ = set_menus(Vec::new());
             let _ = set_dock_menu(Vec::new());
+            let _ = set_app_badge(None);
             let _ = close_all_windows();
         }
         MainThreadRequest::ViewCount { deadline, reply } => {

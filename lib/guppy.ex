@@ -60,6 +60,11 @@ defmodule Guppy do
     Server.set_dock_menu(Server, self(), items, timeout)
   end
 
+  @doc "Sets the process-owned app badge label; pass nil to clear it."
+  def set_app_badge(label, timeout \\ 5_000) do
+    Server.set_app_badge(Server, self(), label, timeout)
+  end
+
   @doc "Opens a platform dialog for choosing one or more files."
   def open_file_dialog(opts \\ [], timeout \\ 30_000) do
     Server.open_file_dialog(Server, opts, timeout)

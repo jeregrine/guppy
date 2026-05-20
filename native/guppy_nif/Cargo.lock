@@ -2372,8 +2372,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-task",
+ "cocoa 0.26.0",
  "eetf",
  "gpui",
+ "objc",
  "rustler",
  "serde_json",
  "unicode-segmentation",

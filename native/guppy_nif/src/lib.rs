@@ -341,6 +341,19 @@ fn native_set_dock_menu<'a>(env: Env<'a>, items: Term<'a>, timeout_ms: u64) -> T
     status_result(env, result, runtime_unavailable())
 }
 
+#[rustler::nif(schedule = "DirtyIo")]
+fn native_set_app_badge<'a>(env: Env<'a>, label: Option<String>, timeout_ms: u64) -> Term<'a> {
+    let result = request_i32(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::SetAppBadge {
+            deadline,
+            label,
+            reply,
+        }
+    });
+
+    status_result(env, result, runtime_unavailable())
+}
+
 #[rustler::nif]
 fn native_event_target_status<'a>(env: Env<'a>) -> Term<'a> {
     let Ok(target) = EVENT_TARGET.lock() else {

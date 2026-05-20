@@ -110,6 +110,10 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_set_app_badge(_label, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_open_file_dialog(_files, _directories, _multiple, _prompt, _owner_view_id, _timeout) do
     {:error, :nif_not_loaded}
   end
@@ -223,6 +227,12 @@ defmodule Guppy.Native.Nif do
   defp dispatch({:set_dock_menu, [items]}, timeout) do
     with_loaded(fn ->
       native_call(:set_dock_menu, fn -> normalize_status(native_set_dock_menu(items, timeout)) end)
+    end)
+  end
+
+  defp dispatch({:set_app_badge, [label]}, timeout) when is_binary(label) or is_nil(label) do
+    with_loaded(fn ->
+      native_call(:set_app_badge, fn -> normalize_status(native_set_app_badge(label, timeout)) end)
     end)
   end
 

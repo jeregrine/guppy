@@ -19,6 +19,8 @@ defmodule Guppy.Server do
             menu_monitor: nil,
             dock_menu_owner: nil,
             dock_menu_monitor: nil,
+            app_badge_owner: nil,
+            app_badge_monitor: nil,
             app_owner: nil,
             app_owner_monitor: nil
 
@@ -41,6 +43,8 @@ defmodule Guppy.Server do
           menu_monitor: reference() | nil,
           dock_menu_owner: pid() | nil,
           dock_menu_monitor: reference() | nil,
+          app_badge_owner: pid() | nil,
+          app_badge_monitor: reference() | nil,
           app_owner: pid() | nil,
           app_owner_monitor: reference() | nil
         }
@@ -75,6 +79,10 @@ defmodule Guppy.Server do
 
   def set_dock_menu(server \\ __MODULE__, owner, items, timeout \\ 5_000) do
     GenServer.call(server, {:set_dock_menu, owner, items, timeout}, gen_call_timeout(timeout))
+  end
+
+  def set_app_badge(server \\ __MODULE__, owner, label, timeout \\ 5_000) do
+    GenServer.call(server, {:set_app_badge, owner, label, timeout}, gen_call_timeout(timeout))
   end
 
   def open_file_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
@@ -298,6 +306,30 @@ defmodule Guppy.Server do
     end
   end
 
+  def handle_call({:set_app_badge, owner, label, timeout}, {caller, _tag}, state)
+      when is_pid(owner) do
+    cond do
+      owner != caller ->
+        {:reply, {:error, :owner_mismatch}, state}
+
+      app_owner_conflict?(state, owner) ->
+        {:reply, {:error, :native_app_owner_already_claimed}, state}
+
+      true ->
+        case validate_app_badge(label) do
+          {:ok, label} ->
+            case native_request(state, :set_app_badge, {:set_app_badge, [label]}, timeout) do
+              :ok -> {:reply, :ok, put_app_badge_owner(state, owner, label)}
+              {:ok, _payload} -> {:reply, :ok, put_app_badge_owner(state, owner, label)}
+              {:error, reason} -> {:reply, {:error, reason}, state}
+            end
+
+          error ->
+            {:reply, error, state}
+        end
+    end
+  end
+
   def handle_call({:claim_app_owner, owner}, {caller, _tag}, state) when is_pid(owner) do
     cond do
       owner != caller ->
@@ -450,6 +482,7 @@ defmodule Guppy.Server do
   def handle_info({:DOWN, monitor_ref, :process, owner, _reason}, state) do
     state = maybe_clear_dead_menu_owner(state, owner, monitor_ref)
     state = maybe_clear_dead_dock_menu_owner(state, owner, monitor_ref)
+    state = maybe_clear_dead_app_badge_owner(state, owner, monitor_ref)
     state = maybe_clear_dead_app_owner(state, owner, monitor_ref)
 
     case Map.fetch(state.monitors, monitor_ref) do
@@ -625,6 +658,20 @@ defmodule Guppy.Server do
     %{state | dock_menu_owner: owner, dock_menu_monitor: Process.monitor(owner)}
   end
 
+  defp put_app_badge_owner(state, _owner, nil) do
+    clear_app_badge_owner_monitor(state)
+  end
+
+  defp put_app_badge_owner(%{app_badge_owner: owner} = state, owner, _label)
+       when is_pid(owner) do
+    state
+  end
+
+  defp put_app_badge_owner(state, owner, _label) do
+    state = clear_app_badge_owner_monitor(state)
+    %{state | app_badge_owner: owner, app_badge_monitor: Process.monitor(owner)}
+  end
+
   defp app_owner_conflict?(%{app_owner: nil}, _owner), do: false
   defp app_owner_conflict?(%{app_owner: owner}, owner), do: false
   defp app_owner_conflict?(%{app_owner: app_owner}, _owner) when is_pid(app_owner), do: true
@@ -681,6 +728,25 @@ defmodule Guppy.Server do
 
   defp maybe_clear_dead_dock_menu_owner(state, _owner, _monitor_ref), do: state
 
+  defp maybe_clear_dead_app_badge_owner(
+         %{app_badge_owner: owner, app_badge_monitor: monitor_ref} = state,
+         owner,
+         monitor_ref
+       )
+       when is_pid(owner) do
+    _ =
+      native_request(
+        state,
+        :set_app_badge,
+        {:set_app_badge, [nil]},
+        state.native_request_timeout
+      )
+
+    %{state | app_badge_owner: nil, app_badge_monitor: nil}
+  end
+
+  defp maybe_clear_dead_app_badge_owner(state, _owner, _monitor_ref), do: state
+
   defp clear_menu_owner_monitor(%{menu_monitor: monitor_ref} = state)
        when is_reference(monitor_ref) do
     Process.demonitor(monitor_ref, [:flush])
@@ -696,6 +762,14 @@ defmodule Guppy.Server do
   end
 
   defp clear_dock_menu_owner_monitor(state), do: state
+
+  defp clear_app_badge_owner_monitor(%{app_badge_monitor: monitor_ref} = state)
+       when is_reference(monitor_ref) do
+    Process.demonitor(monitor_ref, [:flush])
+    %{state | app_badge_owner: nil, app_badge_monitor: nil}
+  end
+
+  defp clear_app_badge_owner_monitor(state), do: state
 
   defp delete_view(state, view_id) do
     case Map.pop(state.views, view_id) do
@@ -759,6 +833,10 @@ defmodule Guppy.Server do
   end
 
   defp validate_dock_menu(_items), do: {:error, :invalid_dock_menu}
+
+  defp validate_app_badge(nil), do: {:ok, nil}
+  defp validate_app_badge(label) when is_binary(label), do: {:ok, label}
+  defp validate_app_badge(_label), do: {:error, :invalid_app_badge}
 
   defp validate_open_file_dialog_options(state, caller, opts, mode) when is_list(opts),
     do: opts |> Map.new() |> validate_open_file_dialog_options(state, caller, mode)
