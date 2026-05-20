@@ -155,6 +155,26 @@ defmodule Guppy.App.Coordinator do
     end
   end
 
+  def handle_call({:set_command_enabled, command_id, enabled}, _from, state) do
+    cond do
+      not is_boolean(enabled) ->
+        {:reply, {:error, :invalid_command_enabled}, state}
+
+      not is_binary(command_id) or command_id == "" ->
+        {:reply, {:error, {:unknown_command, command_id}}, state}
+
+      true ->
+        case Map.fetch(state.config.commands, command_id) do
+          {:ok, command} ->
+            commands = Map.put(state.config.commands, command_id, %{command | enabled: enabled})
+            {:reply, :ok, put_config(state, %{state.config | commands: commands})}
+
+          :error ->
+            {:reply, {:error, {:unknown_command, command_id}}, state}
+        end
+    end
+  end
+
   def handle_call({:set_keymap, keymap}, _from, state) do
     case Config.validate(%{state.config | keymap: keymap}) do
       {:ok, config} -> {:reply, :ok, put_config(state, config)}

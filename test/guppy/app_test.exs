@@ -84,6 +84,21 @@ defmodule Guppy.AppTest do
     send(app_name, {:guppy_menu_event, %{id: "new_file", callback: "new_file"}})
     assert_receive {:app_command, "new_file", %{id: "new_file", callback: "new_file"}}
 
+    assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", false)
+    assert Guppy.App.commands(app_name)["new_file"].enabled == false
+    assert :ok = Guppy.App.dispatch(app_name, "new_file", %{source: :disabled})
+    refute_receive {:app_command, "new_file", %{source: :disabled}}, 100
+
+    assert {:error, :invalid_command_enabled} =
+             Guppy.App.set_command_enabled(app_name, "new_file", :yes)
+
+    assert {:error, {:unknown_command, "missing"}} =
+             Guppy.App.set_command_enabled(app_name, "missing", true)
+
+    assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", true)
+    assert :ok = Guppy.App.dispatch(app_name, "new_file", %{source: :reenabled})
+    assert_receive {:app_command, "new_file", %{source: :reenabled}}
+
     assert :ok =
              Guppy.App.set_theme(app_name, %{
                id: "light",

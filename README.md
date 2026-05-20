@@ -217,7 +217,7 @@ end
 
 Window ids are strings. The first configured window starts by default unless `start: false`; additional windows start when `Guppy.App.open_window/3` is called or when their spec sets `start: true`. App windows run under an app-owned `DynamicSupervisor`; the coordinator registry exposes `Guppy.App.windows/1`, `Guppy.App.window_pid/2`, `Guppy.App.open_window/3`, and `Guppy.App.close_window/2`. Set `exit_on_last_window_closed: true` for example-style apps that should terminate their app supervisor when the last app-owned window closes.
 
-App config is plain Elixir data validated into structs. Use child-spec/start options and optional `init/1` for final config assembly. App-owned menus dispatch callbacks to `handle_command/3`; `Guppy.App.open_command_palette/1` opens a minimal built-in command-palette overlay backed by the same command registry. Standalone `Guppy.Window` modules and low-level `Guppy.open_window/1..3` continue to work without an app.
+App config is plain Elixir data validated into structs. Use child-spec/start options and optional `init/1` for final config assembly. App-owned menus dispatch callbacks to `handle_command/3`; `Guppy.App.open_command_palette/1` opens a minimal built-in command-palette overlay backed by the same command registry. Use `Guppy.App.set_command_enabled/3` to toggle a command without replacing the full registry; disabled commands stay visible in the palette but do not dispatch. Standalone `Guppy.Window` modules and low-level `Guppy.open_window/1..3` continue to work without an app.
 
 ## Themes
 

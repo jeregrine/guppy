@@ -202,6 +202,13 @@ defmodule Guppy.App do
   @doc "Replaces the app command registry after validation."
   def set_commands(app, commands), do: call(app, {:set_commands, commands})
 
+  @doc "Updates one app command's enabled state."
+  def set_command_enabled(command_id, enabled), do: set_command_enabled(nil, command_id, enabled)
+
+  def set_command_enabled(app, command_id, enabled) do
+    call(app, {:set_command_enabled, command_id, enabled})
+  end
+
   @doc "Returns app keymap entries."
   def keymap(app \\ nil), do: call(app, :keymap)
 
