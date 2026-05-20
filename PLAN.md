@@ -27,11 +27,11 @@ These are the biggest missing pieces for building real desktop apps. Add them as
 
 Current popover/select support is first-pass. Native apps need reliable overlays before complex menus/forms feel right.
 
-- [ ] Define overlay lifecycle semantics: open/close ownership, escape behavior, click-outside behavior, focus return, and stale-owner cleanup.
-- [ ] Harden positioning: anchor bounds, viewport constraints, flipping/offsets, scroll-parent behavior, and window-edge handling.
-- [ ] Add keyboard behavior for select/menu-like overlays: arrows, home/end, typeahead if warranted, enter/space, escape, disabled options.
-- [ ] Support nested overlays deliberately or reject/document unsupported nesting with tests.
-- [ ] Add examples that exercise dropdowns, context menus, nested panels, and form-like select usage.
+- [x] Define overlay lifecycle semantics: open/close ownership, escape behavior, click-outside behavior, focus return, and stale-owner cleanup are documented in `docs/overlays.md` and covered by select/popover/context-menu behavior.
+- [x] Harden positioning: popover exposes anchor position/mode/fit/offset/margin controls, select exposes list anchor offset/fit/margin controls, and documented GPUI window-edge/scroll-parent limits are explicit.
+- [x] Add keyboard behavior for select/menu-like overlays: arrows, home/end, single-character typeahead, enter/space, escape, and disabled-option skipping are implemented/tested for select; popover supports Enter/Space toggle and Escape close.
+- [x] Support nested overlays deliberately or reject/document unsupported nesting with tests: nested native `popover`/`select` nodes inside popovers are rejected by Elixir validation and native decode, and documented as unsupported.
+- [x] Add examples that exercise dropdowns, context menus, nested panels, and form-like select usage: `examples/overlay_demo.exs` validates and demonstrates these flows.
 
 ## Priority 3: Keyboard, focus, accessibility, data table, and tree interactions
 
