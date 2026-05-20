@@ -14,6 +14,7 @@ defmodule Guppy.AppTest do
                  commands: [%{id: "new_file", label: "New File"}],
                  keymap: [%{key: "cmd-n", command: "new_file"}],
                  dock_menu: [%{id: "new_file", label: "New", callback: "new_file"}],
+                 app_badge: "4",
                  stylesheet: %{classes: %{"card" => %{style: "p-2", hover_style: "bg-blue"}}},
                  package: %{bundle_id: "dev.guppy.test"}
                },
@@ -25,6 +26,7 @@ defmodule Guppy.AppTest do
     assert config.exit_on_last_window_closed == false
     assert Map.has_key?(config.commands, "new_file")
     assert config.dock_menu == [%{id: "new_file", label: "New", callback: "new_file"}]
+    assert config.app_badge == "4"
     assert config.package.bundle_id == "dev.guppy.test"
 
     assert {:error, {:duplicate_window_id, "main"}} =
@@ -43,6 +45,8 @@ defmodule Guppy.AppTest do
 
     assert {:error, :invalid_exit_on_last_window_closed} =
              Guppy.App.Config.validate(%{exit_on_last_window_closed: :yes})
+
+    assert {:error, :invalid_app_badge} = Guppy.App.Config.validate(%{app_badge: 4})
   end
 
   test "stylesheet resolves app class refs and Tailwind-style variants" do
@@ -314,6 +318,39 @@ defmodule Guppy.AppTest do
                     }}
   end
 
+  test "app-owned app badge installs, updates, and validates through native" do
+    server = :"guppy_app_badge_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    app_name = :"guppy_badge_app_#{System.unique_integer([:positive])}"
+
+    {:ok, _pid} =
+      start_supervised(
+        {Guppy.TestApp, name: app_name, parent: self(), runtime_server: server, app_badge: "2"}
+      )
+
+    assert_receive {:guppy_test_native_request, {:set_menus, [_menus]}, _timeout}
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [_dock_menu]}, _timeout}
+    assert_receive {:guppy_test_native_request, {:set_app_badge, ["2"]}, _timeout}
+    assert Guppy.App.app_badge(app_name) == "2"
+
+    assert :ok = Guppy.App.set_app_badge(app_name, nil)
+    assert_receive {:guppy_test_native_request, {:set_app_badge, [nil]}, _timeout}
+    assert Guppy.App.app_badge(app_name) == nil
+
+    assert {:error, :invalid_app_badge} = Guppy.App.set_app_badge(app_name, 2)
+    refute_receive {:guppy_test_native_request, {:set_app_badge, [_]}, _timeout}
+  end
+
   test "app-owned menus derive enabled state from command registry" do
     server = :"guppy_app_command_menu_native_#{System.unique_integer([:positive])}"
 
@@ -463,11 +500,14 @@ defmodule Guppy.AppTest do
     )
 
     {:ok, _pid} =
-      start_supervised({Guppy.TestApp, name: app_name, parent: self(), runtime_server: server})
+      start_supervised(
+        {Guppy.TestApp, name: app_name, parent: self(), runtime_server: server, app_badge: "8"}
+      )
 
     assert Guppy.App.theme(app_name).id == "test-dark"
     assert_receive {:guppy_test_native_request, {:set_menus, [_menus]}, _timeout}
     assert_receive {:guppy_test_native_request, {:set_dock_menu, [_dock_menu]}, _timeout}
+    assert_receive {:guppy_test_native_request, {:set_app_badge, ["8"]}, _timeout}
 
     server_pid = Process.whereis(server)
     Process.exit(server_pid, :kill)
@@ -479,6 +519,7 @@ defmodule Guppy.AppTest do
 
     assert_receive {:guppy_test_native_request, {:set_menus, [_menus]}, _timeout}, 500
     assert_receive {:guppy_test_native_request, {:set_dock_menu, [_dock_menu]}, _timeout}, 500
+    assert_receive {:guppy_test_native_request, {:set_app_badge, ["8"]}, _timeout}, 500
     assert Guppy.App.theme(app_name).id == "test-dark"
   end
 

@@ -50,7 +50,7 @@ defmodule Guppy.App.Coordinator do
         server_monitor: monitor_server(Keyword.get(opts, :runtime_server, Guppy.Server))
       }
 
-      state = state |> install_menus() |> install_dock_menu()
+      state = state |> install_menus() |> install_dock_menu() |> install_app_badge()
       {:ok, open_startup_windows(state)}
     else
       {:stop, reason} -> {:stop, reason}
@@ -67,6 +67,7 @@ defmodule Guppy.App.Coordinator do
   def handle_call(:keymap, _from, state), do: {:reply, state.config.keymap, state}
   def handle_call(:menus, _from, state), do: {:reply, state.config.menus, state}
   def handle_call(:dock_menu, _from, state), do: {:reply, state.config.dock_menu, state}
+  def handle_call(:app_badge, _from, state), do: {:reply, state.config.app_badge, state}
   def handle_call(:package, _from, state), do: {:reply, state.config.package, state}
 
   def handle_call(:windows, _from, state) do
@@ -223,6 +224,21 @@ defmodule Guppy.App.Coordinator do
     end
   end
 
+  def handle_call({:set_app_badge, label}, _from, state) do
+    case Config.validate(%{state.config | app_badge: label}) do
+      {:ok, config} ->
+        state = put_config(state, config)
+
+        case set_native_app_badge(state) do
+          :ok -> {:reply, :ok, state}
+          error -> {:reply, error, state}
+        end
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+
   @impl true
   def handle_cast({:dispatch_command, command_id, payload}, state) do
     {:noreply, dispatch_command(state, command_id, payload)}
@@ -294,7 +310,7 @@ defmodule Guppy.App.Coordinator do
   def handle_info(:guppy_reinstall_native_resources, state) do
     case claim_native_app_owner(state.runtime_server) do
       :ok ->
-        state = state |> install_menus() |> install_dock_menu()
+        state = state |> install_menus() |> install_dock_menu() |> install_app_badge()
         {:noreply, %{state | server_monitor: monitor_server(state.runtime_server)}}
 
       {:error, _reason} ->
@@ -357,6 +373,17 @@ defmodule Guppy.App.Coordinator do
 
   defp set_native_dock_menu(state) do
     Guppy.Server.set_dock_menu(state.runtime_server, self(), effective_dock_menu(state.config))
+  end
+
+  defp install_app_badge(%{config: %{app_badge: nil}} = state), do: state
+
+  defp install_app_badge(state) do
+    _ = set_native_app_badge(state)
+    state
+  end
+
+  defp set_native_app_badge(state) do
+    Guppy.Server.set_app_badge(state.runtime_server, self(), state.config.app_badge)
   end
 
   defp effective_menus(%Config{menus: menus, commands: commands}) do

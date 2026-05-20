@@ -284,6 +284,12 @@ defmodule Guppy.App do
   @doc "Installs app-owned native Dock/app-icon menu items."
   def set_dock_menu(app, items), do: call(app, {:set_dock_menu, items})
 
+  @doc "Returns the app-owned native badge label, or nil."
+  def app_badge(app \\ nil), do: call(app, :app_badge)
+
+  @doc "Installs or clears the app-owned native badge label."
+  def set_app_badge(app, label), do: call(app, {:set_app_badge, label})
+
   @doc "Returns packaging/signing metadata hooks stored in app config."
   def package(app \\ nil), do: call(app, :package)
 

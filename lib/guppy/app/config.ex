@@ -19,6 +19,7 @@ defmodule Guppy.App.Config do
             keymap: [],
             menus: [],
             dock_menu: [],
+            app_badge: nil,
             exit_on_last_window_closed: false,
             metadata: %{},
             package: %{}
@@ -33,6 +34,7 @@ defmodule Guppy.App.Config do
           keymap: [map()],
           menus: [map()],
           dock_menu: [map()],
+          app_badge: String.t() | nil,
           exit_on_last_window_closed: boolean(),
           metadata: map(),
           package: map()
@@ -48,6 +50,7 @@ defmodule Guppy.App.Config do
     :keymap,
     :menus,
     :dock_menu,
+    :app_badge,
     :exit_on_last_window_closed,
     :metadata,
     :package
@@ -73,6 +76,7 @@ defmodule Guppy.App.Config do
          {:ok, keymap} <- validate_keymap(Map.get(config, :keymap, []), commands),
          {:ok, menus} <- validate_list(Map.get(config, :menus, []), :invalid_menus),
          {:ok, dock_menu} <- validate_list(Map.get(config, :dock_menu, []), :invalid_dock_menu),
+         {:ok, app_badge} <- validate_app_badge(Map.get(config, :app_badge)),
          {:ok, exit_on_last_window_closed} <-
            validate_boolean(
              Map.get(config, :exit_on_last_window_closed, false),
@@ -91,6 +95,7 @@ defmodule Guppy.App.Config do
          keymap: keymap,
          menus: menus,
          dock_menu: dock_menu,
+         app_badge: app_badge,
          exit_on_last_window_closed: exit_on_last_window_closed,
          metadata: metadata,
          package: package
@@ -276,6 +281,10 @@ defmodule Guppy.App.Config do
 
   defp validate_list(value, _error) when is_list(value), do: {:ok, value}
   defp validate_list(_value, error), do: {:error, error}
+
+  defp validate_app_badge(nil), do: {:ok, nil}
+  defp validate_app_badge(label) when is_binary(label), do: {:ok, label}
+  defp validate_app_badge(_label), do: {:error, :invalid_app_badge}
 
   defp validate_boolean(value, _error) when is_boolean(value), do: {:ok, value}
   defp validate_boolean(_value, error), do: {:error, error}
