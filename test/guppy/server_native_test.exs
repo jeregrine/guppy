@@ -97,6 +97,49 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  test "file dialog APIs validate options and route through native" do
+    server = :"guppy_file_dialog_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+
+    assert {:ok, :pong} =
+             Guppy.Server.open_file_dialog(server, [multiple: true, prompt: "Open files"], 37)
+
+    assert_receive {:guppy_test_native_request,
+                    {:open_file_dialog,
+                     [%{files: true, directories: false, multiple: true, prompt: "Open files"}]},
+                    37}
+
+    assert {:ok, :pong} = Guppy.Server.choose_directory_dialog(server, [prompt: "Choose"], 38)
+
+    assert_receive {:guppy_test_native_request,
+                    {:open_file_dialog,
+                     [%{files: false, directories: true, multiple: false, prompt: "Choose"}]}, 38}
+
+    assert {:ok, :pong} =
+             Guppy.Server.save_file_dialog(
+               server,
+               [directory: "/tmp", default_name: "guppy.txt"],
+               39
+             )
+
+    assert_receive {:guppy_test_native_request,
+                    {:save_file_dialog, [%{directory: "/tmp", default_name: "guppy.txt"}]}, 39}
+
+    assert {:error, :invalid_file_dialog_options} =
+             Guppy.Server.open_file_dialog(server, [multiple: :yes], 37)
+
+    refute_receive {:guppy_test_native_request, {:open_file_dialog, _}, _}
+  end
+
   test "clipboard text API reads through native when loaded" do
     case Guppy.Native.Nif.load_status() do
       :ok ->

@@ -191,6 +191,8 @@ Popovers support optional anchor corner, anchor position/offset, local/window an
 
 `Guppy.set_menus/1` installs app/runtime menus for the calling process. Custom menu actions use `%{id:, label:, callback:}` and arrive as `{:guppy_menu_event, %{type: :menu_action, id: id, callback: callback}}`; Edit menu items can use `%{id:, label:, os_action: :cut | :copy | :paste | :select_all}` to target focused native text inputs. Call `Guppy.set_menus([])` to clear menus; menus are also cleared when the installing process exits.
 
+`Guppy.open_file_dialog/0`, `Guppy.choose_directory_dialog/0`, and `Guppy.save_file_dialog/0` provide narrow platform file dialogs through the native runtime. Open/choose support `:multiple` and `:prompt`; save supports `:directory` and `:default_name`. Dialog cancellation returns `{:ok, nil}`.
+
 `Guppy.read_clipboard_text/0` and `Guppy.write_clipboard_text/1` provide narrow text clipboard access through the native runtime. Reads return `{:ok, text}` or `{:ok, nil}` when no text is available; writes accept binaries only.
 
 `window_close_requested` is informational: native close requests are not vetoable from Elixir today, and a successful close is followed by `window_closed`.

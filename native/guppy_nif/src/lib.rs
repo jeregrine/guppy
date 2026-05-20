@@ -326,6 +326,60 @@ fn native_event_target_status<'a>(env: Env<'a>) -> Term<'a> {
 }
 
 #[rustler::nif(schedule = "DirtyIo")]
+fn native_open_file_dialog<'a>(
+    env: Env<'a>,
+    files: bool,
+    directories: bool,
+    multiple: bool,
+    prompt: Option<String>,
+    timeout_ms: u64,
+) -> Term<'a> {
+    let result = request_with_timeout(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::OpenFileDialog {
+            deadline,
+            files,
+            directories,
+            multiple,
+            prompt,
+            reply,
+        }
+    });
+
+    match result {
+        NativeRequestResult::Reply(Ok(Some(paths))) => paths.encode(env),
+        NativeRequestResult::Reply(Ok(None)) => nil().encode(env),
+        NativeRequestResult::Reply(Err(())) => error_tuple(env, runtime_unavailable()),
+        NativeRequestResult::Timeout => error_tuple(env, native_timeout()),
+        NativeRequestResult::Unavailable => error_tuple(env, runtime_unavailable()),
+    }
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+fn native_save_file_dialog<'a>(
+    env: Env<'a>,
+    directory: Option<String>,
+    default_name: Option<String>,
+    timeout_ms: u64,
+) -> Term<'a> {
+    let result = request_with_timeout(timeout_ms, |reply, deadline| {
+        main_thread_runtime::MainThreadRequest::SaveFileDialog {
+            deadline,
+            directory,
+            default_name,
+            reply,
+        }
+    });
+
+    match result {
+        NativeRequestResult::Reply(Ok(Some(path))) => path.encode(env),
+        NativeRequestResult::Reply(Ok(None)) => nil().encode(env),
+        NativeRequestResult::Reply(Err(())) => error_tuple(env, runtime_unavailable()),
+        NativeRequestResult::Timeout => error_tuple(env, native_timeout()),
+        NativeRequestResult::Unavailable => error_tuple(env, runtime_unavailable()),
+    }
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
 fn native_read_clipboard_text<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
     let result = request_with_timeout(timeout_ms, |reply, deadline| {
         main_thread_runtime::MainThreadRequest::ReadClipboardText { deadline, reply }

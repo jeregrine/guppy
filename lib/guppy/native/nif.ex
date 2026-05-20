@@ -106,6 +106,14 @@ defmodule Guppy.Native.Nif do
     {:error, :nif_not_loaded}
   end
 
+  def native_open_file_dialog(_files, _directories, _multiple, _prompt, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
+  def native_save_file_dialog(_directory, _default_name, _timeout) do
+    {:error, :nif_not_loaded}
+  end
+
   def native_read_clipboard_text(_timeout) do
     {:error, :nif_not_loaded}
   end
@@ -208,6 +216,36 @@ defmodule Guppy.Native.Nif do
     end)
   end
 
+  defp dispatch({:open_file_dialog, [opts]}, timeout) when is_map(opts) do
+    with_loaded(fn ->
+      native_call(:open_file_dialog, fn ->
+        normalize_file_dialog_paths(
+          native_open_file_dialog(
+            Map.fetch!(opts, :files),
+            Map.fetch!(opts, :directories),
+            Map.fetch!(opts, :multiple),
+            Map.get(opts, :prompt),
+            timeout
+          )
+        )
+      end)
+    end)
+  end
+
+  defp dispatch({:save_file_dialog, [opts]}, timeout) when is_map(opts) do
+    with_loaded(fn ->
+      native_call(:save_file_dialog, fn ->
+        normalize_file_dialog_path(
+          native_save_file_dialog(
+            Map.get(opts, :directory),
+            Map.get(opts, :default_name),
+            timeout
+          )
+        )
+      end)
+    end)
+  end
+
   defp dispatch({:read_clipboard_text, []}, timeout) do
     with_loaded(fn ->
       native_call(:read_clipboard_text, fn ->
@@ -292,6 +330,16 @@ defmodule Guppy.Native.Nif do
   defp normalize_clipboard_text(value) when is_nil(value), do: {:ok, nil}
   defp normalize_clipboard_text(text) when is_binary(text), do: {:ok, text}
   defp normalize_clipboard_text(_other), do: {:error, :runtime_unavailable}
+
+  defp normalize_file_dialog_paths({:error, reason}), do: {:error, reason}
+  defp normalize_file_dialog_paths(value) when is_nil(value), do: {:ok, nil}
+  defp normalize_file_dialog_paths(paths) when is_list(paths), do: {:ok, paths}
+  defp normalize_file_dialog_paths(_other), do: {:error, :runtime_unavailable}
+
+  defp normalize_file_dialog_path({:error, reason}), do: {:error, reason}
+  defp normalize_file_dialog_path(value) when is_nil(value), do: {:ok, nil}
+  defp normalize_file_dialog_path(path) when is_binary(path), do: {:ok, path}
+  defp normalize_file_dialog_path(_other), do: {:error, :runtime_unavailable}
 
   defp status_from_load_status(:ok), do: :loaded
   defp status_from_load_status(_), do: :not_loaded

@@ -128,6 +128,15 @@ Useful top-level API:
 - `Guppy.close_window/2`
 - `Guppy.set_menus/1`
 - `Guppy.set_menus/2`
+- `Guppy.open_file_dialog/0`
+- `Guppy.open_file_dialog/1`
+- `Guppy.open_file_dialog/2`
+- `Guppy.choose_directory_dialog/0`
+- `Guppy.choose_directory_dialog/1`
+- `Guppy.choose_directory_dialog/2`
+- `Guppy.save_file_dialog/0`
+- `Guppy.save_file_dialog/1`
+- `Guppy.save_file_dialog/2`
 - `Guppy.read_clipboard_text/0`
 - `Guppy.read_clipboard_text/1`
 - `Guppy.write_clipboard_text/1`

@@ -19,6 +19,31 @@ fn expired_requests_do_not_reply_or_mutate_state() {
 }
 
 #[test]
+fn expired_file_dialog_requests_do_not_reply() {
+    let (open_reply, open_rx) = mpsc::channel();
+    handle_request(MainThreadRequest::OpenFileDialog {
+        deadline: RequestDeadline::after(Duration::from_millis(0)),
+        files: true,
+        directories: false,
+        multiple: true,
+        prompt: Some("Open".into()),
+        reply: open_reply,
+    });
+
+    assert!(open_rx.try_recv().is_err());
+
+    let (save_reply, save_rx) = mpsc::channel();
+    handle_request(MainThreadRequest::SaveFileDialog {
+        deadline: RequestDeadline::after(Duration::from_millis(0)),
+        directory: Some("/tmp".into()),
+        default_name: Some("guppy.txt".into()),
+        reply: save_reply,
+    });
+
+    assert!(save_rx.try_recv().is_err());
+}
+
+#[test]
 fn expired_canvas_set_ir_requests_do_not_reply_or_mutate_state() {
     let (reply, rx) = mpsc::channel();
     handle_request(MainThreadRequest::SetIr {

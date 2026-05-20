@@ -4,9 +4,13 @@ use crate::ir::IrNode;
 use crate::menu::{self, MenuSpec};
 use crate::window_options::WindowOptionsConfig;
 use async_task::spawn;
-use gpui::{App, AppContext, Application, AsyncApp, ClipboardItem, PlatformDispatcher};
+use gpui::{
+    App, AppContext, Application, AsyncApp, ClipboardItem, PathPromptOptions, PlatformDispatcher,
+    SharedString,
+};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -77,6 +81,20 @@ pub(crate) enum MainThreadRequest {
         menus: Vec<MenuSpec>,
         reply: Sender<i32>,
     },
+    OpenFileDialog {
+        deadline: RequestDeadline,
+        files: bool,
+        directories: bool,
+        multiple: bool,
+        prompt: Option<String>,
+        reply: Sender<Result<Option<Vec<String>>, ()>>,
+    },
+    SaveFileDialog {
+        deadline: RequestDeadline,
+        directory: Option<String>,
+        default_name: Option<String>,
+        reply: Sender<Result<Option<String>, ()>>,
+    },
     ReadClipboardText {
         deadline: RequestDeadline,
         reply: Sender<Result<Option<String>, ()>>,
@@ -101,6 +119,8 @@ impl MainThreadRequest {
             | MainThreadRequest::CloseWindow { deadline, .. }
             | MainThreadRequest::CloseAll { deadline, .. }
             | MainThreadRequest::SetMenus { deadline, .. }
+            | MainThreadRequest::OpenFileDialog { deadline, .. }
+            | MainThreadRequest::SaveFileDialog { deadline, .. }
             | MainThreadRequest::ReadClipboardText { deadline, .. }
             | MainThreadRequest::WriteClipboardText { deadline, .. }
             | MainThreadRequest::ViewCount { deadline, .. } => Some(deadline),
@@ -278,6 +298,102 @@ pub fn set_menus(menus: Vec<MenuSpec>) -> i32 {
     })
 }
 
+pub fn open_file_dialog(
+    deadline: RequestDeadline,
+    files: bool,
+    directories: bool,
+    multiple: bool,
+    prompt: Option<String>,
+    reply: Sender<Result<Option<Vec<String>>, ()>>,
+) {
+    APP.with(|app| {
+        let Some(app) = app.borrow().as_ref().cloned() else {
+            let _ = reply.send(Err(()));
+            return;
+        };
+
+        let options = PathPromptOptions {
+            files,
+            directories,
+            multiple,
+            prompt: prompt.map(SharedString::from),
+        };
+
+        let receiver = match app.update(move |cx| cx.prompt_for_paths(options)) {
+            Ok(receiver) => receiver,
+            Err(_) => {
+                let _ = reply.send(Err(()));
+                return;
+            }
+        };
+
+        let executor = app.background_executor().clone();
+        executor
+            .spawn(async move {
+                let result = match receiver.await {
+                    Ok(Ok(Some(paths))) => {
+                        Ok(Some(paths.into_iter().map(path_to_string).collect()))
+                    }
+                    Ok(Ok(None)) => Ok(None),
+                    Ok(Err(_)) | Err(_) => Err(()),
+                };
+
+                if !deadline.expired() {
+                    let _ = reply.send(result);
+                }
+            })
+            .detach();
+    });
+}
+
+pub fn save_file_dialog(
+    deadline: RequestDeadline,
+    directory: Option<String>,
+    default_name: Option<String>,
+    reply: Sender<Result<Option<String>, ()>>,
+) {
+    APP.with(|app| {
+        let Some(app) = app.borrow().as_ref().cloned() else {
+            let _ = reply.send(Err(()));
+            return;
+        };
+
+        let directory = directory
+            .map(PathBuf::from)
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+
+        let receiver = match app.update(move |cx| {
+            cx.prompt_for_new_path(Path::new(&directory), default_name.as_deref())
+        }) {
+            Ok(receiver) => receiver,
+            Err(_) => {
+                let _ = reply.send(Err(()));
+                return;
+            }
+        };
+
+        let executor = app.background_executor().clone();
+        executor
+            .spawn(async move {
+                let result = match receiver.await {
+                    Ok(Ok(Some(path))) => Ok(Some(path_to_string(path))),
+                    Ok(Ok(None)) => Ok(None),
+                    Ok(Err(_)) | Err(_) => Err(()),
+                };
+
+                if !deadline.expired() {
+                    let _ = reply.send(result);
+                }
+            })
+            .detach();
+    });
+}
+
+fn path_to_string(path: PathBuf) -> String {
+    path.to_string_lossy().into_owned()
+}
+
 pub fn read_clipboard_text() -> Result<Option<String>, ()> {
     APP.with(|app| {
         let app = app.borrow().as_ref().cloned().ok_or(())?;
@@ -421,6 +537,28 @@ fn handle_request(request: MainThreadRequest) {
         } => {
             if !deadline.expired() {
                 let _ = reply.send(set_menus(menus));
+            }
+        }
+        MainThreadRequest::OpenFileDialog {
+            deadline,
+            files,
+            directories,
+            multiple,
+            prompt,
+            reply,
+        } => {
+            if !deadline.expired() {
+                open_file_dialog(deadline, files, directories, multiple, prompt, reply);
+            }
+        }
+        MainThreadRequest::SaveFileDialog {
+            deadline,
+            directory,
+            default_name,
+            reply,
+        } => {
+            if !deadline.expired() {
+                save_file_dialog(deadline, directory, default_name, reply);
             }
         }
         MainThreadRequest::ReadClipboardText { deadline, reply } => {

@@ -55,6 +55,21 @@ defmodule Guppy do
     Server.set_menus(Server, self(), menus, timeout)
   end
 
+  @doc "Opens a platform dialog for choosing one or more files."
+  def open_file_dialog(opts \\ [], timeout \\ 30_000) do
+    Server.open_file_dialog(Server, opts, timeout)
+  end
+
+  @doc "Opens a platform dialog for choosing one or more directories."
+  def choose_directory_dialog(opts \\ [], timeout \\ 30_000) do
+    Server.choose_directory_dialog(Server, opts, timeout)
+  end
+
+  @doc "Opens a platform dialog for choosing a save path."
+  def save_file_dialog(opts \\ [], timeout \\ 30_000) do
+    Server.save_file_dialog(Server, opts, timeout)
+  end
+
   @doc "Reads text from the platform clipboard, returning `nil` when no text is available."
   def read_clipboard_text(timeout \\ 5_000) do
     Server.read_clipboard_text(Server, timeout)

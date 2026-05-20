@@ -69,6 +69,18 @@ defmodule Guppy.Server do
     GenServer.call(server, {:set_menus, owner, menus, timeout}, gen_call_timeout(timeout))
   end
 
+  def open_file_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
+    GenServer.call(server, {:open_file_dialog, opts, timeout}, gen_call_timeout(timeout))
+  end
+
+  def choose_directory_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
+    GenServer.call(server, {:choose_directory_dialog, opts, timeout}, gen_call_timeout(timeout))
+  end
+
+  def save_file_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
+    GenServer.call(server, {:save_file_dialog, opts, timeout}, gen_call_timeout(timeout))
+  end
+
   def read_clipboard_text(server \\ __MODULE__, timeout \\ 5_000) do
     GenServer.call(server, {:read_clipboard_text, timeout}, gen_call_timeout(timeout))
   end
@@ -175,6 +187,39 @@ defmodule Guppy.Server do
           {:ok, _payload} -> {:reply, :ok, delete_view(state, view_id)}
           {:error, reason} -> {:reply, {:error, reason}, state}
         end
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:open_file_dialog, opts, timeout}, _from, state) do
+    case validate_open_file_dialog_options(opts, files: true, directories: false) do
+      {:ok, opts} ->
+        reply = native_request(state, :open_file_dialog, {:open_file_dialog, [opts]}, timeout)
+        {:reply, reply, state}
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:choose_directory_dialog, opts, timeout}, _from, state) do
+    case validate_open_file_dialog_options(opts, files: false, directories: true) do
+      {:ok, opts} ->
+        reply = native_request(state, :open_file_dialog, {:open_file_dialog, [opts]}, timeout)
+        {:reply, reply, state}
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:save_file_dialog, opts, timeout}, _from, state) do
+    case validate_save_file_dialog_options(opts) do
+      {:ok, opts} ->
+        reply = native_request(state, :save_file_dialog, {:save_file_dialog, [opts]}, timeout)
+        {:reply, reply, state}
 
       error ->
         {:reply, error, state}
@@ -580,6 +625,53 @@ defmodule Guppy.Server do
   end
 
   defp validate_menus(_menus), do: {:error, :invalid_menus}
+
+  defp validate_open_file_dialog_options(opts, mode) when is_list(opts),
+    do: opts |> Map.new() |> validate_open_file_dialog_options(mode)
+
+  defp validate_open_file_dialog_options(opts, mode) when is_map(opts) do
+    with :ok <- validate_file_dialog_keys(opts, [:multiple, :prompt]),
+         {:ok, multiple} <- validate_optional_boolean(Map.get(opts, :multiple, false), :multiple),
+         {:ok, prompt} <- validate_optional_string(Map.get(opts, :prompt), :prompt) do
+      {:ok,
+       %{
+         files: Keyword.fetch!(mode, :files),
+         directories: Keyword.fetch!(mode, :directories),
+         multiple: multiple
+       }
+       |> maybe_put_window_option(:prompt, prompt)}
+    else
+      _error -> {:error, :invalid_file_dialog_options}
+    end
+  end
+
+  defp validate_open_file_dialog_options(_opts, _mode), do: {:error, :invalid_file_dialog_options}
+
+  defp validate_save_file_dialog_options(opts) when is_list(opts),
+    do: opts |> Map.new() |> validate_save_file_dialog_options()
+
+  defp validate_save_file_dialog_options(opts) when is_map(opts) do
+    with :ok <- validate_file_dialog_keys(opts, [:directory, :default_name]),
+         {:ok, directory} <- validate_optional_string(Map.get(opts, :directory), :directory),
+         {:ok, default_name} <-
+           validate_optional_string(Map.get(opts, :default_name), :default_name) do
+      {:ok,
+       %{}
+       |> maybe_put_window_option(:directory, directory)
+       |> maybe_put_window_option(:default_name, default_name)}
+    else
+      _error -> {:error, :invalid_file_dialog_options}
+    end
+  end
+
+  defp validate_save_file_dialog_options(_opts), do: {:error, :invalid_file_dialog_options}
+
+  defp validate_file_dialog_keys(opts, allowed_keys) do
+    case Map.keys(opts) -- allowed_keys do
+      [] -> :ok
+      _ -> {:error, :invalid_file_dialog_options}
+    end
+  end
 
   defp validate_menu_list(menus, seen_ids) do
     Enum.reduce_while(menus, {:ok, seen_ids}, fn menu, {:ok, ids} ->
