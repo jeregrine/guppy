@@ -13,6 +13,7 @@ defmodule Guppy.AppTest do
                  ],
                  commands: [%{id: "new_file", label: "New File"}],
                  keymap: [%{key: "cmd-n", command: "new_file"}],
+                 dock_menu: [%{id: "new_file", label: "New", callback: "new_file"}],
                  stylesheet: %{classes: %{"card" => %{style: "p-2", hover_style: "bg-blue"}}},
                  package: %{bundle_id: "dev.guppy.test"}
                },
@@ -23,6 +24,7 @@ defmodule Guppy.AppTest do
     assert [%{id: "main", start: true}, %{id: "secondary", start: false}] = config.windows
     assert config.exit_on_last_window_closed == false
     assert Map.has_key?(config.commands, "new_file")
+    assert config.dock_menu == [%{id: "new_file", label: "New", callback: "new_file"}]
     assert config.package.bundle_id == "dev.guppy.test"
 
     assert {:error, {:duplicate_window_id, "main"}} =
@@ -74,6 +76,7 @@ defmodule Guppy.AppTest do
     assert Guppy.App.package(app_name).bundle_id == "dev.guppy.test"
     assert Map.has_key?(Guppy.App.commands(app_name), "new_file")
     assert [%{key: "cmd-n", command: "new_file"}] = Guppy.App.keymap(app_name)
+    assert [%{id: "new_file", label: "New", callback: "new_file"}] = Guppy.App.dock_menu(app_name)
 
     assert :ok = Guppy.App.dispatch(app_name, "new_file", %{source: :test})
     assert_receive {:app_command, "new_file", %{source: :test}}
@@ -83,6 +86,14 @@ defmodule Guppy.AppTest do
 
     send(app_name, {:guppy_menu_event, %{id: "new_file", callback: "new_file"}})
     assert_receive {:app_command, "new_file", %{id: "new_file", callback: "new_file"}}
+
+    send(
+      app_name,
+      {:guppy_menu_event, %{type: :dock_menu_action, id: "new_file", callback: "new_file"}}
+    )
+
+    assert_receive {:app_command, "new_file",
+                    %{type: :dock_menu_action, id: "new_file", callback: "new_file"}}
 
     send(app_name, {:guppy_app_event, %{type: :app_activated}})
     assert_receive {:app_event, "app_activated", %{}}
@@ -101,6 +112,13 @@ defmodule Guppy.AppTest do
     assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", true)
     assert :ok = Guppy.App.dispatch(app_name, "new_file", %{source: :reenabled})
     assert_receive {:app_command, "new_file", %{source: :reenabled}}
+
+    assert :ok =
+             Guppy.App.set_dock_menu(app_name, [
+               %{id: "new_file", label: "New from Dock", callback: "new_file"}
+             ])
+
+    assert [%{label: "New from Dock"}] = Guppy.App.dock_menu(app_name)
 
     assert :ok =
              Guppy.App.set_theme(app_name, %{
@@ -315,17 +333,32 @@ defmodule Guppy.AppTest do
       start_supervised({Guppy.TestApp, name: app_name, parent: self(), runtime_server: server})
 
     assert_receive {:guppy_test_native_request, {:set_menus, [initial_menus]}, _timeout}
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [initial_dock_menu]}, _timeout}
     assert [%{items: [%{id: "new_file"} = initial_item]}] = initial_menus
+    assert [%{id: "new_file"} = initial_dock_item] = initial_dock_menu
     refute Map.get(initial_item, :enabled) == false
+    refute Map.get(initial_dock_item, :enabled) == false
 
     assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", false)
     assert_receive {:guppy_test_native_request, {:set_menus, [disabled_menus]}, _timeout}, 500
+
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [disabled_dock_menu]}, _timeout},
+                   500
+
     assert [%{items: [%{id: "new_file", enabled: false}]}] = disabled_menus
+    assert [%{id: "new_file", enabled: false}] = disabled_dock_menu
 
     assert :ok = Guppy.App.set_command_enabled(app_name, "new_file", true)
     assert_receive {:guppy_test_native_request, {:set_menus, [reenabled_menus]}, _timeout}, 500
+
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [reenabled_dock_menu]},
+                    _timeout},
+                   500
+
     assert [%{items: [%{id: "new_file"} = reenabled_item]}] = reenabled_menus
+    assert [%{id: "new_file"} = reenabled_dock_item] = reenabled_dock_menu
     refute Map.get(reenabled_item, :enabled) == false
+    refute Map.get(reenabled_dock_item, :enabled) == false
   end
 
   test "app can stop when the last app-supervised window closes" do
@@ -434,6 +467,7 @@ defmodule Guppy.AppTest do
 
     assert Guppy.App.theme(app_name).id == "test-dark"
     assert_receive {:guppy_test_native_request, {:set_menus, [_menus]}, _timeout}
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [_dock_menu]}, _timeout}
 
     server_pid = Process.whereis(server)
     Process.exit(server_pid, :kill)
@@ -444,6 +478,7 @@ defmodule Guppy.AppTest do
     end)
 
     assert_receive {:guppy_test_native_request, {:set_menus, [_menus]}, _timeout}, 500
+    assert_receive {:guppy_test_native_request, {:set_dock_menu, [_dock_menu]}, _timeout}, 500
     assert Guppy.App.theme(app_name).id == "test-dark"
   end
 

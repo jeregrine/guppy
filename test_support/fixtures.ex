@@ -101,6 +101,7 @@ defmodule Guppy.TestApp do
     commands: [%{id: "new_file", label: "New File"}],
     keymap: [%{key: "cmd-n", command: "new_file"}],
     menus: [%{label: "File", items: [%{id: "new_file", label: "New", callback: "new_file"}]}],
+    dock_menu: [%{id: "new_file", label: "New", callback: "new_file"}],
     metadata: %{name: "Test App"},
     package: %{bundle_id: "dev.guppy.test"}
 

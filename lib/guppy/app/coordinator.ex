@@ -50,7 +50,7 @@ defmodule Guppy.App.Coordinator do
         server_monitor: monitor_server(Keyword.get(opts, :runtime_server, Guppy.Server))
       }
 
-      state = install_menus(state)
+      state = state |> install_menus() |> install_dock_menu()
       {:ok, open_startup_windows(state)}
     else
       {:stop, reason} -> {:stop, reason}
@@ -66,6 +66,7 @@ defmodule Guppy.App.Coordinator do
   def handle_call(:commands, _from, state), do: {:reply, state.config.commands, state}
   def handle_call(:keymap, _from, state), do: {:reply, state.config.keymap, state}
   def handle_call(:menus, _from, state), do: {:reply, state.config.menus, state}
+  def handle_call(:dock_menu, _from, state), do: {:reply, state.config.dock_menu, state}
   def handle_call(:package, _from, state), do: {:reply, state.config.package, state}
 
   def handle_call(:windows, _from, state) do
@@ -150,8 +151,11 @@ defmodule Guppy.App.Coordinator do
 
   def handle_call({:set_commands, commands}, _from, state) do
     case Config.validate(%{state.config | commands: commands}) do
-      {:ok, config} -> {:reply, :ok, state |> put_config(config) |> install_menus()}
-      error -> {:reply, error, state}
+      {:ok, config} ->
+        {:reply, :ok, state |> put_config(config) |> install_menus() |> install_dock_menu()}
+
+      error ->
+        {:reply, error, state}
     end
   end
 
@@ -172,6 +176,7 @@ defmodule Guppy.App.Coordinator do
               state
               |> put_config(%{state.config | commands: commands})
               |> install_menus()
+              |> install_dock_menu()
 
             {:reply, :ok, state}
 
@@ -194,6 +199,21 @@ defmodule Guppy.App.Coordinator do
         state = put_config(state, config)
 
         case set_native_menus(state) do
+          :ok -> {:reply, :ok, state}
+          error -> {:reply, error, state}
+        end
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+
+  def handle_call({:set_dock_menu, items}, _from, state) do
+    case Config.validate(%{state.config | dock_menu: items}) do
+      {:ok, config} ->
+        state = put_config(state, config)
+
+        case set_native_dock_menu(state) do
           :ok -> {:reply, :ok, state}
           error -> {:reply, error, state}
         end
@@ -274,7 +294,8 @@ defmodule Guppy.App.Coordinator do
   def handle_info(:guppy_reinstall_native_resources, state) do
     case claim_native_app_owner(state.runtime_server) do
       :ok ->
-        {:noreply, %{install_menus(state) | server_monitor: monitor_server(state.runtime_server)}}
+        state = state |> install_menus() |> install_dock_menu()
+        {:noreply, %{state | server_monitor: monitor_server(state.runtime_server)}}
 
       {:error, _reason} ->
         Process.send_after(self(), :guppy_reinstall_native_resources, 50)
@@ -327,8 +348,23 @@ defmodule Guppy.App.Coordinator do
     Guppy.Server.set_menus(state.runtime_server, self(), effective_menus(state.config))
   end
 
+  defp install_dock_menu(%{config: %{dock_menu: []}} = state), do: state
+
+  defp install_dock_menu(state) do
+    _ = set_native_dock_menu(state)
+    state
+  end
+
+  defp set_native_dock_menu(state) do
+    Guppy.Server.set_dock_menu(state.runtime_server, self(), effective_dock_menu(state.config))
+  end
+
   defp effective_menus(%Config{menus: menus, commands: commands}) do
     Enum.map(menus, &effective_menu(&1, commands))
+  end
+
+  defp effective_dock_menu(%Config{dock_menu: dock_menu, commands: commands}) do
+    Enum.map(dock_menu, &effective_menu_item(&1, commands))
   end
 
   defp effective_menu(%{items: items} = menu, commands) when is_list(items) do

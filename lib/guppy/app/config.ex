@@ -18,6 +18,7 @@ defmodule Guppy.App.Config do
             commands: %{},
             keymap: [],
             menus: [],
+            dock_menu: [],
             exit_on_last_window_closed: false,
             metadata: %{},
             package: %{}
@@ -31,6 +32,7 @@ defmodule Guppy.App.Config do
           commands: %{optional(String.t()) => Command.t()},
           keymap: [map()],
           menus: [map()],
+          dock_menu: [map()],
           exit_on_last_window_closed: boolean(),
           metadata: map(),
           package: map()
@@ -45,6 +47,7 @@ defmodule Guppy.App.Config do
     :commands,
     :keymap,
     :menus,
+    :dock_menu,
     :exit_on_last_window_closed,
     :metadata,
     :package
@@ -69,6 +72,7 @@ defmodule Guppy.App.Config do
          {:ok, commands} <- validate_commands(Map.get(config, :commands, %{})),
          {:ok, keymap} <- validate_keymap(Map.get(config, :keymap, []), commands),
          {:ok, menus} <- validate_list(Map.get(config, :menus, []), :invalid_menus),
+         {:ok, dock_menu} <- validate_list(Map.get(config, :dock_menu, []), :invalid_dock_menu),
          {:ok, exit_on_last_window_closed} <-
            validate_boolean(
              Map.get(config, :exit_on_last_window_closed, false),
@@ -86,6 +90,7 @@ defmodule Guppy.App.Config do
          commands: commands,
          keymap: keymap,
          menus: menus,
+         dock_menu: dock_menu,
          exit_on_last_window_closed: exit_on_last_window_closed,
          metadata: metadata,
          package: package
