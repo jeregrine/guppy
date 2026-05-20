@@ -37,6 +37,8 @@ unsafe extern "C" {
 rustler::atoms! {
     action,
     alt,
+    app_activated,
+    app_deactivated,
     blur,
     button,
     callback,

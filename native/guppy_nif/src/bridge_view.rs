@@ -26,7 +26,12 @@ use gpui::{
     App, Bounds, Context, Entity, FocusHandle, KeyBinding, ListState, MouseDownEvent, Pixels,
     Render, ScrollAnchor, ScrollHandle, Subscription, Window, actions, div, prelude::*,
 };
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+
+thread_local! {
+    static ACTIVE_WINDOW_VIEW_IDS: RefCell<HashSet<u64>> = RefCell::new(HashSet::new());
+}
 
 actions!(guppy, [FocusNext, FocusPrev]);
 
@@ -66,6 +71,28 @@ fn window_bounds_payload(bounds: Bounds<Pixels>) -> WindowBoundsEventPayload {
         width: f64::from(bounds.size.width),
         height: f64::from(bounds.size.height),
     }
+}
+
+fn mark_initial_app_window_active(view_id: u64, active: bool) {
+    if active {
+        ACTIVE_WINDOW_VIEW_IDS.with(|view_ids| {
+            view_ids.borrow_mut().insert(view_id);
+        });
+    }
+}
+
+fn emit_app_activation_change(view_id: u64, active: bool) {
+    ACTIVE_WINDOW_VIEW_IDS.with(|view_ids| {
+        let mut view_ids = view_ids.borrow_mut();
+
+        if active {
+            if view_ids.insert(view_id) && view_ids.len() == 1 {
+                let _ = native_events::send_app_activated_event();
+            }
+        } else if view_ids.remove(&view_id) && view_ids.is_empty() {
+            let _ = native_events::send_app_deactivated_event();
+        }
+    });
 }
 
 impl Render for BridgeView {
@@ -108,7 +135,9 @@ impl BridgeView {
         }
 
         self.retained.last_window_bounds = Some(window.bounds());
-        self.retained.last_window_active = Some(window.is_window_active());
+        let active = window.is_window_active();
+        self.retained.last_window_active = Some(active);
+        mark_initial_app_window_active(self.view_id, active);
 
         self.retained
             .lifecycle_subscriptions
@@ -143,6 +172,8 @@ impl BridgeView {
         if self.retained.last_window_active.replace(active) == Some(active) {
             return;
         }
+
+        emit_app_activation_change(self.view_id, active);
 
         let _ = if active {
             native_events::send_window_focused_event(self.view_id)

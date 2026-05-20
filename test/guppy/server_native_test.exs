@@ -423,6 +423,27 @@ defmodule Guppy.ServerNativeTest do
                     }}
   end
 
+  test "app lifecycle native events route to the claimed app owner" do
+    server = :"guppy_app_lifecycle_event_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    assert_receive {:guppy_test_native_request, {:set_event_target, [_pid]}, 25}
+    assert :ok = Guppy.Server.claim_app_owner(server, self())
+
+    send(Process.whereis(server), {:guppy_native_event, 0, :app_activated, :undefined})
+    assert_receive {:guppy_app_event, %{type: :app_activated}}
+
+    send(Process.whereis(server), {:guppy_native_event, 0, :app_deactivated, :undefined})
+    assert_receive {:guppy_app_event, %{type: :app_deactivated}}
+  end
+
   test "window lifecycle native events route to the owning process" do
     server = :"guppy_lifecycle_event_native_#{System.unique_integer([:positive])}"
 

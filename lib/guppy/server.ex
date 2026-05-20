@@ -291,6 +291,20 @@ defmodule Guppy.Server do
   end
 
   @impl true
+  def handle_info({:guppy_native_event, 0, type, payload}, state)
+      when type in [:app_activated, :app_deactivated] do
+    case state.app_owner do
+      owner when is_pid(owner) ->
+        send(owner, {:guppy_app_event, Map.put(window_lifecycle_payload(payload), :type, type)})
+        emit_event_route_telemetry(0, type, :ok)
+        {:noreply, state}
+
+      nil ->
+        emit_event_route_telemetry(0, type, :unknown_app_owner)
+        {:noreply, state}
+    end
+  end
+
   def handle_info(
         {:guppy_native_event, 0, :menu_action, %{id: id, callback: callback_id} = payload},
         state

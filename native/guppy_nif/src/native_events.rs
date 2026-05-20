@@ -89,6 +89,24 @@ pub(crate) struct ScrollWheelEventPayload {
     pub modifiers: EventModifiers,
 }
 
+pub(crate) fn send_app_activated_event() -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("app_activated", 0, None, None, None, None);
+
+    send_event(0, app_activated, |env| {
+        rustler::types::atom::undefined().encode(env)
+    })
+}
+
+pub(crate) fn send_app_deactivated_event() -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test("app_deactivated", 0, None, None, None, None);
+
+    send_event(0, app_deactivated, |env| {
+        rustler::types::atom::undefined().encode(env)
+    })
+}
+
 pub(crate) fn send_window_close_requested_event(view_id: u64) -> i32 {
     #[cfg(test)]
     record_basic_event_snapshot_for_test("window_close_requested", view_id, None, None, None, None);
@@ -1150,6 +1168,11 @@ mod tests {
         assert_eq!(change.callback_id.as_deref(), Some("name_changed"));
         assert_eq!(change.value.as_deref(), Some("Jason"));
         assert_eq!(change.checked, None);
+
+        let _ = send_app_activated_event();
+        let app_activated = crate::take_basic_event_snapshot_for_test().unwrap();
+        assert_eq!(app_activated.event, "app_activated");
+        assert_eq!(app_activated.view_id, 0);
 
         let _ = send_window_close_requested_event(10);
         let requested = crate::take_basic_event_snapshot_for_test().unwrap();

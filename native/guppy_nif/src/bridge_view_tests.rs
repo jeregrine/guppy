@@ -110,8 +110,11 @@ fn window_lifecycle_observers_reach_native_event_bridge(cx: &mut gpui::TestAppCo
     });
 
     cx.update(|window, cx| window.draw(cx).clear());
+    let before_activation = crate::native_event_send_snapshot_for_test();
     cx.update(|window, _| window.activate_window());
     cx.run_until_parked();
+    let after_activation = crate::native_event_send_snapshot_for_test();
+    assert!(after_activation.0 >= before_activation.0 + 2);
 
     let event = crate::take_basic_event_snapshot_for_test().unwrap();
     assert_eq!(event.event, "window_focused");
