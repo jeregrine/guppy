@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
+    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, Window, div, list, px,
 };
 use std::collections::HashMap;
@@ -35,6 +35,8 @@ pub(crate) fn render(
     let cell_style = table.cell_style.clone();
     let row_click = table.row_click.clone();
     let cell_click = table.cell_click.clone();
+    let row_context_menu = table.row_context_menu.clone();
+    let cell_context_menu = table.cell_context_menu.clone();
     let table_id_for_rows = table_id.clone();
 
     let body = list(state, move |index, _window, _cx| {
@@ -49,6 +51,8 @@ pub(crate) fn render(
                     &cell_style,
                     row_click.as_deref(),
                     cell_click.as_deref(),
+                    row_context_menu.as_deref(),
+                    cell_context_menu.as_deref(),
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -139,6 +143,8 @@ fn render_row(
     cell_style: &DivStyle,
     row_click: Option<&str>,
     cell_click: Option<&str>,
+    row_context_menu: Option<&str>,
+    cell_context_menu: Option<&str>,
 ) -> AnyElement {
     let row_id = format!("{table_id}.row.{}", row.id);
     let cells = columns.iter().zip(row.cells.iter()).map(|(column, cell)| {
@@ -150,6 +156,7 @@ fn render_row(
             cell.as_ref(),
             cell_style,
             cell_click,
+            cell_context_menu,
         )
     });
 
@@ -167,15 +174,33 @@ fn render_row(
         let callback_id = callback_id.to_owned();
         let table_id = table_id.to_owned();
         let row_value = row.id.clone();
+        let click_row_id = row_id.clone();
         element = element.on_click(move |_, _, _| {
             events::emit_data_table_event(
                 view_id,
                 ROW_CLICK_EVENT,
-                &row_id,
+                &click_row_id,
                 &callback_id,
                 &table_id,
                 Some(&row_value),
                 None,
+            );
+        });
+    }
+
+    if let Some(callback_id) = row_context_menu {
+        let callback_id = callback_id.to_owned();
+        let table_id = table_id.to_owned();
+        let row_value = row.id.clone();
+        element = element.on_mouse_down(MouseButton::Right, move |event, _, _| {
+            events::emit_data_table_context_menu(
+                view_id,
+                &row_id,
+                &callback_id,
+                &table_id,
+                &row_value,
+                None,
+                event,
             );
         });
     }
@@ -230,6 +255,7 @@ fn render_cell(
     cell: Option<&DataTableCell>,
     cell_style: &DivStyle,
     cell_click: Option<&str>,
+    cell_context_menu: Option<&str>,
 ) -> AnyElement {
     let cell_id = format!("{table_id}.cell.{row_id}.{}", column.id);
     let mut cell_div = div().id(SharedString::from(cell_id.clone())).p_2();
@@ -251,15 +277,34 @@ fn render_cell(
         let table_id = table_id.to_owned();
         let row_id = row_id.to_owned();
         let column_id = column.id.clone();
+        let click_cell_id = cell_id.clone();
         element = element.on_click(move |_, _, _| {
             events::emit_data_table_event(
                 view_id,
                 CELL_CLICK_EVENT,
-                &cell_id,
+                &click_cell_id,
                 &callback_id,
                 &table_id,
                 Some(&row_id),
                 Some(&column_id),
+            );
+        });
+    }
+
+    if let Some(callback_id) = cell_context_menu {
+        let callback_id = callback_id.to_owned();
+        let table_id = table_id.to_owned();
+        let row_id = row_id.to_owned();
+        let column_id = column.id.clone();
+        element = element.on_mouse_down(MouseButton::Right, move |event, _, _| {
+            events::emit_data_table_context_menu(
+                view_id,
+                &cell_id,
+                &callback_id,
+                &table_id,
+                &row_id,
+                Some(&column_id),
+                event,
             );
         });
     }
@@ -448,6 +493,29 @@ mod tests {
         let event = crate::take_semantic_event_snapshot_for_test().unwrap();
         assert_eq!(event.event, "data_table_sort");
         assert_eq!(event.row_id, None);
+        assert_eq!(event.column_id.as_deref(), Some("status"));
+
+        use gpui::{Modifiers, MouseButton, MouseDownEvent, point, px};
+
+        events::emit_data_table_context_menu(
+            7,
+            "table.cell.row_1.status",
+            "cell_context",
+            "table",
+            "row_1",
+            Some("status"),
+            &MouseDownEvent {
+                position: point(px(12.0), px(8.0)),
+                modifiers: Modifiers::none(),
+                button: MouseButton::Right,
+                click_count: 1,
+                first_mouse: false,
+            },
+        );
+        let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+        assert_eq!(event.event, "context_menu");
+        assert_eq!(event.table_id.as_deref(), Some("table"));
+        assert_eq!(event.row_id.as_deref(), Some("row_1"));
         assert_eq!(event.column_id.as_deref(), Some("status"));
     }
 }

@@ -29,10 +29,18 @@ defmodule Guppy.IRTest do
         selected_row_id: "row_1",
         selected_cell: {"row_1", "status"},
         sort: %{column_id: "task", direction: :asc},
-        events: %{row_click: "select_row", cell_click: "select_cell", sort: "sort_table"}
+        events: %{
+          row_click: "select_row",
+          cell_click: "select_cell",
+          sort: "sort_table",
+          row_context_menu: "row_context",
+          cell_context_menu: "cell_context"
+        }
       )
 
     assert :ok = Guppy.IR.validate(ir)
+    assert ir.events.row_context_menu == "row_context"
+    assert ir.events.cell_context_menu == "cell_context"
   end
 
   test "data_table rejects duplicate columns and invalid cell references" do

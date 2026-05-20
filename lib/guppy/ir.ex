@@ -603,7 +603,9 @@ defmodule Guppy.IR do
   @type data_table_events :: %{
           optional(:row_click) => String.t(),
           optional(:cell_click) => String.t(),
-          optional(:sort) => String.t()
+          optional(:sort) => String.t(),
+          optional(:row_context_menu) => String.t(),
+          optional(:cell_context_menu) => String.t()
         }
 
   @type data_table_sort :: %{
@@ -1762,7 +1764,14 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :header_style)),
          :ok <- validate_style(Map.get(node, :row_style)),
          :ok <- validate_style(Map.get(node, :cell_style)),
-         :ok <- validate_events(Map.get(node, :events), [:row_click, :cell_click, :sort]),
+         :ok <-
+           validate_events(Map.get(node, :events), [
+             :row_click,
+             :cell_click,
+             :sort,
+             :row_context_menu,
+             :cell_context_menu
+           ]),
          {:ok, column_ids} <- validate_data_table_columns(columns),
          {:ok, row_ids} <- validate_data_table_rows(rows, column_ids),
          :ok <- validate_data_table_selected_row(Map.get(node, :selected_row_id), row_ids),

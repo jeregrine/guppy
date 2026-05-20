@@ -460,6 +460,8 @@ fn data_table_ir() -> IrNode {
         row_click: Some("select_row".into()),
         cell_click: Some("select_cell".into()),
         sort_callback: Some("sort_table".into()),
+        row_context_menu: Some("row_context".into()),
+        cell_context_menu: Some("cell_context".into()),
     }))
 }
 

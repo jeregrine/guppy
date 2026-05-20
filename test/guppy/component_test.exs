@@ -384,7 +384,9 @@ defmodule Guppy.ComponentTest do
     assert data_table.events == %{
              row_click: "table_row_clicked",
              cell_click: "table_cell_clicked",
-             sort: "table_sorted"
+             sort: "table_sorted",
+             row_context_menu: "table_row_context",
+             cell_context_menu: "table_cell_context"
            }
 
     assert tree.kind == :tree

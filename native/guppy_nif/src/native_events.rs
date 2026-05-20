@@ -406,6 +406,54 @@ pub(crate) fn send_data_table_event(
     }
 }
 
+pub(crate) fn send_data_table_context_menu_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    table_id_value: &str,
+    row_id_value: &str,
+    column_id_value: Option<&str>,
+    payload: ContextMenuEventPayload,
+) -> i32 {
+    #[cfg(test)]
+    {
+        let _ = payload;
+
+        record_semantic_event_snapshot_for_test(
+            "context_menu",
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            Some(table_id_value.to_owned()),
+            Some(row_id_value.to_owned()),
+            column_id_value.map(str::to_owned),
+            None,
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, context_menu, move |env| {
+        let column_id_term = optional_str_term(env, column_id_value);
+
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (table_id().encode(env), table_id_value.encode(env)),
+                (row_id().encode(env), row_id_value.encode(env)),
+                (column_id().encode(env), column_id_term),
+                (x().encode(env), payload.x.encode(env)),
+                (y().encode(env), payload.y.encode(env)),
+                modifiers_pair(env, payload.modifiers),
+            ],
+        )
+    })
+}
+
 pub(crate) fn send_tree_context_menu_event(
     view_id: u64,
     node_id: &str,

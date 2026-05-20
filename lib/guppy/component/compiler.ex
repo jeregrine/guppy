@@ -278,7 +278,11 @@ defmodule Guppy.Component.Compiler do
         maybe_attr_entry(attrs, "selected_row_id", :string_or_expr, caller),
         maybe_attr_entry(attrs, "selected_cell", :expr_only, caller),
         renamed_attr_entry(attrs, "sort_state", :sort, :expr_only, caller),
-        events_entry(attrs, ["row_click", "cell_click", "sort"], caller)
+        events_entry(
+          attrs,
+          ["row_click", "cell_click", "sort", "row_context_menu", "cell_context_menu"],
+          caller
+        )
       ])
 
     quote do
@@ -1518,7 +1522,7 @@ defmodule Guppy.Component.Compiler do
       "selected_row_id",
       "selected_cell",
       "sort_state"
-    ] ++ ["row_click", "cell_click", "sort"]
+    ] ++ ["row_click", "cell_click", "sort", "row_context_menu", "cell_context_menu"]
   end
 
   defp tree_allowed_attrs do

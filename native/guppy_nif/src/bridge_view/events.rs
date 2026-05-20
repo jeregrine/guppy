@@ -64,6 +64,31 @@ pub(crate) fn emit_data_table_event(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn emit_data_table_context_menu(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    table_id: &str,
+    row_id: &str,
+    column_id: Option<&str>,
+    event: &MouseDownEvent,
+) {
+    let _ = native_events::send_data_table_context_menu_event(
+        view_id,
+        node_id,
+        callback_id,
+        table_id,
+        row_id,
+        column_id,
+        ContextMenuEventPayload {
+            x: pixel_to_f64(event.position.x),
+            y: pixel_to_f64(event.position.y),
+            modifiers: modifier_flags(&event.modifiers),
+        },
+    );
+}
+
 pub(crate) fn emit_tree_event(
     view_id: u64,
     event_code: i32,

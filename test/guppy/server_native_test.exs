@@ -272,7 +272,13 @@ defmodule Guppy.ServerNativeTest do
           [%{id: "task", label: "Task"}],
           [%{id: "row_1", cells: [%{column_id: "task", children: [Guppy.IR.text("Task")]}]}],
           id: "tasks",
-          events: %{row_click: "select_row", cell_click: "select_cell", sort: "sort_table"}
+          events: %{
+            row_click: "select_row",
+            cell_click: "select_cell",
+            sort: "sort_table",
+            row_context_menu: "row_context",
+            cell_context_menu: "cell_context"
+          }
         ),
         Guppy.IR.tree([%{id: "root", label: "Root"}],
           id: "outline",
@@ -300,6 +306,30 @@ defmodule Guppy.ServerNativeTest do
                     %{
                       type: :data_table_cell_click,
                       callback: "select_cell",
+                      table_id: "tasks",
+                      row_id: "row_1",
+                      column_id: "task"
+                    }}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      view_id,
+      :context_menu,
+      %{
+        id: "tasks.cell.row_1.task",
+        callback: "cell_context",
+        table_id: "tasks",
+        row_id: "row_1",
+        column_id: "task",
+        x: 10.0,
+        y: 12.0
+      }
+    })
+
+    assert_receive {:guppy_event, ^view_id,
+                    %{
+                      type: :context_menu,
+                      callback: "cell_context",
                       table_id: "tasks",
                       row_id: "row_1",
                       column_id: "task"

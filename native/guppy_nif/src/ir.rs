@@ -44,6 +44,8 @@ struct IrFieldKeys {
     sort: Term,
     row_click: Term,
     cell_click: Term,
+    row_context_menu: Term,
+    cell_context_menu: Term,
     direction: Term,
     nodes: Term,
     selected_id: Term,
@@ -148,6 +150,8 @@ impl IrFieldKeys {
             sort: atom_term("sort"),
             row_click: atom_term("row_click"),
             cell_click: atom_term("cell_click"),
+            row_context_menu: atom_term("row_context_menu"),
+            cell_context_menu: atom_term("cell_context_menu"),
             direction: atom_term("direction"),
             nodes: atom_term("nodes"),
             selected_id: atom_term("selected_id"),
@@ -926,6 +930,8 @@ pub struct DataTableNode {
     pub row_click: Option<String>,
     pub cell_click: Option<String>,
     pub sort_callback: Option<String>,
+    pub row_context_menu: Option<String>,
+    pub cell_context_menu: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -1269,6 +1275,8 @@ impl IrNode {
                     row_click: get_optional_event(map, "row_click")?,
                     cell_click: get_optional_event(map, "cell_click")?,
                     sort_callback: get_optional_event(map, "sort")?,
+                    row_context_menu: get_optional_event(map, "row_context_menu")?,
+                    cell_context_menu: get_optional_event(map, "cell_context_menu")?,
                 })))
             }
             "tree" => {
@@ -1550,6 +1558,8 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "sort" => &keys.sort,
         "row_click" => &keys.row_click,
         "cell_click" => &keys.cell_click,
+        "row_context_menu" => &keys.row_context_menu,
+        "cell_context_menu" => &keys.cell_context_menu,
         "direction" => &keys.direction,
         "nodes" => &keys.nodes,
         "selected_id" => &keys.selected_id,
