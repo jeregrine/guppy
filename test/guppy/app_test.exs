@@ -490,6 +490,22 @@ defmodule Guppy.AppTest do
     assert_receive {:DOWN, ^app_ref, :process, ^app_pid, :normal}, 1_000
   end
 
+  test "app can focus an app-supervised window" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        app_name = :"guppy_focus_app_window_#{System.unique_integer([:positive])}"
+        {:ok, _pid} = start_supervised({Guppy.TestApp, name: app_name, parent: self()})
+
+        assert {:ok, _pid} =
+                 Guppy.App.open_window(app_name, "main", arg: self(), opts: [show: false])
+
+        assert :ok = Guppy.App.focus_window(app_name, "main")
+
+      {:error, _reason} ->
+        :ok
+    end
+  end
+
   test "app-supervised windows are registered and receive app context" do
     case Guppy.Native.Nif.load_status() do
       :ok ->

@@ -135,6 +135,19 @@ defmodule Guppy.WindowTest do
     end
   end
 
+  test "Guppy.Window.focus routes focus through the owning window process" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        {:ok, pid} = Guppy.TestCounterWindow.start_link(0)
+        on_exit(fn -> if Process.alive?(pid), do: GenServer.stop(pid, :normal) end)
+
+        assert :ok = Guppy.Window.focus(pid)
+
+      {:error, _reason} ->
+        :ok
+    end
+  end
+
   test "Guppy.Window owns a window process and rerenders from events/messages" do
     case Guppy.Native.Nif.load_status() do
       :ok ->

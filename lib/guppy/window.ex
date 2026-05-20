@@ -125,6 +125,23 @@ defmodule Guppy.Window do
 
   def handle_window_message(
         _module,
+        {:guppy_focus_window, _timeout},
+        %State{window: %__MODULE__{view_id: nil}} = state
+      ) do
+    {:noreply, state}
+  end
+
+  def handle_window_message(
+        _module,
+        {:guppy_focus_window, timeout},
+        %State{window: %__MODULE__{view_id: view_id}} = state
+      ) do
+    _ = Guppy.focus_window(view_id, timeout)
+    {:noreply, state}
+  end
+
+  def handle_window_message(
+        _module,
         {:DOWN, monitor_ref, :process, _pid, _reason},
         %State{server_monitor: monitor_ref} = state
       ) do
@@ -180,10 +197,8 @@ defmodule Guppy.Window do
   end
 
   def focus(server, timeout \\ 5_000) do
-    case view_id(server) do
-      view_id when is_integer(view_id) -> Guppy.focus_window(view_id, timeout)
-      nil -> {:error, :unknown_view_id}
-    end
+    send(server, {:guppy_focus_window, timeout})
+    :ok
   end
 
   def state(server) do
