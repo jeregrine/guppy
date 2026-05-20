@@ -4,7 +4,7 @@ use crate::{
     native_events,
 };
 use gpui::{
-    AnyElement, InteractiveElement, IntoElement, ParentElement, SharedString,
+    AnyElement, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
     StatefulInteractiveElement, Styled, div, uniform_list,
 };
 use std::sync::Arc;
@@ -17,6 +17,7 @@ pub(crate) fn render(
     style: &DivStyle,
     item_style: &DivStyle,
     click: Option<&str>,
+    context_menu: Option<&str>,
 ) -> AnyElement {
     let view_id = pass.view_id();
     let node_id = NodeIdentity::new(view_id, path, id);
@@ -25,12 +26,22 @@ pub(crate) fn render(
     let items = items.clone();
     let item_style = item_style.clone();
     let click = click.map(str::to_owned);
+    let context_menu = context_menu.map(str::to_owned);
     let item_list_key = list_key.clone();
 
     let list = uniform_list(element_id, items.len(), move |range, _window, _cx| {
         range
             .filter_map(|index| items.get(index))
-            .map(|item| render_item(view_id, &item_list_key, item, &item_style, click.as_deref()))
+            .map(|item| {
+                render_item(
+                    view_id,
+                    &item_list_key,
+                    item,
+                    &item_style,
+                    click.as_deref(),
+                    context_menu.as_deref(),
+                )
+            })
             .collect::<Vec<_>>()
     })
     .size_full();
@@ -50,6 +61,7 @@ fn render_item(
     item: &UniformListItem,
     item_style: &DivStyle,
     click: Option<&str>,
+    context_menu: Option<&str>,
 ) -> AnyElement {
     let item_key = format!("{list_key}.{}", item.id);
     let mut row = apply_div_style(
@@ -64,8 +76,16 @@ fn render_item(
 
     if let Some(callback_id) = click {
         let callback_id = callback_id.to_owned();
+        let click_item_key = item_key.clone();
         row = row.on_click(move |_, _, _| {
-            emit_item_click(view_id, &item_key, &callback_id);
+            emit_item_click(view_id, &click_item_key, &callback_id);
+        });
+    }
+
+    if let Some(callback_id) = context_menu {
+        let callback_id = callback_id.to_owned();
+        row = row.on_mouse_down(MouseButton::Right, move |event, _, _| {
+            super::events::emit_context_menu(view_id, &item_key, &callback_id, event);
         });
     }
 
@@ -87,6 +107,13 @@ mod tests {
             id: "item_1".into(),
             label: "Item 1".into(),
         };
-        let _ = render_item(1, "list", &item, &Vec::new().into(), Some("clicked"));
+        let _ = render_item(
+            1,
+            "list",
+            &item,
+            &Vec::new().into(),
+            Some("clicked"),
+            Some("contexted"),
+        );
     }
 }

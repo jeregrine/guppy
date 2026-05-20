@@ -364,14 +364,18 @@ defmodule Guppy.ComponentTest do
     assert Enum.map(uniform_list.items, & &1.id) == ["uniform_1", "uniform_2"]
     assert {:height, {:px, 120}} in uniform_list.style
     assert {:padding, :all, {:rem, 0.5}} in uniform_list.item_style
-    assert uniform_list.events == %{click: "uniform_item_clicked"}
+
+    assert uniform_list.events == %{
+             click: "uniform_item_clicked",
+             context_menu: "uniform_item_context"
+           }
 
     assert list.kind == :list
     assert list.id == "generic_items"
     assert Enum.map(list.items, & &1.id) == ["generic_1", "generic_2"]
     assert {:height, {:px, 140}} in list.style
     assert {:padding, :all, {:rem, 0.5}} in list.item_style
-    assert list.events == %{click: "generic_item_clicked"}
+    assert list.events == %{click: "generic_item_clicked", context_menu: "generic_item_context"}
 
     assert data_table.kind == :data_table
     assert data_table.id == "task_table"

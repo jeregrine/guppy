@@ -1118,6 +1118,7 @@ pub enum IrNode {
         style: DivStyle,
         item_style: DivStyle,
         click: Option<String>,
+        context_menu: Option<String>,
     },
     List {
         id: Option<String>,
@@ -1125,6 +1126,7 @@ pub enum IrNode {
         style: DivStyle,
         item_style: DivStyle,
         click: Option<String>,
+        context_menu: Option<String>,
     },
     DataTable(Box<DataTableNode>),
     Tree(Box<TreeNode>),
@@ -1229,6 +1231,7 @@ impl IrNode {
                 style: get_div_style(map)?,
                 item_style: get_style_list_field(map, "item_style")?,
                 click: get_click_event(map)?,
+                context_menu: get_optional_event(map, "context_menu")?,
             }),
             "list" => Ok(Self::List {
                 id,
@@ -1236,6 +1239,7 @@ impl IrNode {
                 style: get_div_style(map)?,
                 item_style: get_style_list_field(map, "item_style")?,
                 click: get_click_event(map)?,
+                context_menu: get_optional_event(map, "context_menu")?,
             }),
             "data_table" => {
                 let columns = get_data_table_columns_field(map)?;

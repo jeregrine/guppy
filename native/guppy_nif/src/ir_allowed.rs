@@ -190,8 +190,8 @@ pub(crate) fn allowed_node_event_fields(
             "div events",
         ),
         "popover" => (&["click", "close"], "popover events"),
-        "uniform_list" => (&["click"], "uniform_list events"),
-        "list" => (&["click"], "list events"),
+        "uniform_list" => (&["click", "context_menu"], "uniform_list events"),
+        "list" => (&["click", "context_menu"], "list events"),
         "data_table" => (
             &[
                 "row_click",

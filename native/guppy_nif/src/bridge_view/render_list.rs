@@ -11,8 +11,8 @@ use crate::{
     ir::{CheckboxNode, DivNode, DivStyle, IrNode, ListItem, RadioNode},
 };
 use gpui::{
-    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, ParentElement,
-    SharedString, StatefulInteractiveElement, Styled, Window, div, list,
+    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
+    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div, list,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -37,6 +37,7 @@ pub(crate) fn render(
     style: &DivStyle,
     item_style: &DivStyle,
     click: Option<&str>,
+    context_menu: Option<&str>,
     _window: &mut Window,
     cx: &mut Context<BridgeView>,
 ) -> AnyElement {
@@ -49,6 +50,7 @@ pub(crate) fn render(
     let items = items.clone();
     let item_style = item_style.clone();
     let click = click.map(str::to_owned);
+    let context_menu = context_menu.map(str::to_owned);
     let item_list_key = list_key.clone();
 
     let list = list(state, move |index, window, _cx| {
@@ -61,6 +63,7 @@ pub(crate) fn render(
                     item,
                     &item_style,
                     click.as_deref(),
+                    context_menu.as_deref(),
                     &row_controls,
                     focus_visible,
                     window,
@@ -193,6 +196,7 @@ fn render_item(
     item: &ListItem,
     item_style: &DivStyle,
     click: Option<&str>,
+    context_menu: Option<&str>,
     row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
     focus_visible: bool,
     window: &mut Window,
@@ -221,8 +225,16 @@ fn render_item(
 
     if let Some(callback_id) = click {
         let callback_id = callback_id.to_owned();
+        let click_item_key = item_key.clone();
         row = row.on_click(move |_, _, _| {
-            events::emit_click(view_id, &item_key, &callback_id);
+            events::emit_click(view_id, &click_item_key, &callback_id);
+        });
+    }
+
+    if let Some(callback_id) = context_menu {
+        let callback_id = callback_id.to_owned();
+        row = row.on_mouse_down(MouseButton::Right, move |event, _, _| {
+            events::emit_context_menu(view_id, &item_key, &callback_id, event);
         });
     }
 

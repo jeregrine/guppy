@@ -270,6 +270,7 @@ defmodule Guppy.IR do
   @type style :: [style_op()]
 
   @type text_events :: %{optional(:click) => String.t()}
+  @type list_events :: %{optional(:click) => String.t(), optional(:context_menu) => String.t()}
   @type text_run :: %{required(:text) => String.t(), optional(:style) => style()}
 
   @type animation :: %{
@@ -482,7 +483,7 @@ defmodule Guppy.IR do
           optional(:id) => node_id(),
           optional(:style) => style(),
           optional(:item_style) => style(),
-          optional(:events) => text_events()
+          optional(:events) => list_events()
         }
 
   @type list_row_click_events :: %{optional(:click) => String.t()}
@@ -575,7 +576,7 @@ defmodule Guppy.IR do
           optional(:id) => node_id(),
           optional(:style) => style(),
           optional(:item_style) => style(),
-          optional(:events) => text_events()
+          optional(:events) => list_events()
         }
 
   @type data_table_column_width :: :auto | {:px, number()} | {:fr, pos_integer()}
@@ -1739,7 +1740,7 @@ defmodule Guppy.IR do
          :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :item_style)),
-         :ok <- validate_events(Map.get(node, :events), [:click]),
+         :ok <- validate_events(Map.get(node, :events), [:click, :context_menu]),
          :ok <- validate_uniform_list_items(items) do
       :ok
     end
@@ -1750,7 +1751,7 @@ defmodule Guppy.IR do
          :ok <- validate_id(Map.get(node, :id)),
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_style(Map.get(node, :item_style)),
-         :ok <- validate_events(Map.get(node, :events), [:click]),
+         :ok <- validate_events(Map.get(node, :events), [:click, :context_menu]),
          :ok <- validate_list_items(items) do
       :ok
     end

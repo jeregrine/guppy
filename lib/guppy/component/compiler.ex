@@ -54,6 +54,7 @@ defmodule Guppy.Component.Compiler do
     "scroll_wheel"
   ]
   @text_events ["click"]
+  @list_events ["click", "context_menu"]
   @button_events [
     "click",
     "hover",
@@ -236,7 +237,7 @@ defmodule Guppy.Component.Compiler do
         maybe_attr_entry(attrs, "id", :string, caller),
         style_entry(attrs, "class", "style", :style),
         style_entry(attrs, "item_class", "item_style", :item_style),
-        events_entry(attrs, @text_events, caller)
+        events_entry(attrs, @list_events, caller)
       ])
 
     quote do
@@ -254,7 +255,7 @@ defmodule Guppy.Component.Compiler do
         maybe_attr_entry(attrs, "id", :string, caller),
         style_entry(attrs, "class", "style", :style),
         style_entry(attrs, "item_class", "item_style", :item_style),
-        events_entry(attrs, @text_events, caller)
+        events_entry(attrs, @list_events, caller)
       ])
 
     quote do
@@ -1497,11 +1498,11 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp uniform_list_allowed_attrs do
-    [":if", ":for", "id", "items", "class", "style", "item_class", "item_style"] ++ @text_events
+    [":if", ":for", "id", "items", "class", "style", "item_class", "item_style"] ++ @list_events
   end
 
   defp list_allowed_attrs do
-    [":if", ":for", "id", "items", "class", "style", "item_class", "item_style"] ++ @text_events
+    [":if", ":for", "id", "items", "class", "style", "item_class", "item_style"] ++ @list_events
   end
 
   defp data_table_allowed_attrs do

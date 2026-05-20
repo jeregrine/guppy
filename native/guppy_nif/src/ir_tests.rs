@@ -364,6 +364,69 @@ fn rejects_text_run_content_mismatches() {
 }
 
 #[test]
+fn decodes_list_context_menu_events() {
+    let uniform = map(vec![
+        (atom("kind"), atom("uniform_list")),
+        (
+            atom("items"),
+            list(vec![map(vec![
+                (atom("id"), binary("one")),
+                (atom("label"), binary("One")),
+            ])]),
+        ),
+        (
+            atom("events"),
+            events(vec![("click", "clicked"), ("context_menu", "contexted")]),
+        ),
+    ]);
+
+    match IrNode::from_term(&uniform).unwrap() {
+        IrNode::UniformList {
+            click,
+            context_menu,
+            ..
+        } => {
+            assert_eq!(click.as_deref(), Some("clicked"));
+            assert_eq!(context_menu.as_deref(), Some("contexted"));
+        }
+        other => panic!("expected uniform list, got {other:?}"),
+    }
+
+    let list_node = map(vec![
+        (atom("kind"), atom("list")),
+        (
+            atom("items"),
+            list(vec![map(vec![
+                (atom("id"), binary("row_1")),
+                (
+                    atom("children"),
+                    list(vec![map(vec![(atom("kind"), atom("spacer"))])]),
+                ),
+            ])]),
+        ),
+        (
+            atom("events"),
+            events(vec![
+                ("click", "row_clicked"),
+                ("context_menu", "row_context"),
+            ]),
+        ),
+    ]);
+
+    match IrNode::from_term(&list_node).unwrap() {
+        IrNode::List {
+            click,
+            context_menu,
+            ..
+        } => {
+            assert_eq!(click.as_deref(), Some("row_clicked"));
+            assert_eq!(context_menu.as_deref(), Some("row_context"));
+        }
+        other => panic!("expected list, got {other:?}"),
+    }
+}
+
+#[test]
 fn decodes_data_table_node() {
     let node = map(vec![
         (atom("kind"), atom("data_table")),

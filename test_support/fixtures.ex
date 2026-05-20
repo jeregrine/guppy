@@ -204,8 +204,8 @@ defmodule Guppy.TemplateExample do
           <text>{item.label}</text>
         </div>
       </scroll>
-      <uniform_list id="virtual_items" items={@uniform_items} class="h-[120px]" item_class="p-2" click="uniform_item_clicked" />
-      <list id="generic_items" items={@generic_items} class="h-[140px]" item_class="p-2 border-b-1" click="generic_item_clicked" />
+      <uniform_list id="virtual_items" items={@uniform_items} class="h-[120px]" item_class="p-2" click="uniform_item_clicked" context_menu="uniform_item_context" />
+      <list id="generic_items" items={@generic_items} class="h-[140px]" item_class="p-2 border-b-1" click="generic_item_clicked" context_menu="generic_item_context" />
       <data_table id="task_table" columns={@table_columns} rows={@table_rows} selected_row_id={@selected_row_id} selected_cell={@selected_cell} sort_state={@table_sort} class="h-[140px]" header_class="p-2" row_class="border-b-1" cell_class="p-2" row_click="table_row_clicked" cell_click="table_cell_clicked" sort="table_sorted" row_context_menu="table_row_context" cell_context_menu="table_cell_context" />
       <tree id="task_tree" nodes={@tree_nodes} selected_id={@selected_tree_id} class="h-[140px]" row_class="p-2" select="tree_selected" toggle="tree_toggled" context_menu="tree_context_menu" />
       <canvas id="summary_canvas" commands={@canvas_commands} class="w-[120px] h-[80px]" click="canvas_clicked" context_menu="canvas_context_menu" />

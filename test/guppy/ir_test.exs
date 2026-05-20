@@ -544,13 +544,13 @@ defmodule Guppy.IRTest do
         id: "uniform_items",
         style: [{:h_px, 160}, :overflow_y_scroll],
         item_style: [:p_2, :border_b_1],
-        events: %{click: "item_clicked"}
+        events: %{click: "item_clicked", context_menu: "item_context"}
       )
 
     assert :ok = Guppy.IR.validate(uniform_list_ir)
     assert uniform_list_ir.kind == :uniform_list
     assert length(uniform_list_ir.items) == 2
-    assert uniform_list_ir.events == %{click: "item_clicked"}
+    assert uniform_list_ir.events == %{click: "item_clicked", context_menu: "item_context"}
 
     list_ir =
       Guppy.IR.list(
@@ -567,13 +567,17 @@ defmodule Guppy.IRTest do
         id: "generic_items",
         style: [{:h_px, 180}, :overflow_y_scroll],
         item_style: [:p_2, :border_b_1],
-        events: %{click: "generic_item_clicked"}
+        events: %{click: "generic_item_clicked", context_menu: "generic_item_context"}
       )
 
     assert :ok = Guppy.IR.validate(list_ir)
     assert list_ir.kind == :list
     assert Enum.map(list_ir.items, & &1.id) == ["row_1", "row_2"]
-    assert list_ir.events == %{click: "generic_item_clicked"}
+
+    assert list_ir.events == %{
+             click: "generic_item_clicked",
+             context_menu: "generic_item_context"
+           }
 
     popover_ir =
       Guppy.IR.popover(

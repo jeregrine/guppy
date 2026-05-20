@@ -270,6 +270,7 @@ impl<'a> RenderPass<'a> {
                 style,
                 item_style,
                 click,
+                context_menu,
             } => render_uniform_list::render(
                 self,
                 path,
@@ -278,6 +279,7 @@ impl<'a> RenderPass<'a> {
                 style,
                 item_style,
                 click.as_deref(),
+                context_menu.as_deref(),
             ),
             IrNode::List {
                 id,
@@ -285,6 +287,7 @@ impl<'a> RenderPass<'a> {
                 style,
                 item_style,
                 click,
+                context_menu,
             } => render_list::render(
                 self,
                 path,
@@ -293,6 +296,7 @@ impl<'a> RenderPass<'a> {
                 style,
                 item_style,
                 click.as_deref(),
+                context_menu.as_deref(),
                 window,
                 cx,
             ),

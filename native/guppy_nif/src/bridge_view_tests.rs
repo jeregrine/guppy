@@ -243,6 +243,29 @@ fn simulated_list_row_button_click_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn simulated_list_row_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
+    let _ = crate::take_basic_event_snapshot_for_test();
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 49,
+        ir: list_with_row_button(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_mouse_down(
+        point(px(10.), px(10.)),
+        MouseButton::Right,
+        Modifiers::none(),
+    );
+
+    let event = crate::take_basic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "context_menu");
+    assert_eq!(event.view_id, 49);
+    assert_eq!(event.node_id.as_deref(), Some("todo_list.row_1"));
+    assert_eq!(event.callback_id.as_deref(), Some("row_context"));
+}
+
+#[gpui::test]
 fn tab_key_moves_focus_across_guppy_tab_stops(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
 
@@ -606,6 +629,7 @@ fn list_with_row_button() -> IrNode {
         style: vec![StyleOp::W96, StyleOp::H32].into(),
         item_style: Vec::new().into(),
         click: None,
+        context_menu: Some("row_context".into()),
     }
 }
 
