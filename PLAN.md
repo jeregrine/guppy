@@ -15,7 +15,7 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 
 These are the biggest missing pieces for building real desktop apps. Add them as narrow, typed APIs with process ownership and restart behavior, not as ad hoc NIF calls.
 
-- [ ] App/window command model: command registry, keyboard shortcut registration, routing priority, enable/disable state, and `Guppy.Window` integration.
+- [x] App/window command model: command registry, keyboard shortcut registration, routing priority, enable/disable state, and `Guppy.Window` integration.
 - [ ] Element-local/context menus: right-click/context menu primitives for rows, trees, canvas items, editors, and general elements; include keyboard invocation and focus return.
 - [ ] File dialogs: open file(s), save file, choose directory, filters, default paths/names, cancellation semantics, and owner-window association.
 - [ ] Clipboard APIs: read/write text, later images/files if GPUI/platform support is practical; define permission/error behavior.
