@@ -39,7 +39,7 @@ Focus and keyboard behavior are now more important than broadening visual primit
 
 - [ ] Define focus scopes and roving-focus patterns for list/tree/table/menu-like widgets.
 - [ ] Add shortcut bubbling/priority rules that work with app commands, focused controls, and text inputs.
-- [ ] Improve data-table/tree keyboard navigation, row/cell/item focus-visible behavior, selection affordances, disclosure behavior, and context-menu integration. Done so far: table sortable headers/rows/cells and tree rows are keyboard-actionable for activation/disclosure/context-menu callbacks, table body rows/cells support arrow-key focus movement, and tree rows support Up/Down focus movement; richer roving navigation and native selection/focus-visible affordances remain.
+- [ ] Improve data-table/tree keyboard navigation, row/cell/item focus-visible behavior, selection affordances, disclosure behavior, and context-menu integration. Done so far: table sortable headers/rows/cells and tree rows are keyboard-actionable for activation/disclosure/context-menu callbacks, table body rows/cells support arrow-key focus movement including sortable header/body transitions, and tree rows support Up/Down focus movement; richer roving navigation and native selection/focus-visible affordances remain.
 - [ ] Add data-table column resize/reorder and pinned header/column behavior only after navigation/focus semantics are stable.
 - [ ] Audit GPUI accessibility/semantics support and expose labels/roles/states where practical through typed IR.
 
