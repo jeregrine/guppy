@@ -67,6 +67,8 @@ pub(crate) fn render(
     let cell_context_menu = table.cell_context_menu.clone();
     let table_id_for_rows = table_id.clone();
     let body_focus_handles_for_rows = body_focus_handles.clone();
+    let header_focus_handles_for_rows = header_focus_handles.clone();
+    let first_row_id = rows.first().map(|row| row.id.clone());
 
     let body = list(state, move |index, _window, _cx| {
         rows.get(index)
@@ -98,6 +100,7 @@ pub(crate) fn render(
                     row_context_menu.as_deref(),
                     cell_context_menu.as_deref(),
                     &body_focus_handles_for_rows,
+                    &header_focus_handles_for_rows,
                     row_focus_neighbors,
                 )
             })
@@ -112,6 +115,8 @@ pub(crate) fn render(
         &table.header_style,
         table.sort_callback.as_deref(),
         &header_focus_handles,
+        &body_focus_handles,
+        first_row_id.as_deref(),
     );
 
     apply_div_style(
@@ -189,6 +194,8 @@ fn render_header(
     header_style: &DivStyle,
     sort_callback: Option<&str>,
     focus_handles: &HashMap<String, FocusHandle>,
+    body_focus_handles: &DataTableFocusHandles,
+    first_row_id: Option<&str>,
 ) -> AnyElement {
     let children = columns.iter().map(|column| {
         let header_id = format!("{table_id}.header.{}", column.id);
@@ -236,7 +243,22 @@ fn render_header(
             let key_table_id = table_id.to_owned();
             let key_column_id = column.id.clone();
             let key_header_id = header_id.clone();
-            cell = cell.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            let down_focus = first_row_id
+                .and_then(|row_id| {
+                    body_focus_handles
+                        .cells
+                        .get(&(row_id.to_owned(), column.id.clone()))
+                })
+                .cloned();
+            cell = cell.on_key_down(move |event: &KeyDownEvent, window, cx| {
+                if event.keystroke.key.as_str() == "down"
+                    && let Some(handle) = down_focus.as_ref()
+                {
+                    handle.focus(window);
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if is_header_activation_key(event) {
                     events::emit_data_table_event(
                         view_id,
@@ -281,6 +303,7 @@ fn render_row(
     row_context_menu: Option<&str>,
     cell_context_menu: Option<&str>,
     focus_handles: &DataTableFocusHandles,
+    header_focus_handles: &HashMap<String, FocusHandle>,
     row_focus_neighbors: RowFocusNeighbors,
 ) -> AnyElement {
     let row_id = data_table_row_id(table_id, &row.id);
@@ -297,6 +320,7 @@ fn render_row(
                     previous_row_id,
                     next_row_id,
                     column_index,
+                    header_focus_handles,
                 );
 
                 render_cell(
@@ -462,6 +486,7 @@ fn cell_focus_neighbors(
     previous_row_id: Option<&str>,
     next_row_id: Option<&str>,
     column_index: usize,
+    header_focus_handles: &HashMap<String, FocusHandle>,
 ) -> CellFocusNeighbors {
     let Some(column) = columns.get(column_index) else {
         return CellFocusNeighbors::default();
@@ -491,7 +516,8 @@ fn cell_focus_neighbors(
                     .cells
                     .get(&(row_id.to_owned(), column.id.clone()))
             })
-            .cloned(),
+            .cloned()
+            .or_else(|| header_focus_handles.get(&column.id).cloned()),
         down: next_row_id
             .and_then(|row_id| {
                 focus_handles

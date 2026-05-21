@@ -480,6 +480,35 @@ fn simulated_textarea_context_menu_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn data_table_header_down_and_cell_up_move_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 63,
+        ir: navigable_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.task"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("down");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.cell.row_1.task"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("up");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.task"].is_focused(window));
+    });
+}
+
+#[gpui::test]
 fn data_table_rows_and_cells_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
