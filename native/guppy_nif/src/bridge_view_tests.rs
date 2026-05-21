@@ -271,6 +271,28 @@ fn simulated_uniform_list_context_menu_reaches_native_event_bridge(cx: &mut gpui
 }
 
 #[gpui::test]
+fn sortable_data_table_headers_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 56,
+        ir: data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("enter");
+
+    let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "data_table_sort");
+    assert_eq!(event.view_id, 56);
+    assert_eq!(event.node_id, "tasks.header.task");
+    assert_eq!(event.callback_id, "sort_table");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.column_id.as_deref(), Some("task"));
+}
+
+#[gpui::test]
 fn simulated_list_row_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 49,

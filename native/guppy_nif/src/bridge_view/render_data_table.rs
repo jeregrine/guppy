@@ -9,8 +9,8 @@ use crate::{
     },
 };
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
-    StatefulInteractiveElement, Styled, Window, div, list, px,
+    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
+    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div, list, px,
 };
 use std::collections::HashMap;
 const ROW_CLICK_EVENT: i32 = 1;
@@ -22,7 +22,7 @@ pub(crate) fn render(
     path: &str,
     table: &DataTableNode,
     _window: &mut Window,
-    _cx: &mut Context<BridgeView>,
+    cx: &mut Context<BridgeView>,
 ) -> AnyElement {
     let view_id = pass.view_id();
     let node_id = NodeIdentity::new(view_id, path, table.id.as_deref());
@@ -31,6 +31,13 @@ pub(crate) fn render(
     let state = pass.retain_list_state(&list_id, table.rows.len());
     let columns = table.columns.clone();
     let rows = prepare_rows(table.columns.as_ref(), table.rows.as_ref());
+    let header_focus_handles = prepare_header_focus_handles(
+        pass,
+        &table_id,
+        table.columns.as_ref(),
+        table.sort_callback.is_some(),
+        cx,
+    );
     let row_style = table.row_style.clone();
     let cell_style = table.cell_style.clone();
     let row_click = table.row_click.clone();
@@ -65,6 +72,7 @@ pub(crate) fn render(
         table.columns.as_ref(),
         &table.header_style,
         table.sort_callback.as_deref(),
+        &header_focus_handles,
     );
 
     apply_div_style(
@@ -80,12 +88,35 @@ pub(crate) fn render(
     .into_any_element()
 }
 
+fn prepare_header_focus_handles(
+    pass: &mut RenderPass<'_>,
+    table_id: &str,
+    columns: &[DataTableColumn],
+    sort_enabled: bool,
+    cx: &mut Context<BridgeView>,
+) -> HashMap<String, FocusHandle> {
+    if !sort_enabled {
+        return HashMap::new();
+    }
+
+    columns
+        .iter()
+        .filter(|column| column.sortable)
+        .map(|column| {
+            let header_id = format!("{table_id}.header.{}", column.id);
+            let focus_handle = pass.ensure_focus_handle(&header_id, cx, Some(true), None);
+            (column.id.clone(), focus_handle)
+        })
+        .collect()
+}
+
 fn render_header(
     view_id: u64,
     table_id: &str,
     columns: &[DataTableColumn],
     header_style: &DivStyle,
     sort_callback: Option<&str>,
+    focus_handles: &HashMap<String, FocusHandle>,
 ) -> AnyElement {
     let children = columns.iter().map(|column| {
         let header_id = format!("{table_id}.header.{}", column.id);
@@ -103,19 +134,49 @@ fn render_header(
         if column.sortable
             && let Some(callback_id) = sort_callback
         {
-            let callback_id = callback_id.to_owned();
-            let table_id = table_id.to_owned();
-            let column_id = column.id.clone();
+            if let Some(handle) = focus_handles.get(&column.id) {
+                let focus_handle = handle.clone();
+                cell = cell
+                    .track_focus(&focus_handle)
+                    .focusable()
+                    .on_any_mouse_down(move |_, window, _| {
+                        focus_handle.focus(window);
+                    });
+            }
+
+            let click_callback_id = callback_id.to_owned();
+            let click_table_id = table_id.to_owned();
+            let click_column_id = column.id.clone();
+            let click_header_id = header_id.clone();
             cell = cell.on_click(move |_, _, _| {
                 events::emit_data_table_event(
                     view_id,
                     SORT_EVENT,
-                    &header_id,
-                    &callback_id,
-                    &table_id,
+                    &click_header_id,
+                    &click_callback_id,
+                    &click_table_id,
                     None,
-                    Some(&column_id),
+                    Some(&click_column_id),
                 );
+            });
+
+            let key_callback_id = callback_id.to_owned();
+            let key_table_id = table_id.to_owned();
+            let key_column_id = column.id.clone();
+            let key_header_id = header_id.clone();
+            cell = cell.on_key_down(move |event: &KeyDownEvent, _, cx| {
+                if is_header_activation_key(event) {
+                    events::emit_data_table_event(
+                        view_id,
+                        SORT_EVENT,
+                        &key_header_id,
+                        &key_callback_id,
+                        &key_table_id,
+                        None,
+                        Some(&key_column_id),
+                    );
+                    cx.stop_propagation();
+                }
             });
         }
 
@@ -311,6 +372,10 @@ fn render_cell(
     }
 
     element.into_any_element()
+}
+
+fn is_header_activation_key(event: &KeyDownEvent) -> bool {
+    matches!(event.keystroke.key.as_str(), "space" | "enter")
 }
 
 fn apply_column_width<E>(element: E, width: &DataTableColumnWidth) -> E
