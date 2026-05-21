@@ -64,69 +64,121 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
       })
 
     ~GUI"""
-    <div id="priority3_root" class="flex flex-col w-full h-full gap-4 p-5 bg-[#0f172a] text-[#f8fafc]" actions={@command_actions} shortcuts={@command_shortcuts}>
-      <div id="header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-        <text id="title" class="text-3xl font-black">Priority 3: keyboard, focus, semantic widgets</text>
-        <text id="subtitle" class="text-sm text-[#94a3b8] leading-snug">
-          This single demo covers the Priority 3 work: shortcut bubbling/priority, focus scopes, roving focus for virtual lists/tree/table, focus-visible retained rows/cells/items, Elixir-owned selection/sort/expansion, table resize/reorder/pinned columns, context-menu keyboard invocation, and the current accessibility boundary.
-        </text>
-        <text id="instructions" class="text-sm text-[#bfdbfe]">
-          Try Tab / Shift-Tab, arrows, Home/End, Enter/Space, Shift-F10, Cmd-K, Alt-Left/Alt-Right on table headers, and Shift-Left/Shift-Right on table headers.
-        </text>
-      </div>
-
-      <div id="shortcut_panel" class="grid grid-cols-2 gap-3 p-4 rounded-xl border-1 border-[#7c3aed] bg-[#1e1b4b] shadow-md">
-        <div id="shortcut_notes" class="flex flex-col gap-2">
-          <text class="text-lg font-bold text-[#ddd6fe]">Shortcut priority</text>
-          <text class="text-sm text-[#c4b5fd]">
-            The window root has an app command on Cmd-K. The text input below has its own Cmd-K shortcut. Focus the input and press Cmd-K: the focused text-input action stops propagation before the app-command root.
-          </text>
-        </div>
-        <div id="shortcut_input_box" class="flex flex-col gap-2">
-          <text class="text-sm font-bold text-[#ddd6fe]">Local text-input shortcut target</text>
-          <text_input
-            id="priority_note"
-            value={@note}
-            placeholder="Type here"
-            class="p-3 rounded-lg border-1 border-[#a78bfa] bg-[#0b1220] text-[#f8fafc]"
-            actions={@input_actions}
-            shortcuts={@input_shortcuts}
-            change="note_changed"
-            focus="input_focused"
-            blur="input_blurred"
-            context_menu="input_context"
-          />
-        </div>
-      </div>
-
-      <div id="workspace" class="grid grid-cols-2 gap-4 flex-1 min-h-0">
-        <div id="virtual_widgets" class="flex flex-col gap-4 min-h-0">
-          <div id="list_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md flex-1 min-h-0">
-            <text class="text-lg font-bold">Virtual list roving focus</text>
-            <text class="text-xs text-[#94a3b8]">
-              uniform_list and list rows with click/context_menu callbacks are tab stops. Up/Down/Home/End rove focus; Enter/Space activate; Shift-F10 emits context_menu. Keyboard-focused retained rows/items draw native focus-visible borders.
+    <div id="priority3_root" class="w-full h-full bg-[#0f172a] text-[#f8fafc]" actions={@command_actions} shortcuts={@command_shortcuts}>
+      <scroll id="priority3_scroll" axis="y" class="w-full h-full scrollbar-w-[10px]">
+        <div id="priority3_content" class="flex flex-col gap-4 p-5">
+          <div id="header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+            <text id="title" class="text-3xl font-black">Priority 3: keyboard, focus, semantic widgets</text>
+            <text id="subtitle" class="text-sm text-[#94a3b8] leading-snug">
+              Focus scopes, roving focus, shortcut priority, data-table/tree keyboard behavior, focus-visible affordances, Elixir-owned selection state, and the current accessibility boundary.
             </text>
-            <div id="list_columns" class="grid grid-cols-2 gap-3 flex-1 min-h-0">
-              <div class="flex flex-col gap-2 min-h-0">
+            <text id="instructions" class="text-sm text-[#bfdbfe]">
+              Try Tab / Shift-Tab, arrows, Home/End, Enter/Space, Shift-F10, Cmd-K, Alt-Left/Alt-Right on table headers, and Shift-Left/Shift-Right on table headers.
+            </text>
+          </div>
+
+          <div id="shortcut_panel" class="flex flex-row gap-4 p-4 rounded-xl border-1 border-[#7c3aed] bg-[#1e1b4b] shadow-md">
+            <div id="shortcut_notes" class="flex flex-col gap-2 flex-1">
+              <text class="text-lg font-bold text-[#ddd6fe]">Shortcut priority</text>
+              <text class="text-sm text-[#c4b5fd] leading-snug">
+                The window root has an app command on Cmd-K. The text input has its own Cmd-K shortcut. Focus the input and press Cmd-K: the focused text-input action stops propagation before the app-command root.
+              </text>
+            </div>
+            <div id="shortcut_input_box" class="flex flex-col gap-2 w-[520px]">
+              <text class="text-sm font-bold text-[#ddd6fe]">Local text-input shortcut target</text>
+              <text_input
+                id="priority_note"
+                value={@note}
+                placeholder="Type here"
+                class="p-3 rounded-lg border-1 border-[#a78bfa] bg-[#0b1220] text-[#f8fafc]"
+                actions={@input_actions}
+                shortcuts={@input_shortcuts}
+                change="note_changed"
+                focus="input_focused"
+                blur="input_blurred"
+                context_menu="input_context"
+              />
+            </div>
+          </div>
+
+          <div id="virtual_panel" class="flex flex-col gap-3 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+            <div class="flex flex-col gap-1">
+              <text class="text-lg font-bold">Virtual list roving focus</text>
+              <text class="text-sm text-[#94a3b8] leading-snug">
+                uniform_list and list rows with click/context_menu callbacks are tab stops. Up/Down/Home/End rove focus; Enter/Space activate; Shift-F10 emits context_menu. Keyboard-focused retained rows/items draw native focus-visible borders.
+              </text>
+            </div>
+            <div id="list_columns" class="flex flex-row gap-4">
+              <div class="flex flex-col gap-2 flex-1">
                 <text class="text-sm font-bold text-[#bfdbfe]">uniform_list</text>
                 <uniform_list
                   id="priority_uniform"
                   items={@uniform_items}
-                  class="h-[220px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
+                  class="h-[150px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
                   item_class="p-2 border-b-1 border-[#1e293b]"
                   click="uniform_clicked"
                   context_menu="uniform_context"
                 />
               </div>
-              <div class="flex flex-col gap-2 min-h-0">
+              <div class="flex flex-col gap-2 flex-1">
                 <text class="text-sm font-bold text-[#bfdbfe]">generic list</text>
                 <list
                   id="priority_list"
                   items={@list_items}
-                  class="h-[220px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
+                  class="h-[150px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
                   item_class="p-2 border-b-1 border-[#1e293b]"
                   click="list_clicked"
                   context_menu="list_context"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div id="tree_table_panel" class="flex flex-col gap-3 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+            <div class="flex flex-row gap-3">
+              <text class="text-sm text-[#bfdbfe]">Tree: {@selected_tree_id}</text>
+              <text class="text-sm text-[#bfdbfe]">Sort: {@sort_label}</text>
+              <text class="text-sm text-[#bfdbfe]">Cell: {@selected_cell_label}</text>
+            </div>
+            <div class="flex flex-row gap-4">
+              <div id="tree_panel" class="flex flex-col gap-2 w-[300px]">
+                <text class="text-lg font-bold">Tree</text>
+                <text class="text-xs text-[#94a3b8] leading-snug">Rows support Up/Down/Home/End, Left/Right parent-child focus, selection, disclosure, and context menus.</text>
+                <tree
+                  id="priority_tree"
+                  nodes={@tree_nodes}
+                  selected_id={@selected_tree_id}
+                  class="h-[260px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
+                  row_class="border-b-1 border-[#1e293b]"
+                  select="tree_selected"
+                  toggle="tree_toggled"
+                  context_menu="tree_context"
+                />
+              </div>
+
+              <div id="table_panel" class="flex flex-col gap-2 flex-1">
+                <text class="text-lg font-bold">Data table</text>
+                <text class="text-xs text-[#94a3b8] leading-snug">
+                  Pinned title column renders first. Headers sort with Enter/Space, reorder with Alt-Left/Alt-Right or pointer Alt-drag, resize with Shift-Left/Shift-Right or pointer drag, and move focus with arrows/Home/End. Rows/cells own selection styles in Elixir.
+                </text>
+                <data_table
+                  id="priority_table"
+                  columns={@table_columns}
+                  rows={@table_rows}
+                  selected_row_id={@selected_row_id}
+                  selected_cell={@selected_cell}
+                  sort_state={@sort}
+                  class="h-[260px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
+                  header_class="border-b-1 border-[#334155] bg-[#172554] text-[#bfdbfe] font-bold"
+                  row_class="border-b-1 border-[#1e293b]"
+                  cell_class="text-sm"
+                  row_click="table_row_selected"
+                  cell_click="table_cell_selected"
+                  sort="table_sorted"
+                  column_reorder="table_column_reordered"
+                  column_resize="table_column_resized"
+                  row_context_menu="table_row_context"
+                  cell_context_menu="table_cell_context"
                 />
               </div>
             </div>
@@ -138,68 +190,17 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
               GPUI 0.2.2 does not expose public element-level role/label/state APIs, so Guppy intentionally rejects placeholder role/aria fields. The example uses truthful semantics instead: stable ids, labels, selected/sort/expanded state, focus handles, and typed event payloads owned by Elixir.
             </text>
           </div>
-        </div>
 
-        <div id="semantic_widgets" class="flex flex-col gap-4 min-h-0">
-          <div id="tree_table_state" class="grid grid-cols-3 gap-2 p-3 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-            <text class="text-xs text-[#bfdbfe]">Tree: {@selected_tree_id}</text>
-            <text class="text-xs text-[#bfdbfe]">Sort: {@sort_label}</text>
-            <text class="text-xs text-[#bfdbfe]">Cell: {@selected_cell_label}</text>
-          </div>
-
-          <div id="tree_table_panel" class="grid grid-cols-3 gap-3 flex-1 min-h-0">
-            <div id="tree_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md min-h-0">
-              <text class="text-lg font-bold">Tree</text>
-              <text class="text-xs text-[#94a3b8]">Rows support Up/Down/Home/End, Left/Right parent-child focus, selection, disclosure, and context menus.</text>
-              <tree
-                id="priority_tree"
-                nodes={@tree_nodes}
-                selected_id={@selected_tree_id}
-                class="flex-1 rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-                row_class="border-b-1 border-[#1e293b]"
-                select="tree_selected"
-                toggle="tree_toggled"
-                context_menu="tree_context"
-              />
-            </div>
-
-            <div id="table_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md col-span-2 min-h-0">
-              <text class="text-lg font-bold">Data table</text>
-              <text class="text-xs text-[#94a3b8]">
-                Pinned title column renders first. Headers sort with Enter/Space, reorder with Alt-Left/Alt-Right or pointer Alt-drag, resize with Shift-Left/Shift-Right or pointer drag, and move focus with arrows/Home/End. Rows/cells own selection styles in Elixir.
-              </text>
-              <data_table
-                id="priority_table"
-                columns={@table_columns}
-                rows={@table_rows}
-                selected_row_id={@selected_row_id}
-                selected_cell={@selected_cell}
-                sort_state={@sort}
-                class="flex-1 rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-                header_class="border-b-1 border-[#334155] bg-[#172554] text-[#bfdbfe] font-bold"
-                row_class="border-b-1 border-[#1e293b]"
-                cell_class="text-sm"
-                row_click="table_row_selected"
-                cell_click="table_cell_selected"
-                sort="table_sorted"
-                column_reorder="table_column_reordered"
-                column_resize="table_column_resized"
-                row_context_menu="table_row_context"
-                cell_context_menu="table_cell_context"
-              />
+          <div id="event_log" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+            <text class="text-lg font-bold">Recent semantic events</text>
+            <div id="event_rows" class="grid grid-cols-2 gap-2">
+              <div :for={{event, index} <- @recent_events} id={"event_#{index}"} class="p-2 rounded-md bg-[#0b1220]">
+                <text class="text-xs text-[#e2e8f0]">{event}</text>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div id="event_log" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-        <text class="text-lg font-bold">Recent semantic events</text>
-        <div id="event_rows" class="grid grid-cols-2 gap-2">
-          <div :for={{event, index} <- @recent_events} id={"event_#{index}"} class="p-2 rounded-md bg-[#0b1220]">
-            <text class="text-xs text-[#e2e8f0]">{event}</text>
-          </div>
-        </div>
-      </div>
+      </scroll>
     </div>
     """
   end
@@ -215,8 +216,9 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
   def handle_event("input_blurred", _event, window),
     do: {:noreply, log(window, "text_input blurred")}
 
-  def handle_event("input_context", event, window),
-    do: {:noreply, log(window, "text_input context #{event_position(event)}")}
+  def handle_event("input_context", event, window) do
+    {:noreply, log(window, "text_input context #{event_position(event)}")}
+  end
 
   def handle_event("local_input_shortcut", %{shortcut: shortcut}, window) do
     {:noreply, log(window, "local text_input shortcut won over app command: #{shortcut}")}
