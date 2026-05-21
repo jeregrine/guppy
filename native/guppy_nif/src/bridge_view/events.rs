@@ -89,6 +89,30 @@ pub(crate) fn emit_data_table_context_menu(
     );
 }
 
+pub(crate) fn emit_data_table_keyboard_context_menu(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    table_id: &str,
+    row_id: &str,
+    column_id: Option<&str>,
+    event: &KeyDownEvent,
+) {
+    let _ = native_events::send_data_table_context_menu_event(
+        view_id,
+        node_id,
+        callback_id,
+        table_id,
+        row_id,
+        column_id,
+        ContextMenuEventPayload {
+            x: 0.0,
+            y: 0.0,
+            modifiers: modifier_flags(&event.keystroke.modifiers),
+        },
+    );
+}
+
 pub(crate) fn emit_tree_event(
     view_id: u64,
     event_code: i32,

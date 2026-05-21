@@ -17,6 +17,12 @@ const ROW_CLICK_EVENT: i32 = 1;
 const CELL_CLICK_EVENT: i32 = 2;
 const SORT_EVENT: i32 = 3;
 
+#[derive(Clone, Default)]
+struct DataTableFocusHandles {
+    rows: HashMap<String, FocusHandle>,
+    cells: HashMap<(String, String), FocusHandle>,
+}
+
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
     path: &str,
@@ -38,6 +44,7 @@ pub(crate) fn render(
         table.sort_callback.is_some(),
         cx,
     );
+    let body_focus_handles = prepare_body_focus_handles(pass, &table_id, table, cx);
     let row_style = table.row_style.clone();
     let cell_style = table.cell_style.clone();
     let row_click = table.row_click.clone();
@@ -45,6 +52,7 @@ pub(crate) fn render(
     let row_context_menu = table.row_context_menu.clone();
     let cell_context_menu = table.cell_context_menu.clone();
     let table_id_for_rows = table_id.clone();
+    let body_focus_handles_for_rows = body_focus_handles.clone();
 
     let body = list(state, move |index, _window, _cx| {
         rows.get(index)
@@ -60,6 +68,7 @@ pub(crate) fn render(
                     cell_click.as_deref(),
                     row_context_menu.as_deref(),
                     cell_context_menu.as_deref(),
+                    &body_focus_handles_for_rows,
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -108,6 +117,39 @@ fn prepare_header_focus_handles(
             (column.id.clone(), focus_handle)
         })
         .collect()
+}
+
+fn prepare_body_focus_handles(
+    pass: &mut RenderPass<'_>,
+    table_id: &str,
+    table: &DataTableNode,
+    cx: &mut Context<BridgeView>,
+) -> DataTableFocusHandles {
+    let mut handles = DataTableFocusHandles::default();
+
+    if table.row_click.is_some() || table.row_context_menu.is_some() {
+        for row in table.rows.iter() {
+            let row_id = data_table_row_id(table_id, &row.id);
+            handles.rows.insert(
+                row.id.clone(),
+                pass.ensure_focus_handle(&row_id, cx, Some(true), None),
+            );
+        }
+    }
+
+    if table.cell_click.is_some() || table.cell_context_menu.is_some() {
+        for row in table.rows.iter() {
+            for column in table.columns.iter() {
+                let cell_id = data_table_cell_id(table_id, &row.id, &column.id);
+                handles.cells.insert(
+                    (row.id.clone(), column.id.clone()),
+                    pass.ensure_focus_handle(&cell_id, cx, Some(true), None),
+                );
+            }
+        }
+    }
+
+    handles
 }
 
 fn render_header(
@@ -206,8 +248,9 @@ fn render_row(
     cell_click: Option<&str>,
     row_context_menu: Option<&str>,
     cell_context_menu: Option<&str>,
+    focus_handles: &DataTableFocusHandles,
 ) -> AnyElement {
-    let row_id = format!("{table_id}.row.{}", row.id);
+    let row_id = data_table_row_id(table_id, &row.id);
     let cells = columns.iter().zip(row.cells.iter()).map(|(column, cell)| {
         render_cell(
             view_id,
@@ -218,6 +261,9 @@ fn render_row(
             cell_style,
             cell_click,
             cell_context_menu,
+            focus_handles
+                .cells
+                .get(&(row.id.clone(), column.id.clone())),
         )
     });
 
@@ -230,6 +276,16 @@ fn render_row(
         row_style,
     );
     element = apply_div_style(element, &row.style);
+
+    if let Some(handle) = focus_handles.rows.get(&row.id) {
+        let focus_handle = handle.clone();
+        element = element
+            .track_focus(&focus_handle)
+            .focusable()
+            .on_any_mouse_down(move |_, window, _| {
+                focus_handle.focus(window);
+            });
+    }
 
     if let Some(callback_id) = row_click {
         let callback_id = callback_id.to_owned();
@@ -246,6 +302,46 @@ fn render_row(
                 Some(&row_value),
                 None,
             );
+        });
+    }
+
+    if row_click.is_some() || row_context_menu.is_some() {
+        let click_callback = row_click.map(str::to_owned);
+        let context_menu_callback = row_context_menu.map(str::to_owned);
+        let key_table_id = table_id.to_owned();
+        let key_row_value = row.id.clone();
+        let key_row_id = row_id.clone();
+        element = element.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            if let Some(callback_id) = context_menu_callback.as_deref()
+                && events::is_context_menu_key(event)
+            {
+                events::emit_data_table_keyboard_context_menu(
+                    view_id,
+                    &key_row_id,
+                    callback_id,
+                    &key_table_id,
+                    &key_row_value,
+                    None,
+                    event,
+                );
+                cx.stop_propagation();
+                return;
+            }
+
+            if let Some(callback_id) = click_callback.as_deref()
+                && is_activation_key(event)
+            {
+                events::emit_data_table_event(
+                    view_id,
+                    ROW_CLICK_EVENT,
+                    &key_row_id,
+                    callback_id,
+                    &key_table_id,
+                    Some(&key_row_value),
+                    None,
+                );
+                cx.stop_propagation();
+            }
         });
     }
 
@@ -318,8 +414,9 @@ fn render_cell(
     cell_style: &DivStyle,
     cell_click: Option<&str>,
     cell_context_menu: Option<&str>,
+    focus_handle: Option<&FocusHandle>,
 ) -> AnyElement {
-    let cell_id = format!("{table_id}.cell.{row_id}.{}", column.id);
+    let cell_id = data_table_cell_id(table_id, row_id, &column.id);
     let mut cell_div = div().id(SharedString::from(cell_id.clone())).p_2();
     if let Some(cell) = cell {
         let children = cell.children.iter().enumerate().map(|(index, child)| {
@@ -332,6 +429,16 @@ fn render_cell(
 
     if let Some(cell) = cell {
         element = apply_div_style(element, &cell.style);
+    }
+
+    if let Some(handle) = focus_handle {
+        let focus_handle = handle.clone();
+        element = element
+            .track_focus(&focus_handle)
+            .focusable()
+            .on_any_mouse_down(move |_, window, _| {
+                focus_handle.focus(window);
+            });
     }
 
     if let Some(callback_id) = cell_click {
@@ -350,6 +457,47 @@ fn render_cell(
                 Some(&row_id),
                 Some(&column_id),
             );
+        });
+    }
+
+    if cell_click.is_some() || cell_context_menu.is_some() {
+        let click_callback = cell_click.map(str::to_owned);
+        let context_menu_callback = cell_context_menu.map(str::to_owned);
+        let key_table_id = table_id.to_owned();
+        let key_row_id = row_id.to_owned();
+        let key_column_id = column.id.clone();
+        let key_cell_id = cell_id.clone();
+        element = element.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            if let Some(callback_id) = context_menu_callback.as_deref()
+                && events::is_context_menu_key(event)
+            {
+                events::emit_data_table_keyboard_context_menu(
+                    view_id,
+                    &key_cell_id,
+                    callback_id,
+                    &key_table_id,
+                    &key_row_id,
+                    Some(&key_column_id),
+                    event,
+                );
+                cx.stop_propagation();
+                return;
+            }
+
+            if let Some(callback_id) = click_callback.as_deref()
+                && is_activation_key(event)
+            {
+                events::emit_data_table_event(
+                    view_id,
+                    CELL_CLICK_EVENT,
+                    &key_cell_id,
+                    callback_id,
+                    &key_table_id,
+                    Some(&key_row_id),
+                    Some(&key_column_id),
+                );
+                cx.stop_propagation();
+            }
         });
     }
 
@@ -374,7 +522,19 @@ fn render_cell(
     element.into_any_element()
 }
 
+fn data_table_row_id(table_id: &str, row_id: &str) -> String {
+    format!("{table_id}.row.{row_id}")
+}
+
+fn data_table_cell_id(table_id: &str, row_id: &str, column_id: &str) -> String {
+    format!("{table_id}.cell.{row_id}.{column_id}")
+}
+
 fn is_header_activation_key(event: &KeyDownEvent) -> bool {
+    is_activation_key(event)
+}
+
+fn is_activation_key(event: &KeyDownEvent) -> bool {
     matches!(event.keystroke.key.as_str(), "space" | "enter")
 }
 

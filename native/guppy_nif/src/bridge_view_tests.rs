@@ -480,6 +480,72 @@ fn simulated_textarea_context_menu_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn data_table_rows_and_cells_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 59,
+        ir: data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("enter");
+
+    let event =
+        crate::take_semantic_event_snapshot_matching_for_test("data_table_row_click", 59).unwrap();
+    assert_eq!(event.node_id, "tasks.row.row_1");
+    assert_eq!(event.callback_id, "select_row");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.row_id.as_deref(), Some("row_1"));
+    assert_eq!(event.column_id, None);
+
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("enter");
+
+    let event =
+        crate::take_semantic_event_snapshot_matching_for_test("data_table_cell_click", 59).unwrap();
+    assert_eq!(event.node_id, "tasks.cell.row_1.task");
+    assert_eq!(event.callback_id, "select_cell");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.row_id.as_deref(), Some("row_1"));
+    assert_eq!(event.column_id.as_deref(), Some("task"));
+}
+
+#[gpui::test]
+fn data_table_rows_and_cells_support_keyboard_context_menu(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 60,
+        ir: data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("shift-f10");
+
+    let event = crate::take_semantic_event_snapshot_matching_for_test("context_menu", 60).unwrap();
+    assert_eq!(event.node_id, "tasks.row.row_1");
+    assert_eq!(event.callback_id, "row_context");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.row_id.as_deref(), Some("row_1"));
+    assert_eq!(event.column_id, None);
+
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("shift-f10");
+
+    let event = crate::take_semantic_event_snapshot_matching_for_test("context_menu", 60).unwrap();
+    assert_eq!(event.node_id, "tasks.cell.row_1.task");
+    assert_eq!(event.callback_id, "cell_context");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.row_id.as_deref(), Some("row_1"));
+    assert_eq!(event.column_id.as_deref(), Some("task"));
+}
+
+#[gpui::test]
 fn tree_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
