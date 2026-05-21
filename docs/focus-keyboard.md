@@ -28,7 +28,7 @@ Current widget behavior:
 
 ## Shortcut priority
 
-Current shortcut dispatch is element-local and bubbles through GPUI event propagation: a focused element with a matching shortcut emits its action and stops propagation before ancestor shortcuts see the key. App command shortcuts are usually installed on a focusable window root. Editor/text-input shortcut parity and a more explicit cross-scope priority table remain Priority 3 follow-up work.
+Current shortcut dispatch is element-local and bubbles through GPUI event propagation: a focused element with a matching shortcut emits its action and stops propagation before ancestor shortcuts see the key. This child-before-ancestor priority is covered by a GPUI keyboard regression test. App command shortcuts are usually installed on a focusable window root. Editor/text-input shortcut parity and a more explicit cross-scope app-command priority table remain Priority 3 follow-up work.
 
 ## Accessibility boundary
 
