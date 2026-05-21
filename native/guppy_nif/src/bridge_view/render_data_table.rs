@@ -13,10 +13,11 @@ use crate::{
     },
 };
 use gpui::{
-    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
-    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div, list, px,
+    AnyElement, AppContext, Context, Empty, FocusHandle, InteractiveElement, IntoElement,
+    KeyDownEvent, MouseButton, ParentElement, SharedString, StatefulInteractiveElement, Styled,
+    Window, div, list, px,
 };
-use std::collections::HashMap;
+use std::{cell::Cell, collections::HashMap, rc::Rc};
 const ROW_CLICK_EVENT: i32 = 1;
 const CELL_CLICK_EVENT: i32 = 2;
 const SORT_EVENT: i32 = 3;
@@ -45,6 +46,11 @@ struct CellFocusNeighbors {
     down: Option<FocusHandle>,
     first: Option<FocusHandle>,
     last: Option<FocusHandle>,
+}
+
+#[derive(Clone)]
+struct DataTableColumnResizeDragState {
+    last_offset_x: Rc<Cell<f32>>,
 }
 
 pub(crate) fn render(
@@ -262,10 +268,12 @@ fn render_header(
 ) -> AnyElement {
     let children = columns.iter().enumerate().map(|(column_index, column)| {
         let header_id = format!("{table_id}.header.{}", column.id);
+        let debug_header_id = header_id.clone();
         let mut cell = apply_column_width(
             apply_div_style(
                 div()
                     .id(SharedString::from(header_id.clone()))
+                    .debug_selector(move || debug_header_id)
                     .p_2()
                     .child(column.label.clone()),
                 &column.style,
@@ -471,6 +479,38 @@ fn render_header(
                     cx.stop_propagation();
                 }
             });
+        }
+
+        if let Some(callback_id) = column_resize {
+            let callback_id = callback_id.to_owned();
+            let resize_table_id = table_id.to_owned();
+            let resize_column_id = column.id.clone();
+            let resize_header_id = header_id.clone();
+            let drag_state = DataTableColumnResizeDragState {
+                last_offset_x: Rc::new(Cell::new(0.0)),
+            };
+            cell = cell
+                .on_drag_move::<DataTableColumnResizeDragState>(move |event, _, cx| {
+                    let drag = event.drag(cx);
+                    let offset_x = f32::from(event.event.position.x - event.bounds.origin.x);
+                    let delta = (offset_x - drag.last_offset_x.get()).round() as i32;
+                    drag.last_offset_x.set(offset_x);
+
+                    if delta != 0 {
+                        events::emit_data_table_column_resize(
+                            view_id,
+                            &resize_header_id,
+                            &callback_id,
+                            &resize_table_id,
+                            &resize_column_id,
+                            delta,
+                        );
+                    }
+                })
+                .on_drag(drag_state, |drag, cursor_offset, _, cx| {
+                    drag.last_offset_x.set(f32::from(cursor_offset.x));
+                    cx.new(|_| Empty)
+                });
         }
 
         apply_semantic_focus_visible_affordance(cell, show_focus_visible).into_any_element()

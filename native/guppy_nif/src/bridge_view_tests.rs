@@ -750,6 +750,39 @@ fn data_table_headers_emit_keyboard_column_resize(cx: &mut gpui::TestAppContext)
 }
 
 #[gpui::test]
+fn data_table_headers_emit_pointer_column_resize(cx: &mut gpui::TestAppContext) {
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 68,
+        ir: header_navigation_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    let header = cx.debug_bounds("tasks.header.task").unwrap();
+    let start = header.center();
+    cx.simulate_mouse_down(start, MouseButton::Left, Modifiers::none());
+    cx.simulate_mouse_move(
+        point(start.x + px(16.0), start.y),
+        MouseButton::Left,
+        Modifiers::none(),
+    );
+    cx.simulate_mouse_move(
+        point(start.x + px(32.0), start.y),
+        MouseButton::Left,
+        Modifiers::none(),
+    );
+
+    let event =
+        crate::take_semantic_event_snapshot_matching_for_test("data_table_column_resize", 68)
+            .unwrap();
+    assert_eq!(event.node_id, "tasks.header.task");
+    assert_eq!(event.callback_id, "resize_column");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.column_id.as_deref(), Some("task"));
+    assert_eq!(event.width_delta, Some(16));
+}
+
+#[gpui::test]
 fn data_table_header_arrow_keys_move_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
