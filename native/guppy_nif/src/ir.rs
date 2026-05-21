@@ -20,6 +20,8 @@ static DEFAULT_BUTTON_FOCUS_STYLE: OnceLock<DivStyle> = OnceLock::new();
 static DEFAULT_BUTTON_ACTIVE_STYLE: OnceLock<DivStyle> = OnceLock::new();
 static DEFAULT_BUTTON_DISABLED_STYLE: OnceLock<DivStyle> = OnceLock::new();
 
+const MAX_IR_NODE_DEPTH: usize = 256;
+
 struct IrFieldKeys {
     kind: Term,
     id: Term,
@@ -1181,6 +1183,12 @@ impl IrNode {
     }
 
     fn from_term(term: &Term) -> Result<Self, String> {
+        Self::from_term_at_depth(term, 0)
+    }
+
+    #[inline(never)]
+    fn from_term_at_depth(term: &Term, depth: usize) -> Result<Self, String> {
+        ensure_ir_node_depth(depth)?;
         let map = expect_map(term)?;
         let kind = get_atom_field(map, "kind")?;
         let Some(allowed_fields) = allowed_node_fields(kind) else {
@@ -1191,256 +1199,377 @@ impl IrNode {
         let id = get_optional_string_field(map, "id")?;
 
         match kind {
-            "text" => {
-                let content = get_string_field(map, "content")?;
-                let runs = get_text_runs_field(map, &content)?;
-
-                Ok(Self::Text {
-                    id,
-                    content,
-                    runs,
-                    style: get_div_style(map)?,
-                    click: get_click_event(map)?,
-                })
-            }
-            "text_input" => Ok(Self::TextInput {
-                id,
-                value: get_string_field(map, "value")?,
-                placeholder: get_optional_string_field(map, "placeholder")?.unwrap_or_default(),
-                style: get_div_style(map)?,
-                disabled: get_boolean_field(map, "disabled")?,
-                tab_index: get_optional_integer_field(map, "tab_index")?,
-                change: get_change_event(map)?,
-                focus: get_focus_event(map)?,
-                blur: get_blur_event(map)?,
-                context_menu: get_optional_event(map, "context_menu")?,
-            }),
-            "textarea" => Ok(Self::Textarea {
-                id,
-                value: get_string_field(map, "value")?,
-                placeholder: get_optional_string_field(map, "placeholder")?.unwrap_or_default(),
-                style: get_div_style(map)?,
-                disabled: get_boolean_field(map, "disabled")?,
-                tab_index: get_optional_integer_field(map, "tab_index")?,
-                change: get_change_event(map)?,
-                focus: get_focus_event(map)?,
-                blur: get_blur_event(map)?,
-                context_menu: get_optional_event(map, "context_menu")?,
-            }),
-            "scroll" => Ok(Self::Scroll {
-                id,
-                axis: get_scroll_axis_field(map)?,
-                style: get_div_style(map)?,
-                children: get_child_nodes_field(map)?,
-            }),
-            "uniform_list" => Ok(Self::UniformList {
-                id,
-                items: get_uniform_list_items_field(map)?,
-                style: get_div_style(map)?,
-                item_style: get_style_list_field(map, "item_style")?,
-                click: get_click_event(map)?,
-                context_menu: get_optional_event(map, "context_menu")?,
-            }),
-            "list" => Ok(Self::List {
-                id,
-                items: get_list_items_field(map)?,
-                style: get_div_style(map)?,
-                item_style: get_style_list_field(map, "item_style")?,
-                click: get_click_event(map)?,
-                context_menu: get_optional_event(map, "context_menu")?,
-            }),
-            "data_table" => {
-                let columns = get_data_table_columns_field(map)?;
-                let column_ids = columns
-                    .iter()
-                    .map(|column| column.id.as_str())
-                    .collect::<HashSet<_>>();
-                let rows = get_data_table_rows_field(map, &column_ids)?;
-                let row_ids = rows
-                    .iter()
-                    .map(|row| row.id.as_str())
-                    .collect::<HashSet<_>>();
-                let selected_row_id = get_optional_string_field(map, "selected_row_id")?;
-                ensure_optional_id_known(
-                    selected_row_id.as_deref(),
-                    &row_ids,
-                    "unknown data_table selected row",
-                )?;
-                let selected_cell = get_optional_string_pair_field(map, "selected_cell")?;
-                if let Some((row_id, column_id)) = selected_cell.as_ref() {
-                    ensure_id_known(row_id, &row_ids, "unknown data_table selected row")?;
-                    ensure_id_known(column_id, &column_ids, "unknown data_table selected column")?;
-                }
-                let sort = get_data_table_sort_field(map, &column_ids)?;
-
-                Ok(Self::DataTable(Box::new(DataTableNode {
-                    id,
-                    columns,
-                    rows,
-                    style: get_div_style(map)?,
-                    header_style: get_style_list_field(map, "header_style")?,
-                    row_style: get_style_list_field(map, "row_style")?,
-                    cell_style: get_style_list_field(map, "cell_style")?,
-                    selected_row_id,
-                    selected_cell,
-                    sort,
-                    row_click: get_optional_event(map, "row_click")?,
-                    cell_click: get_optional_event(map, "cell_click")?,
-                    sort_callback: get_optional_event(map, "sort")?,
-                    row_context_menu: get_optional_event(map, "row_context_menu")?,
-                    cell_context_menu: get_optional_event(map, "cell_context_menu")?,
-                })))
-            }
-            "tree" => {
-                let (nodes, tree_ids) = get_tree_nodes_field(map)?;
-                let tree_id_refs = tree_ids
-                    .iter()
-                    .map(|id| id.as_str())
-                    .collect::<HashSet<_>>();
-                let selected_id = get_optional_string_field(map, "selected_id")?;
-                ensure_optional_id_known(
-                    selected_id.as_deref(),
-                    &tree_id_refs,
-                    "unknown tree selected item",
-                )?;
-
-                Ok(Self::Tree(Box::new(TreeNode {
-                    id,
-                    nodes,
-                    style: get_div_style(map)?,
-                    row_style: get_style_list_field(map, "row_style")?,
-                    selected_id,
-                    select: get_optional_event(map, "select")?,
-                    toggle: get_optional_event(map, "toggle")?,
-                    context_menu: get_context_menu_event(map)?,
-                })))
-            }
-            "canvas" => Ok(Self::Canvas(Box::new(CanvasNode {
-                id,
-                commands: get_canvas_commands_field(map)?,
-                style: get_div_style(map)?,
-                click: get_click_event(map)?,
-                context_menu: get_context_menu_event(map)?,
-            }))),
-            "select" => Ok(Self::Select(Box::new(SelectNode {
-                id,
-                value: get_optional_string_field(map, "value")?,
-                open: get_boolean_field(map, "open")?,
-                placeholder: get_optional_string_field(map, "placeholder")?
-                    .unwrap_or_else(|| "Select…".into()),
-                options: get_select_options_field(map)?,
-                style: get_div_style(map)?,
-                list_style: get_style_list_field(map, "list_style")?,
-                option_style: get_style_list_field(map, "option_style")?,
-                anchor: get_popover_anchor_field(map)?,
-                anchor_offset: get_optional_point_field(map, "anchor_offset")?,
-                anchor_fit: get_popover_anchor_fit_field(map)?,
-                snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
-                disabled: get_boolean_field(map, "disabled")?,
-                tab_index: get_optional_integer_field(map, "tab_index")?,
-                click: get_click_event(map)?,
-                change: get_change_event(map)?,
-                close: get_close_event(map)?,
-                focus: get_focus_event(map)?,
-                blur: get_blur_event(map)?,
-            }))),
-            "popover" => {
-                let children = get_child_nodes_field(map)?;
-                ensure_no_nested_overlay_nodes(&children)?;
-
-                Ok(Self::Popover {
-                    id,
-                    label: get_string_field(map, "label")?,
-                    open: get_required_boolean_field(map, "open")?,
-                    style: get_div_style(map)?,
-                    popover_style: get_style_list_field(map, "popover_style")?,
-                    anchor: get_popover_anchor_field(map)?,
-                    anchor_position: get_optional_point_field(map, "anchor_position")?,
-                    anchor_offset: get_optional_point_field(map, "anchor_offset")?,
-                    anchor_position_mode: get_popover_anchor_position_mode_field(map)?,
-                    anchor_fit: get_popover_anchor_fit_field(map)?,
-                    snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
-                    close_on_click_outside: get_boolean_field(map, "close_on_click_outside")?
-                        || get_field(map, "close_on_click_outside").is_none(),
-                    stack_priority: get_optional_usize_field(map, "stack_priority")?.or(Some(1)),
-                    disabled: get_boolean_field(map, "disabled")?,
-                    click: get_click_event(map)?,
-                    close: get_close_event(map)?,
-                    children,
-                })
-            }
-            "image" => Ok(Self::Image {
-                id,
-                source: get_image_source_field(map)?,
-                style: get_div_style(map)?,
-                object_fit: get_image_object_fit_field(map)?,
-                grayscale: get_boolean_field(map, "grayscale")?,
-            }),
-            "icon" => Ok(Self::Icon {
-                id,
-                source: get_image_source_field(map)?,
-                style: get_div_style(map)?,
-            }),
+            "text" => decode_text_ir_node(map, id),
+            "text_input" => decode_text_input_ir_node(map, id),
+            "textarea" => decode_textarea_ir_node(map, id),
+            "scroll" => decode_scroll_ir_node(map, id, depth),
+            "uniform_list" => decode_uniform_list_ir_node(map, id),
+            "list" => decode_list_ir_node(map, id, depth),
+            "data_table" => decode_data_table_ir_node(map, id, depth),
+            "tree" => decode_tree_ir_node(map, id),
+            "canvas" => decode_canvas_ir_node(map, id),
+            "select" => decode_select_ir_node(map, id),
+            "popover" => decode_popover_ir_node(map, id, depth),
+            "image" => decode_image_ir_node(map, id),
+            "icon" => decode_icon_ir_node(map, id),
             "checkbox" => Ok(Self::Checkbox(Box::new(decode_checkbox_node(map, id)?))),
             "radio" => Ok(Self::Radio(Box::new(decode_radio_node(map, id)?))),
-            "spacer" => Ok(Self::Spacer {
-                id,
-                style: get_div_style(map)?,
-            }),
+            "spacer" => decode_spacer_ir_node(map, id),
             "button" => Ok(Self::Button(Box::new(decode_button_node(map, id)?))),
-            "div" => {
-                let children = get_child_nodes_field(map)?;
-                let actions = get_div_actions(map)?;
-
-                Ok(Self::Div(Box::new(DivNode {
-                    id,
-                    style: get_div_style(map)?,
-                    hover_style: get_div_hover_style(map)?,
-                    focus_style: get_div_focus_style(map)?,
-                    focus_visible_style: get_div_focus_visible_style(map)?,
-                    in_focus_style: get_div_in_focus_style(map)?,
-                    active_style: get_div_active_style(map)?,
-                    disabled_style: get_div_disabled_style(map)?,
-                    animation: get_animation_field(map)?,
-                    disabled: get_boolean_field(map, "disabled")?,
-                    stack_priority: get_optional_usize_field(map, "stack_priority")?,
-                    occlude: get_boolean_field(map, "occlude")?,
-                    focusable: get_boolean_field(map, "focusable")?,
-                    tab_stop: get_optional_boolean_field(map, "tab_stop")?,
-                    tab_index: get_optional_integer_field(map, "tab_index")?,
-                    track_scroll: get_boolean_field(map, "track_scroll")?,
-                    anchor_scroll: get_boolean_field(map, "anchor_scroll")?,
-                    scroll_to: get_boolean_field(map, "scroll_to")?,
-                    tooltip: get_optional_string_field(map, "tooltip")?,
-                    shortcuts: get_div_shortcuts(map, &actions)?,
-                    children,
-                    click: get_click_event(map)?,
-                    hover: get_hover_event(map)?,
-                    focus: get_focus_event(map)?,
-                    blur: get_blur_event(map)?,
-                    key_down: get_key_down_event(map)?,
-                    key_up: get_key_up_event(map)?,
-                    context_menu: get_context_menu_event(map)?,
-                    drag_start: get_drag_start_event(map)?,
-                    drag_move: get_drag_move_event(map)?,
-                    drop: get_drop_event(map)?,
-                    mouse_down: get_mouse_down_event(map)?,
-                    mouse_up: get_mouse_up_event(map)?,
-                    mouse_move: get_mouse_move_event(map)?,
-                    scroll_wheel: get_scroll_wheel_event(map)?,
-                })))
-            }
+            "div" => decode_div_ir_node(map, id, depth),
             other => Err(format!("unsupported ir kind: {other}")),
         }
     }
 }
 
-fn get_child_nodes_field(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, String> {
+fn ensure_ir_node_depth(depth: usize) -> Result<(), String> {
+    if depth > MAX_IR_NODE_DEPTH {
+        Err(format!(
+            "ir node tree exceeds maximum depth of {MAX_IR_NODE_DEPTH}"
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn next_ir_node_depth(depth: usize) -> usize {
+    depth.saturating_add(1)
+}
+
+#[inline(never)]
+fn decode_text_ir_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<IrNode, String> {
+    let content = get_string_field(map, "content")?;
+    let runs = get_text_runs_field(map, &content)?;
+
+    Ok(IrNode::Text {
+        id,
+        content,
+        runs,
+        style: get_div_style(map)?,
+        click: get_click_event(map)?,
+    })
+}
+
+#[inline(never)]
+fn decode_text_input_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+) -> Result<IrNode, String> {
+    Ok(IrNode::TextInput {
+        id,
+        value: get_string_field(map, "value")?,
+        placeholder: get_optional_string_field(map, "placeholder")?.unwrap_or_default(),
+        style: get_div_style(map)?,
+        disabled: get_boolean_field(map, "disabled")?,
+        tab_index: get_optional_integer_field(map, "tab_index")?,
+        change: get_change_event(map)?,
+        focus: get_focus_event(map)?,
+        blur: get_blur_event(map)?,
+        context_menu: get_optional_event(map, "context_menu")?,
+    })
+}
+
+#[inline(never)]
+fn decode_textarea_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+) -> Result<IrNode, String> {
+    Ok(IrNode::Textarea {
+        id,
+        value: get_string_field(map, "value")?,
+        placeholder: get_optional_string_field(map, "placeholder")?.unwrap_or_default(),
+        style: get_div_style(map)?,
+        disabled: get_boolean_field(map, "disabled")?,
+        tab_index: get_optional_integer_field(map, "tab_index")?,
+        change: get_change_event(map)?,
+        focus: get_focus_event(map)?,
+        blur: get_blur_event(map)?,
+        context_menu: get_optional_event(map, "context_menu")?,
+    })
+}
+
+#[inline(never)]
+fn decode_scroll_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+    depth: usize,
+) -> Result<IrNode, String> {
+    Ok(IrNode::Scroll {
+        id,
+        axis: get_scroll_axis_field(map)?,
+        style: get_div_style(map)?,
+        children: get_child_nodes_field(map, depth)?,
+    })
+}
+
+#[inline(never)]
+fn decode_uniform_list_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+) -> Result<IrNode, String> {
+    Ok(IrNode::UniformList {
+        id,
+        items: get_uniform_list_items_field(map)?,
+        style: get_div_style(map)?,
+        item_style: get_style_list_field(map, "item_style")?,
+        click: get_click_event(map)?,
+        context_menu: get_optional_event(map, "context_menu")?,
+    })
+}
+
+#[inline(never)]
+fn decode_list_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+    depth: usize,
+) -> Result<IrNode, String> {
+    Ok(IrNode::List {
+        id,
+        items: get_list_items_field(map, depth)?,
+        style: get_div_style(map)?,
+        item_style: get_style_list_field(map, "item_style")?,
+        click: get_click_event(map)?,
+        context_menu: get_optional_event(map, "context_menu")?,
+    })
+}
+
+#[inline(never)]
+fn decode_data_table_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+    depth: usize,
+) -> Result<IrNode, String> {
+    let columns = get_data_table_columns_field(map)?;
+    let column_ids = columns
+        .iter()
+        .map(|column| column.id.as_str())
+        .collect::<HashSet<_>>();
+    let rows = get_data_table_rows_field(map, &column_ids, depth)?;
+    let row_ids = rows
+        .iter()
+        .map(|row| row.id.as_str())
+        .collect::<HashSet<_>>();
+    let selected_row_id = get_optional_string_field(map, "selected_row_id")?;
+    ensure_optional_id_known(
+        selected_row_id.as_deref(),
+        &row_ids,
+        "unknown data_table selected row",
+    )?;
+    let selected_cell = get_optional_string_pair_field(map, "selected_cell")?;
+    if let Some((row_id, column_id)) = selected_cell.as_ref() {
+        ensure_id_known(row_id, &row_ids, "unknown data_table selected row")?;
+        ensure_id_known(column_id, &column_ids, "unknown data_table selected column")?;
+    }
+    let sort = get_data_table_sort_field(map, &column_ids)?;
+
+    Ok(IrNode::DataTable(Box::new(DataTableNode {
+        id,
+        columns,
+        rows,
+        style: get_div_style(map)?,
+        header_style: get_style_list_field(map, "header_style")?,
+        row_style: get_style_list_field(map, "row_style")?,
+        cell_style: get_style_list_field(map, "cell_style")?,
+        selected_row_id,
+        selected_cell,
+        sort,
+        row_click: get_optional_event(map, "row_click")?,
+        cell_click: get_optional_event(map, "cell_click")?,
+        sort_callback: get_optional_event(map, "sort")?,
+        row_context_menu: get_optional_event(map, "row_context_menu")?,
+        cell_context_menu: get_optional_event(map, "cell_context_menu")?,
+    })))
+}
+
+#[inline(never)]
+fn decode_tree_ir_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<IrNode, String> {
+    let (nodes, tree_ids) = get_tree_nodes_field(map)?;
+    let tree_id_refs = tree_ids
+        .iter()
+        .map(|id| id.as_str())
+        .collect::<HashSet<_>>();
+    let selected_id = get_optional_string_field(map, "selected_id")?;
+    ensure_optional_id_known(
+        selected_id.as_deref(),
+        &tree_id_refs,
+        "unknown tree selected item",
+    )?;
+
+    Ok(IrNode::Tree(Box::new(TreeNode {
+        id,
+        nodes,
+        style: get_div_style(map)?,
+        row_style: get_style_list_field(map, "row_style")?,
+        selected_id,
+        select: get_optional_event(map, "select")?,
+        toggle: get_optional_event(map, "toggle")?,
+        context_menu: get_context_menu_event(map)?,
+    })))
+}
+
+#[inline(never)]
+fn decode_canvas_ir_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<IrNode, String> {
+    Ok(IrNode::Canvas(Box::new(CanvasNode {
+        id,
+        commands: get_canvas_commands_field(map)?,
+        style: get_div_style(map)?,
+        click: get_click_event(map)?,
+        context_menu: get_context_menu_event(map)?,
+    })))
+}
+
+#[inline(never)]
+fn decode_select_ir_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<IrNode, String> {
+    Ok(IrNode::Select(Box::new(SelectNode {
+        id,
+        value: get_optional_string_field(map, "value")?,
+        open: get_boolean_field(map, "open")?,
+        placeholder: get_optional_string_field(map, "placeholder")?
+            .unwrap_or_else(|| "Select…".into()),
+        options: get_select_options_field(map)?,
+        style: get_div_style(map)?,
+        list_style: get_style_list_field(map, "list_style")?,
+        option_style: get_style_list_field(map, "option_style")?,
+        anchor: get_popover_anchor_field(map)?,
+        anchor_offset: get_optional_point_field(map, "anchor_offset")?,
+        anchor_fit: get_popover_anchor_fit_field(map)?,
+        snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
+        disabled: get_boolean_field(map, "disabled")?,
+        tab_index: get_optional_integer_field(map, "tab_index")?,
+        click: get_click_event(map)?,
+        change: get_change_event(map)?,
+        close: get_close_event(map)?,
+        focus: get_focus_event(map)?,
+        blur: get_blur_event(map)?,
+    })))
+}
+
+#[inline(never)]
+fn decode_popover_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+    depth: usize,
+) -> Result<IrNode, String> {
+    let children = get_child_nodes_field(map, depth)?;
+    ensure_no_nested_overlay_nodes(&children)?;
+
+    Ok(IrNode::Popover {
+        id,
+        label: get_string_field(map, "label")?,
+        open: get_required_boolean_field(map, "open")?,
+        style: get_div_style(map)?,
+        popover_style: get_style_list_field(map, "popover_style")?,
+        anchor: get_popover_anchor_field(map)?,
+        anchor_position: get_optional_point_field(map, "anchor_position")?,
+        anchor_offset: get_optional_point_field(map, "anchor_offset")?,
+        anchor_position_mode: get_popover_anchor_position_mode_field(map)?,
+        anchor_fit: get_popover_anchor_fit_field(map)?,
+        snap_margin: get_non_neg_f32_field(map, "snap_margin", 8.0)?,
+        close_on_click_outside: get_boolean_field(map, "close_on_click_outside")?
+            || get_field(map, "close_on_click_outside").is_none(),
+        stack_priority: get_optional_usize_field(map, "stack_priority")?.or(Some(1)),
+        disabled: get_boolean_field(map, "disabled")?,
+        click: get_click_event(map)?,
+        close: get_close_event(map)?,
+        children,
+    })
+}
+
+#[inline(never)]
+fn decode_image_ir_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<IrNode, String> {
+    Ok(IrNode::Image {
+        id,
+        source: get_image_source_field(map)?,
+        style: get_div_style(map)?,
+        object_fit: get_image_object_fit_field(map)?,
+        grayscale: get_boolean_field(map, "grayscale")?,
+    })
+}
+
+#[inline(never)]
+fn decode_icon_ir_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<IrNode, String> {
+    Ok(IrNode::Icon {
+        id,
+        source: get_image_source_field(map)?,
+        style: get_div_style(map)?,
+    })
+}
+
+#[inline(never)]
+fn decode_spacer_ir_node(map: &HashMap<Term, Term>, id: Option<String>) -> Result<IrNode, String> {
+    Ok(IrNode::Spacer {
+        id,
+        style: get_div_style(map)?,
+    })
+}
+
+#[inline(never)]
+fn decode_div_ir_node(
+    map: &HashMap<Term, Term>,
+    id: Option<String>,
+    depth: usize,
+) -> Result<IrNode, String> {
+    let children = get_child_nodes_field(map, depth)?;
+    let actions = get_div_actions(map)?;
+
+    Ok(IrNode::Div(Box::new(DivNode {
+        id,
+        style: get_div_style(map)?,
+        hover_style: get_div_hover_style(map)?,
+        focus_style: get_div_focus_style(map)?,
+        focus_visible_style: get_div_focus_visible_style(map)?,
+        in_focus_style: get_div_in_focus_style(map)?,
+        active_style: get_div_active_style(map)?,
+        disabled_style: get_div_disabled_style(map)?,
+        animation: get_animation_field(map)?,
+        disabled: get_boolean_field(map, "disabled")?,
+        stack_priority: get_optional_usize_field(map, "stack_priority")?,
+        occlude: get_boolean_field(map, "occlude")?,
+        focusable: get_boolean_field(map, "focusable")?,
+        tab_stop: get_optional_boolean_field(map, "tab_stop")?,
+        tab_index: get_optional_integer_field(map, "tab_index")?,
+        track_scroll: get_boolean_field(map, "track_scroll")?,
+        anchor_scroll: get_boolean_field(map, "anchor_scroll")?,
+        scroll_to: get_boolean_field(map, "scroll_to")?,
+        tooltip: get_optional_string_field(map, "tooltip")?,
+        shortcuts: get_div_shortcuts(map, &actions)?,
+        children,
+        click: get_click_event(map)?,
+        hover: get_hover_event(map)?,
+        focus: get_focus_event(map)?,
+        blur: get_blur_event(map)?,
+        key_down: get_key_down_event(map)?,
+        key_up: get_key_up_event(map)?,
+        context_menu: get_context_menu_event(map)?,
+        drag_start: get_drag_start_event(map)?,
+        drag_move: get_drag_move_event(map)?,
+        drop: get_drop_event(map)?,
+        mouse_down: get_mouse_down_event(map)?,
+        mouse_up: get_mouse_up_event(map)?,
+        mouse_move: get_mouse_move_event(map)?,
+        scroll_wheel: get_scroll_wheel_event(map)?,
+    })))
+}
+
+fn get_child_nodes_field(
+    map: &HashMap<Term, Term>,
+    parent_depth: usize,
+) -> Result<Arc<[IrNode]>, String> {
     let Some(children_term) = get_field(map, "children") else {
         return Ok(empty_ir_nodes());
     };
 
-    collect_arc(get_list(children_term)?.iter().map(IrNode::from_term))
+    let children = get_list(children_term)?;
+    if children.is_empty() {
+        return Ok(empty_ir_nodes());
+    }
+
+    let child_depth = next_ir_node_depth(parent_depth);
+    let mut decoded = Vec::with_capacity(children.len());
+    for child in children {
+        decoded.push(IrNode::from_term_at_depth(child, child_depth)?);
+    }
+    Ok(decoded.into())
 }
 
 fn ensure_no_nested_overlay_nodes(children: &[IrNode]) -> Result<(), String> {
@@ -1933,11 +2062,15 @@ fn get_uniform_list_items_field(
     }))
 }
 
-fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, String> {
+fn get_list_items_field(
+    map: &HashMap<Term, Term>,
+    parent_depth: usize,
+) -> Result<Arc<[ListItem]>, String> {
     let Some(items_term) = get_field(map, "items") else {
         return Err("missing required field: items".into());
     };
 
+    let child_depth = next_ir_node_depth(parent_depth);
     collect_arc(get_list(items_term)?.iter().map(|term| {
         let item = expect_map(term)?;
         ensure_allowed_fields(item, &["id", "children"], "list item")?;
@@ -1947,7 +2080,7 @@ fn get_list_items_field(map: &HashMap<Term, Term>) -> Result<Arc<[ListItem]>, St
         let children = collect_arc(
             get_list(children_term)?
                 .iter()
-                .map(decode_list_row_child_term),
+                .map(|child| decode_list_row_child_term(child, child_depth)),
         )?;
         ensure_unique_list_row_control_ids(&children)?;
 
@@ -2027,6 +2160,7 @@ fn get_data_table_column_width(map: &HashMap<Term, Term>) -> Result<DataTableCol
 fn get_data_table_rows_field(
     map: &HashMap<Term, Term>,
     column_ids: &HashSet<&str>,
+    parent_depth: usize,
 ) -> Result<Arc<[DataTableRow]>, String> {
     let Some(rows_term) = get_field(map, "rows") else {
         return Err("missing required field: rows".into());
@@ -2043,7 +2177,7 @@ fn get_data_table_rows_field(
 
         Ok(DataTableRow {
             id,
-            cells: get_data_table_cells(row, column_ids)?,
+            cells: get_data_table_cells(row, column_ids, parent_depth)?,
             style: get_div_style(row)?,
         })
     }))
@@ -2052,6 +2186,7 @@ fn get_data_table_rows_field(
 fn get_data_table_cells(
     row: &HashMap<Term, Term>,
     column_ids: &HashSet<&str>,
+    parent_depth: usize,
 ) -> Result<Arc<[DataTableCell]>, String> {
     let Some(cells_term) = get_field(row, "cells") else {
         return Err("missing required field: data_table row cells".into());
@@ -2069,25 +2204,29 @@ fn get_data_table_cells(
 
         Ok(DataTableCell {
             column_id,
-            children: get_data_table_cell_children(cell)?,
+            children: get_data_table_cell_children(cell, parent_depth)?,
             style: get_div_style(cell)?,
         })
     }))
 }
 
-fn get_data_table_cell_children(map: &HashMap<Term, Term>) -> Result<Arc<[IrNode]>, String> {
+fn get_data_table_cell_children(
+    map: &HashMap<Term, Term>,
+    parent_depth: usize,
+) -> Result<Arc<[IrNode]>, String> {
     let Some(children_term) = get_field(map, "children") else {
         return Err("missing required field: data_table cell children".into());
     };
 
+    let child_depth = next_ir_node_depth(parent_depth);
     collect_arc(
         get_list(children_term)?
             .iter()
-            .map(decode_data_table_cell_child_term),
+            .map(|child| decode_data_table_cell_child_term(child, child_depth)),
     )
 }
 
-fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
+fn decode_data_table_cell_child_term(term: &Term, depth: usize) -> Result<IrNode, String> {
     let map = expect_map(term)?;
     let kind = get_atom_field(map, "kind")?;
 
@@ -2099,13 +2238,13 @@ fn decode_data_table_cell_child_term(term: &Term) -> Result<IrNode, String> {
                 "data_table cell text",
             )?;
             ensure_allowed_event_fields(map, &["click"], "data_table cell text events")?;
-            IrNode::from_term(term)
+            IrNode::from_term_at_depth(term, depth)
         }
         "spacer" => {
             ensure_allowed_fields(map, &["kind", "id", "style"], "data_table cell spacer")?;
-            IrNode::from_term(term)
+            IrNode::from_term_at_depth(term, depth)
         }
-        "div" => decode_static_data_table_cell_div(map),
+        "div" => decode_static_data_table_cell_div(map, depth),
         _ => Err(format!("unsupported data_table cell child kind: {kind}")),
     }
 }
@@ -2313,7 +2452,7 @@ fn get_select_options_field(map: &HashMap<Term, Term>) -> Result<Arc<[SelectOpti
     }))
 }
 
-fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
+fn decode_list_row_child_term(term: &Term, depth: usize) -> Result<IrNode, String> {
     let map = expect_map(term)?;
     let kind = get_atom_field(map, "kind")?;
 
@@ -2325,13 +2464,13 @@ fn decode_list_row_child_term(term: &Term) -> Result<IrNode, String> {
                 "list row text",
             )?;
             ensure_allowed_event_fields(map, &["click"], "list row text events")?;
-            IrNode::from_term(term)
+            IrNode::from_term_at_depth(term, depth)
         }
         "spacer" => {
             ensure_allowed_fields(map, &["kind", "id", "style"], "list row spacer")?;
-            IrNode::from_term(term)
+            IrNode::from_term_at_depth(term, depth)
         }
-        "div" => decode_static_list_row_div(map),
+        "div" => decode_static_list_row_div(map, depth),
         "button" => decode_list_row_button(map),
         "checkbox" => decode_list_row_checkbox(map),
         "radio" => decode_list_row_radio(map),
@@ -2425,9 +2564,10 @@ fn get_list_row_control_id(map: &HashMap<Term, Term>, kind: &str) -> Result<Stri
         .ok_or_else(|| format!("missing list row control id: {kind}"))
 }
 
-fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+fn decode_static_list_row_div(map: &HashMap<Term, Term>, depth: usize) -> Result<IrNode, String> {
     decode_static_div(
         map,
+        depth,
         "list row div",
         "list row div events",
         "missing required field: list row div children",
@@ -2435,9 +2575,13 @@ fn decode_static_list_row_div(map: &HashMap<Term, Term>) -> Result<IrNode, Strin
     )
 }
 
-fn decode_static_data_table_cell_div(map: &HashMap<Term, Term>) -> Result<IrNode, String> {
+fn decode_static_data_table_cell_div(
+    map: &HashMap<Term, Term>,
+    depth: usize,
+) -> Result<IrNode, String> {
     decode_static_div(
         map,
+        depth,
         "data_table cell div",
         "data_table cell div events",
         "missing required field: data_table cell div children",
@@ -2447,10 +2591,11 @@ fn decode_static_data_table_cell_div(map: &HashMap<Term, Term>) -> Result<IrNode
 
 fn decode_static_div(
     map: &HashMap<Term, Term>,
+    depth: usize,
     context: &str,
     events_context: &str,
     missing_children_error: &str,
-    decode_child: fn(&Term) -> Result<IrNode, String>,
+    decode_child: fn(&Term, usize) -> Result<IrNode, String>,
 ) -> Result<IrNode, String> {
     ensure_allowed_fields(
         map,
@@ -2463,7 +2608,12 @@ fn decode_static_div(
         return Err(missing_children_error.into());
     };
 
-    let children = collect_arc(get_list(children_term)?.iter().map(decode_child))?;
+    let child_depth = next_ir_node_depth(depth);
+    let children = collect_arc(
+        get_list(children_term)?
+            .iter()
+            .map(|child| decode_child(child, child_depth)),
+    )?;
     let empty_style = empty_style();
 
     Ok(IrNode::Div(Box::new(DivNode {

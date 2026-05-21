@@ -44,6 +44,22 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  test "native IR decode rejects excessively deep trees without crashing" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        deep_ir =
+          Enum.reduce(1..257, Guppy.IR.text("leaf"), fn _, child ->
+            Guppy.IR.div([child])
+          end)
+
+        assert {:error, {:decode_error, "ir node tree exceeds maximum depth of 256"}} =
+                 Guppy.open_window(deep_ir, show: false)
+
+      {:error, _reason} ->
+        assert {:error, :nif_not_loaded} = Guppy.open_window(Guppy.IR.text("leaf"), show: false)
+    end
+  end
+
   test "native request crashes are contained and reported" do
     server = :"guppy_crashing_native_#{System.unique_integer([:positive])}"
     handler_id = {__MODULE__, self(), :crashing_native_request_telemetry}

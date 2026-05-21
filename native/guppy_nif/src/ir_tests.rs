@@ -1,9 +1,9 @@
 use super::{
     BackgroundPatternSlash, BoxShadowSpec, CanvasCommand, CheckboxNode, DataTableSortDirection,
-    DivNode, ImageObjectFit, ImageSource, IrNode, LinearGradientStop, StyleAxis, StyleColor,
-    StyleLength, StyleOp, decode_list_row_child_term, ensure_unique_list_row_control_ids,
-    field_key, get_optional_integer_field, get_optional_usize_field, parse_positive_u32,
-    parse_style_op,
+    DivNode, ImageObjectFit, ImageSource, IrNode, LinearGradientStop, MAX_IR_NODE_DEPTH, StyleAxis,
+    StyleColor, StyleLength, StyleOp, decode_list_row_child_term,
+    ensure_unique_list_row_control_ids, field_key, get_optional_integer_field,
+    get_optional_usize_field, parse_positive_u32, parse_style_op,
 };
 use crate::ir_allowed::{allowed_node_event_fields, allowed_node_fields};
 use eetf::{Atom, BigInteger, Binary, FixInteger, Float, List, Map, Term, Tuple};
@@ -61,6 +61,22 @@ fn events(entries: Vec<(&str, &str)>) -> Term {
         .into_iter()
         .map(|(key, value)| (atom(key), binary(value)))
         .collect())
+}
+
+fn deep_div(depth: usize) -> Term {
+    let mut node = map(vec![
+        (atom("kind"), atom("text")),
+        (atom("content"), binary("leaf")),
+    ]);
+
+    for _ in 0..depth {
+        node = map(vec![
+            (atom("kind"), atom("div")),
+            (atom("children"), list(vec![node])),
+        ]);
+    }
+
+    node
 }
 
 fn validate_list_row_child(node: &IrNode) -> Result<(), String> {
@@ -257,6 +273,23 @@ fn rejects_unknown_native_ir_fields() {
     assert!(
         err.contains("unsupported animation field"),
         "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn rejects_excessively_deep_ir_tree() {
+    let node = deep_div(MAX_IR_NODE_DEPTH + 1);
+
+    let err = std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(move || IrNode::from_term(&node).unwrap_err())
+        .unwrap()
+        .join()
+        .unwrap();
+
+    assert_eq!(
+        err,
+        format!("ir node tree exceeds maximum depth of {MAX_IR_NODE_DEPTH}")
     );
 }
 
@@ -1101,7 +1134,7 @@ fn list_row_decode_accepts_supported_controls_with_explicit_ids() {
         (atom("events"), events(vec![("click", "save_row")])),
     ]);
 
-    match decode_list_row_child_term(&button).unwrap() {
+    match decode_list_row_child_term(&button, 0).unwrap() {
         IrNode::Button(node) => {
             assert_eq!(node.id.as_deref(), Some("save"));
             assert_eq!(node.click.as_deref(), Some("save_row"));
@@ -1120,7 +1153,7 @@ fn list_row_decode_accepts_supported_controls_with_explicit_ids() {
         (atom("events"), events(vec![("change", "toggle_done")])),
     ]);
 
-    match decode_list_row_child_term(&checkbox).unwrap() {
+    match decode_list_row_child_term(&checkbox, 0).unwrap() {
         IrNode::Checkbox(node) => {
             assert_eq!(node.id.as_deref(), Some("done"));
             assert_eq!(node.change.as_deref(), Some("toggle_done"));
@@ -1137,7 +1170,7 @@ fn list_row_decode_accepts_supported_controls_with_explicit_ids() {
         (atom("events"), events(vec![("change", "set_priority")])),
     ]);
 
-    match decode_list_row_child_term(&radio).unwrap() {
+    match decode_list_row_child_term(&radio, 0).unwrap() {
         IrNode::Radio(node) => {
             assert_eq!(node.id.as_deref(), Some("priority_high"));
             assert_eq!(node.value, "high");
@@ -1156,7 +1189,7 @@ fn list_row_decode_rejects_supported_controls_without_ids() {
         (atom("checked"), bool_atom(false)),
     ]);
 
-    let err = decode_list_row_child_term(&checkbox).unwrap_err();
+    let err = decode_list_row_child_term(&checkbox, 0).unwrap_err();
     assert!(err.contains("missing list row control id"));
 }
 

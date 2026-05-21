@@ -14,7 +14,7 @@ use crate::window_options::WindowOptionsConfig;
 use rustler::{Atom, Encoder, Env, LocalPid, Monitor, Resource, ResourceArc, Term};
 use std::ffi::{CString, c_char, c_void};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Condvar, Mutex};
 use std::time::{Duration, Instant};
 
@@ -129,6 +129,11 @@ static GUI_STATUS: Mutex<i32> = Mutex::new(0);
 static GUI_STATUS_COND: Condvar = Condvar::new();
 static EVENT_TARGET: Mutex<Option<EventTargetRegistration>> = Mutex::new(None);
 static EVENT_TARGET_GENERATION: AtomicU64 = AtomicU64::new(0);
+// BEAM dirty scheduler stacks are small enough for debug recursive IR decode to overflow on
+// ordinary UI trees. Decode ETF-backed IR on a dedicated worker with a larger stack, then hand the
+// native IR back to the dirty scheduler for timeout-aware main-thread dispatch.
+static IR_DECODE_WORKER: Mutex<Option<Sender<IrDecodeJob>>> = Mutex::new(None);
+const IR_DECODE_STACK_SIZE_BYTES: usize = 16 * 1024 * 1024;
 static OPEN_IR_TO_BINARY_COUNT: AtomicU64 = AtomicU64::new(0);
 static OPEN_IR_TO_BINARY_NANOS: AtomicU64 = AtomicU64::new(0);
 static OPEN_IR_DECODE_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -536,11 +541,78 @@ fn native_view_count<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
     }
 }
 
+struct IrDecodeJob {
+    bytes: Vec<u8>,
+    reply: Sender<Result<IrNode, String>>,
+}
+
 fn decode_ir_binary(bytes: &[u8], count: &AtomicU64, nanos: &AtomicU64) -> Result<IrNode, String> {
     let started_at = Instant::now();
-    let decoded = IrNode::decode_etf(bytes);
+    let decoded = decode_ir_binary_on_worker(bytes);
     record_counter(count, nanos, started_at.elapsed());
     decoded
+}
+
+fn decode_ir_binary_on_worker(bytes: &[u8]) -> Result<IrNode, String> {
+    let (reply_tx, reply_rx) = mpsc::channel();
+    let mut job = Some(IrDecodeJob {
+        bytes: bytes.to_vec(),
+        reply: reply_tx,
+    });
+
+    for _ in 0..2 {
+        let sender = ir_decode_worker_sender()?;
+        let current_job = job
+            .take()
+            .expect("ir decode retry loop must retain unsent job");
+
+        match sender.send(current_job) {
+            Ok(()) => {
+                return reply_rx
+                    .recv()
+                    .map_err(|_| "ir decode worker stopped before replying".to_owned())?;
+            }
+            Err(error) => {
+                job = Some(error.0);
+                clear_ir_decode_worker();
+            }
+        }
+    }
+
+    Err("ir decode worker unavailable".into())
+}
+
+fn ir_decode_worker_sender() -> Result<Sender<IrDecodeJob>, String> {
+    let mut worker = IR_DECODE_WORKER
+        .lock()
+        .map_err(|_| "ir decode worker lock poisoned".to_owned())?;
+
+    if let Some(sender) = worker.as_ref() {
+        return Ok(sender.clone());
+    }
+
+    let (sender, receiver) = mpsc::channel();
+    std::thread::Builder::new()
+        .name("guppy-ir-decode".into())
+        .stack_size(IR_DECODE_STACK_SIZE_BYTES)
+        .spawn(move || ir_decode_worker_loop(receiver))
+        .map_err(|error| format!("failed to start ir decode worker: {error}"))?;
+
+    *worker = Some(sender.clone());
+    Ok(sender)
+}
+
+fn clear_ir_decode_worker() {
+    if let Ok(mut worker) = IR_DECODE_WORKER.lock() {
+        *worker = None;
+    }
+}
+
+fn ir_decode_worker_loop(receiver: Receiver<IrDecodeJob>) {
+    for job in receiver {
+        let result = IrNode::decode_etf(&job.bytes);
+        let _ = job.reply.send(result);
+    }
 }
 
 fn status_result<'a>(
