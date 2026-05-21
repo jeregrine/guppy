@@ -28,7 +28,7 @@ Current widget behavior:
 
 ## Shortcut priority
 
-Current shortcut dispatch is element-local and bubbles through GPUI event propagation: a focused element with a matching shortcut emits its action and stops propagation before ancestor shortcuts see the key. This child-before-ancestor priority is covered by a GPUI keyboard regression test. `text_input` and `textarea` accept the same explicit `actions`/`shortcuts` IR fields as other shortcut-capable nodes; matching shortcuts emit action events while preserving normal text-editing key bindings for non-matching keys. App command shortcuts are usually installed on a focusable window root. A more explicit cross-scope app-command priority table remains Priority 3 follow-up work.
+Current shortcut dispatch is element-local and bubbles through GPUI event propagation: a focused element with a matching shortcut emits its action and stops propagation before ancestor shortcuts see the key. This child-before-ancestor priority is covered by GPUI keyboard regression tests, including a focused element overriding a root app-command shortcut. `text_input` and `textarea` accept the same explicit `actions`/`shortcuts` IR fields as other shortcut-capable nodes; matching shortcuts emit action events while preserving normal text-editing key bindings for non-matching keys. App command shortcuts are usually installed on a focusable window root via `Guppy.App.command_bindings/1`, so focused control shortcuts have priority over root app commands when both bind the same key.
 
 ## Accessibility boundary
 
