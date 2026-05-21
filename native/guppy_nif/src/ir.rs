@@ -38,6 +38,7 @@ struct IrFieldKeys {
     column_id: Term,
     width: Term,
     sortable: Term,
+    pinned: Term,
     header_style: Term,
     row_style: Term,
     cell_style: Term,
@@ -146,6 +147,7 @@ impl IrFieldKeys {
             column_id: atom_term("column_id"),
             width: atom_term("width"),
             sortable: atom_term("sortable"),
+            pinned: atom_term("pinned"),
             header_style: atom_term("header_style"),
             row_style: atom_term("row_style"),
             cell_style: atom_term("cell_style"),
@@ -892,6 +894,7 @@ pub struct DataTableColumn {
     pub label: String,
     pub width: DataTableColumnWidth,
     pub sortable: bool,
+    pub pinned: bool,
     pub style: DivStyle,
 }
 
@@ -1730,6 +1733,7 @@ fn field_key(key: &str) -> Option<&'static Term> {
         "column_id" => &keys.column_id,
         "width" => &keys.width,
         "sortable" => &keys.sortable,
+        "pinned" => &keys.pinned,
         "header_style" => &keys.header_style,
         "row_style" => &keys.row_style,
         "cell_style" => &keys.cell_style,
@@ -2121,7 +2125,7 @@ fn get_data_table_columns_field(
         let column = expect_map(term)?;
         ensure_allowed_fields(
             column,
-            &["id", "label", "width", "sortable", "style"],
+            &["id", "label", "width", "sortable", "pinned", "style"],
             "data_table column",
         )?;
         let id = get_string_field(column, "id")?;
@@ -2134,6 +2138,7 @@ fn get_data_table_columns_field(
             label: get_string_field(column, "label")?,
             width: get_data_table_column_width(column)?,
             sortable: get_boolean_field(column, "sortable")?,
+            pinned: get_boolean_field(column, "pinned")?,
             style: get_div_style(column)?,
         })
     }))

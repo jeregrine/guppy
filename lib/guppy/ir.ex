@@ -590,6 +590,7 @@ defmodule Guppy.IR do
           required(:label) => String.t(),
           optional(:width) => data_table_column_width(),
           optional(:sortable) => boolean(),
+          optional(:pinned) => boolean(),
           optional(:style) => style()
         }
 
@@ -1061,7 +1062,7 @@ defmodule Guppy.IR do
 
   @uniform_list_item_keys [:id, :label]
   @list_item_keys [:id, :children]
-  @data_table_column_keys [:id, :label, :width, :sortable, :style]
+  @data_table_column_keys [:id, :label, :width, :sortable, :pinned, :style]
   @data_table_row_keys [:id, :cells, :style]
   @data_table_cell_keys [:column_id, :children, :style]
   @data_table_sort_keys [:column_id, :direction]
@@ -2213,6 +2214,7 @@ defmodule Guppy.IR do
           with :ok <- validate_known_keys(column, @data_table_column_keys, :data_table_column),
                :ok <- validate_data_table_column_width(Map.get(column, :width)),
                :ok <- validate_optional_boolean(Map.get(column, :sortable), :sortable),
+               :ok <- validate_optional_boolean(Map.get(column, :pinned), :pinned),
                :ok <- validate_style(Map.get(column, :style)) do
             {:cont, {:ok, MapSet.put(seen, id)}}
           else

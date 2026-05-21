@@ -523,6 +523,7 @@ fn decodes_data_table_node() {
                     (atom("label"), binary("Task")),
                     (atom("width"), tuple(vec![atom("fr"), integer(1)])),
                     (atom("sortable"), bool_atom(true)),
+                    (atom("pinned"), bool_atom(true)),
                 ]),
                 map(vec![
                     (atom("id"), binary("status")),
@@ -581,6 +582,7 @@ fn decodes_data_table_node() {
             assert_eq!(table.id.as_deref(), Some("project_table"));
             assert_eq!(table.columns.len(), 2);
             assert_eq!(table.columns[0].id, "task");
+            assert!(table.columns[0].pinned);
             assert_eq!(table.rows[0].id, "row_1");
             assert_eq!(table.rows[0].cells[0].column_id, "task");
             assert_eq!(table.selected_row_id.as_deref(), Some("row_1"));

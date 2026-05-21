@@ -13,7 +13,7 @@ defmodule Guppy.IRTest do
     ir =
       Guppy.IR.data_table(
         [
-          %{id: "task", label: "Task", width: {:fr, 1}, sortable: true},
+          %{id: "task", label: "Task", width: {:fr, 1}, sortable: true, pinned: true},
           %{id: "status", label: "Status", width: {:px, 120}}
         ],
         [
@@ -41,6 +41,7 @@ defmodule Guppy.IRTest do
       )
 
     assert :ok = Guppy.IR.validate(ir)
+    assert hd(ir.columns).pinned == true
     assert ir.events.row_context_menu == "row_context"
     assert ir.events.cell_context_menu == "cell_context"
     assert ir.events.column_reorder == "reorder_column"

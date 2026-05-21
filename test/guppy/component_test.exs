@@ -226,7 +226,7 @@ defmodule Guppy.ComponentTest do
           }
         ],
         table_columns: [
-          %{id: "task", label: "Task", width: {:fr, 1}, sortable: true},
+          %{id: "task", label: "Task", width: {:fr, 1}, sortable: true, pinned: true},
           %{id: "status", label: "Status", width: {:px, 96}}
         ],
         table_rows: [
@@ -382,6 +382,7 @@ defmodule Guppy.ComponentTest do
     assert data_table.kind == :data_table
     assert data_table.id == "task_table"
     assert Enum.map(data_table.columns, & &1.id) == ["task", "status"]
+    assert hd(data_table.columns).pinned == true
     assert Enum.map(data_table.rows, & &1.id) == ["row_1"]
     assert data_table.selected_row_id == "row_1"
     assert data_table.selected_cell == {"row_1", "status"}

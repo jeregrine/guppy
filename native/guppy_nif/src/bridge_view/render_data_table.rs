@@ -17,7 +17,7 @@ use gpui::{
     KeyDownEvent, MouseButton, ParentElement, SharedString, StatefulInteractiveElement, Styled,
     Window, div, list, px,
 };
-use std::{cell::Cell, collections::HashMap, rc::Rc};
+use std::{cell::Cell, collections::HashMap, rc::Rc, sync::Arc};
 const ROW_CLICK_EVENT: i32 = 1;
 const CELL_CLICK_EVENT: i32 = 2;
 const SORT_EVENT: i32 = 3;
@@ -66,18 +66,19 @@ pub(crate) fn render(
     let table_id = node_id.to_string();
     let list_id = format!("{table_id}.rows");
     let state = pass.retain_list_state(&list_id, table.rows.len());
-    let columns = table.columns.clone();
-    let rows = prepare_rows(table.columns.as_ref(), table.rows.as_ref());
+    let columns = order_pinned_columns(table.columns.as_ref());
+    let rows = prepare_rows(columns.as_ref(), table.rows.as_ref());
     let header_focus_handles = prepare_header_focus_handles(
         pass,
         &table_id,
-        table.columns.as_ref(),
+        columns.as_ref(),
         table.sort_callback.is_some(),
         table.column_reorder.is_some(),
         table.column_resize.is_some(),
         cx,
     );
-    let body_focus_handles = prepare_body_focus_handles(pass, &table_id, table, cx);
+    let body_focus_handles =
+        prepare_body_focus_handles(pass, &table_id, table, columns.as_ref(), cx);
     let focus_visible = pass.focus_visible();
     let row_style = table.row_style.clone();
     let cell_style = table.cell_style.clone();
@@ -88,6 +89,7 @@ pub(crate) fn render(
     let table_id_for_rows = table_id.clone();
     let body_focus_handles_for_rows = body_focus_handles.clone();
     let header_focus_handles_for_rows = header_focus_handles.clone();
+    let columns_for_rows = columns.clone();
     let first_row_id = rows.first().map(|row| row.id.clone());
 
     let body = list(state, move |index, window, _cx| {
@@ -112,7 +114,7 @@ pub(crate) fn render(
                         .last()
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
-                    first_cell: columns.first().and_then(|column| {
+                    first_cell: columns_for_rows.first().and_then(|column| {
                         body_focus_handles_for_rows
                             .cells
                             .get(&(row.id.clone(), column.id.clone()))
@@ -126,7 +128,7 @@ pub(crate) fn render(
                     row,
                     previous_row.map(|row| row.id.as_str()),
                     next_row.map(|row| row.id.as_str()),
-                    &columns,
+                    &columns_for_rows,
                     &row_style,
                     &cell_style,
                     row_click.as_deref(),
@@ -147,7 +149,7 @@ pub(crate) fn render(
     let header = render_header(
         view_id,
         &table_id,
-        table.columns.as_ref(),
+        columns.as_ref(),
         &table.header_style,
         table.sort_callback.as_deref(),
         table.column_reorder.as_deref(),
@@ -200,6 +202,7 @@ fn prepare_body_focus_handles(
     pass: &mut RenderPass<'_>,
     table_id: &str,
     table: &DataTableNode,
+    columns: &[DataTableColumn],
     cx: &mut Context<BridgeView>,
 ) -> DataTableFocusHandles {
     let mut handles = DataTableFocusHandles::default();
@@ -216,7 +219,7 @@ fn prepare_body_focus_handles(
 
     if table.cell_click.is_some() || table.cell_context_menu.is_some() {
         for row in table.rows.iter() {
-            for column in table.columns.iter() {
+            for column in columns.iter() {
                 let cell_id = data_table_cell_id(table_id, &row.id, &column.id);
                 handles.cells.insert(
                     (row.id.clone(), column.id.clone()),
@@ -764,6 +767,16 @@ fn render_row(
     apply_semantic_focus_visible_affordance(element, show_focus_visible).into_any_element()
 }
 
+fn order_pinned_columns(columns: &[DataTableColumn]) -> Arc<[DataTableColumn]> {
+    columns
+        .iter()
+        .filter(|column| column.pinned)
+        .chain(columns.iter().filter(|column| !column.pinned))
+        .cloned()
+        .collect::<Vec<_>>()
+        .into()
+}
+
 #[derive(Debug)]
 struct PreparedDataTableRow {
     id: String,
@@ -1106,7 +1119,10 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
 
 #[cfg(test)]
 mod tests {
-    use super::{CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width, prepare_rows};
+    use super::{
+        CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width, order_pinned_columns,
+        prepare_rows,
+    };
     use crate::{
         bridge_view::events,
         ir::{DataTableCell, DataTableColumn, DataTableColumnWidth, DataTableRow},
@@ -1133,13 +1149,22 @@ mod tests {
     }
 
     #[test]
-    fn prepared_rows_follow_column_order_and_preserve_missing_cells() {
+    fn pinned_columns_render_before_unpinned_columns() {
         let columns = vec![
+            DataTableColumn {
+                id: "status".into(),
+                label: "Status".into(),
+                width: DataTableColumnWidth::Auto,
+                sortable: false,
+                pinned: false,
+                style: Vec::new().into(),
+            },
             DataTableColumn {
                 id: "task".into(),
                 label: "Task".into(),
                 width: DataTableColumnWidth::Auto,
                 sortable: false,
+                pinned: true,
                 style: Vec::new().into(),
             },
             DataTableColumn {
@@ -1147,6 +1172,39 @@ mod tests {
                 label: "Owner".into(),
                 width: DataTableColumnWidth::Auto,
                 sortable: false,
+                pinned: false,
+                style: Vec::new().into(),
+            },
+        ];
+
+        let ordered = order_pinned_columns(&columns);
+
+        assert_eq!(
+            ordered
+                .iter()
+                .map(|column| column.id.as_str())
+                .collect::<Vec<_>>(),
+            ["task", "status", "owner"]
+        );
+    }
+
+    #[test]
+    fn prepared_rows_follow_column_order_and_preserve_missing_cells() {
+        let columns = vec![
+            DataTableColumn {
+                id: "task".into(),
+                label: "Task".into(),
+                width: DataTableColumnWidth::Auto,
+                sortable: false,
+                pinned: false,
+                style: Vec::new().into(),
+            },
+            DataTableColumn {
+                id: "owner".into(),
+                label: "Owner".into(),
+                width: DataTableColumnWidth::Auto,
+                sortable: false,
+                pinned: false,
                 style: Vec::new().into(),
             },
             DataTableColumn {
@@ -1154,6 +1212,7 @@ mod tests {
                 label: "Status".into(),
                 width: DataTableColumnWidth::Auto,
                 sortable: false,
+                pinned: false,
                 style: Vec::new().into(),
             },
         ];

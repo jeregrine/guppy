@@ -115,7 +115,7 @@ defmodule Examples.DataTableTreeWindow do
       <div id="header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
         <text id="title" class="text-2xl font-black">Semantic table + tree</text>
         <text id="subtitle" class="text-base text-[#94a3b8]">
-          Tree expansion, table row/cell selection, sorting, Alt-Left/Alt-Right header reordering, and Shift-Left/Shift-Right header resizing are Elixir-owned state driven by native semantic events.
+          Tree expansion, table row/cell selection, sorting, pinned-leading columns, Alt-Left/Alt-Right header reordering, and Shift-Left/Shift-Right header resizing are Elixir-owned state driven by native semantic events.
         </text>
         <text id="state_summary" class="text-sm text-[#bfdbfe]">
           Scope {@selected_label}; selected row {@selected_row_label}; sort {@sort_label}
@@ -163,20 +163,26 @@ defmodule Examples.DataTableTreeWindow do
 
   defp table_columns(column_ids, column_widths) do
     definitions = %{
-      "title" => %{id: "title", label: "Task", sortable: true},
+      "title" => %{id: "title", label: "Task", sortable: true, pinned: true},
       "status" => %{id: "status", label: "Status", sortable: true},
       "owner" => %{id: "owner", label: "Owner", sortable: true}
     }
 
     Enum.map(column_ids, fn column_id ->
-      Map.put(Map.fetch!(definitions, column_id), :width, {:px, Map.fetch!(column_widths, column_id)})
+      Map.put(
+        Map.fetch!(definitions, column_id),
+        :width,
+        {:px, Map.fetch!(column_widths, column_id)}
+      )
     end)
   end
 
   defp reorder_column_ids(column_ids, column_id, target_column_id, direction) do
     without_column = List.delete(column_ids, column_id)
+
     target_index =
       Enum.find_index(without_column, &(&1 == target_column_id)) || length(without_column)
+
     insert_at = if direction == "right", do: target_index + 1, else: target_index
 
     List.insert_at(without_column, insert_at, column_id)
