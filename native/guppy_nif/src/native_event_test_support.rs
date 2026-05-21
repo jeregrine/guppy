@@ -48,7 +48,8 @@ pub(crate) struct SemanticEventSnapshot {
 static BASIC_EVENT_SNAPSHOT: Mutex<VecDeque<BasicEventSnapshot>> = Mutex::new(VecDeque::new());
 static ROW_CONTROL_EVENT_SNAPSHOT: Mutex<Option<RowControlEventSnapshot>> = Mutex::new(None);
 static MENU_EVENT_SNAPSHOT: Mutex<Option<MenuEventSnapshot>> = Mutex::new(None);
-static SEMANTIC_EVENT_SNAPSHOT: Mutex<Option<SemanticEventSnapshot>> = Mutex::new(None);
+static SEMANTIC_EVENT_SNAPSHOT: Mutex<VecDeque<SemanticEventSnapshot>> =
+    Mutex::new(VecDeque::new());
 
 pub(crate) fn native_event_send_snapshot_for_test() -> (u64, u64) {
     (
@@ -77,7 +78,18 @@ pub(crate) fn take_menu_event_snapshot_for_test() -> Option<MenuEventSnapshot> {
 }
 
 pub(crate) fn take_semantic_event_snapshot_for_test() -> Option<SemanticEventSnapshot> {
-    SEMANTIC_EVENT_SNAPSHOT.lock().ok()?.take()
+    SEMANTIC_EVENT_SNAPSHOT.lock().ok()?.pop_front()
+}
+
+pub(crate) fn take_semantic_event_snapshot_matching_for_test(
+    event: &'static str,
+    view_id: u64,
+) -> Option<SemanticEventSnapshot> {
+    let mut snapshots = SEMANTIC_EVENT_SNAPSHOT.lock().ok()?;
+    let position = snapshots
+        .iter()
+        .position(|snapshot| snapshot.event == event && snapshot.view_id == view_id)?;
+    snapshots.remove(position)
 }
 
 pub(super) fn record_basic_event_snapshot_for_test(
@@ -121,8 +133,8 @@ pub(super) fn record_semantic_event_snapshot_for_test(
     tree_id: Option<String>,
     item_id: Option<String>,
 ) {
-    if let Ok(mut snapshot) = SEMANTIC_EVENT_SNAPSHOT.lock() {
-        *snapshot = Some(SemanticEventSnapshot {
+    if let Ok(mut snapshots) = SEMANTIC_EVENT_SNAPSHOT.lock() {
+        snapshots.push_back(SemanticEventSnapshot {
             event,
             view_id,
             node_id,

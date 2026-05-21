@@ -283,7 +283,8 @@ fn sortable_data_table_headers_are_keyboard_actionable(cx: &mut gpui::TestAppCon
     cx.simulate_keystrokes("tab");
     cx.simulate_keystrokes("enter");
 
-    let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+    let event =
+        crate::take_semantic_event_snapshot_matching_for_test("data_table_sort", 56).unwrap();
     assert_eq!(event.event, "data_table_sort");
     assert_eq!(event.view_id, 56);
     assert_eq!(event.node_id, "tasks.header.task");
@@ -491,7 +492,7 @@ fn tree_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
     cx.simulate_keystrokes("tab");
     cx.simulate_keystrokes("enter");
 
-    let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+    let event = crate::take_semantic_event_snapshot_matching_for_test("tree_select", 57).unwrap();
     assert_eq!(event.event, "tree_select");
     assert_eq!(event.view_id, 57);
     assert_eq!(event.node_id, "outline.row.root");
@@ -501,11 +502,33 @@ fn tree_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
 
     cx.simulate_keystrokes("space");
 
-    let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+    let event = crate::take_semantic_event_snapshot_matching_for_test("tree_toggle", 57).unwrap();
     assert_eq!(event.event, "tree_toggle");
     assert_eq!(event.view_id, 57);
     assert_eq!(event.node_id, "outline.row.root");
     assert_eq!(event.callback_id, "toggle_node");
+    assert_eq!(event.tree_id.as_deref(), Some("outline"));
+    assert_eq!(event.item_id.as_deref(), Some("root"));
+}
+
+#[gpui::test]
+fn tree_rows_support_keyboard_context_menu(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 58,
+        ir: tree_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("shift-f10");
+
+    let event = crate::take_semantic_event_snapshot_matching_for_test("context_menu", 58).unwrap();
+    assert_eq!(event.event, "context_menu");
+    assert_eq!(event.view_id, 58);
+    assert_eq!(event.node_id, "outline.row.root");
+    assert_eq!(event.callback_id, "tree_context_menu");
     assert_eq!(event.tree_id.as_deref(), Some("outline"));
     assert_eq!(event.item_id.as_deref(), Some("root"));
 }

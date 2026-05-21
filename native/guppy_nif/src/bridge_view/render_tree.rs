@@ -207,14 +207,30 @@ fn render_row(
             });
     }
 
-    if select.is_some() || (item.has_children && toggle.is_some()) {
+    if select.is_some() || (item.has_children && toggle.is_some()) || context_menu.is_some() {
         let select_callback = select.map(str::to_owned);
         let toggle_callback = toggle.map(str::to_owned);
+        let context_menu_callback = context_menu.map(str::to_owned);
         let key_tree_id = tree_id.to_owned();
         let key_item_id = item.id.clone();
         let key_row_id = row_id.clone();
         let item = item.clone();
         row = row.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            if let Some(callback_id) = context_menu_callback.as_deref()
+                && events::is_context_menu_key(event)
+            {
+                events::emit_tree_keyboard_context_menu(
+                    view_id,
+                    &key_row_id,
+                    callback_id,
+                    &key_tree_id,
+                    &key_item_id,
+                    event,
+                );
+                cx.stop_propagation();
+                return;
+            }
+
             match tree_keyboard_action(
                 event,
                 &item,

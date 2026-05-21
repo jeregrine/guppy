@@ -123,6 +123,28 @@ pub(crate) fn emit_tree_context_menu(
     );
 }
 
+pub(crate) fn emit_tree_keyboard_context_menu(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    tree_id: &str,
+    item_id: &str,
+    event: &KeyDownEvent,
+) {
+    let _ = native_events::send_tree_context_menu_event(
+        view_id,
+        node_id,
+        callback_id,
+        tree_id,
+        item_id,
+        ContextMenuEventPayload {
+            x: 0.0,
+            y: 0.0,
+            modifiers: modifier_flags(&event.keystroke.modifiers),
+        },
+    );
+}
+
 pub(crate) fn emit_row_control_change(
     view_id: u64,
     context: &RowControlEventContext,
