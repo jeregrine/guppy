@@ -292,6 +292,7 @@ impl<'a> RenderPass<'a> {
                 item_style,
                 click.as_deref(),
                 context_menu.as_deref(),
+                cx,
             ),
             IrNode::List {
                 id,

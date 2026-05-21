@@ -267,6 +267,41 @@ fn simulated_list_row_button_click_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn uniform_list_items_support_keyboard_actions_and_arrow_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 71,
+        ir: keyboard_uniform_list_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["uniform_items.item_1"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("enter");
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("click", 71).unwrap();
+    assert_eq!(event.node_id.as_deref(), Some("uniform_items.item_1"));
+    assert_eq!(event.callback_id.as_deref(), Some("uniform_clicked"));
+
+    cx.simulate_keystrokes("down");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["uniform_items.item_2"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("shift-f10");
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 71).unwrap();
+    assert_eq!(event.node_id.as_deref(), Some("uniform_items.item_2"));
+    assert_eq!(event.callback_id.as_deref(), Some("uniform_context"));
+}
+
+#[gpui::test]
 fn simulated_uniform_list_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 51,
@@ -1210,6 +1245,27 @@ fn canvas_ir() -> IrNode {
         click: Some("canvas_clicked".into()),
         context_menu: Some("canvas_context_menu".into()),
     }))
+}
+
+fn keyboard_uniform_list_ir() -> IrNode {
+    IrNode::UniformList {
+        id: Some("uniform_items".into()),
+        items: vec![
+            UniformListItem {
+                id: "item_1".into(),
+                label: "Item 1".into(),
+            },
+            UniformListItem {
+                id: "item_2".into(),
+                label: "Item 2".into(),
+            },
+        ]
+        .into(),
+        style: vec![StyleOp::W96, StyleOp::H32].into(),
+        item_style: Vec::new().into(),
+        click: Some("uniform_clicked".into()),
+        context_menu: Some("uniform_context".into()),
+    }
 }
 
 fn keyboard_list_ir() -> IrNode {
