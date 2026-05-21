@@ -310,6 +310,17 @@ fn render_header(
                 .cloned();
             let (left_focus, right_focus) =
                 header_focus_neighbors(columns, focus_handles, column_index);
+            let first_focus = columns
+                .iter()
+                .find(|column| column.sortable)
+                .and_then(|column| focus_handles.get(&column.id))
+                .cloned();
+            let last_focus = columns
+                .iter()
+                .rev()
+                .find(|column| column.sortable)
+                .and_then(|column| focus_handles.get(&column.id))
+                .cloned();
             cell = cell.on_key_down(move |event: &KeyDownEvent, window, cx| {
                 match event.keystroke.key.as_str() {
                     "left" => {
@@ -328,6 +339,20 @@ fn render_header(
                     }
                     "down" => {
                         if let Some(handle) = down_focus.as_ref() {
+                            handle.focus(window);
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                    "home" => {
+                        if let Some(handle) = first_focus.as_ref() {
+                            handle.focus(window);
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                    "end" => {
+                        if let Some(handle) = last_focus.as_ref() {
                             handle.focus(window);
                             cx.stop_propagation();
                             return;

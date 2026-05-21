@@ -691,6 +691,35 @@ fn data_table_header_arrow_keys_move_focus(cx: &mut gpui::TestAppContext) {
 }
 
 #[gpui::test]
+fn data_table_header_home_end_keys_move_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 65,
+        ir: header_navigation_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.task"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("end");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.status"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("home");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.task"].is_focused(window));
+    });
+}
+
+#[gpui::test]
 fn data_table_header_down_and_cell_up_move_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
