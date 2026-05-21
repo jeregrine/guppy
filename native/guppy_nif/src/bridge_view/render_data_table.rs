@@ -27,6 +27,8 @@ struct DataTableFocusHandles {
 struct RowFocusNeighbors {
     previous: Option<FocusHandle>,
     next: Option<FocusHandle>,
+    first: Option<FocusHandle>,
+    last: Option<FocusHandle>,
     first_cell: Option<FocusHandle>,
 }
 
@@ -36,6 +38,8 @@ struct CellFocusNeighbors {
     right: Option<FocusHandle>,
     up: Option<FocusHandle>,
     down: Option<FocusHandle>,
+    first: Option<FocusHandle>,
+    last: Option<FocusHandle>,
 }
 
 pub(crate) fn render(
@@ -83,6 +87,14 @@ pub(crate) fn render(
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
                     next: next_row
+                        .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
+                        .cloned(),
+                    first: rows
+                        .first()
+                        .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
+                        .cloned(),
+                    last: rows
+                        .last()
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
                     first_cell: columns.first().and_then(|column| {
@@ -450,6 +462,20 @@ fn render_row(
                         return;
                     }
                 }
+                "home" => {
+                    if let Some(handle) = row_focus_neighbors.first.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "end" => {
+                    if let Some(handle) = row_focus_neighbors.last.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
                 "right" => {
                     if let Some(handle) = row_focus_neighbors.first_cell.as_ref() {
                         handle.focus(window);
@@ -583,6 +609,18 @@ fn cell_focus_neighbors(
                     .get(&(row_id.to_owned(), column.id.clone()))
             })
             .cloned(),
+        first: columns.first().and_then(|column| {
+            focus_handles
+                .cells
+                .get(&(row_id.to_owned(), column.id.clone()))
+                .cloned()
+        }),
+        last: columns.last().and_then(|column| {
+            focus_handles
+                .cells
+                .get(&(row_id.to_owned(), column.id.clone()))
+                .cloned()
+        }),
     }
 }
 
@@ -692,6 +730,20 @@ fn render_cell(
                 }
                 "down" => {
                     if let Some(handle) = focus_neighbors.down.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "home" => {
+                    if let Some(handle) = focus_neighbors.first.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "end" => {
+                    if let Some(handle) = focus_neighbors.last.as_ref() {
                         handle.focus(window);
                         cx.stop_propagation();
                         return;

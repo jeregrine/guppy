@@ -818,6 +818,49 @@ fn tree_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
 }
 
 #[gpui::test]
+fn data_table_home_end_keys_move_body_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 75,
+        ir: navigable_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.row.row_1"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("end");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.row.row_2"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("home");
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.cell.row_1.task"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("end");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.cell.row_1.status"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("home");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.cell.row_1.task"].is_focused(window));
+    });
+}
+
+#[gpui::test]
 fn data_table_row_right_and_first_cell_left_move_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
