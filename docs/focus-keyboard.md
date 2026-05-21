@@ -22,7 +22,7 @@ Virtual widgets use a narrow roving-focus pattern:
 Current widget behavior:
 
 - **data_table**: sortable headers are tab stops; Left/Right moves between sortable headers; Down enters the first row cell in that column; Up from the first row cell returns to the sortable header. Body rows use Up/Down roving focus. Body cells use Left/Right/Up/Down roving focus. Enter/Space activate row/cell/sort callbacks, and keyboard context-menu invocation emits row/cell context-menu events.
-- **tree**: visible rows are tab stops when select/toggle/context-menu callbacks exist. Up/Down moves row focus; Left returns focus from a child row to its parent when the focused row is not expanded; Enter selects; Space toggles disclosure; Left collapses expanded nodes; Right expands collapsed nodes; keyboard context-menu invocation emits row context-menu events.
+- **tree**: visible rows are tab stops when select/toggle/context-menu callbacks exist. Up/Down moves row focus; Left returns focus from a child row to its parent when the focused row is not expanded; Right moves focus from an expanded parent row to its first child row; Enter selects; Space toggles disclosure; Left collapses expanded nodes; Right expands collapsed nodes; keyboard context-menu invocation emits row context-menu events.
 - **list**: row-local controls are ordinary retained tab stops. Generic row roving focus is not implemented yet.
 - **select/popover/context menus**: select owns menu-like arrow/Home/End/typeahead behavior; popover supports toggle/close keys. Context-menu overlay focus return is app-owned where opened through `Guppy.App` helpers.
 
