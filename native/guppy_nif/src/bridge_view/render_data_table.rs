@@ -23,6 +23,20 @@ struct DataTableFocusHandles {
     cells: HashMap<(String, String), FocusHandle>,
 }
 
+#[derive(Clone, Default)]
+struct RowFocusNeighbors {
+    previous: Option<FocusHandle>,
+    next: Option<FocusHandle>,
+}
+
+#[derive(Clone, Default)]
+struct CellFocusNeighbors {
+    left: Option<FocusHandle>,
+    right: Option<FocusHandle>,
+    up: Option<FocusHandle>,
+    down: Option<FocusHandle>,
+}
+
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
     path: &str,
@@ -57,10 +71,25 @@ pub(crate) fn render(
     let body = list(state, move |index, _window, _cx| {
         rows.get(index)
             .map(|row| {
+                let previous_row = index
+                    .checked_sub(1)
+                    .and_then(|previous_index| rows.get(previous_index));
+                let next_row = rows.get(index + 1);
+                let row_focus_neighbors = RowFocusNeighbors {
+                    previous: previous_row
+                        .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
+                        .cloned(),
+                    next: next_row
+                        .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
+                        .cloned(),
+                };
+
                 render_row(
                     view_id,
                     &table_id_for_rows,
                     row,
+                    previous_row.map(|row| row.id.as_str()),
+                    next_row.map(|row| row.id.as_str()),
                     &columns,
                     &row_style,
                     &cell_style,
@@ -69,6 +98,7 @@ pub(crate) fn render(
                     row_context_menu.as_deref(),
                     cell_context_menu.as_deref(),
                     &body_focus_handles_for_rows,
+                    row_focus_neighbors,
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -241,6 +271,8 @@ fn render_row(
     view_id: u64,
     table_id: &str,
     row: &PreparedDataTableRow,
+    previous_row_id: Option<&str>,
+    next_row_id: Option<&str>,
     columns: &[DataTableColumn],
     row_style: &DivStyle,
     cell_style: &DivStyle,
@@ -249,23 +281,39 @@ fn render_row(
     row_context_menu: Option<&str>,
     cell_context_menu: Option<&str>,
     focus_handles: &DataTableFocusHandles,
+    row_focus_neighbors: RowFocusNeighbors,
 ) -> AnyElement {
     let row_id = data_table_row_id(table_id, &row.id);
-    let cells = columns.iter().zip(row.cells.iter()).map(|(column, cell)| {
-        render_cell(
-            view_id,
-            table_id,
-            &row.id,
-            column,
-            cell.as_ref(),
-            cell_style,
-            cell_click,
-            cell_context_menu,
-            focus_handles
-                .cells
-                .get(&(row.id.clone(), column.id.clone())),
-        )
-    });
+    let cells =
+        columns
+            .iter()
+            .enumerate()
+            .zip(row.cells.iter())
+            .map(|((column_index, column), cell)| {
+                let cell_focus_neighbors = cell_focus_neighbors(
+                    focus_handles,
+                    columns,
+                    &row.id,
+                    previous_row_id,
+                    next_row_id,
+                    column_index,
+                );
+
+                render_cell(
+                    view_id,
+                    table_id,
+                    &row.id,
+                    column,
+                    cell.as_ref(),
+                    cell_style,
+                    cell_click,
+                    cell_context_menu,
+                    focus_handles
+                        .cells
+                        .get(&(row.id.clone(), column.id.clone())),
+                    cell_focus_neighbors,
+                )
+            });
 
     let mut element = apply_div_style(
         div()
@@ -311,7 +359,26 @@ fn render_row(
         let key_table_id = table_id.to_owned();
         let key_row_value = row.id.clone();
         let key_row_id = row_id.clone();
-        element = element.on_key_down(move |event: &KeyDownEvent, _, cx| {
+        let row_focus_neighbors = row_focus_neighbors.clone();
+        element = element.on_key_down(move |event: &KeyDownEvent, window, cx| {
+            match event.keystroke.key.as_str() {
+                "up" => {
+                    if let Some(handle) = row_focus_neighbors.previous.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "down" => {
+                    if let Some(handle) = row_focus_neighbors.next.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                _ => {}
+            }
+
             if let Some(callback_id) = context_menu_callback.as_deref()
                 && events::is_context_menu_key(event)
             {
@@ -388,6 +455,53 @@ fn prepare_rows(columns: &[DataTableColumn], rows: &[DataTableRow]) -> Vec<Prepa
         .collect()
 }
 
+fn cell_focus_neighbors(
+    focus_handles: &DataTableFocusHandles,
+    columns: &[DataTableColumn],
+    row_id: &str,
+    previous_row_id: Option<&str>,
+    next_row_id: Option<&str>,
+    column_index: usize,
+) -> CellFocusNeighbors {
+    let Some(column) = columns.get(column_index) else {
+        return CellFocusNeighbors::default();
+    };
+
+    CellFocusNeighbors {
+        left: column_index
+            .checked_sub(1)
+            .and_then(|index| columns.get(index))
+            .and_then(|column| {
+                focus_handles
+                    .cells
+                    .get(&(row_id.to_owned(), column.id.clone()))
+            })
+            .cloned(),
+        right: columns
+            .get(column_index + 1)
+            .and_then(|column| {
+                focus_handles
+                    .cells
+                    .get(&(row_id.to_owned(), column.id.clone()))
+            })
+            .cloned(),
+        up: previous_row_id
+            .and_then(|row_id| {
+                focus_handles
+                    .cells
+                    .get(&(row_id.to_owned(), column.id.clone()))
+            })
+            .cloned(),
+        down: next_row_id
+            .and_then(|row_id| {
+                focus_handles
+                    .cells
+                    .get(&(row_id.to_owned(), column.id.clone()))
+            })
+            .cloned(),
+    }
+}
+
 fn ordered_row_cells(
     column_count: usize,
     column_indices: &HashMap<&str, usize>,
@@ -415,6 +529,7 @@ fn render_cell(
     cell_click: Option<&str>,
     cell_context_menu: Option<&str>,
     focus_handle: Option<&FocusHandle>,
+    focus_neighbors: CellFocusNeighbors,
 ) -> AnyElement {
     let cell_id = data_table_cell_id(table_id, row_id, &column.id);
     let mut cell_div = div().id(SharedString::from(cell_id.clone())).p_2();
@@ -467,7 +582,40 @@ fn render_cell(
         let key_row_id = row_id.to_owned();
         let key_column_id = column.id.clone();
         let key_cell_id = cell_id.clone();
-        element = element.on_key_down(move |event: &KeyDownEvent, _, cx| {
+        let focus_neighbors = focus_neighbors.clone();
+        element = element.on_key_down(move |event: &KeyDownEvent, window, cx| {
+            match event.keystroke.key.as_str() {
+                "left" => {
+                    if let Some(handle) = focus_neighbors.left.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "right" => {
+                    if let Some(handle) = focus_neighbors.right.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "up" => {
+                    if let Some(handle) = focus_neighbors.up.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "down" => {
+                    if let Some(handle) = focus_neighbors.down.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                _ => {}
+            }
+
             if let Some(callback_id) = context_menu_callback.as_deref()
                 && events::is_context_menu_key(event)
             {

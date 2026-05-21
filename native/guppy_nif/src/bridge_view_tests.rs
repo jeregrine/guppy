@@ -578,6 +578,49 @@ fn tree_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
 }
 
 #[gpui::test]
+fn data_table_arrow_keys_move_body_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 62,
+        ir: navigable_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.row.row_1"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("down");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.row.row_2"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("up");
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.cell.row_1.task"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("right");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.cell.row_1.status"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("down");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.cell.row_2.status"].is_focused(window));
+    });
+}
+
+#[gpui::test]
 fn tree_arrow_keys_move_row_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
@@ -787,6 +830,66 @@ fn data_table_ir() -> IrNode {
         row_context_menu: Some("row_context".into()),
         cell_context_menu: Some("cell_context".into()),
     }))
+}
+
+fn navigable_data_table_ir() -> IrNode {
+    IrNode::DataTable(Box::new(DataTableNode {
+        id: Some("tasks".into()),
+        columns: vec![
+            DataTableColumn {
+                id: "task".into(),
+                label: "Task".into(),
+                width: DataTableColumnWidth::Fr(1),
+                sortable: true,
+                style: Vec::new().into(),
+            },
+            DataTableColumn {
+                id: "status".into(),
+                label: "Status".into(),
+                width: DataTableColumnWidth::Fr(1),
+                sortable: false,
+                style: Vec::new().into(),
+            },
+        ]
+        .into(),
+        rows: vec![
+            data_table_row_for_navigation("row_1", "Ship", "Ready"),
+            data_table_row_for_navigation("row_2", "Test", "Blocked"),
+        ]
+        .into(),
+        style: vec![StyleOp::W96, StyleOp::H32].into(),
+        header_style: Vec::new().into(),
+        row_style: Vec::new().into(),
+        cell_style: Vec::new().into(),
+        selected_row_id: None,
+        selected_cell: None,
+        sort: None,
+        row_click: Some("select_row".into()),
+        cell_click: Some("select_cell".into()),
+        sort_callback: Some("sort_table".into()),
+        row_context_menu: Some("row_context".into()),
+        cell_context_menu: Some("cell_context".into()),
+    }))
+}
+
+fn data_table_row_for_navigation(id: &str, task: &str, status: &str) -> DataTableRow {
+    DataTableRow {
+        id: id.into(),
+        cells: vec![
+            DataTableCell {
+                column_id: "task".into(),
+                children: vec![IrNode::text(task)].into(),
+                style: Vec::new().into(),
+            },
+            DataTableCell {
+                column_id: "status".into(),
+                children: vec![IrNode::text(status)].into(),
+                style: Vec::new().into(),
+            },
+        ]
+        .into(),
+        style: Vec::new().into(),
+    }
 }
 
 fn tree_ir() -> IrNode {
