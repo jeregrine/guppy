@@ -77,8 +77,9 @@ defmodule Examples.DataTableTreeWindow do
     assigns =
       Map.merge(window.assigns, %{
         table_columns: table_columns(),
-        table_rows: table_rows(sorted_tasks),
-        tree_nodes: tree_nodes(window.assigns.expanded),
+        table_rows:
+          table_rows(sorted_tasks, window.assigns.selected_row_id, window.assigns.selected_cell),
+        tree_nodes: tree_nodes(window.assigns.expanded, window.assigns.selected_tree_id),
         selected_label: selected_label(window.assigns.selected_tree_id),
         selected_row_label: window.assigns.selected_row_id,
         sort_label: "#{window.assigns.sort.column_id} #{window.assigns.sort.direction}"
@@ -141,33 +142,67 @@ defmodule Examples.DataTableTreeWindow do
     ]
   end
 
-  defp table_rows(tasks) do
+  defp table_rows(tasks, selected_row_id, selected_cell) do
     Enum.map(tasks, fn task ->
       %{
         id: task.id,
+        style: selected_row_style(task.id == selected_row_id),
         cells: [
-          %{column_id: "title", children: [Guppy.IR.text(task.title)]},
-          %{column_id: "status", children: [Guppy.IR.text(task.status)]},
-          %{column_id: "owner", children: [Guppy.IR.text(task.owner)]}
+          table_cell("title", task.title, selected_cell == {task.id, "title"}),
+          table_cell("status", task.status, selected_cell == {task.id, "status"}),
+          table_cell("owner", task.owner, selected_cell == {task.id, "owner"})
         ]
       }
     end)
   end
 
-  defp tree_nodes(expanded) do
+  defp table_cell(column_id, text, selected?) do
+    %{
+      column_id: column_id,
+      children: [Guppy.IR.text(text)],
+      style: selected_cell_style(selected?)
+    }
+  end
+
+  defp tree_nodes(expanded, selected_id) do
     [
       %{
         id: "all",
         label: "All tasks",
         expanded: MapSet.member?(expanded, "all"),
+        style: selected_tree_style(selected_id == "all"),
         children: [
-          %{id: "platform", label: "Platform", expanded: MapSet.member?(expanded, "platform")},
-          %{id: "design", label: "Design"},
-          %{id: "release", label: "Release"}
+          %{
+            id: "platform",
+            label: "Platform",
+            expanded: MapSet.member?(expanded, "platform"),
+            style: selected_tree_style(selected_id == "platform")
+          },
+          %{id: "design", label: "Design", style: selected_tree_style(selected_id == "design")},
+          %{
+            id: "release",
+            label: "Release",
+            style: selected_tree_style(selected_id == "release")
+          }
         ]
       }
     ]
   end
+
+  defp selected_row_style(true),
+    do: [Guppy.Style.bg_hex("#172554"), Guppy.Style.border_color_hex("#2563eb")]
+
+  defp selected_row_style(false), do: []
+
+  defp selected_cell_style(true),
+    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#eff6ff")]
+
+  defp selected_cell_style(false), do: []
+
+  defp selected_tree_style(true),
+    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#eff6ff")]
+
+  defp selected_tree_style(false), do: []
 
   defp visible_tasks("all"), do: @tasks
   defp visible_tasks(project), do: Enum.filter(@tasks, &(&1.project == project))
