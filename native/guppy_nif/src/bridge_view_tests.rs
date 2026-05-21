@@ -322,6 +322,35 @@ fn sortable_data_table_headers_are_keyboard_actionable(cx: &mut gpui::TestAppCon
 }
 
 #[gpui::test]
+fn list_rows_support_arrow_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 70,
+        ir: keyboard_list_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["todo_list.row_1"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("down");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["todo_list.row_2"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("up");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["todo_list.row_1"].is_focused(window));
+    });
+}
+
+#[gpui::test]
 fn list_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
