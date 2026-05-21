@@ -71,7 +71,17 @@ defmodule Guppy.Component.Compiler do
   @radio_events ["change", "focus", "blur"]
   @select_events ["click", "change", "close", "focus", "blur"]
   @text_input_events ["change", "focus", "blur", "context_menu"]
-  @input_attrs ["id", "value", "placeholder", "class", "style", "disabled", "tab_index"]
+  @input_attrs [
+    "id",
+    "value",
+    "placeholder",
+    "class",
+    "style",
+    "disabled",
+    "tab_index",
+    "actions",
+    "shortcuts"
+  ]
 
   @local_component_prefix "guppy-local-"
 
@@ -412,6 +422,8 @@ defmodule Guppy.Component.Compiler do
         style_entry(attrs, "class", "style", :style),
         maybe_attr_entry(attrs, "disabled", :boolean, caller),
         maybe_attr_entry(attrs, "tab_index", :integer, caller),
+        maybe_attr_entry(attrs, "actions", :expr_only, caller),
+        maybe_attr_entry(attrs, "shortcuts", :expr_only, caller),
         events_entry(attrs, @text_input_events, caller)
       ])
 

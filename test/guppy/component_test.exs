@@ -259,6 +259,8 @@ defmodule Guppy.ComponentTest do
           %{text: "intro", style: [{:text_color, :yellow}]}
         ],
         value: "Jason",
+        input_actions: %{"submit" => "submit_name"},
+        input_shortcuts: [{"cmd-enter", "submit"}],
         notes: "Line one\nLine two",
         priority: "high",
         status: "todo",
@@ -451,6 +453,8 @@ defmodule Guppy.ComponentTest do
     assert text_input.id == "name_input"
     assert text_input.value == "Jason"
     assert text_input.placeholder == "Type here"
+    assert text_input.actions == %{"submit" => "submit_name"}
+    assert text_input.shortcuts == [{"cmd-enter", "submit"}]
 
     assert text_input.events == %{
              change: "name_changed",
