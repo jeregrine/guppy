@@ -322,6 +322,35 @@ fn sortable_data_table_headers_are_keyboard_actionable(cx: &mut gpui::TestAppCon
 }
 
 #[gpui::test]
+fn list_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 69,
+        ir: keyboard_list_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["todo_list.row_1"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("enter");
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("click", 69).unwrap();
+    assert_eq!(event.node_id.as_deref(), Some("todo_list.row_1"));
+    assert_eq!(event.callback_id.as_deref(), Some("row_clicked"));
+
+    cx.simulate_keystrokes("shift-f10");
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("context_menu", 69).unwrap();
+    assert_eq!(event.node_id.as_deref(), Some("todo_list.row_1"));
+    assert_eq!(event.callback_id.as_deref(), Some("row_context"));
+}
+
+#[gpui::test]
 fn simulated_list_row_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 49,
@@ -1152,6 +1181,27 @@ fn canvas_ir() -> IrNode {
         click: Some("canvas_clicked".into()),
         context_menu: Some("canvas_context_menu".into()),
     }))
+}
+
+fn keyboard_list_ir() -> IrNode {
+    IrNode::List {
+        id: Some("todo_list".into()),
+        items: vec![
+            ListItem {
+                id: "row_1".into(),
+                children: vec![IrNode::text("Row one")].into(),
+            },
+            ListItem {
+                id: "row_2".into(),
+                children: vec![IrNode::text("Row two")].into(),
+            },
+        ]
+        .into(),
+        style: vec![StyleOp::W96, StyleOp::H32].into(),
+        item_style: Vec::new().into(),
+        click: Some("row_clicked".into()),
+        context_menu: Some("row_context".into()),
+    }
 }
 
 fn list_with_row_button() -> IrNode {

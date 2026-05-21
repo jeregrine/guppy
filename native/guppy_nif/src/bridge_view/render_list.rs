@@ -46,6 +46,13 @@ pub(crate) fn render(
     let list_key = node_id.to_string();
     let state = pass.retain_list_state(&list_key, items.len());
     let row_controls = prepare_row_control_states(pass, &list_key, items.as_ref(), cx);
+    let row_focus_handles = prepare_row_focus_handles(
+        pass,
+        &list_key,
+        items.as_ref(),
+        click.is_some() || context_menu.is_some(),
+        cx,
+    );
     let focus_visible = pass.focus_visible();
     let items = items.clone();
     let item_style = item_style.clone();
@@ -65,6 +72,7 @@ pub(crate) fn render(
                     click.as_deref(),
                     context_menu.as_deref(),
                     &row_controls,
+                    row_focus_handles.get(&item.id),
                     focus_visible,
                     window,
                 )
@@ -80,6 +88,27 @@ pub(crate) fn render(
         style,
     )
     .into_any_element()
+}
+
+fn prepare_row_focus_handles(
+    pass: &mut RenderPass<'_>,
+    list_key: &str,
+    items: &[ListItem],
+    keyboard_enabled: bool,
+    cx: &mut Context<BridgeView>,
+) -> HashMap<String, FocusHandle> {
+    if !keyboard_enabled {
+        return HashMap::new();
+    }
+
+    items
+        .iter()
+        .map(|item| {
+            let item_key = list_row_id(list_key, &item.id);
+            let focus_handle = pass.ensure_focus_handle(&item_key, cx, Some(true), None);
+            (item.id.clone(), focus_handle)
+        })
+        .collect()
 }
 
 fn prepare_row_control_states(
@@ -198,10 +227,11 @@ fn render_item(
     click: Option<&str>,
     context_menu: Option<&str>,
     row_controls: &HashMap<RowControlLookupKey, RowControlRenderState>,
+    row_focus_handle: Option<&FocusHandle>,
     focus_visible: bool,
     window: &mut Window,
 ) -> AnyElement {
-    let item_key = format!("{list_key}.{}", item.id);
+    let item_key = list_row_id(list_key, &item.id);
     let children = item.children.iter().enumerate().map(|(index, child)| {
         render_static_node(
             view_id,
@@ -223,6 +253,38 @@ fn render_item(
         item_style,
     );
 
+    if let Some(handle) = row_focus_handle {
+        let focus_handle = handle.clone();
+        row = row
+            .track_focus(&focus_handle)
+            .focusable()
+            .on_any_mouse_down(move |_, window, _| {
+                focus_handle.focus(window);
+            });
+    }
+
+    if click.is_some() || context_menu.is_some() {
+        let click_callback = click.map(str::to_owned);
+        let context_menu_callback = context_menu.map(str::to_owned);
+        let key_item_key = item_key.clone();
+        row = row.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            if let Some(callback_id) = context_menu_callback.as_deref()
+                && events::is_context_menu_key(event)
+            {
+                events::emit_keyboard_context_menu(view_id, &key_item_key, callback_id, event);
+                cx.stop_propagation();
+                return;
+            }
+
+            if let Some(callback_id) = click_callback.as_deref()
+                && is_activation_key(event)
+            {
+                events::emit_click(view_id, &key_item_key, callback_id);
+                cx.stop_propagation();
+            }
+        });
+    }
+
     if let Some(callback_id) = click {
         let callback_id = callback_id.to_owned();
         let click_item_key = item_key.clone();
@@ -233,12 +295,25 @@ fn render_item(
 
     if let Some(callback_id) = context_menu {
         let callback_id = callback_id.to_owned();
+        let context_item_key = item_key.clone();
         row = row.on_mouse_down(MouseButton::Right, move |event, _, _| {
-            events::emit_context_menu(view_id, &item_key, &callback_id, event);
+            events::emit_context_menu(view_id, &context_item_key, &callback_id, event);
         });
     }
 
     row.into_any_element()
+}
+
+fn list_row_id(list_key: &str, item_id: &str) -> String {
+    format!("{list_key}.{item_id}")
+}
+
+fn is_activation_key(event: &KeyDownEvent) -> bool {
+    if event.is_held {
+        return false;
+    }
+
+    matches!(event.keystroke.key.as_str(), "enter" | "space")
 }
 
 #[allow(clippy::too_many_arguments)]
