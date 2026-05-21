@@ -50,6 +50,14 @@ pub(crate) fn render(
         visible_items
             .get(index)
             .map(|item| {
+                let previous_focus = index
+                    .checked_sub(1)
+                    .and_then(|previous_index| visible_items.get(previous_index))
+                    .and_then(|previous_item| row_focus_handles.get(&previous_item.id));
+                let next_focus = visible_items
+                    .get(index + 1)
+                    .and_then(|next_item| row_focus_handles.get(&next_item.id));
+
                 render_row(
                     view_id,
                     &tree_id_for_rows,
@@ -59,6 +67,8 @@ pub(crate) fn render(
                     toggle.as_deref(),
                     context_menu.as_deref(),
                     row_focus_handles.get(&item.id),
+                    previous_focus,
+                    next_focus,
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -135,6 +145,8 @@ fn render_row(
     toggle: Option<&str>,
     context_menu: Option<&str>,
     focus_handle: Option<&FocusHandle>,
+    previous_focus: Option<&FocusHandle>,
+    next_focus: Option<&FocusHandle>,
 ) -> AnyElement {
     let row_id = tree_row_id(tree_id, &item.id);
     let disclosure_id = format!("{row_id}.toggle");
@@ -215,7 +227,27 @@ fn render_row(
         let key_item_id = item.id.clone();
         let key_row_id = row_id.clone();
         let item = item.clone();
-        row = row.on_key_down(move |event: &KeyDownEvent, _, cx| {
+        let previous_focus = previous_focus.cloned();
+        let next_focus = next_focus.cloned();
+        row = row.on_key_down(move |event: &KeyDownEvent, window, cx| {
+            match event.keystroke.key.as_str() {
+                "up" => {
+                    if let Some(handle) = previous_focus.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "down" => {
+                    if let Some(handle) = next_focus.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                _ => {}
+            }
+
             if let Some(callback_id) = context_menu_callback.as_deref()
                 && events::is_context_menu_key(event)
             {
