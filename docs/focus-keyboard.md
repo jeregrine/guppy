@@ -33,4 +33,4 @@ Current shortcut dispatch is element-local and bubbles through GPUI event propag
 
 ## Accessibility boundary
 
-Guppy currently exposes semantic ids and event payloads for tables/trees but does not expose typed accessibility roles/states through IR. That audit remains separate Priority 3 work.
+Guppy currently exposes semantic ids and event payloads for tables/trees but does not expose typed accessibility roles/states through IR. The current `gpui = 0.2.2` accessibility audit is documented in `docs/accessibility.md`.
