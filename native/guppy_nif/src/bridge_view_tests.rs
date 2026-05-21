@@ -938,6 +938,35 @@ fn tree_left_arrow_focuses_parent_row(cx: &mut gpui::TestAppContext) {
 }
 
 #[gpui::test]
+fn tree_home_end_keys_move_row_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 74,
+        ir: tree_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["outline.row.root"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("end");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["outline.row.child"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("home");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["outline.row.root"].is_focused(window));
+    });
+}
+
+#[gpui::test]
 fn tree_arrow_keys_move_row_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {

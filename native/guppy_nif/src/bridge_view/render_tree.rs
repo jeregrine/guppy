@@ -58,6 +58,12 @@ pub(crate) fn render(
                 let next_focus = visible_items
                     .get(index + 1)
                     .and_then(|next_item| row_focus_handles.get(&next_item.id));
+                let first_focus = visible_items
+                    .first()
+                    .and_then(|first_item| row_focus_handles.get(&first_item.id));
+                let last_focus = visible_items
+                    .last()
+                    .and_then(|last_item| row_focus_handles.get(&last_item.id));
                 let parent_focus = item
                     .parent_id
                     .as_ref()
@@ -81,6 +87,8 @@ pub(crate) fn render(
                     row_focus_handles.get(&item.id),
                     previous_focus,
                     next_focus,
+                    first_focus,
+                    last_focus,
                     parent_focus,
                     first_child_focus,
                 )
@@ -163,6 +171,8 @@ fn render_row(
     focus_handle: Option<&FocusHandle>,
     previous_focus: Option<&FocusHandle>,
     next_focus: Option<&FocusHandle>,
+    first_focus: Option<&FocusHandle>,
+    last_focus: Option<&FocusHandle>,
     parent_focus: Option<&FocusHandle>,
     first_child_focus: Option<&FocusHandle>,
 ) -> AnyElement {
@@ -247,6 +257,8 @@ fn render_row(
         let item = item.clone();
         let previous_focus = previous_focus.cloned();
         let next_focus = next_focus.cloned();
+        let first_focus = first_focus.cloned();
+        let last_focus = last_focus.cloned();
         let parent_focus = parent_focus.cloned();
         let first_child_focus = first_child_focus.cloned();
         row = row.on_key_down(move |event: &KeyDownEvent, window, cx| {
@@ -260,6 +272,20 @@ fn render_row(
                 }
                 "down" => {
                     if let Some(handle) = next_focus.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "home" => {
+                    if let Some(handle) = first_focus.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "end" => {
+                    if let Some(handle) = last_focus.as_ref() {
                         handle.focus(window);
                         cx.stop_propagation();
                         return;
