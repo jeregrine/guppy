@@ -62,6 +62,13 @@ pub(crate) fn render(
                     .parent_id
                     .as_ref()
                     .and_then(|parent_id| row_focus_handles.get(parent_id));
+                let first_child_focus = visible_items.get(index + 1).and_then(|next_item| {
+                    if next_item.parent_id.as_deref() == Some(item.id.as_str()) {
+                        row_focus_handles.get(&next_item.id)
+                    } else {
+                        None
+                    }
+                });
 
                 render_row(
                     view_id,
@@ -75,6 +82,7 @@ pub(crate) fn render(
                     previous_focus,
                     next_focus,
                     parent_focus,
+                    first_child_focus,
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -156,6 +164,7 @@ fn render_row(
     previous_focus: Option<&FocusHandle>,
     next_focus: Option<&FocusHandle>,
     parent_focus: Option<&FocusHandle>,
+    first_child_focus: Option<&FocusHandle>,
 ) -> AnyElement {
     let row_id = tree_row_id(tree_id, &item.id);
     let disclosure_id = format!("{row_id}.toggle");
@@ -239,6 +248,7 @@ fn render_row(
         let previous_focus = previous_focus.cloned();
         let next_focus = next_focus.cloned();
         let parent_focus = parent_focus.cloned();
+        let first_child_focus = first_child_focus.cloned();
         row = row.on_key_down(move |event: &KeyDownEvent, window, cx| {
             match event.keystroke.key.as_str() {
                 "up" => {
@@ -257,6 +267,13 @@ fn render_row(
                 }
                 "left" if !(item.has_children && item.expanded) => {
                     if let Some(handle) = parent_focus.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "right" if item.has_children && item.expanded => {
+                    if let Some(handle) = first_child_focus.as_ref() {
                         handle.focus(window);
                         cx.stop_propagation();
                         return;
