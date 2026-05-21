@@ -703,6 +703,30 @@ fn simulated_textarea_context_menu_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn data_table_headers_emit_keyboard_column_reorder(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 66,
+        ir: header_navigation_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("alt-right");
+
+    let event =
+        crate::take_semantic_event_snapshot_matching_for_test("data_table_column_reorder", 66)
+            .unwrap();
+    assert_eq!(event.node_id, "tasks.header.task");
+    assert_eq!(event.callback_id, "reorder_column");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.column_id.as_deref(), Some("task"));
+    assert_eq!(event.target_column_id.as_deref(), Some("status"));
+    assert_eq!(event.direction.as_deref(), Some("right"));
+}
+
+#[gpui::test]
 fn data_table_header_arrow_keys_move_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
@@ -1287,6 +1311,7 @@ fn data_table_ir() -> IrNode {
         row_click: Some("select_row".into()),
         cell_click: Some("select_cell".into()),
         sort_callback: Some("sort_table".into()),
+        column_reorder: None,
         row_context_menu: Some("row_context".into()),
         cell_context_menu: Some("cell_context".into()),
     }))
@@ -1323,6 +1348,7 @@ fn header_navigation_data_table_ir() -> IrNode {
         row_click: Some("select_row".into()),
         cell_click: Some("select_cell".into()),
         sort_callback: Some("sort_table".into()),
+        column_reorder: Some("reorder_column".into()),
         row_context_menu: Some("row_context".into()),
         cell_context_menu: Some("cell_context".into()),
     }))
@@ -1363,6 +1389,7 @@ fn navigable_data_table_ir() -> IrNode {
         row_click: Some("select_row".into()),
         cell_click: Some("select_cell".into()),
         sort_callback: Some("sort_table".into()),
+        column_reorder: None,
         row_context_menu: Some("row_context".into()),
         cell_context_menu: Some("cell_context".into()),
     }))

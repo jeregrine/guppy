@@ -552,13 +552,14 @@ defmodule Guppy.ServerNativeTest do
     ir =
       Guppy.IR.div([
         Guppy.IR.data_table(
-          [%{id: "task", label: "Task"}],
+          [%{id: "task", label: "Task"}, %{id: "status", label: "Status"}],
           [%{id: "row_1", cells: [%{column_id: "task", children: [Guppy.IR.text("Task")]}]}],
           id: "tasks",
           events: %{
             row_click: "select_row",
             cell_click: "select_cell",
             sort: "sort_table",
+            column_reorder: "reorder_column",
             row_context_menu: "row_context",
             cell_context_menu: "cell_context"
           }
@@ -592,6 +593,30 @@ defmodule Guppy.ServerNativeTest do
                       table_id: "tasks",
                       row_id: "row_1",
                       column_id: "task"
+                    }}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      view_id,
+      :data_table_column_reorder,
+      %{
+        id: "tasks.header.task",
+        callback: "reorder_column",
+        table_id: "tasks",
+        column_id: "task",
+        target_column_id: "status",
+        direction: "right"
+      }
+    })
+
+    assert_receive {:guppy_event, ^view_id,
+                    %{
+                      type: :data_table_column_reorder,
+                      callback: "reorder_column",
+                      table_id: "tasks",
+                      column_id: "task",
+                      target_column_id: "status",
+                      direction: "right"
                     }}
 
     send(Process.whereis(server), {

@@ -205,6 +205,7 @@ pub(crate) fn allowed_node_event_fields(
                 "row_click",
                 "cell_click",
                 "sort",
+                "column_reorder",
                 "row_context_menu",
                 "cell_context_menu",
             ],

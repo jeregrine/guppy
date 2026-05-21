@@ -391,6 +391,7 @@ defmodule Guppy.ComponentTest do
              row_click: "table_row_clicked",
              cell_click: "table_cell_clicked",
              sort: "table_sorted",
+             column_reorder: "table_column_reordered",
              row_context_menu: "table_row_context",
              cell_context_menu: "table_cell_context"
            }

@@ -65,6 +65,27 @@ pub(crate) fn emit_data_table_event(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub(crate) fn emit_data_table_column_reorder(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    table_id: &str,
+    column_id: &str,
+    target_column_id: &str,
+    direction: &str,
+) {
+    let _ = native_events::send_data_table_column_reorder_event(
+        view_id,
+        node_id,
+        callback_id,
+        table_id,
+        column_id,
+        target_column_id,
+        direction,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn emit_data_table_context_menu(
     view_id: u64,
     node_id: &str,

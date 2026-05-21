@@ -444,6 +444,7 @@ defmodule Guppy.Server do
                :data_table_row_click,
                :data_table_cell_click,
                :data_table_sort,
+               :data_table_column_reorder,
                :tree_select,
                :tree_toggle
              ] and

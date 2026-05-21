@@ -568,6 +568,7 @@ fn decodes_data_table_node() {
                 ("row_click", "select_row"),
                 ("cell_click", "select_cell"),
                 ("sort", "sort_table"),
+                ("column_reorder", "reorder_column"),
                 ("row_context_menu", "row_context"),
                 ("cell_context_menu", "cell_context"),
             ]),
@@ -594,6 +595,7 @@ fn decodes_data_table_node() {
                 DataTableSortDirection::Asc
             );
             assert_eq!(table.sort_callback.as_deref(), Some("sort_table"));
+            assert_eq!(table.column_reorder.as_deref(), Some("reorder_column"));
             assert_eq!(table.row_context_menu.as_deref(), Some("row_context"));
             assert_eq!(table.cell_context_menu.as_deref(), Some("cell_context"));
         }

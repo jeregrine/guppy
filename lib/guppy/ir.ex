@@ -609,6 +609,7 @@ defmodule Guppy.IR do
           optional(:row_click) => String.t(),
           optional(:cell_click) => String.t(),
           optional(:sort) => String.t(),
+          optional(:column_reorder) => String.t(),
           optional(:row_context_menu) => String.t(),
           optional(:cell_context_menu) => String.t()
         }
@@ -1818,6 +1819,7 @@ defmodule Guppy.IR do
              :row_click,
              :cell_click,
              :sort,
+             :column_reorder,
              :row_context_menu,
              :cell_context_menu
            ]),

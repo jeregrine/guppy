@@ -65,6 +65,7 @@ pub(crate) fn render(
         &table_id,
         table.columns.as_ref(),
         table.sort_callback.is_some(),
+        table.column_reorder.is_some(),
         cx,
     );
     let body_focus_handles = prepare_body_focus_handles(pass, &table_id, table, cx);
@@ -140,6 +141,7 @@ pub(crate) fn render(
         table.columns.as_ref(),
         &table.header_style,
         table.sort_callback.as_deref(),
+        table.column_reorder.as_deref(),
         &header_focus_handles,
         &body_focus_handles,
         first_row_id.as_deref(),
@@ -165,15 +167,16 @@ fn prepare_header_focus_handles(
     table_id: &str,
     columns: &[DataTableColumn],
     sort_enabled: bool,
+    reorder_enabled: bool,
     cx: &mut Context<BridgeView>,
 ) -> HashMap<String, FocusHandle> {
-    if !sort_enabled {
+    if !sort_enabled && !reorder_enabled {
         return HashMap::new();
     }
 
     columns
         .iter()
-        .filter(|column| column.sortable)
+        .filter(|column| (sort_enabled && column.sortable) || reorder_enabled)
         .map(|column| {
             let header_id = format!("{table_id}.header.{}", column.id);
             let focus_handle = pass.ensure_focus_handle(&header_id, cx, Some(true), None);
@@ -225,14 +228,14 @@ fn header_focus_neighbors(
         .into_iter()
         .flatten()
         .rev()
-        .find(|column| column.sortable)
+        .find(|column| focus_handles.contains_key(&column.id))
         .and_then(|column| focus_handles.get(&column.id))
         .cloned();
     let next = columns
         .get(column_index + 1..)
         .into_iter()
         .flatten()
-        .find(|column| column.sortable)
+        .find(|column| focus_handles.contains_key(&column.id))
         .and_then(|column| focus_handles.get(&column.id))
         .cloned();
 
@@ -245,6 +248,7 @@ fn render_header(
     columns: &[DataTableColumn],
     header_style: &DivStyle,
     sort_callback: Option<&str>,
+    column_reorder: Option<&str>,
     focus_handles: &HashMap<String, FocusHandle>,
     body_focus_handles: &DataTableFocusHandles,
     first_row_id: Option<&str>,
@@ -268,19 +272,19 @@ fn render_header(
                 .get(&column.id)
                 .is_some_and(|handle| handle.is_focused(window));
 
+        if let Some(handle) = focus_handles.get(&column.id) {
+            let focus_handle = handle.clone();
+            cell = cell
+                .track_focus(&focus_handle)
+                .focusable()
+                .on_any_mouse_down(move |_, window, _| {
+                    focus_handle.focus(window);
+                });
+        }
+
         if column.sortable
             && let Some(callback_id) = sort_callback
         {
-            if let Some(handle) = focus_handles.get(&column.id) {
-                let focus_handle = handle.clone();
-                cell = cell
-                    .track_focus(&focus_handle)
-                    .focusable()
-                    .on_any_mouse_down(move |_, window, _| {
-                        focus_handle.focus(window);
-                    });
-            }
-
             let click_callback_id = callback_id.to_owned();
             let click_table_id = table_id.to_owned();
             let click_column_id = column.id.clone();
@@ -296,11 +300,22 @@ fn render_header(
                     Some(&click_column_id),
                 );
             });
+        }
 
-            let key_callback_id = callback_id.to_owned();
+        if (column.sortable && sort_callback.is_some()) || column_reorder.is_some() {
+            let column_sortable = column.sortable;
+            let sort_callback_id = sort_callback.map(str::to_owned);
+            let reorder_callback_id = column_reorder.map(str::to_owned);
             let key_table_id = table_id.to_owned();
             let key_column_id = column.id.clone();
             let key_header_id = header_id.clone();
+            let previous_column_id = column_index
+                .checked_sub(1)
+                .and_then(|index| columns.get(index))
+                .map(|column| column.id.clone());
+            let next_column_id = columns
+                .get(column_index + 1)
+                .map(|column| column.id.clone());
             let down_focus = first_row_id
                 .and_then(|row_id| {
                     body_focus_handles
@@ -312,16 +327,54 @@ fn render_header(
                 header_focus_neighbors(columns, focus_handles, column_index);
             let first_focus = columns
                 .iter()
-                .find(|column| column.sortable)
+                .find(|column| focus_handles.contains_key(&column.id))
                 .and_then(|column| focus_handles.get(&column.id))
                 .cloned();
             let last_focus = columns
                 .iter()
                 .rev()
-                .find(|column| column.sortable)
+                .find(|column| focus_handles.contains_key(&column.id))
                 .and_then(|column| focus_handles.get(&column.id))
                 .cloned();
             cell = cell.on_key_down(move |event: &KeyDownEvent, window, cx| {
+                if event.keystroke.modifiers.alt
+                    && let Some(callback_id) = reorder_callback_id.as_deref()
+                {
+                    match event.keystroke.key.as_str() {
+                        "left" => {
+                            if let Some(target_column_id) = previous_column_id.as_deref() {
+                                events::emit_data_table_column_reorder(
+                                    view_id,
+                                    &key_header_id,
+                                    callback_id,
+                                    &key_table_id,
+                                    &key_column_id,
+                                    target_column_id,
+                                    "left",
+                                );
+                                cx.stop_propagation();
+                                return;
+                            }
+                        }
+                        "right" => {
+                            if let Some(target_column_id) = next_column_id.as_deref() {
+                                events::emit_data_table_column_reorder(
+                                    view_id,
+                                    &key_header_id,
+                                    callback_id,
+                                    &key_table_id,
+                                    &key_column_id,
+                                    target_column_id,
+                                    "right",
+                                );
+                                cx.stop_propagation();
+                                return;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
                 match event.keystroke.key.as_str() {
                     "left" => {
                         if let Some(handle) = left_focus.as_ref() {
@@ -361,12 +414,15 @@ fn render_header(
                     _ => {}
                 }
 
-                if is_header_activation_key(event) {
+                if column_sortable
+                    && let Some(callback_id) = sort_callback_id.as_deref()
+                    && is_header_activation_key(event)
+                {
                     events::emit_data_table_event(
                         view_id,
                         SORT_EVENT,
                         &key_header_id,
-                        &key_callback_id,
+                        callback_id,
                         &key_table_id,
                         None,
                         Some(&key_column_id),

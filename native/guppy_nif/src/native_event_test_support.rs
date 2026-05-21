@@ -41,6 +41,8 @@ pub(crate) struct SemanticEventSnapshot {
     pub table_id: Option<String>,
     pub row_id: Option<String>,
     pub column_id: Option<String>,
+    pub target_column_id: Option<String>,
+    pub direction: Option<String>,
     pub tree_id: Option<String>,
     pub item_id: Option<String>,
 }
@@ -130,6 +132,8 @@ pub(super) fn record_semantic_event_snapshot_for_test(
     table_id: Option<String>,
     row_id: Option<String>,
     column_id: Option<String>,
+    target_column_id: Option<String>,
+    direction: Option<String>,
     tree_id: Option<String>,
     item_id: Option<String>,
 ) {
@@ -142,6 +146,8 @@ pub(super) fn record_semantic_event_snapshot_for_test(
             table_id,
             row_id,
             column_id,
+            target_column_id,
+            direction,
             tree_id,
             item_id,
         });

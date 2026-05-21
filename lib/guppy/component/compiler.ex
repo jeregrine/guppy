@@ -291,7 +291,14 @@ defmodule Guppy.Component.Compiler do
         renamed_attr_entry(attrs, "sort_state", :sort, :expr_only, caller),
         events_entry(
           attrs,
-          ["row_click", "cell_click", "sort", "row_context_menu", "cell_context_menu"],
+          [
+            "row_click",
+            "cell_click",
+            "sort",
+            "column_reorder",
+            "row_context_menu",
+            "cell_context_menu"
+          ],
           caller
         )
       ])
@@ -1543,7 +1550,15 @@ defmodule Guppy.Component.Compiler do
       "selected_row_id",
       "selected_cell",
       "sort_state"
-    ] ++ ["row_click", "cell_click", "sort", "row_context_menu", "cell_context_menu"]
+    ] ++
+      [
+        "row_click",
+        "cell_click",
+        "sort",
+        "column_reorder",
+        "row_context_menu",
+        "cell_context_menu"
+      ]
   end
 
   defp tree_allowed_attrs do

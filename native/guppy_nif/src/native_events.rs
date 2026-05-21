@@ -457,6 +457,8 @@ pub(crate) fn send_data_table_event(
             column_id_value.map(str::to_owned),
             None,
             None,
+            None,
+            None,
         );
         record_event_send(Instant::now(), false);
         0
@@ -482,6 +484,53 @@ pub(crate) fn send_data_table_event(
     }
 }
 
+pub(crate) fn send_data_table_column_reorder_event(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    table_id_value: &str,
+    column_id_value: &str,
+    target_column_id_value: &str,
+    direction_value: &str,
+) -> i32 {
+    #[cfg(test)]
+    {
+        record_semantic_event_snapshot_for_test(
+            "data_table_column_reorder",
+            view_id,
+            node_id.to_owned(),
+            callback_id.to_owned(),
+            Some(table_id_value.to_owned()),
+            None,
+            Some(column_id_value.to_owned()),
+            Some(target_column_id_value.to_owned()),
+            Some(direction_value.to_owned()),
+            None,
+            None,
+        );
+        record_event_send(Instant::now(), false);
+        0
+    }
+
+    #[cfg(not(test))]
+    send_event(view_id, data_table_column_reorder, move |env| {
+        map_from_pairs(
+            env,
+            [
+                (id().encode(env), node_id.encode(env)),
+                (callback().encode(env), callback_id.encode(env)),
+                (table_id().encode(env), table_id_value.encode(env)),
+                (column_id().encode(env), column_id_value.encode(env)),
+                (
+                    target_column_id().encode(env),
+                    target_column_id_value.encode(env),
+                ),
+                (direction().encode(env), direction_value.encode(env)),
+            ],
+        )
+    })
+}
+
 pub(crate) fn send_data_table_context_menu_event(
     view_id: u64,
     node_id: &str,
@@ -503,6 +552,8 @@ pub(crate) fn send_data_table_context_menu_event(
             Some(table_id_value.to_owned()),
             Some(row_id_value.to_owned()),
             column_id_value.map(str::to_owned),
+            None,
+            None,
             None,
             None,
         );
@@ -550,6 +601,8 @@ pub(crate) fn send_tree_context_menu_event(
             None,
             None,
             None,
+            None,
+            None,
             Some(tree_id_value.to_owned()),
             Some(item_id_value.to_owned()),
         );
@@ -593,6 +646,8 @@ pub(crate) fn send_tree_event(
             view_id,
             node_id.to_owned(),
             callback_id.to_owned(),
+            None,
+            None,
             None,
             None,
             None,
