@@ -4,9 +4,10 @@ use crate::{
     ir::{DivStyle, TreeItem, TreeNode},
 };
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, SharedString,
-    StatefulInteractiveElement, Styled, Window, div, list,
+    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
+    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div, list,
 };
+use std::collections::HashMap;
 const SELECT_EVENT: i32 = 1;
 const TOGGLE_EVENT: i32 = 2;
 
@@ -25,13 +26,20 @@ pub(crate) fn render(
     path: &str,
     tree: &TreeNode,
     _window: &mut Window,
-    _cx: &mut Context<BridgeView>,
+    cx: &mut Context<BridgeView>,
 ) -> AnyElement {
     let view_id = pass.view_id();
     let node_id = NodeIdentity::new(view_id, path, tree.id.as_deref());
     let tree_id = node_id.to_string();
     let visible_items = flatten_visible_tree_items(&tree.nodes);
     let state = pass.retain_list_state(&format!("{tree_id}.rows"), visible_items.len());
+    let row_focus_handles = prepare_row_focus_handles(
+        pass,
+        &tree_id,
+        &visible_items,
+        tree.select.is_some() || tree.toggle.is_some() || tree.context_menu.is_some(),
+        cx,
+    );
     let row_style = tree.row_style.clone();
     let select = tree.select.clone();
     let toggle = tree.toggle.clone();
@@ -50,6 +58,7 @@ pub(crate) fn render(
                     select.as_deref(),
                     toggle.as_deref(),
                     context_menu.as_deref(),
+                    row_focus_handles.get(&item.id),
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -66,6 +75,27 @@ pub(crate) fn render(
         &tree.style,
     )
     .into_any_element()
+}
+
+fn prepare_row_focus_handles(
+    pass: &mut RenderPass<'_>,
+    tree_id: &str,
+    visible_items: &[VisibleTreeItem],
+    keyboard_enabled: bool,
+    cx: &mut Context<BridgeView>,
+) -> HashMap<String, FocusHandle> {
+    if !keyboard_enabled {
+        return HashMap::new();
+    }
+
+    visible_items
+        .iter()
+        .map(|item| {
+            let row_id = tree_row_id(tree_id, &item.id);
+            let focus_handle = pass.ensure_focus_handle(&row_id, cx, Some(true), None);
+            (item.id.clone(), focus_handle)
+        })
+        .collect()
 }
 
 fn flatten_visible_tree_items(items: &[TreeItem]) -> Vec<VisibleTreeItem> {
@@ -104,8 +134,9 @@ fn render_row(
     select: Option<&str>,
     toggle: Option<&str>,
     context_menu: Option<&str>,
+    focus_handle: Option<&FocusHandle>,
 ) -> AnyElement {
-    let row_id = format!("{tree_id}.row.{}", item.id);
+    let row_id = tree_row_id(tree_id, &item.id);
     let disclosure_id = format!("{row_id}.toggle");
     let label_id = format!("{row_id}.label");
     let indent = "  ".repeat(item.depth);
@@ -166,6 +197,57 @@ fn render_row(
         .flex_row()
         .children([disclosure.into_any_element(), label.into_any_element()]);
 
+    if let Some(handle) = focus_handle {
+        let focus_handle = handle.clone();
+        row = row
+            .track_focus(&focus_handle)
+            .focusable()
+            .on_any_mouse_down(move |_, window, _| {
+                focus_handle.focus(window);
+            });
+    }
+
+    if select.is_some() || (item.has_children && toggle.is_some()) {
+        let select_callback = select.map(str::to_owned);
+        let toggle_callback = toggle.map(str::to_owned);
+        let key_tree_id = tree_id.to_owned();
+        let key_item_id = item.id.clone();
+        let key_row_id = row_id.clone();
+        let item = item.clone();
+        row = row.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            match tree_keyboard_action(
+                event,
+                &item,
+                select_callback.as_deref(),
+                toggle_callback.as_deref(),
+            ) {
+                Some(TreeKeyboardAction::Select(callback_id)) => {
+                    events::emit_tree_event(
+                        view_id,
+                        SELECT_EVENT,
+                        &key_row_id,
+                        callback_id,
+                        &key_tree_id,
+                        &key_item_id,
+                    );
+                    cx.stop_propagation();
+                }
+                Some(TreeKeyboardAction::Toggle(callback_id)) => {
+                    events::emit_tree_event(
+                        view_id,
+                        TOGGLE_EVENT,
+                        &key_row_id,
+                        callback_id,
+                        &key_tree_id,
+                        &key_item_id,
+                    );
+                    cx.stop_propagation();
+                }
+                None => {}
+            }
+        });
+    }
+
     if let Some(callback_id) = context_menu {
         let callback_id = callback_id.to_owned();
         let tree_id = tree_id.to_owned();
@@ -183,6 +265,31 @@ fn render_row(
     }
 
     apply_tree_row_styles(row, row_style, &item.style).into_any_element()
+}
+
+fn tree_row_id(tree_id: &str, item_id: &str) -> String {
+    format!("{tree_id}.row.{item_id}")
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum TreeKeyboardAction<'a> {
+    Select(&'a str),
+    Toggle(&'a str),
+}
+
+fn tree_keyboard_action<'a>(
+    event: &KeyDownEvent,
+    item: &VisibleTreeItem,
+    select: Option<&'a str>,
+    toggle: Option<&'a str>,
+) -> Option<TreeKeyboardAction<'a>> {
+    match event.keystroke.key.as_str() {
+        "enter" => select.map(TreeKeyboardAction::Select),
+        "space" if item.has_children => toggle.map(TreeKeyboardAction::Toggle),
+        "right" if item.has_children && !item.expanded => toggle.map(TreeKeyboardAction::Toggle),
+        "left" if item.has_children && item.expanded => toggle.map(TreeKeyboardAction::Toggle),
+        _ => None,
+    }
 }
 
 fn apply_tree_row_styles<E>(element: E, row_style: &DivStyle, item_style: &DivStyle) -> E

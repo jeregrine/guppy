@@ -479,6 +479,38 @@ fn simulated_textarea_context_menu_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn tree_rows_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 57,
+        ir: tree_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("enter");
+
+    let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "tree_select");
+    assert_eq!(event.view_id, 57);
+    assert_eq!(event.node_id, "outline.row.root");
+    assert_eq!(event.callback_id, "select_node");
+    assert_eq!(event.tree_id.as_deref(), Some("outline"));
+    assert_eq!(event.item_id.as_deref(), Some("root"));
+
+    cx.simulate_keystrokes("space");
+
+    let event = crate::take_semantic_event_snapshot_for_test().unwrap();
+    assert_eq!(event.event, "tree_toggle");
+    assert_eq!(event.view_id, 57);
+    assert_eq!(event.node_id, "outline.row.root");
+    assert_eq!(event.callback_id, "toggle_node");
+    assert_eq!(event.tree_id.as_deref(), Some("outline"));
+    assert_eq!(event.item_id.as_deref(), Some("root"));
+}
+
+#[gpui::test]
 fn render_retains_data_table_and_tree_list_states(cx: &mut gpui::TestAppContext) {
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 55,
