@@ -38,7 +38,7 @@ Current popover/select support is first-pass. Native apps need reliable overlays
 Focus and keyboard behavior are now more important than broadening visual primitives.
 
 - [x] Define focus scopes and roving-focus patterns for list/tree/table/menu-like widgets: documented in `docs/focus-keyboard.md` with current table/tree/select/list behavior and deferred gaps.
-- [ ] Add shortcut bubbling/priority rules that work with app commands, focused controls, and text inputs. Current element-local propagation notes and focused child-before-ancestor shortcut priority are documented in `docs/focus-keyboard.md`; explicit cross-scope app-command priority and editor/text-input parity remain.
+- [ ] Add shortcut bubbling/priority rules that work with app commands, focused controls, and text inputs. Current element-local propagation notes, focused child-before-ancestor shortcut priority, and explicit text-input/textarea shortcuts are documented in `docs/focus-keyboard.md`; explicit cross-scope app-command priority remains.
 - [ ] Improve data-table/tree keyboard navigation, row/cell/item focus-visible behavior, selection affordances, disclosure behavior, and context-menu integration. Done so far: table sortable headers/rows/cells and tree rows are keyboard-actionable for activation/disclosure/context-menu callbacks, table sortable headers/body rows/cells support arrow-key focus movement including sortable header/body transitions, tree rows support Up/Down focus movement, and `examples/data_table_tree.exs` demonstrates explicit Elixir-owned selection styles; richer roving navigation and native focus-visible/accessibility affordances remain.
 - [ ] Add data-table column resize/reorder and pinned header/column behavior only after navigation/focus semantics are stable.
 - [ ] Audit GPUI accessibility/semantics support and expose labels/roles/states where practical through typed IR.
@@ -57,7 +57,7 @@ Before external users rely on Guppy, make source builds and release consumption 
 Real native apps often need more than plain inputs. Treat this as a focused design effort rather than incremental prop sprawl.
 
 - [ ] Audit GPUI text/editor capabilities available in `gpui = 0.2.2` and decide what belongs in Guppy now versus later.
-- [ ] Improve `text_input`/`textarea`: selection APIs, cursor control, scroll control, validation hooks, keyboard shortcut behavior, IME correctness, and native event coverage.
+- [ ] Improve `text_input`/`textarea`: selection APIs, cursor control, scroll control, validation hooks, IME correctness, and native event coverage. Explicit `actions`/`shortcuts` now work on text inputs/textareas; deeper editor parity remains.
 - [ ] Design a richer editor primitive only if a concrete example needs it: rich text editing, syntax highlighting, undo/redo integration, diagnostics, and multi-cursor/selection behavior.
 - [ ] Ensure editor-like controls interact correctly with commands, context menus, themes, focus scopes, and clipboard APIs.
 
