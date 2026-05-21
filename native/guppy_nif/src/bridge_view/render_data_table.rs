@@ -256,6 +256,7 @@ fn header_focus_neighbors(
     (previous, next)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_header(
     view_id: u64,
     table_id: &str,

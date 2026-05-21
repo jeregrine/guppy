@@ -168,6 +168,7 @@ fn collect_visible_tree_items(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_row(
     view_id: u64,
     tree_id: &str,
