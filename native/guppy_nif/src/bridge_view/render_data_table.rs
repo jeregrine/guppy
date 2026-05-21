@@ -49,8 +49,9 @@ struct CellFocusNeighbors {
 }
 
 #[derive(Clone)]
-struct DataTableColumnResizeDragState {
+struct DataTableHeaderDragState {
     last_offset_x: Rc<Cell<f32>>,
+    reorder_emitted: Rc<Cell<bool>>,
 }
 
 pub(crate) fn render(
@@ -481,34 +482,72 @@ fn render_header(
             });
         }
 
-        if let Some(callback_id) = column_resize {
-            let callback_id = callback_id.to_owned();
-            let resize_table_id = table_id.to_owned();
-            let resize_column_id = column.id.clone();
-            let resize_header_id = header_id.clone();
-            let drag_state = DataTableColumnResizeDragState {
+        if column_resize.is_some() || column_reorder.is_some() {
+            let resize_callback_id = column_resize.map(str::to_owned);
+            let reorder_callback_id = column_reorder.map(str::to_owned);
+            let drag_table_id = table_id.to_owned();
+            let drag_column_id = column.id.clone();
+            let drag_header_id = header_id.clone();
+            let previous_column_id = column_index
+                .checked_sub(1)
+                .and_then(|index| columns.get(index))
+                .map(|column| column.id.clone());
+            let next_column_id = columns
+                .get(column_index + 1)
+                .map(|column| column.id.clone());
+            let drag_state = DataTableHeaderDragState {
                 last_offset_x: Rc::new(Cell::new(0.0)),
+                reorder_emitted: Rc::new(Cell::new(false)),
             };
             cell = cell
-                .on_drag_move::<DataTableColumnResizeDragState>(move |event, _, cx| {
+                .on_drag_move::<DataTableHeaderDragState>(move |event, _, cx| {
                     let drag = event.drag(cx);
                     let offset_x = f32::from(event.event.position.x - event.bounds.origin.x);
                     let delta = (offset_x - drag.last_offset_x.get()).round() as i32;
                     drag.last_offset_x.set(offset_x);
 
-                    if delta != 0 {
+                    if event.event.modifiers.alt
+                        && delta != 0
+                        && !drag.reorder_emitted.get()
+                        && let Some(callback_id) = reorder_callback_id.as_deref()
+                    {
+                        let (direction, target_column_id) = if delta < 0 {
+                            ("left", previous_column_id.as_deref())
+                        } else {
+                            ("right", next_column_id.as_deref())
+                        };
+
+                        if let Some(target_column_id) = target_column_id {
+                            events::emit_data_table_column_reorder(
+                                view_id,
+                                &drag_header_id,
+                                callback_id,
+                                &drag_table_id,
+                                &drag_column_id,
+                                target_column_id,
+                                direction,
+                            );
+                            drag.reorder_emitted.set(true);
+                        }
+                        return;
+                    }
+
+                    if delta != 0
+                        && let Some(callback_id) = resize_callback_id.as_deref()
+                    {
                         events::emit_data_table_column_resize(
                             view_id,
-                            &resize_header_id,
-                            &callback_id,
-                            &resize_table_id,
-                            &resize_column_id,
+                            &drag_header_id,
+                            callback_id,
+                            &drag_table_id,
+                            &drag_column_id,
                             delta,
                         );
                     }
                 })
                 .on_drag(drag_state, |drag, cursor_offset, _, cx| {
                     drag.last_offset_x.set(f32::from(cursor_offset.x));
+                    drag.reorder_emitted.set(false);
                     cx.new(|_| Empty)
                 });
         }
