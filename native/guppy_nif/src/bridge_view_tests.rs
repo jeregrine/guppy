@@ -314,6 +314,18 @@ fn uniform_list_items_support_keyboard_actions_and_arrow_focus(cx: &mut gpui::Te
     assert_eq!(event.node_id.as_deref(), Some("uniform_items.item_1"));
     assert_eq!(event.callback_id.as_deref(), Some("uniform_clicked"));
 
+    cx.simulate_keystrokes("end");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["uniform_items.item_2"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("home");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["uniform_items.item_1"].is_focused(window));
+    });
+
     cx.simulate_keystrokes("down");
 
     view.update_in(cx, |view, window, _| {
@@ -405,6 +417,35 @@ fn list_rows_support_arrow_focus(cx: &mut gpui::TestAppContext) {
     });
 
     cx.simulate_keystrokes("up");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["todo_list.row_1"].is_focused(window));
+    });
+}
+
+#[gpui::test]
+fn list_rows_support_home_end_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 72,
+        ir: keyboard_list_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["todo_list.row_1"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("end");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["todo_list.row_2"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("home");
 
     view.update_in(cx, |view, window, _| {
         assert!(view.retained.focus_handles["todo_list.row_1"].is_focused(window));
