@@ -480,6 +480,35 @@ fn simulated_textarea_context_menu_reaches_native_event_bridge(cx: &mut gpui::Te
 }
 
 #[gpui::test]
+fn data_table_header_arrow_keys_move_focus(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 64,
+        ir: header_navigation_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.task"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("right");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.status"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("left");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["tasks.header.task"].is_focused(window));
+    });
+}
+
+#[gpui::test]
 fn data_table_header_down_and_cell_up_move_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
@@ -852,6 +881,42 @@ fn data_table_ir() -> IrNode {
         cell_style: Vec::new().into(),
         selected_row_id: Some("row_1".into()),
         selected_cell: Some(("row_1".into(), "task".into())),
+        sort: None,
+        row_click: Some("select_row".into()),
+        cell_click: Some("select_cell".into()),
+        sort_callback: Some("sort_table".into()),
+        row_context_menu: Some("row_context".into()),
+        cell_context_menu: Some("cell_context".into()),
+    }))
+}
+
+fn header_navigation_data_table_ir() -> IrNode {
+    IrNode::DataTable(Box::new(DataTableNode {
+        id: Some("tasks".into()),
+        columns: vec![
+            DataTableColumn {
+                id: "task".into(),
+                label: "Task".into(),
+                width: DataTableColumnWidth::Fr(1),
+                sortable: true,
+                style: Vec::new().into(),
+            },
+            DataTableColumn {
+                id: "status".into(),
+                label: "Status".into(),
+                width: DataTableColumnWidth::Fr(1),
+                sortable: true,
+                style: Vec::new().into(),
+            },
+        ]
+        .into(),
+        rows: vec![data_table_row_for_navigation("row_1", "Ship", "Ready")].into(),
+        style: vec![StyleOp::W96, StyleOp::H32].into(),
+        header_style: Vec::new().into(),
+        row_style: Vec::new().into(),
+        cell_style: Vec::new().into(),
+        selected_row_id: None,
+        selected_cell: None,
         sort: None,
         row_click: Some("select_row".into()),
         cell_click: Some("select_cell".into()),

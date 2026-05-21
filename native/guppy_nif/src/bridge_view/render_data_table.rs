@@ -187,6 +187,30 @@ fn prepare_body_focus_handles(
     handles
 }
 
+fn header_focus_neighbors(
+    columns: &[DataTableColumn],
+    focus_handles: &HashMap<String, FocusHandle>,
+    column_index: usize,
+) -> (Option<FocusHandle>, Option<FocusHandle>) {
+    let previous = columns
+        .get(..column_index)
+        .into_iter()
+        .flatten()
+        .rev()
+        .find(|column| column.sortable)
+        .and_then(|column| focus_handles.get(&column.id))
+        .cloned();
+    let next = columns
+        .get(column_index + 1..)
+        .into_iter()
+        .flatten()
+        .find(|column| column.sortable)
+        .and_then(|column| focus_handles.get(&column.id))
+        .cloned();
+
+    (previous, next)
+}
+
 fn render_header(
     view_id: u64,
     table_id: &str,
@@ -197,7 +221,7 @@ fn render_header(
     body_focus_handles: &DataTableFocusHandles,
     first_row_id: Option<&str>,
 ) -> AnyElement {
-    let children = columns.iter().map(|column| {
+    let children = columns.iter().enumerate().map(|(column_index, column)| {
         let header_id = format!("{table_id}.header.{}", column.id);
         let mut cell = apply_column_width(
             apply_div_style(
@@ -250,13 +274,32 @@ fn render_header(
                         .get(&(row_id.to_owned(), column.id.clone()))
                 })
                 .cloned();
+            let (left_focus, right_focus) =
+                header_focus_neighbors(columns, focus_handles, column_index);
             cell = cell.on_key_down(move |event: &KeyDownEvent, window, cx| {
-                if event.keystroke.key.as_str() == "down"
-                    && let Some(handle) = down_focus.as_ref()
-                {
-                    handle.focus(window);
-                    cx.stop_propagation();
-                    return;
+                match event.keystroke.key.as_str() {
+                    "left" => {
+                        if let Some(handle) = left_focus.as_ref() {
+                            handle.focus(window);
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                    "right" => {
+                        if let Some(handle) = right_focus.as_ref() {
+                            handle.focus(window);
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                    "down" => {
+                        if let Some(handle) = down_focus.as_ref() {
+                            handle.focus(window);
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                    _ => {}
                 }
 
                 if is_header_activation_key(event) {
