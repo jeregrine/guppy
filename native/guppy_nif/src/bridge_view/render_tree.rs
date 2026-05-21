@@ -18,6 +18,7 @@ struct VisibleTreeItem {
     depth: usize,
     expanded: bool,
     has_children: bool,
+    parent_id: Option<String>,
     style: DivStyle,
 }
 
@@ -57,6 +58,10 @@ pub(crate) fn render(
                 let next_focus = visible_items
                     .get(index + 1)
                     .and_then(|next_item| row_focus_handles.get(&next_item.id));
+                let parent_focus = item
+                    .parent_id
+                    .as_ref()
+                    .and_then(|parent_id| row_focus_handles.get(parent_id));
 
                 render_row(
                     view_id,
@@ -69,6 +74,7 @@ pub(crate) fn render(
                     row_focus_handles.get(&item.id),
                     previous_focus,
                     next_focus,
+                    parent_focus,
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -110,13 +116,14 @@ fn prepare_row_focus_handles(
 
 fn flatten_visible_tree_items(items: &[TreeItem]) -> Vec<VisibleTreeItem> {
     let mut visible = Vec::new();
-    collect_visible_tree_items(items, 0, &mut visible);
+    collect_visible_tree_items(items, 0, None, &mut visible);
     visible
 }
 
 fn collect_visible_tree_items(
     items: &[TreeItem],
     depth: usize,
+    parent_id: Option<&str>,
     visible: &mut Vec<VisibleTreeItem>,
 ) {
     for item in items {
@@ -127,11 +134,12 @@ fn collect_visible_tree_items(
             depth,
             expanded: item.expanded,
             has_children,
+            parent_id: parent_id.map(str::to_owned),
             style: item.style.clone(),
         });
 
         if item.expanded {
-            collect_visible_tree_items(&item.children, depth + 1, visible);
+            collect_visible_tree_items(&item.children, depth + 1, Some(&item.id), visible);
         }
     }
 }
@@ -147,6 +155,7 @@ fn render_row(
     focus_handle: Option<&FocusHandle>,
     previous_focus: Option<&FocusHandle>,
     next_focus: Option<&FocusHandle>,
+    parent_focus: Option<&FocusHandle>,
 ) -> AnyElement {
     let row_id = tree_row_id(tree_id, &item.id);
     let disclosure_id = format!("{row_id}.toggle");
@@ -229,6 +238,7 @@ fn render_row(
         let item = item.clone();
         let previous_focus = previous_focus.cloned();
         let next_focus = next_focus.cloned();
+        let parent_focus = parent_focus.cloned();
         row = row.on_key_down(move |event: &KeyDownEvent, window, cx| {
             match event.keystroke.key.as_str() {
                 "up" => {
@@ -240,6 +250,13 @@ fn render_row(
                 }
                 "down" => {
                     if let Some(handle) = next_focus.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+                "left" if !(item.has_children && item.expanded) => {
+                    if let Some(handle) = parent_focus.as_ref() {
                         handle.focus(window);
                         cx.stop_propagation();
                         return;
@@ -424,6 +441,7 @@ mod tests {
             ["open", "child", "closed"]
         );
         assert_eq!(visible[1].depth, 1);
+        assert_eq!(visible[1].parent_id.as_deref(), Some("open"));
         assert!(visible[0].has_children);
     }
 
