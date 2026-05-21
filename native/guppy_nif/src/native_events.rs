@@ -663,6 +663,16 @@ pub(crate) fn send_action_event(
     callback_id: &str,
     payload: ActionEventPayload<'_>,
 ) -> i32 {
+    #[cfg(test)]
+    record_basic_event_snapshot_for_test(
+        "action",
+        view_id,
+        Some(node_id.to_owned()),
+        Some(callback_id.to_owned()),
+        Some(payload.action.to_owned()),
+        None,
+    );
+
     send_event(view_id, action, move |env| {
         let key_char_term = optional_str_term(env, payload.key_char);
         map_from_pairs(

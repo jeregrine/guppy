@@ -1,11 +1,12 @@
 use super::{BridgeRetainedState, BridgeView, render_pass::RenderPassState};
 use crate::ir::{
     CanvasCommand, CanvasNode, ColorToken, DataTableCell, DataTableColumn, DataTableColumnWidth,
-    DataTableNode, DataTableRow, DivNode, IrNode, ListItem, ScrollAxis, StyleColor, StyleOp,
-    TreeItem, TreeNode, UniformListItem,
+    DataTableNode, DataTableRow, DivNode, IrNode, ListItem, ScrollAxis, ShortcutBinding,
+    StyleColor, StyleOp, TreeItem, TreeNode, UniformListItem,
 };
 use gpui::{
-    ListAlignment, ListState, Modifiers, MouseButton, Render, ScrollHandle, point, px, size,
+    KeybindingKeystroke, Keystroke, ListAlignment, ListState, Modifiers, MouseButton, Render,
+    ScrollHandle, point, px, size,
 };
 
 #[test]
@@ -77,6 +78,33 @@ fn simulated_gpui_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContex
     let after = crate::native_event_send_snapshot_for_test();
     assert!(after.0 > before.0);
     assert!(after.1 > before.1);
+}
+
+#[gpui::test]
+fn focused_child_shortcut_takes_priority_over_ancestor(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 65,
+        ir: nested_shortcut_divs(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["shortcut_child"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("cmd-k");
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("action", 65).unwrap();
+    assert_eq!(event.event, "action");
+    assert_eq!(event.view_id, 65);
+    assert_eq!(event.node_id.as_deref(), Some("shortcut_child"));
+    assert_eq!(event.callback_id.as_deref(), Some("child_action"));
+    assert!(crate::take_basic_event_snapshot_matching_for_test("action", 65).is_none());
 }
 
 #[gpui::test]
@@ -1092,6 +1120,71 @@ fn list_with_row_button() -> IrNode {
         item_style: Vec::new().into(),
         click: None,
         context_menu: Some("row_context".into()),
+    }
+}
+
+fn nested_shortcut_divs() -> IrNode {
+    let child = IrNode::Div(Box::new(shortcut_div(
+        "shortcut_child",
+        2,
+        "child_action",
+        vec![IrNode::text("child")],
+    )));
+
+    IrNode::Div(Box::new(shortcut_div(
+        "shortcut_parent",
+        1,
+        "parent_action",
+        vec![child],
+    )))
+}
+
+fn shortcut_div(id: &str, tab_index: isize, callback: &str, children: Vec<IrNode>) -> DivNode {
+    DivNode {
+        id: Some(id.into()),
+        style: vec![StyleOp::W96, StyleOp::H32, StyleOp::P4, StyleOp::Border1].into(),
+        hover_style: Vec::new().into(),
+        focus_style: Vec::new().into(),
+        focus_visible_style: Vec::new().into(),
+        in_focus_style: Vec::new().into(),
+        active_style: Vec::new().into(),
+        disabled_style: Vec::new().into(),
+        animation: None,
+        disabled: false,
+        stack_priority: None,
+        occlude: false,
+        focusable: false,
+        tab_stop: Some(true),
+        tab_index: Some(tab_index),
+        track_scroll: false,
+        anchor_scroll: false,
+        scroll_to: false,
+        tooltip: None,
+        shortcuts: vec![shortcut_binding("cmd-k", "open", callback)].into(),
+        children: children.into(),
+        click: None,
+        hover: None,
+        focus: None,
+        blur: None,
+        key_down: None,
+        key_up: None,
+        context_menu: None,
+        drag_start: None,
+        drag_move: None,
+        drop: None,
+        mouse_down: None,
+        mouse_up: None,
+        mouse_move: None,
+        scroll_wheel: None,
+    }
+}
+
+fn shortcut_binding(shortcut: &str, action: &str, callback: &str) -> ShortcutBinding {
+    ShortcutBinding {
+        shortcut: shortcut.into(),
+        action: action.into(),
+        callback: callback.into(),
+        parsed: KeybindingKeystroke::from_keystroke(Keystroke::parse(shortcut).unwrap()),
     }
 }
 
