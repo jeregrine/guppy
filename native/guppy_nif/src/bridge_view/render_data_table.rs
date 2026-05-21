@@ -27,6 +27,7 @@ struct DataTableFocusHandles {
 struct RowFocusNeighbors {
     previous: Option<FocusHandle>,
     next: Option<FocusHandle>,
+    first_cell: Option<FocusHandle>,
 }
 
 #[derive(Clone, Default)]
@@ -84,6 +85,12 @@ pub(crate) fn render(
                     next: next_row
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
+                    first_cell: columns.first().and_then(|column| {
+                        body_focus_handles_for_rows
+                            .cells
+                            .get(&(row.id.clone(), column.id.clone()))
+                            .cloned()
+                    }),
                 };
 
                 render_row(
@@ -443,6 +450,13 @@ fn render_row(
                         return;
                     }
                 }
+                "right" => {
+                    if let Some(handle) = row_focus_neighbors.first_cell.as_ref() {
+                        handle.focus(window);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
                 _ => {}
             }
 
@@ -544,7 +558,8 @@ fn cell_focus_neighbors(
                     .cells
                     .get(&(row_id.to_owned(), column.id.clone()))
             })
-            .cloned(),
+            .cloned()
+            .or_else(|| focus_handles.rows.get(row_id).cloned()),
         right: columns
             .get(column_index + 1)
             .and_then(|column| {
