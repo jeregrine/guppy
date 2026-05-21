@@ -153,6 +153,8 @@ pub(crate) fn allowed_node_fields(kind: &str) -> Option<&'static [&'static str]>
             "style",
             "disabled",
             "tab_index",
+            "actions",
+            "shortcuts",
             "events",
         ],
         "textarea" => &[
@@ -163,6 +165,8 @@ pub(crate) fn allowed_node_fields(kind: &str) -> Option<&'static [&'static str]>
             "style",
             "disabled",
             "tab_index",
+            "actions",
+            "shortcuts",
             "events",
         ],
         _ => return None,

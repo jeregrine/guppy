@@ -443,6 +443,39 @@ fn render_retains_scroll_and_focus_state_for_compliance_smoke(cx: &mut gpui::Tes
 }
 
 #[gpui::test]
+fn text_input_shortcuts_are_keyboard_actionable(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 66,
+        ir: IrNode::TextInput {
+            id: Some("name_input".into()),
+            value: "Jason".into(),
+            placeholder: "Name".into(),
+            style: vec![StyleOp::W96, StyleOp::H32].into(),
+            disabled: false,
+            tab_index: None,
+            shortcuts: vec![shortcut_binding("cmd-enter", "submit", "submit_name")].into(),
+            change: None,
+            focus: None,
+            blur: None,
+            context_menu: None,
+        },
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("cmd-enter");
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("action", 66).unwrap();
+    assert_eq!(event.event, "action");
+    assert_eq!(event.view_id, 66);
+    assert_eq!(event.node_id.as_deref(), Some("name_input"));
+    assert_eq!(event.callback_id.as_deref(), Some("submit_name"));
+    assert_eq!(event.value.as_deref(), Some("submit"));
+}
+
+#[gpui::test]
 fn simulated_text_input_context_menu_reaches_native_event_bridge(cx: &mut gpui::TestAppContext) {
     let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
         view_id: 50,
@@ -453,6 +486,7 @@ fn simulated_text_input_context_menu_reaches_native_event_bridge(cx: &mut gpui::
             style: vec![StyleOp::W96, StyleOp::H32].into(),
             disabled: false,
             tab_index: None,
+            shortcuts: Vec::new().into(),
             change: None,
             focus: None,
             blur: None,
@@ -486,6 +520,7 @@ fn simulated_textarea_context_menu_reaches_native_event_bridge(cx: &mut gpui::Te
             style: vec![StyleOp::W96, StyleOp::H32].into(),
             disabled: false,
             tab_index: None,
+            shortcuts: Vec::new().into(),
             change: None,
             focus: None,
             blur: None,
@@ -819,6 +854,7 @@ fn render_prunes_dead_text_input_entities(cx: &mut gpui::TestAppContext) {
             style: Vec::new().into(),
             disabled: false,
             tab_index: None,
+            shortcuts: Vec::new().into(),
             change: Some("name_changed".into()),
             focus: Some("name_focused".into()),
             blur: Some("name_blurred".into()),

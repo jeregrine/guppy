@@ -402,6 +402,14 @@ fn decodes_text_input_context_menu_events() {
         (atom("kind"), atom("text_input")),
         (atom("value"), binary("Jason")),
         (
+            atom("actions"),
+            map(vec![(binary("submit"), binary("submit_name"))]),
+        ),
+        (
+            atom("shortcuts"),
+            list(vec![tuple(vec![binary("cmd-enter"), binary("submit")])]),
+        ),
+        (
             atom("events"),
             events(vec![("change", "changed"), ("context_menu", "contexted")]),
         ),
@@ -411,10 +419,13 @@ fn decodes_text_input_context_menu_events() {
         IrNode::TextInput {
             change,
             context_menu,
+            shortcuts,
             ..
         } => {
             assert_eq!(change.as_deref(), Some("changed"));
             assert_eq!(context_menu.as_deref(), Some("contexted"));
+            assert_eq!(shortcuts.len(), 1);
+            assert_eq!(shortcuts[0].callback, "submit_name");
         }
         other => panic!("expected text input, got {other:?}"),
     }
@@ -2159,6 +2170,7 @@ fn list_row_validation_rejects_stateful_controls() {
         style: Vec::new().into(),
         disabled: false,
         tab_index: None,
+        shortcuts: Vec::new().into(),
         change: None,
         focus: None,
         blur: None,

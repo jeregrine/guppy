@@ -751,6 +751,8 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:disabled) => boolean(),
           optional(:tab_index) => integer(),
+          optional(:actions) => action_bindings(),
+          optional(:shortcuts) => [shortcut_binding()],
           optional(:events) => text_input_events()
         }
 
@@ -762,6 +764,8 @@ defmodule Guppy.IR do
           optional(:style) => style(),
           optional(:disabled) => boolean(),
           optional(:tab_index) => integer(),
+          optional(:actions) => action_bindings(),
+          optional(:shortcuts) => [shortcut_binding()],
           optional(:events) => text_input_events()
         }
 
@@ -1479,6 +1483,8 @@ defmodule Guppy.IR do
     style = Keyword.get(opts, :style)
     disabled = Keyword.get(opts, :disabled)
     tab_index = Keyword.get(opts, :tab_index)
+    actions = Keyword.get(opts, :actions)
+    shortcuts = Keyword.get(opts, :shortcuts)
     events = Keyword.get(opts, :events)
 
     %{kind: kind, value: value}
@@ -1487,6 +1493,8 @@ defmodule Guppy.IR do
     |> maybe_put(:style, style)
     |> maybe_put(:disabled, disabled)
     |> maybe_put(:tab_index, tab_index)
+    |> maybe_put(:actions, actions)
+    |> maybe_put(:shortcuts, shortcuts)
     |> maybe_put(:events, events)
   end
 
@@ -1658,8 +1666,30 @@ defmodule Guppy.IR do
       :shortcuts,
       :events
     ],
-    text_input: [:kind, :value, :id, :placeholder, :style, :disabled, :tab_index, :events],
-    textarea: [:kind, :value, :id, :placeholder, :style, :disabled, :tab_index, :events]
+    text_input: [
+      :kind,
+      :value,
+      :id,
+      :placeholder,
+      :style,
+      :disabled,
+      :tab_index,
+      :actions,
+      :shortcuts,
+      :events
+    ],
+    textarea: [
+      :kind,
+      :value,
+      :id,
+      :placeholder,
+      :style,
+      :disabled,
+      :tab_index,
+      :actions,
+      :shortcuts,
+      :events
+    ]
   }
 
   defp validate_node(%{kind: :text, content: content} = node) when is_binary(content) do
@@ -1922,6 +1952,8 @@ defmodule Guppy.IR do
          :ok <- validate_style(Map.get(node, :style)),
          :ok <- validate_optional_boolean(Map.get(node, :disabled), :disabled),
          :ok <- validate_optional_integer(Map.get(node, :tab_index), :tab_index),
+         :ok <- validate_actions(Map.get(node, :actions)),
+         :ok <- validate_shortcuts(Map.get(node, :shortcuts), Map.get(node, :actions)),
          :ok <- validate_events(Map.get(node, :events), [:change, :focus, :blur, :context_menu]) do
       :ok
     end

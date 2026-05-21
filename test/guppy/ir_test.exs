@@ -723,6 +723,8 @@ defmodule Guppy.IRTest do
         style: [{:w_px, 240}],
         disabled: false,
         tab_index: 4,
+        actions: %{"submit" => "submit_name"},
+        shortcuts: [{"cmd-enter", "submit"}],
         events: %{
           change: "name_changed",
           focus: "name_focused",
@@ -734,6 +736,8 @@ defmodule Guppy.IRTest do
     assert :ok = Guppy.IR.validate(text_input_ir)
     assert text_input_ir.placeholder == "Type a name"
     assert text_input_ir.tab_index == 4
+    assert text_input_ir.actions == %{"submit" => "submit_name"}
+    assert text_input_ir.shortcuts == [{"cmd-enter", "submit"}]
 
     assert text_input_ir.events == %{
              change: "name_changed",

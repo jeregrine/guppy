@@ -1,10 +1,12 @@
 use super::{identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
 use crate::bridge_text_input::{BridgeTextInput, BridgeTextInputOptions};
 use crate::bridge_view::BridgeView;
-use crate::ir::DivStyle;
+use crate::ir::{DivStyle, ShortcutBinding};
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, MouseButton, ParentElement, Window, div,
+    AnyElement, Context, InteractiveElement, IntoElement, KeyDownEvent, MouseButton, ParentElement,
+    Window, div,
 };
+use std::sync::Arc;
 
 pub(crate) struct TextInputSpec<'a> {
     pub path: &'a str,
@@ -14,6 +16,7 @@ pub(crate) struct TextInputSpec<'a> {
     pub style: &'a DivStyle,
     pub disabled: bool,
     pub tab_index: Option<isize>,
+    pub shortcuts: &'a Arc<[ShortcutBinding]>,
     pub change: Option<&'a str>,
     pub focus: Option<&'a str>,
     pub blur: Option<&'a str>,
@@ -85,6 +88,18 @@ pub(crate) fn render(
 
     let mut wrapper = div().id(node_id.to_shared_string()).child(entity);
 
+    if !spec.disabled && !spec.shortcuts.is_empty() {
+        let view_id = pass.view_id();
+        let node_id = node_id.to_string();
+        let shortcuts = spec.shortcuts.clone();
+        wrapper = wrapper.on_key_down(move |event: &KeyDownEvent, _, cx| {
+            if let Some(shortcut) = super::events::matching_shortcut(event, &shortcuts) {
+                super::events::emit_action(view_id, &node_id, shortcut, event);
+                cx.stop_propagation();
+            }
+        });
+    }
+
     if let Some(callback_id) = spec.context_menu {
         let view_id = pass.view_id();
         let node_id = node_id.to_string();
@@ -116,6 +131,7 @@ mod tests {
         view.update_in(cx, |view, _window, view_cx| {
             let mut pass = super::RenderPass::new(view.view_id, &mut view.retained);
             let style: DivStyle = Vec::new().into();
+            let shortcuts = crate::ir::empty_shortcuts();
 
             let first = upsert_text_input_entity(
                 &mut pass,
@@ -128,6 +144,7 @@ mod tests {
                     style: &style,
                     disabled: false,
                     tab_index: Some(1),
+                    shortcuts: &shortcuts,
                     change: Some("name_changed"),
                     focus: Some("name_focused"),
                     blur: Some("name_blurred"),
@@ -148,6 +165,7 @@ mod tests {
                     style: &style,
                     disabled: true,
                     tab_index: Some(3),
+                    shortcuts: &shortcuts,
                     change: Some("person_changed"),
                     focus: Some("person_focused"),
                     blur: Some("person_blurred"),
@@ -186,6 +204,7 @@ mod tests {
         view.update_in(cx, |view, window, view_cx| {
             let mut pass = super::RenderPass::new(view.view_id, &mut view.retained);
             let style: DivStyle = Vec::new().into();
+            let shortcuts = crate::ir::empty_shortcuts();
 
             let _element = super::render(
                 &mut pass,
@@ -197,6 +216,7 @@ mod tests {
                     style: &style,
                     disabled: false,
                     tab_index: Some(1),
+                    shortcuts: &shortcuts,
                     change: Some("name_changed"),
                     focus: Some("name_focused"),
                     blur: Some("name_blurred"),

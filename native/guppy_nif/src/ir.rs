@@ -1082,6 +1082,7 @@ pub enum IrNode {
         style: DivStyle,
         disabled: bool,
         tab_index: Option<isize>,
+        shortcuts: Arc<[ShortcutBinding]>,
         change: Option<String>,
         focus: Option<String>,
         blur: Option<String>,
@@ -1094,6 +1095,7 @@ pub enum IrNode {
         style: DivStyle,
         disabled: bool,
         tab_index: Option<isize>,
+        shortcuts: Arc<[ShortcutBinding]>,
         change: Option<String>,
         focus: Option<String>,
         blur: Option<String>,
@@ -1255,6 +1257,8 @@ fn decode_text_input_ir_node(
     map: &HashMap<Term, Term>,
     id: Option<String>,
 ) -> Result<IrNode, String> {
+    let actions = get_div_actions(map)?;
+
     Ok(IrNode::TextInput {
         id,
         value: get_string_field(map, "value")?,
@@ -1262,6 +1266,7 @@ fn decode_text_input_ir_node(
         style: get_div_style(map)?,
         disabled: get_boolean_field(map, "disabled")?,
         tab_index: get_optional_integer_field(map, "tab_index")?,
+        shortcuts: get_div_shortcuts(map, &actions)?,
         change: get_change_event(map)?,
         focus: get_focus_event(map)?,
         blur: get_blur_event(map)?,
@@ -1274,6 +1279,8 @@ fn decode_textarea_ir_node(
     map: &HashMap<Term, Term>,
     id: Option<String>,
 ) -> Result<IrNode, String> {
+    let actions = get_div_actions(map)?;
+
     Ok(IrNode::Textarea {
         id,
         value: get_string_field(map, "value")?,
@@ -1281,6 +1288,7 @@ fn decode_textarea_ir_node(
         style: get_div_style(map)?,
         disabled: get_boolean_field(map, "disabled")?,
         tab_index: get_optional_integer_field(map, "tab_index")?,
+        shortcuts: get_div_shortcuts(map, &actions)?,
         change: get_change_event(map)?,
         focus: get_focus_event(map)?,
         blur: get_blur_event(map)?,
