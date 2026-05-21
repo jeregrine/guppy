@@ -727,6 +727,29 @@ fn data_table_headers_emit_keyboard_column_reorder(cx: &mut gpui::TestAppContext
 }
 
 #[gpui::test]
+fn data_table_headers_emit_keyboard_column_resize(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (_view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 67,
+        ir: header_navigation_data_table_ir(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("shift-right");
+
+    let event =
+        crate::take_semantic_event_snapshot_matching_for_test("data_table_column_resize", 67)
+            .unwrap();
+    assert_eq!(event.node_id, "tasks.header.task");
+    assert_eq!(event.callback_id, "resize_column");
+    assert_eq!(event.table_id.as_deref(), Some("tasks"));
+    assert_eq!(event.column_id.as_deref(), Some("task"));
+    assert_eq!(event.width_delta, Some(16));
+}
+
+#[gpui::test]
 fn data_table_header_arrow_keys_move_focus(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
@@ -1312,6 +1335,7 @@ fn data_table_ir() -> IrNode {
         cell_click: Some("select_cell".into()),
         sort_callback: Some("sort_table".into()),
         column_reorder: None,
+        column_resize: None,
         row_context_menu: Some("row_context".into()),
         cell_context_menu: Some("cell_context".into()),
     }))
@@ -1349,6 +1373,7 @@ fn header_navigation_data_table_ir() -> IrNode {
         cell_click: Some("select_cell".into()),
         sort_callback: Some("sort_table".into()),
         column_reorder: Some("reorder_column".into()),
+        column_resize: Some("resize_column".into()),
         row_context_menu: Some("row_context".into()),
         cell_context_menu: Some("cell_context".into()),
     }))
@@ -1390,6 +1415,7 @@ fn navigable_data_table_ir() -> IrNode {
         cell_click: Some("select_cell".into()),
         sort_callback: Some("sort_table".into()),
         column_reorder: None,
+        column_resize: None,
         row_context_menu: Some("row_context".into()),
         cell_context_menu: Some("cell_context".into()),
     }))

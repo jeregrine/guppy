@@ -20,6 +20,7 @@ use std::collections::HashMap;
 const ROW_CLICK_EVENT: i32 = 1;
 const CELL_CLICK_EVENT: i32 = 2;
 const SORT_EVENT: i32 = 3;
+const COLUMN_RESIZE_KEYBOARD_STEP: i32 = 16;
 
 #[derive(Clone, Default)]
 struct DataTableFocusHandles {
@@ -66,6 +67,7 @@ pub(crate) fn render(
         table.columns.as_ref(),
         table.sort_callback.is_some(),
         table.column_reorder.is_some(),
+        table.column_resize.is_some(),
         cx,
     );
     let body_focus_handles = prepare_body_focus_handles(pass, &table_id, table, cx);
@@ -142,6 +144,7 @@ pub(crate) fn render(
         &table.header_style,
         table.sort_callback.as_deref(),
         table.column_reorder.as_deref(),
+        table.column_resize.as_deref(),
         &header_focus_handles,
         &body_focus_handles,
         first_row_id.as_deref(),
@@ -168,15 +171,16 @@ fn prepare_header_focus_handles(
     columns: &[DataTableColumn],
     sort_enabled: bool,
     reorder_enabled: bool,
+    resize_enabled: bool,
     cx: &mut Context<BridgeView>,
 ) -> HashMap<String, FocusHandle> {
-    if !sort_enabled && !reorder_enabled {
+    if !sort_enabled && !reorder_enabled && !resize_enabled {
         return HashMap::new();
     }
 
     columns
         .iter()
-        .filter(|column| (sort_enabled && column.sortable) || reorder_enabled)
+        .filter(|column| (sort_enabled && column.sortable) || reorder_enabled || resize_enabled)
         .map(|column| {
             let header_id = format!("{table_id}.header.{}", column.id);
             let focus_handle = pass.ensure_focus_handle(&header_id, cx, Some(true), None);
@@ -249,6 +253,7 @@ fn render_header(
     header_style: &DivStyle,
     sort_callback: Option<&str>,
     column_reorder: Option<&str>,
+    column_resize: Option<&str>,
     focus_handles: &HashMap<String, FocusHandle>,
     body_focus_handles: &DataTableFocusHandles,
     first_row_id: Option<&str>,
@@ -302,10 +307,14 @@ fn render_header(
             });
         }
 
-        if (column.sortable && sort_callback.is_some()) || column_reorder.is_some() {
+        if (column.sortable && sort_callback.is_some())
+            || column_reorder.is_some()
+            || column_resize.is_some()
+        {
             let column_sortable = column.sortable;
             let sort_callback_id = sort_callback.map(str::to_owned);
             let reorder_callback_id = column_reorder.map(str::to_owned);
+            let resize_callback_id = column_resize.map(str::to_owned);
             let key_table_id = table_id.to_owned();
             let key_column_id = column.id.clone();
             let key_header_id = header_id.clone();
@@ -337,6 +346,38 @@ fn render_header(
                 .and_then(|column| focus_handles.get(&column.id))
                 .cloned();
             cell = cell.on_key_down(move |event: &KeyDownEvent, window, cx| {
+                if event.keystroke.modifiers.shift
+                    && let Some(callback_id) = resize_callback_id.as_deref()
+                {
+                    match event.keystroke.key.as_str() {
+                        "left" => {
+                            events::emit_data_table_column_resize(
+                                view_id,
+                                &key_header_id,
+                                callback_id,
+                                &key_table_id,
+                                &key_column_id,
+                                -COLUMN_RESIZE_KEYBOARD_STEP,
+                            );
+                            cx.stop_propagation();
+                            return;
+                        }
+                        "right" => {
+                            events::emit_data_table_column_resize(
+                                view_id,
+                                &key_header_id,
+                                callback_id,
+                                &key_table_id,
+                                &key_column_id,
+                                COLUMN_RESIZE_KEYBOARD_STEP,
+                            );
+                            cx.stop_propagation();
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
+
                 if event.keystroke.modifiers.alt
                     && let Some(callback_id) = reorder_callback_id.as_deref()
                 {

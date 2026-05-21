@@ -560,6 +560,7 @@ defmodule Guppy.ServerNativeTest do
             cell_click: "select_cell",
             sort: "sort_table",
             column_reorder: "reorder_column",
+            column_resize: "resize_column",
             row_context_menu: "row_context",
             cell_context_menu: "cell_context"
           }
@@ -617,6 +618,28 @@ defmodule Guppy.ServerNativeTest do
                       column_id: "task",
                       target_column_id: "status",
                       direction: "right"
+                    }}
+
+    send(Process.whereis(server), {
+      :guppy_native_event,
+      view_id,
+      :data_table_column_resize,
+      %{
+        id: "tasks.header.task",
+        callback: "resize_column",
+        table_id: "tasks",
+        column_id: "task",
+        width_delta: 16
+      }
+    })
+
+    assert_receive {:guppy_event, ^view_id,
+                    %{
+                      type: :data_table_column_resize,
+                      callback: "resize_column",
+                      table_id: "tasks",
+                      column_id: "task",
+                      width_delta: 16
                     }}
 
     send(Process.whereis(server), {

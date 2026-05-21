@@ -34,6 +34,7 @@ defmodule Guppy.IRTest do
           cell_click: "select_cell",
           sort: "sort_table",
           column_reorder: "reorder_column",
+          column_resize: "resize_column",
           row_context_menu: "row_context",
           cell_context_menu: "cell_context"
         }
@@ -43,6 +44,7 @@ defmodule Guppy.IRTest do
     assert ir.events.row_context_menu == "row_context"
     assert ir.events.cell_context_menu == "cell_context"
     assert ir.events.column_reorder == "reorder_column"
+    assert ir.events.column_resize == "resize_column"
   end
 
   test "data_table rejects duplicate columns and invalid cell references" do

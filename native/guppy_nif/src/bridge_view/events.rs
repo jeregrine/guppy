@@ -85,6 +85,24 @@ pub(crate) fn emit_data_table_column_reorder(
     );
 }
 
+pub(crate) fn emit_data_table_column_resize(
+    view_id: u64,
+    node_id: &str,
+    callback_id: &str,
+    table_id: &str,
+    column_id: &str,
+    width_delta: i32,
+) {
+    let _ = native_events::send_data_table_column_resize_event(
+        view_id,
+        node_id,
+        callback_id,
+        table_id,
+        column_id,
+        width_delta,
+    );
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn emit_data_table_context_menu(
     view_id: u64,

@@ -296,6 +296,7 @@ defmodule Guppy.Component.Compiler do
             "cell_click",
             "sort",
             "column_reorder",
+            "column_resize",
             "row_context_menu",
             "cell_context_menu"
           ],
@@ -1556,6 +1557,7 @@ defmodule Guppy.Component.Compiler do
         "cell_click",
         "sort",
         "column_reorder",
+        "column_resize",
         "row_context_menu",
         "cell_context_menu"
       ]

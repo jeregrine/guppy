@@ -25,6 +25,7 @@ defmodule Examples.DataTableTreeWindow do
      |> assign(:expanded, MapSet.new(["all", "platform"]))
      |> assign(:selected_tree_id, "platform")
      |> assign(:table_column_ids, ["title", "status", "owner"])
+     |> assign(:table_column_widths, %{"title" => 260, "status" => 120, "owner" => 100})
      |> assign(:selected_row_id, "menus")
      |> assign(:selected_cell, {"menus", "status"})
      |> assign(:sort, %{column_id: "title", direction: :asc})}
@@ -83,6 +84,15 @@ defmodule Examples.DataTableTreeWindow do
      )}
   end
 
+  def handle_event("resize_column", %{column_id: column_id, width_delta: width_delta}, window) do
+    {:noreply,
+     assign(
+       window,
+       :table_column_widths,
+       resize_column_widths(window.assigns.table_column_widths, column_id, width_delta)
+     )}
+  end
+
   @impl Guppy.Window
   def render(window) do
     visible_tasks = visible_tasks(window.assigns.selected_tree_id)
@@ -90,7 +100,8 @@ defmodule Examples.DataTableTreeWindow do
 
     assigns =
       Map.merge(window.assigns, %{
-        table_columns: table_columns(window.assigns.table_column_ids),
+        table_columns:
+          table_columns(window.assigns.table_column_ids, window.assigns.table_column_widths),
         table_rows:
           table_rows(sorted_tasks, window.assigns.selected_row_id, window.assigns.selected_cell),
         tree_nodes: tree_nodes(window.assigns.expanded, window.assigns.selected_tree_id),
@@ -104,7 +115,7 @@ defmodule Examples.DataTableTreeWindow do
       <div id="header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
         <text id="title" class="text-2xl font-black">Semantic table + tree</text>
         <text id="subtitle" class="text-base text-[#94a3b8]">
-          Tree expansion, table row/cell selection, sorting, and Alt-Left/Alt-Right header reordering are Elixir-owned state driven by native semantic events.
+          Tree expansion, table row/cell selection, sorting, Alt-Left/Alt-Right header reordering, and Shift-Left/Shift-Right header resizing are Elixir-owned state driven by native semantic events.
         </text>
         <text id="state_summary" class="text-sm text-[#bfdbfe]">
           Scope {@selected_label}; selected row {@selected_row_label}; sort {@sort_label}
@@ -142,6 +153,7 @@ defmodule Examples.DataTableTreeWindow do
             cell_click="select_cell"
             sort="sort_table"
             column_reorder="reorder_column"
+            column_resize="resize_column"
           />
         </div>
       </div>
@@ -149,22 +161,29 @@ defmodule Examples.DataTableTreeWindow do
     """
   end
 
-  defp table_columns(column_ids) do
+  defp table_columns(column_ids, column_widths) do
     definitions = %{
-      "title" => %{id: "title", label: "Task", width: {:fr, 1}, sortable: true},
-      "status" => %{id: "status", label: "Status", width: {:px, 120}, sortable: true},
-      "owner" => %{id: "owner", label: "Owner", width: {:px, 100}, sortable: true}
+      "title" => %{id: "title", label: "Task", sortable: true},
+      "status" => %{id: "status", label: "Status", sortable: true},
+      "owner" => %{id: "owner", label: "Owner", sortable: true}
     }
 
-    Enum.map(column_ids, &Map.fetch!(definitions, &1))
+    Enum.map(column_ids, fn column_id ->
+      Map.put(Map.fetch!(definitions, column_id), :width, {:px, Map.fetch!(column_widths, column_id)})
+    end)
   end
 
   defp reorder_column_ids(column_ids, column_id, target_column_id, direction) do
     without_column = List.delete(column_ids, column_id)
-    target_index = Enum.find_index(without_column, &(&1 == target_column_id)) || length(without_column)
+    target_index =
+      Enum.find_index(without_column, &(&1 == target_column_id)) || length(without_column)
     insert_at = if direction == "right", do: target_index + 1, else: target_index
 
     List.insert_at(without_column, insert_at, column_id)
+  end
+
+  defp resize_column_widths(column_widths, column_id, width_delta) do
+    Map.update!(column_widths, column_id, fn width -> max(width + width_delta, 64) end)
   end
 
   defp table_rows(tasks, selected_row_id, selected_cell) do
