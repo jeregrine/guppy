@@ -81,6 +81,32 @@ fn simulated_gpui_click_reaches_native_event_bridge(cx: &mut gpui::TestAppContex
 }
 
 #[gpui::test]
+fn focused_element_shortcut_takes_priority_over_app_command_root(cx: &mut gpui::TestAppContext) {
+    cx.update(super::bind_focus_keys);
+    let (view, cx) = cx.add_window_view(|_, _| BridgeView {
+        view_id: 72,
+        ir: nested_app_command_shortcut_divs(),
+        retained: BridgeRetainedState::default(),
+    });
+
+    cx.update(|window, cx| window.draw(cx).clear());
+    cx.simulate_keystrokes("tab");
+    cx.simulate_keystrokes("tab");
+
+    view.update_in(cx, |view, window, _| {
+        assert!(view.retained.focus_handles["local_save_button"].is_focused(window));
+    });
+
+    cx.simulate_keystrokes("cmd-s");
+
+    let event = crate::take_basic_event_snapshot_matching_for_test("action", 72).unwrap();
+    assert_eq!(event.node_id.as_deref(), Some("local_save_button"));
+    assert_eq!(event.callback_id.as_deref(), Some("local_save"));
+    assert_eq!(event.value.as_deref(), Some("save"));
+    assert!(crate::take_basic_event_snapshot_matching_for_test("action", 72).is_none());
+}
+
+#[gpui::test]
 fn focused_child_shortcut_takes_priority_over_ancestor(cx: &mut gpui::TestAppContext) {
     cx.update(super::bind_focus_keys);
     let (view, cx) = cx.add_window_view(|_, _| BridgeView {
@@ -1341,6 +1367,26 @@ fn list_with_row_button() -> IrNode {
     }
 }
 
+fn nested_app_command_shortcut_divs() -> IrNode {
+    let child = IrNode::Div(Box::new(shortcut_div_with_shortcut(
+        "local_save_button",
+        2,
+        "cmd-s",
+        "save",
+        "local_save",
+        vec![IrNode::text("save here")],
+    )));
+
+    IrNode::Div(Box::new(shortcut_div_with_shortcut(
+        "app_command_root",
+        1,
+        "cmd-s",
+        "save",
+        "guppy.app.command",
+        vec![child],
+    )))
+}
+
 fn nested_shortcut_divs() -> IrNode {
     let child = IrNode::Div(Box::new(shortcut_div(
         "shortcut_child",
@@ -1358,6 +1404,17 @@ fn nested_shortcut_divs() -> IrNode {
 }
 
 fn shortcut_div(id: &str, tab_index: isize, callback: &str, children: Vec<IrNode>) -> DivNode {
+    shortcut_div_with_shortcut(id, tab_index, "cmd-k", "open", callback, children)
+}
+
+fn shortcut_div_with_shortcut(
+    id: &str,
+    tab_index: isize,
+    shortcut: &str,
+    action: &str,
+    callback: &str,
+    children: Vec<IrNode>,
+) -> DivNode {
     DivNode {
         id: Some(id.into()),
         style: vec![StyleOp::W96, StyleOp::H32, StyleOp::P4, StyleOp::Border1].into(),
@@ -1378,7 +1435,7 @@ fn shortcut_div(id: &str, tab_index: isize, callback: &str, children: Vec<IrNode
         anchor_scroll: false,
         scroll_to: false,
         tooltip: None,
-        shortcuts: vec![shortcut_binding("cmd-k", "open", callback)].into(),
+        shortcuts: vec![shortcut_binding(shortcut, action, callback)].into(),
         children: children.into(),
         click: None,
         hover: None,
