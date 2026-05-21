@@ -43,6 +43,8 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
   def render(window) do
     visible_tasks = visible_tasks(window.assigns.selected_tree_id)
     sorted_tasks = sort_tasks(visible_tasks, window.assigns.sort)
+    selected_row_id = selected_row_id_for(sorted_tasks, window.assigns.selected_row_id)
+    selected_cell = selected_cell_for(selected_row_id, window.assigns.selected_cell)
     command_bindings = command_bindings()
 
     assigns =
@@ -56,11 +58,12 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
         tree_nodes: tree_nodes(window.assigns.expanded, window.assigns.selected_tree_id),
         table_columns:
           table_columns(window.assigns.table_column_ids, window.assigns.table_column_widths),
-        table_rows:
-          table_rows(sorted_tasks, window.assigns.selected_row_id, window.assigns.selected_cell),
+        table_rows: table_rows(sorted_tasks, selected_row_id, selected_cell),
+        selected_row_id: selected_row_id,
+        selected_cell: selected_cell,
         recent_events: Enum.with_index(window.assigns.events, 1),
         sort_label: "#{window.assigns.sort.column_id} #{window.assigns.sort.direction}",
-        selected_cell_label: format_cell(window.assigns.selected_cell)
+        selected_cell_label: format_cell(selected_cell)
       })
 
     ~GUI"""
@@ -257,9 +260,15 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
   end
 
   def handle_event("tree_selected", %{item_id: item_id}, window) do
+    tasks = item_id |> visible_tasks() |> sort_tasks(window.assigns.sort)
+    selected_row_id = selected_row_id_for(tasks, window.assigns.selected_row_id)
+    selected_cell = selected_cell_for(selected_row_id, window.assigns.selected_cell)
+
     {:noreply,
      window
      |> assign(:selected_tree_id, item_id)
+     |> assign(:selected_row_id, selected_row_id)
+     |> assign(:selected_cell, selected_cell)
      |> log("tree select #{item_id}")}
   end
 
@@ -489,6 +498,27 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
     end)
   end
 
+  defp selected_row_id_for([], _selected_row_id), do: nil
+
+  defp selected_row_id_for(tasks, selected_row_id) do
+    task_ids = MapSet.new(tasks, & &1.id)
+
+    if MapSet.member?(task_ids, selected_row_id) do
+      selected_row_id
+    else
+      tasks |> List.first() |> Map.fetch!(:id)
+    end
+  end
+
+  defp selected_cell_for(nil, _selected_cell), do: nil
+
+  defp selected_cell_for(selected_row_id, {row_id, column_id})
+       when row_id == selected_row_id and column_id in ["title", "status", "owner"] do
+    {row_id, column_id}
+  end
+
+  defp selected_cell_for(selected_row_id, _selected_cell), do: {selected_row_id, "status"}
+
   defp table_rows(tasks, selected_row_id, selected_cell) do
     Enum.map(tasks, fn task ->
       %{
@@ -607,8 +637,15 @@ defmodule Guppy.Examples.Priority3FocusKeyboard do
 end
 
 if "--validate-only" in System.argv() do
-  {:ok, window} = Guppy.Examples.Priority3FocusKeyboard.MainWindow.mount(:ok, %Guppy.Window{})
-  :ok = Guppy.IR.validate(Guppy.Examples.Priority3FocusKeyboard.MainWindow.render(window))
+  window_module = Guppy.Examples.Priority3FocusKeyboard.MainWindow
+  {:ok, window} = window_module.mount(:ok, %Guppy.Window{})
+  :ok = Guppy.IR.validate(window_module.render(window))
+
+  for item_id <- ["task_auth", "task_menus", "task_gallery", "task_qa", "platform", "all"] do
+    {:noreply, window} = window_module.handle_event("tree_selected", %{item_id: item_id}, window)
+    :ok = Guppy.IR.validate(window_module.render(window))
+  end
+
   IO.puts("priority3_focus_keyboard.exs IR validates")
 else
   {:ok, _} = Application.ensure_all_started(:guppy)
