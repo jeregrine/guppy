@@ -4,7 +4,7 @@ use super::{
     render_checkbox,
     render_pass::RenderPass,
     render_radio, render_text,
-    style::{apply_div_style, apply_refinement_style},
+    style::{apply_div_style, apply_refinement_style, apply_semantic_focus_visible_affordance},
 };
 use crate::{
     bridge_view::BridgeView,
@@ -264,6 +264,8 @@ fn render_item(
             .children(children),
         item_style,
     );
+    let show_focus_visible =
+        focus_visible && row_focus_handle.is_some_and(|handle| handle.is_focused(window));
 
     if let Some(handle) = row_focus_handle {
         let focus_handle = handle.clone();
@@ -333,7 +335,7 @@ fn render_item(
         });
     }
 
-    row.into_any_element()
+    apply_semantic_focus_visible_affordance(row, show_focus_visible).into_any_element()
 }
 
 fn list_row_id(list_key: &str, item_id: &str) -> String {

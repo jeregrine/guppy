@@ -1,4 +1,9 @@
-use super::{events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
+use super::{
+    events,
+    identity::NodeIdentity,
+    render_pass::RenderPass,
+    style::{apply_div_style, apply_semantic_focus_visible_affordance},
+};
 use crate::{
     bridge_view::BridgeView,
     ir::{DivStyle, TreeItem, TreeNode},
@@ -34,6 +39,7 @@ pub(crate) fn render(
     let tree_id = node_id.to_string();
     let visible_items = flatten_visible_tree_items(&tree.nodes);
     let state = pass.retain_list_state(&format!("{tree_id}.rows"), visible_items.len());
+    let focus_visible = pass.focus_visible();
     let row_focus_handles = prepare_row_focus_handles(
         pass,
         &tree_id,
@@ -47,7 +53,7 @@ pub(crate) fn render(
     let context_menu = tree.context_menu.clone();
     let tree_id_for_rows = tree_id.clone();
 
-    let rows = list(state, move |index, _window, _cx| {
+    let rows = list(state, move |index, window, _cx| {
         visible_items
             .get(index)
             .map(|item| {
@@ -85,6 +91,8 @@ pub(crate) fn render(
                     toggle.as_deref(),
                     context_menu.as_deref(),
                     row_focus_handles.get(&item.id),
+                    focus_visible,
+                    window,
                     previous_focus,
                     next_focus,
                     first_focus,
@@ -169,6 +177,8 @@ fn render_row(
     toggle: Option<&str>,
     context_menu: Option<&str>,
     focus_handle: Option<&FocusHandle>,
+    focus_visible: bool,
+    window: &Window,
     previous_focus: Option<&FocusHandle>,
     next_focus: Option<&FocusHandle>,
     first_focus: Option<&FocusHandle>,
@@ -236,6 +246,8 @@ fn render_row(
         .flex()
         .flex_row()
         .children([disclosure.into_any_element(), label.into_any_element()]);
+    let show_focus_visible =
+        focus_visible && focus_handle.is_some_and(|handle| handle.is_focused(window));
 
     if let Some(handle) = focus_handle {
         let focus_handle = handle.clone();
@@ -372,7 +384,8 @@ fn render_row(
         });
     }
 
-    apply_tree_row_styles(row, row_style, &item.style).into_any_element()
+    let row = apply_tree_row_styles(row, row_style, &item.style);
+    apply_semantic_focus_visible_affordance(row, show_focus_visible).into_any_element()
 }
 
 fn tree_row_id(tree_id: &str, item_id: &str) -> String {

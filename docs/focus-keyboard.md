@@ -17,7 +17,8 @@ Virtual widgets use a narrow roving-focus pattern:
 2. Arrow keys move native focus between retained visible items where the widget defines a clear spatial order.
 3. Enter/Space activate the focused item according to that widget's semantics.
 4. Keyboard context-menu invocation uses Shift-F10 or the context-menu key when a context-menu callback exists.
-5. Selection, expansion, and sorting remain semantic Elixir state updated from callback events; native focus does not imply selection.
+5. Keyboard-focused retained table headers/rows/cells, tree rows, list rows, and uniform-list items receive a default focus-visible border while focus-visible mode is active.
+6. Selection, expansion, and sorting remain semantic Elixir state updated from callback events; native focus does not imply selection.
 
 Current widget behavior:
 

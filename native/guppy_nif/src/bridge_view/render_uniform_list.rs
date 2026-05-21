@@ -1,4 +1,9 @@
-use super::{events, identity::NodeIdentity, render_pass::RenderPass, style::apply_div_style};
+use super::{
+    events,
+    identity::NodeIdentity,
+    render_pass::RenderPass,
+    style::{apply_div_style, apply_semantic_focus_visible_affordance},
+};
 use crate::{
     bridge_view::BridgeView,
     ir::{DivStyle, UniformListItem},
@@ -6,7 +11,7 @@ use crate::{
 };
 use gpui::{
     AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
-    ParentElement, SharedString, StatefulInteractiveElement, Styled, div, uniform_list,
+    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div, uniform_list,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -33,13 +38,14 @@ pub(crate) fn render(
         click.is_some() || context_menu.is_some(),
         cx,
     );
+    let focus_visible = pass.focus_visible();
     let items = items.clone();
     let item_style = item_style.clone();
     let click = click.map(str::to_owned);
     let context_menu = context_menu.map(str::to_owned);
     let item_list_key = list_key.clone();
 
-    let list = uniform_list(element_id, items.len(), move |range, _window, _cx| {
+    let list = uniform_list(element_id, items.len(), move |range, window, _cx| {
         range
             .filter_map(|index| {
                 let item = items.get(index)?;
@@ -61,6 +67,8 @@ pub(crate) fn render(
                     focus_handles.get(&item.id),
                     previous_focus,
                     next_focus,
+                    focus_visible,
+                    window,
                 ))
             })
             .collect::<Vec<_>>()
@@ -108,6 +116,8 @@ fn render_item(
     focus_handle: Option<&FocusHandle>,
     previous_focus: Option<&FocusHandle>,
     next_focus: Option<&FocusHandle>,
+    focus_visible: bool,
+    window: &Window,
 ) -> AnyElement {
     let item_key = uniform_item_id(list_key, &item.id);
     let mut row = apply_div_style(
@@ -119,6 +129,8 @@ fn render_item(
             .child(item.label.clone()),
         item_style,
     );
+    let show_focus_visible =
+        focus_visible && focus_handle.is_some_and(|handle| handle.is_focused(window));
 
     if let Some(handle) = focus_handle {
         let focus_handle = handle.clone();
@@ -188,7 +200,7 @@ fn render_item(
         });
     }
 
-    row.into_any_element()
+    apply_semantic_focus_visible_affordance(row, show_focus_visible).into_any_element()
 }
 
 fn uniform_item_id(list_key: &str, item_id: &str) -> String {
@@ -209,25 +221,10 @@ fn emit_item_click(view_id: u64, node_id: &str, callback_id: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::render_item;
-    use crate::ir::UniformListItem;
+    use super::uniform_item_id;
 
     #[test]
-    fn render_item_accepts_stable_item_identity() {
-        let item = UniformListItem {
-            id: "item_1".into(),
-            label: "Item 1".into(),
-        };
-        let _ = render_item(
-            1,
-            "list",
-            &item,
-            &Vec::new().into(),
-            Some("clicked"),
-            Some("contexted"),
-            None,
-            None,
-            None,
-        );
+    fn uniform_item_ids_are_stable() {
+        assert_eq!(uniform_item_id("list", "item_1"), "list.item_1");
     }
 }

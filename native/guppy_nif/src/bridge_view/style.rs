@@ -14,6 +14,17 @@ use gpui::{
 };
 use std::sync::Arc;
 
+pub(crate) fn apply_semantic_focus_visible_affordance<E>(element: E, enabled: bool) -> E
+where
+    E: Styled + StatefulInteractiveElement,
+{
+    if enabled {
+        element.border_1().border_color(rgb(0x60a5fa))
+    } else {
+        element
+    }
+}
+
 pub(crate) fn apply_div_style<E>(mut element: E, style: &DivStyle) -> E
 where
     E: Styled + StatefulInteractiveElement,
@@ -1409,8 +1420,31 @@ mod tests {
     use super::*;
     use crate::ir::{BackgroundPatternSlash, BoxShadowSpec, LinearGradientStop, StyleColor};
     use gpui::{
-        BoxShadow, Fill, StyleRefinement, linear_color_stop, linear_gradient, pattern_slash, point,
+        BoxShadow, Fill, InteractiveElement, SharedString, StyleRefinement, div, linear_color_stop,
+        linear_gradient, pattern_slash, point,
     };
+
+    #[test]
+    fn semantic_focus_visible_affordance_applies_default_outline() {
+        let mut element = apply_semantic_focus_visible_affordance(
+            div().id(SharedString::from("focused_semantic_row")),
+            true,
+        );
+        let style = element.style();
+        assert_eq!(style.border_widths.top, Some(px(1.0).into()));
+        assert_eq!(style.border_widths.right, Some(px(1.0).into()));
+        assert_eq!(style.border_widths.bottom, Some(px(1.0).into()));
+        assert_eq!(style.border_widths.left, Some(px(1.0).into()));
+        assert_eq!(style.border_color, Some(rgb(0x60a5fa).into()));
+
+        let mut element = apply_semantic_focus_visible_affordance(
+            div().id(SharedString::from("mouse_focused_semantic_row")),
+            false,
+        );
+        let style = element.style();
+        assert_eq!(style.border_widths.top, None);
+        assert_eq!(style.border_color, None);
+    }
 
     #[test]
     fn applies_canonical_box_spacing_to_style_refinement() {

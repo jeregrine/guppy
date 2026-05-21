@@ -1,5 +1,9 @@
 use super::{
-    events, identity::NodeIdentity, render_pass::RenderPass, render_text, style::apply_div_style,
+    events,
+    identity::NodeIdentity,
+    render_pass::RenderPass,
+    render_text,
+    style::{apply_div_style, apply_semantic_focus_visible_affordance},
 };
 use crate::{
     bridge_view::BridgeView,
@@ -46,7 +50,7 @@ pub(crate) fn render(
     pass: &mut RenderPass<'_>,
     path: &str,
     table: &DataTableNode,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut Context<BridgeView>,
 ) -> AnyElement {
     let view_id = pass.view_id();
@@ -64,6 +68,7 @@ pub(crate) fn render(
         cx,
     );
     let body_focus_handles = prepare_body_focus_handles(pass, &table_id, table, cx);
+    let focus_visible = pass.focus_visible();
     let row_style = table.row_style.clone();
     let cell_style = table.cell_style.clone();
     let row_click = table.row_click.clone();
@@ -75,7 +80,7 @@ pub(crate) fn render(
     let header_focus_handles_for_rows = header_focus_handles.clone();
     let first_row_id = rows.first().map(|row| row.id.clone());
 
-    let body = list(state, move |index, _window, _cx| {
+    let body = list(state, move |index, window, _cx| {
         rows.get(index)
             .map(|row| {
                 let previous_row = index
@@ -121,6 +126,8 @@ pub(crate) fn render(
                     &body_focus_handles_for_rows,
                     &header_focus_handles_for_rows,
                     row_focus_neighbors,
+                    focus_visible,
+                    window,
                 )
             })
             .unwrap_or_else(|| div().into_any_element())
@@ -136,6 +143,8 @@ pub(crate) fn render(
         &header_focus_handles,
         &body_focus_handles,
         first_row_id.as_deref(),
+        focus_visible,
+        window,
     );
 
     apply_div_style(
@@ -239,6 +248,8 @@ fn render_header(
     focus_handles: &HashMap<String, FocusHandle>,
     body_focus_handles: &DataTableFocusHandles,
     first_row_id: Option<&str>,
+    focus_visible: bool,
+    window: &Window,
 ) -> AnyElement {
     let children = columns.iter().enumerate().map(|(column_index, column)| {
         let header_id = format!("{table_id}.header.{}", column.id);
@@ -252,6 +263,10 @@ fn render_header(
             ),
             &column.width,
         );
+        let show_focus_visible = focus_visible
+            && focus_handles
+                .get(&column.id)
+                .is_some_and(|handle| handle.is_focused(window));
 
         if column.sortable
             && let Some(callback_id) = sort_callback
@@ -336,7 +351,7 @@ fn render_header(
             });
         }
 
-        cell.into_any_element()
+        apply_semantic_focus_visible_affordance(cell, show_focus_visible).into_any_element()
     });
 
     apply_div_style(
@@ -367,6 +382,8 @@ fn render_row(
     focus_handles: &DataTableFocusHandles,
     header_focus_handles: &HashMap<String, FocusHandle>,
     row_focus_neighbors: RowFocusNeighbors,
+    focus_visible: bool,
+    window: &Window,
 ) -> AnyElement {
     let row_id = data_table_row_id(table_id, &row.id);
     let cells =
@@ -398,6 +415,8 @@ fn render_row(
                         .cells
                         .get(&(row.id.clone(), column.id.clone())),
                     cell_focus_neighbors,
+                    focus_visible,
+                    window,
                 )
             });
 
@@ -410,6 +429,11 @@ fn render_row(
         row_style,
     );
     element = apply_div_style(element, &row.style);
+    let show_focus_visible = focus_visible
+        && focus_handles
+            .rows
+            .get(&row.id)
+            .is_some_and(|handle| handle.is_focused(window));
 
     if let Some(handle) = focus_handles.rows.get(&row.id) {
         let focus_handle = handle.clone();
@@ -536,7 +560,7 @@ fn render_row(
         });
     }
 
-    element.into_any_element()
+    apply_semantic_focus_visible_affordance(element, show_focus_visible).into_any_element()
 }
 
 #[derive(Debug)]
@@ -652,6 +676,8 @@ fn render_cell(
     cell_context_menu: Option<&str>,
     focus_handle: Option<&FocusHandle>,
     focus_neighbors: CellFocusNeighbors,
+    focus_visible: bool,
+    window: &Window,
 ) -> AnyElement {
     let cell_id = data_table_cell_id(table_id, row_id, &column.id);
     let mut cell_div = div().id(SharedString::from(cell_id.clone())).p_2();
@@ -667,6 +693,8 @@ fn render_cell(
     if let Some(cell) = cell {
         element = apply_div_style(element, &cell.style);
     }
+    let show_focus_visible =
+        focus_visible && focus_handle.is_some_and(|handle| handle.is_focused(window));
 
     if let Some(handle) = focus_handle {
         let focus_handle = handle.clone();
@@ -803,7 +831,7 @@ fn render_cell(
         });
     }
 
-    element.into_any_element()
+    apply_semantic_focus_visible_affordance(element, show_focus_visible).into_any_element()
 }
 
 fn data_table_row_id(table_id: &str, row_id: &str) -> String {
