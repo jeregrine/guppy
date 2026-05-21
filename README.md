@@ -127,6 +127,12 @@ mix run examples/data_table_tree.exs
 Semantic data-table/tree example with Elixir-owned expansion, selection, and sorting over native virtual rows.
 
 ```bash
+mix run examples/priority3_focus_keyboard.exs
+```
+
+Comprehensive Priority 3 example for shortcut priority, virtual-widget roving focus, keyboard context menus, data-table resize/reorder/pinned columns, tree navigation, focus-visible affordances, and the current accessibility/semantics boundary.
+
+```bash
 mix run examples/canvas_pattern.exs
 ```
 
