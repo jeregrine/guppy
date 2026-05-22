@@ -11,7 +11,7 @@ Statuses:
 
 ## Missing or deferred primitive areas
 
-These are the main primitive gaps visible from the current GPUI matrix. They are not active work unless explicitly prioritized. Deferred idea buckets live in [`docs/future-primitives.md`](future-primitives.md).
+These are the main primitive gaps visible from the current GPUI matrix. They are not active work unless explicitly prioritized.
 
 Intentionally narrow parity areas:
 
