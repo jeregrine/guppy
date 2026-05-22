@@ -9,6 +9,11 @@ name = "guppy_nif"
 crate-type = ["cdylib"]
 path = "src/lib.rs"
 
+[lints.rust]
+# objc's msg_send! macro expands a legacy cfg(feature = "cargo-clippy") check.
+# Declare it as expected so CI can keep -D warnings without hiding other cfg typos.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("cargo-clippy"))'] }
+
 [dependencies]
 anyhow = "1.0.98"
 async-task = "4.7.1"
