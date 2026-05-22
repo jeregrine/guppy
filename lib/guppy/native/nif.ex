@@ -355,16 +355,11 @@ defmodule Guppy.Native.Nif do
     :telemetry.execute(
       [:guppy, :native, :nif],
       %{duration: duration},
-      %{command: command, status: telemetry_status(reply)}
+      %{command: command, status: Guppy.Native.telemetry_status(reply)}
     )
 
     reply
   end
-
-  defp telemetry_status(:ok), do: :ok
-  defp telemetry_status({:ok, _payload}), do: :ok
-  defp telemetry_status({:error, reason}), do: {:error, reason}
-  defp telemetry_status(other), do: other
 
   defp normalize_status({:error, reason}), do: {:error, reason}
   defp normalize_status(status) when is_atom(status), do: status

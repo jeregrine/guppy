@@ -209,34 +209,20 @@ fn to_gpui_system_menu_type(menu_type: MenuSystemMenuType) -> SystemMenuType {
 }
 
 fn to_gpui_action_item(action: MenuActionSpec) -> MenuItem {
-    if !action.enabled {
-        return disabled_action_item(action);
-    }
-
-    match action.os_action {
-        Some(MenuOsAction::Cut) => MenuItem::os_action(action.label, TextCut, OsAction::Cut),
-        Some(MenuOsAction::Copy) => MenuItem::os_action(action.label, TextCopy, OsAction::Copy),
-        Some(MenuOsAction::Paste) => MenuItem::os_action(action.label, TextPaste, OsAction::Paste),
-        Some(MenuOsAction::SelectAll) => {
-            MenuItem::os_action(action.label, TextSelectAll, OsAction::SelectAll)
-        }
-        Some(MenuOsAction::Undo) | Some(MenuOsAction::Redo) => disabled_action_item(action),
-        None => {
-            let callback = action
-                .callback
-                .expect("menu callback actions are validated before native rendering");
-            MenuItem::action(
-                action.label,
-                GuppyMenuAction {
-                    id: action.id,
-                    callback,
-                },
-            )
-        }
-    }
+    to_gpui_callback_action_item(action, |id, callback| GuppyMenuAction { id, callback })
 }
 
 fn to_gpui_dock_action_item(action: MenuActionSpec) -> MenuItem {
+    to_gpui_callback_action_item(action, |id, callback| GuppyDockMenuAction { id, callback })
+}
+
+fn to_gpui_callback_action_item<A>(
+    action: MenuActionSpec,
+    build_callback_action: impl FnOnce(String, String) -> A,
+) -> MenuItem
+where
+    A: Action + 'static,
+{
     if !action.enabled {
         return disabled_action_item(action);
     }
@@ -250,16 +236,17 @@ fn to_gpui_dock_action_item(action: MenuActionSpec) -> MenuItem {
         }
         Some(MenuOsAction::Undo) | Some(MenuOsAction::Redo) => disabled_action_item(action),
         None => {
-            let callback = action
-                .callback
-                .expect("menu callback actions are validated before native rendering");
-            MenuItem::action(
-                action.label,
-                GuppyDockMenuAction {
-                    id: action.id,
-                    callback,
-                },
-            )
+            let MenuActionSpec {
+                id,
+                label,
+                callback,
+                ..
+            } = action;
+
+            match callback {
+                Some(callback) => MenuItem::action(label, build_callback_action(id, callback)),
+                None => MenuItem::action(label, GuppyDisabledMenuAction { id, callback }),
+            }
         }
     }
 }

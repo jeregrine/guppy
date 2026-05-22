@@ -27,11 +27,17 @@ fn bigint_u32(value: u32) -> Term {
 }
 
 fn map(entries: Vec<(&str, Term)>) -> Term {
-    Term::Map(Map {
-        map: entries
+    raw_map(
+        entries
             .into_iter()
             .map(|(key, value)| (atom(key), value))
             .collect(),
+    )
+}
+
+fn raw_map(entries: Vec<(Term, Term)>) -> Term {
+    Term::Map(Map {
+        map: entries.into_iter().collect(),
     })
 }
 
@@ -166,21 +172,21 @@ fn maps_display_ids_through_active_gpui_displays(cx: &mut gpui::TestAppContext) 
             display_id: Some(valid_id),
             ..Default::default()
         }
-        .to_gpui(cx);
+        .into_gpui(cx);
         assert_eq!(valid.display_id, Some(display));
 
         let missing = WindowOptionsConfig {
             display_id: Some(missing_id),
             ..Default::default()
         }
-        .to_gpui(cx);
+        .into_gpui(cx);
         assert_eq!(missing.display_id, None);
 
         let out_of_range = WindowOptionsConfig {
             display_id: Some(u32::MAX),
             ..Default::default()
         }
-        .to_gpui(cx);
+        .into_gpui(cx);
         assert_eq!(out_of_range.display_id, None);
     });
 }
@@ -215,4 +221,28 @@ fn rejects_invalid_window_option_atoms() {
         WindowOptionsConfig::decode_etf(&encode(map(vec![("kind", atom("tooltip"))]))).unwrap_err();
 
     assert!(err.contains("invalid kind"));
+}
+
+#[test]
+fn rejects_non_atom_window_option_keys() {
+    let err =
+        WindowOptionsConfig::decode_etf(&encode(raw_map(vec![(binary("focus"), atom("true"))])))
+            .unwrap_err();
+
+    assert!(
+        err.contains("non-atom field key"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn rejects_atom_values_for_string_window_options() {
+    let err =
+        WindowOptionsConfig::decode_etf(&encode(map(vec![("app_id", atom("dev.guppy.test"))])))
+            .unwrap_err();
+
+    assert!(
+        err.contains("expected utf8 binary/string"),
+        "unexpected error: {err}"
+    );
 }

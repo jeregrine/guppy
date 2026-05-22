@@ -11,6 +11,664 @@ defmodule Guppy.Style do
   @external_resource @catalog_path
   @catalog @catalog_path |> File.read!() |> JSON.decode!()
 
+  @catalog_atom_seed [
+    :"2xl",
+    :"2xs",
+    :"3xl",
+    :absolute,
+    :alias,
+    :align_content,
+    :align_items,
+    :align_self,
+    :all,
+    :allow_concurrent_scroll,
+    :allow_cross_axis_scroll,
+    :around,
+    :aspect,
+    :"aspect-square",
+    :"aspect-video",
+    :aspect_ratio,
+    :auto,
+    :base,
+    :baseline,
+    :basis,
+    :between,
+    :bg,
+    :"bg-black",
+    :"bg-blue",
+    :"bg-gray",
+    :"bg-green",
+    :"bg-red",
+    :"bg-white",
+    :"bg-yellow",
+    :bg_black,
+    :bg_blue,
+    :bg_gray,
+    :bg_green,
+    :bg_hex,
+    :bg_linear_gradient,
+    :bg_pattern_slash,
+    :bg_red,
+    :bg_white,
+    :bg_yellow,
+    :black,
+    :block,
+    :blue,
+    :bold,
+    :border,
+    :"border-b",
+    :"border-black",
+    :"border-blue",
+    :"border-dashed",
+    :"border-gray",
+    :"border-green",
+    :"border-l",
+    :"border-r",
+    :"border-red",
+    :"border-solid",
+    :"border-t",
+    :"border-white",
+    :"border-x",
+    :"border-y",
+    :"border-yellow",
+    :border_b,
+    :border_color,
+    :border_color_black,
+    :border_color_blue,
+    :border_color_gray,
+    :border_color_green,
+    :border_color_hex,
+    :border_color_red,
+    :border_color_white,
+    :border_color_yellow,
+    :border_dashed,
+    :border_l,
+    :border_r,
+    :border_radius,
+    :border_solid,
+    :border_style,
+    :border_t,
+    :border_width,
+    :border_width_scale,
+    :border_x,
+    :border_y,
+    :bottom,
+    :bottom_left,
+    :bottom_right,
+    :box_shadow,
+    :center,
+    :clip,
+    :"col-end",
+    :"col-end-auto",
+    :"col-span",
+    :"col-span-full",
+    :"col-start",
+    :"col-start-auto",
+    :col_end,
+    :col_resize,
+    :col_span,
+    :col_span_full,
+    :col_start,
+    :column,
+    :column_reverse,
+    :contain,
+    :"content-around",
+    :"content-between",
+    :"content-center",
+    :"content-end",
+    :"content-evenly",
+    :"content-normal",
+    :"content-start",
+    :"content-stretch",
+    :content_around,
+    :content_between,
+    :content_center,
+    :content_end,
+    :content_evenly,
+    :content_normal,
+    :content_start,
+    :content_stretch,
+    :context_menu,
+    :copy,
+    :cover,
+    :crosshair,
+    :cursor,
+    :"cursor-alias",
+    :"cursor-col-resize",
+    :"cursor-context-menu",
+    :"cursor-copy",
+    :"cursor-crosshair",
+    :"cursor-default",
+    :"cursor-e-resize",
+    :"cursor-ew-resize",
+    :"cursor-grab",
+    :"cursor-grabbing",
+    :"cursor-move",
+    :"cursor-n-resize",
+    :"cursor-nesw-resize",
+    :"cursor-no-drop",
+    :"cursor-none",
+    :"cursor-not-allowed",
+    :"cursor-ns-resize",
+    :"cursor-nwse-resize",
+    :"cursor-pointer",
+    :"cursor-row-resize",
+    :"cursor-s-resize",
+    :"cursor-text",
+    :"cursor-vertical-text",
+    :"cursor-w-resize",
+    :cursor_alias,
+    :cursor_col_resize,
+    :cursor_context_menu,
+    :cursor_copy,
+    :cursor_crosshair,
+    :cursor_default,
+    :cursor_e_resize,
+    :cursor_ew_resize,
+    :cursor_grab,
+    :cursor_grabbing,
+    :cursor_move,
+    :cursor_n_resize,
+    :cursor_nesw_resize,
+    :cursor_no_drop,
+    :cursor_none,
+    :cursor_not_allowed,
+    :cursor_ns_resize,
+    :cursor_nwse_resize,
+    :cursor_pointer,
+    :cursor_row_resize,
+    :cursor_s_resize,
+    :cursor_text,
+    :cursor_vertical_text,
+    :cursor_w_resize,
+    :dashed,
+    :debug,
+    :"debug-below",
+    :debug_below,
+    :decoration,
+    :"decoration-0",
+    :"decoration-1",
+    :"decoration-2",
+    :"decoration-4",
+    :"decoration-8",
+    :"decoration-black",
+    :"decoration-blue",
+    :"decoration-gray",
+    :"decoration-green",
+    :"decoration-red",
+    :"decoration-solid",
+    :"decoration-wavy",
+    :"decoration-white",
+    :"decoration-yellow",
+    :decoration_black,
+    :decoration_blue,
+    :decoration_gray,
+    :decoration_green,
+    :decoration_red,
+    :decoration_solid,
+    :decoration_wavy,
+    :decoration_white,
+    :decoration_yellow,
+    :default,
+    :disable_ligatures,
+    :disallow_concurrent_scroll,
+    :display,
+    :e_resize,
+    :ellipsis,
+    :end,
+    :evenly,
+    :ew_resize,
+    :exact,
+    :extrabold,
+    :extralight,
+    :fill,
+    :flex,
+    :"flex-1",
+    :"flex-auto",
+    :"flex-col",
+    :"flex-col-reverse",
+    :"flex-grow",
+    :"flex-initial",
+    :"flex-none",
+    :"flex-nowrap",
+    :"flex-row",
+    :"flex-row-reverse",
+    :"flex-shrink",
+    :"flex-shrink-0",
+    :"flex-wrap",
+    :"flex-wrap-reverse",
+    :flex_1,
+    :flex_auto,
+    :flex_basis,
+    :flex_col,
+    :flex_col_reverse,
+    :flex_direction,
+    :flex_grow,
+    :flex_initial,
+    :flex_item,
+    :flex_none,
+    :flex_nowrap,
+    :flex_row,
+    :flex_row_reverse,
+    :flex_shrink,
+    :flex_shrink_0,
+    :flex_wrap,
+    :flex_wrap_reverse,
+    :font,
+    :"font-black",
+    :"font-bold",
+    :"font-extrabold",
+    :"font-extralight",
+    :"font-fallbacks",
+    :"font-family",
+    :"font-features",
+    :"font-ligatures-none",
+    :"font-light",
+    :"font-medium",
+    :"font-normal",
+    :"font-semibold",
+    :"font-thin",
+    :font_black,
+    :font_bold,
+    :font_extrabold,
+    :font_extralight,
+    :font_fallbacks,
+    :font_family,
+    :font_features,
+    :font_light,
+    :font_medium,
+    :font_normal,
+    :font_semibold,
+    :font_size,
+    :font_style,
+    :font_thin,
+    :font_weight,
+    :font_weight_value,
+    :fraction,
+    :full,
+    :gap,
+    :"gap-x",
+    :"gap-y",
+    :gap_x,
+    :gap_y,
+    :grab,
+    :grabbing,
+    :gray,
+    :grayscale,
+    :"grayscale-0",
+    :green,
+    :grid,
+    :"grid-cols",
+    :"grid-rows",
+    :grid_cols,
+    :grid_rows,
+    :grow,
+    :"grow-0",
+    :h,
+    :height,
+    :hidden,
+    :initial,
+    :inset,
+    :integer,
+    :invisible,
+    :italic,
+    :"items-baseline",
+    :"items-center",
+    :"items-end",
+    :"items-start",
+    :"items-stretch",
+    :items_baseline,
+    :items_center,
+    :items_end,
+    :items_start,
+    :items_stretch,
+    :"justify-around",
+    :"justify-between",
+    :"justify-center",
+    :"justify-end",
+    :"justify-evenly",
+    :"justify-start",
+    :"justify-stretch",
+    :justify_around,
+    :justify_between,
+    :justify_center,
+    :justify_content,
+    :justify_end,
+    :justify_evenly,
+    :justify_start,
+    :justify_stretch,
+    :leading,
+    :"leading-loose",
+    :"leading-none",
+    :"leading-normal",
+    :"leading-relaxed",
+    :"leading-snug",
+    :"leading-tight",
+    :leading_loose,
+    :leading_none,
+    :leading_normal,
+    :leading_relaxed,
+    :leading_snug,
+    :leading_tight,
+    :left,
+    :lg,
+    :light,
+    :"line-clamp",
+    :"line-through",
+    :line_clamp,
+    :line_height,
+    :line_height_length,
+    :line_through,
+    :loose,
+    :m,
+    :margin,
+    :"max-h",
+    :"max-w",
+    :max_h,
+    :max_height,
+    :max_w,
+    :max_width,
+    :mb,
+    :md,
+    :medium,
+    :"min-h",
+    :"min-w",
+    :min_h,
+    :min_height,
+    :min_w,
+    :min_width,
+    :ml,
+    :move,
+    :mr,
+    :mt,
+    :mx,
+    :my,
+    :n_resize,
+    :nesw_resize,
+    :"no-underline",
+    :no_drop,
+    :no_underline,
+    :none,
+    :normal,
+    :"not-grayscale",
+    :"not-italic",
+    :not_allowed,
+    :not_grayscale,
+    :not_italic,
+    :nowrap,
+    :ns_resize,
+    :number,
+    :nwse_resize,
+    :"object-contain",
+    :"object-cover",
+    :"object-fill",
+    :"object-none",
+    :"object-scale-down",
+    :object_contain,
+    :object_cover,
+    :object_fill,
+    :object_fit,
+    :object_none,
+    :object_scale_down,
+    :one,
+    :opacity,
+    :"opacity-0",
+    :"opacity-10",
+    :"opacity-100",
+    :"opacity-20",
+    :"opacity-25",
+    :"opacity-30",
+    :"opacity-40",
+    :"opacity-5",
+    :"opacity-50",
+    :"opacity-60",
+    :"opacity-70",
+    :"opacity-75",
+    :"opacity-80",
+    :"opacity-90",
+    :"opacity-95",
+    :overflow,
+    :"overflow-clip",
+    :"overflow-hidden",
+    :"overflow-scroll",
+    :"overflow-visible",
+    :"overflow-x-clip",
+    :"overflow-x-hidden",
+    :"overflow-x-scroll",
+    :"overflow-x-visible",
+    :"overflow-y-clip",
+    :"overflow-y-hidden",
+    :"overflow-y-scroll",
+    :"overflow-y-visible",
+    :overflow_clip,
+    :overflow_hidden,
+    :overflow_scroll,
+    :overflow_visible,
+    :overflow_x_clip,
+    :overflow_x_hidden,
+    :overflow_x_scroll,
+    :overflow_x_visible,
+    :overflow_y_clip,
+    :overflow_y_hidden,
+    :overflow_y_scroll,
+    :overflow_y_visible,
+    :p,
+    :padding,
+    :pattern_slash,
+    :pb,
+    :pl,
+    :pointer,
+    :position,
+    :pr,
+    :pt,
+    :px,
+    :py,
+    :radius_scale,
+    :red,
+    :relative,
+    :relaxed,
+    :rem,
+    :restrict_scroll_to_axis,
+    :right,
+    :rounded,
+    :"rounded-b",
+    :"rounded-bl",
+    :"rounded-br",
+    :"rounded-l",
+    :"rounded-r",
+    :"rounded-t",
+    :"rounded-tl",
+    :"rounded-tr",
+    :rounded_b,
+    :rounded_bl,
+    :rounded_br,
+    :rounded_l,
+    :rounded_r,
+    :rounded_t,
+    :rounded_tl,
+    :rounded_tr,
+    :row,
+    :"row-end",
+    :"row-end-auto",
+    :"row-span",
+    :"row-span-full",
+    :"row-start",
+    :"row-start-auto",
+    :row_end,
+    :row_resize,
+    :row_reverse,
+    :row_span,
+    :row_span_full,
+    :row_start,
+    :s_resize,
+    :scale,
+    :scale_down,
+    :scroll,
+    :"scroll-axis-free",
+    :"scroll-axis-restricted",
+    :"scroll-concurrent",
+    :"scroll-concurrent-off",
+    :"scrollbar-w",
+    :scrollbar_width,
+    :"self-baseline",
+    :"self-center",
+    :"self-end",
+    :"self-start",
+    :"self-stretch",
+    :self_baseline,
+    :self_center,
+    :self_end,
+    :self_start,
+    :self_stretch,
+    :semibold,
+    :shadow,
+    :"shadow-2xl",
+    :"shadow-2xs",
+    :"shadow-lg",
+    :"shadow-md",
+    :"shadow-none",
+    :"shadow-sm",
+    :"shadow-xl",
+    :"shadow-xs",
+    :shadow_2xl,
+    :shadow_2xs,
+    :shadow_lg,
+    :shadow_md,
+    :shadow_none,
+    :shadow_sm,
+    :shadow_xl,
+    :shadow_xs,
+    :shrink,
+    :"shrink-0",
+    :shrink_0,
+    :signed_integer_or_auto,
+    :size,
+    :sm,
+    :snug,
+    :solid,
+    :start,
+    :stretch,
+    :strikethrough,
+    :"strikethrough-0",
+    :"strikethrough-1",
+    :"strikethrough-2",
+    :"strikethrough-4",
+    :"strikethrough-8",
+    :"strikethrough-black",
+    :"strikethrough-blue",
+    :"strikethrough-gray",
+    :"strikethrough-green",
+    :"strikethrough-red",
+    :"strikethrough-white",
+    :"strikethrough-yellow",
+    :strikethrough_black,
+    :strikethrough_blue,
+    :strikethrough_color,
+    :strikethrough_color_hex,
+    :strikethrough_gray,
+    :strikethrough_green,
+    :strikethrough_red,
+    :strikethrough_thickness,
+    :strikethrough_white,
+    :strikethrough_yellow,
+    :string,
+    :string_list,
+    :text,
+    :"text-2xl",
+    :"text-3xl",
+    :"text-base",
+    :"text-bg",
+    :"text-bg-black",
+    :"text-bg-blue",
+    :"text-bg-gray",
+    :"text-bg-green",
+    :"text-bg-red",
+    :"text-bg-white",
+    :"text-bg-yellow",
+    :"text-black",
+    :"text-blue",
+    :"text-center",
+    :"text-ellipsis",
+    :"text-gray",
+    :"text-green",
+    :"text-left",
+    :"text-lg",
+    :"text-red",
+    :"text-right",
+    :"text-sm",
+    :"text-white",
+    :"text-xl",
+    :"text-xs",
+    :"text-yellow",
+    :text_2xl,
+    :text_3xl,
+    :text_align,
+    :text_base,
+    :text_bg,
+    :text_bg_black,
+    :text_bg_blue,
+    :text_bg_gray,
+    :text_bg_green,
+    :text_bg_hex,
+    :text_bg_red,
+    :text_bg_white,
+    :text_bg_yellow,
+    :text_center,
+    :text_color,
+    :text_color_black,
+    :text_color_blue,
+    :text_color_gray,
+    :text_color_green,
+    :text_color_hex,
+    :text_color_red,
+    :text_color_white,
+    :text_color_yellow,
+    :text_decoration,
+    :text_decoration_color,
+    :text_decoration_color_hex,
+    :text_decoration_style,
+    :text_decoration_thickness,
+    :text_ellipsis,
+    :text_left,
+    :text_lg,
+    :text_overflow,
+    :text_right,
+    :text_size,
+    :text_sm,
+    :text_xl,
+    :text_xs,
+    :thin,
+    :tight,
+    :top,
+    :top_left,
+    :top_right,
+    :truncate,
+    :underline,
+    :unit_length,
+    :value,
+    :vertical_text,
+    :visibility,
+    :visible,
+    :w,
+    :w_resize,
+    :wavy,
+    :white,
+    :white_space,
+    :"whitespace-normal",
+    :"whitespace-nowrap",
+    :whitespace_normal,
+    :whitespace_nowrap,
+    :width,
+    :wrap,
+    :wrap_reverse,
+    :x,
+    :xl,
+    :xs,
+    :y,
+    :yellow
+  ]
+  @catalog_atoms Map.new(@catalog_atom_seed, &{Atom.to_string(&1), &1})
+
   @axis_operations Enum.filter(@catalog["operations"], fn operation ->
                      operation["name"] in [
                        "padding",
@@ -152,37 +810,37 @@ defmodule Guppy.Style do
                           operation["name"] in ["col_start", "col_end", "row_start", "row_end"]
                         end)
 
-  @named_color_tokens @catalog["color_tokens"] |> Enum.map(&String.to_atom/1)
+  @named_color_tokens @catalog["color_tokens"] |> Enum.map(&Map.fetch!(@catalog_atoms, &1))
 
   @style_operations @axis_operations ++ @length_operations
 
   @enum_config Map.new(@enum_operations, fn operation ->
-                 {String.to_atom(operation["name"]),
+                 {Map.fetch!(@catalog_atoms, operation["name"]),
                   %{
-                    values: Enum.map(operation["values"], &String.to_atom/1),
+                    values: Enum.map(operation["values"], &Map.fetch!(@catalog_atoms, &1)),
                     class_tokens:
                       Map.new(operation["class_tokens"], fn {token, value} ->
-                        {token, String.to_atom(value)}
+                        {token, Map.fetch!(@catalog_atoms, value)}
                       end)
                   }}
                end)
 
   @enum_class_tokens Enum.flat_map(@enum_operations, fn operation ->
-                       operation_name = String.to_atom(operation["name"])
+                       operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
                        Enum.map(operation["class_tokens"], fn {token, value} ->
-                         {token, {operation_name, String.to_atom(value)}}
+                         {token, {operation_name, Map.fetch!(@catalog_atoms, value)}}
                        end)
                      end)
                      |> Map.new()
 
   @image_option_config Map.new(@image_option_operations, fn operation ->
                          normalize_value = fn
-                           value when is_binary(value) -> String.to_atom(value)
+                           value when is_binary(value) -> Map.fetch!(@catalog_atoms, value)
                            value when is_boolean(value) -> value
                          end
 
-                         {String.to_atom(operation["name"]),
+                         {Map.fetch!(@catalog_atoms, operation["name"]),
                           %{
                             values: Enum.map(operation["values"], normalize_value),
                             class_tokens:
@@ -194,11 +852,11 @@ defmodule Guppy.Style do
 
   @image_option_class_tokens Enum.flat_map(@image_option_operations, fn operation ->
                                normalize_value = fn
-                                 value when is_binary(value) -> String.to_atom(value)
+                                 value when is_binary(value) -> Map.fetch!(@catalog_atoms, value)
                                  value when is_boolean(value) -> value
                                end
 
-                               operation_name = String.to_atom(operation["name"])
+                               operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
                                Enum.map(operation["class_tokens"], fn {token, value} ->
                                  {token, {operation_name, normalize_value.(value)}}
@@ -206,62 +864,64 @@ defmodule Guppy.Style do
                              end)
                              |> Map.new()
 
-  @boolean_class_tokens Enum.flat_map(@boolean_operations, fn operation ->
-                          operation_name = String.to_atom(operation["name"])
+  @literal_class_tokens fn operations ->
+    operations
+    |> Enum.flat_map(fn operation ->
+      operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
-                          Enum.map(operation["class_tokens"], fn {token, value} ->
-                            {token, {operation_name, value}}
-                          end)
-                        end)
-                        |> Map.new()
+      Enum.map(operation["class_tokens"], fn {token, value} ->
+        {token, {operation_name, value}}
+      end)
+    end)
+    |> Map.new()
+  end
+
+  @boolean_class_tokens @literal_class_tokens.(@boolean_operations)
 
   @hex_color_class_prefixes Map.new(@hex_color_operations, fn operation ->
-                              {operation["class_prefix"], String.to_atom(operation["name"])}
+                              {operation["class_prefix"],
+                               Map.fetch!(@catalog_atoms, operation["name"])}
                             end)
+
+  @numeric_class_prefix_specs fn operations, config_by_operation ->
+    operations
+    |> Enum.map(fn operation ->
+      config = Map.fetch!(config_by_operation, Map.fetch!(@catalog_atoms, operation["name"]))
+      {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
+
+      %{
+        prefix: prefix,
+        operation: Map.fetch!(@catalog_atoms, operation["name"]),
+        min: config.min,
+        max: config.max
+      }
+    end)
+    |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+  end
 
   @number_config Map.new(@number_operations, fn operation ->
                    number = operation["number"]
 
-                   {String.to_atom(operation["name"]),
+                   {Map.fetch!(@catalog_atoms, operation["name"]),
                     %{
                       min: number["min"],
                       max: number["max"]
                     }}
                  end)
 
-  @number_class_tokens Enum.flat_map(@number_operations, fn operation ->
-                         operation_name = String.to_atom(operation["name"])
+  @number_class_tokens @literal_class_tokens.(@number_operations)
 
-                         Enum.map(operation["class_tokens"], fn {token, value} ->
-                           {token, {operation_name, value}}
-                         end)
-                       end)
-                       |> Map.new()
-
-  @number_class_prefix_specs @number_operations
-                             |> Enum.map(fn operation ->
-                               config =
-                                 Map.fetch!(@number_config, String.to_atom(operation["name"]))
-
-                               {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
-
-                               %{
-                                 prefix: prefix,
-                                 operation: String.to_atom(operation["name"]),
-                                 min: config.min,
-                                 max: config.max
-                               }
-                             end)
-                             |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+  @number_class_prefix_specs @numeric_class_prefix_specs.(@number_operations, @number_config)
 
   @unit_length_config Map.new(@unit_length_operations, fn operation ->
                         length = operation["length"]
 
-                        {String.to_atom(operation["name"]),
+                        {Map.fetch!(@catalog_atoms, operation["name"]),
                          %{
                            allow_auto: length["auto"],
                            allow_negative: length["negative"],
-                           length_units: length["allowed_units"] |> Enum.map(&String.to_atom/1)
+                           length_units:
+                             length["allowed_units"] |> Enum.map(&Map.fetch!(@catalog_atoms, &1))
                          }}
                       end)
 
@@ -270,14 +930,14 @@ defmodule Guppy.Style do
                                     config =
                                       Map.fetch!(
                                         @unit_length_config,
-                                        String.to_atom(operation["name"])
+                                        Map.fetch!(@catalog_atoms, operation["name"])
                                       )
 
                                     {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
 
                                     %{
                                       prefix: prefix,
-                                      operation: String.to_atom(operation["name"]),
+                                      operation: Map.fetch!(@catalog_atoms, operation["name"]),
                                       allow_auto: config.allow_auto,
                                       allow_negative: config.allow_negative,
                                       length_units: config.length_units
@@ -288,7 +948,7 @@ defmodule Guppy.Style do
   @grid_line_config Map.new(@grid_line_operations, fn operation ->
                       integer = operation["integer"]
 
-                      {String.to_atom(operation["name"]),
+                      {Map.fetch!(@catalog_atoms, operation["name"]),
                        %{
                          min: integer["min"],
                          max: integer["max"],
@@ -297,7 +957,7 @@ defmodule Guppy.Style do
                     end)
 
   @grid_line_class_tokens Enum.flat_map(@grid_line_operations, fn operation ->
-                            operation_name = String.to_atom(operation["name"])
+                            operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
                             Enum.map(operation["class_tokens"], fn {token, value} ->
                               value = if value == "auto", do: :auto, else: value
@@ -306,29 +966,15 @@ defmodule Guppy.Style do
                           end)
                           |> Map.new()
 
-  @grid_line_class_prefix_specs @grid_line_operations
-                                |> Enum.map(fn operation ->
-                                  config =
-                                    Map.fetch!(
-                                      @grid_line_config,
-                                      String.to_atom(operation["name"])
-                                    )
-
-                                  {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
-
-                                  %{
-                                    prefix: prefix,
-                                    operation: String.to_atom(operation["name"]),
-                                    min: config.min,
-                                    max: config.max
-                                  }
-                                end)
-                                |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+  @grid_line_class_prefix_specs @numeric_class_prefix_specs.(
+                                  @grid_line_operations,
+                                  @grid_line_config
+                                )
 
   @string_config Map.new(@string_operations, fn operation ->
                    string = operation["string"]
 
-                   {String.to_atom(operation["name"]),
+                   {Map.fetch!(@catalog_atoms, operation["name"]),
                     %{
                       min_length: string["min_length"]
                     }}
@@ -337,13 +983,16 @@ defmodule Guppy.Style do
   @string_class_prefix_specs @string_operations
                              |> Enum.map(fn operation ->
                                config =
-                                 Map.fetch!(@string_config, String.to_atom(operation["name"]))
+                                 Map.fetch!(
+                                   @string_config,
+                                   Map.fetch!(@catalog_atoms, operation["name"])
+                                 )
 
                                {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
 
                                %{
                                  prefix: prefix,
-                                 operation: String.to_atom(operation["name"]),
+                                 operation: Map.fetch!(@catalog_atoms, operation["name"]),
                                  min_length: config.min_length
                                }
                              end)
@@ -352,7 +1001,7 @@ defmodule Guppy.Style do
   @string_list_config Map.new(@string_list_operations, fn operation ->
                         string_list = operation["string_list"]
 
-                        {String.to_atom(operation["name"]),
+                        {Map.fetch!(@catalog_atoms, operation["name"]),
                          %{
                            min_items: string_list["min_items"],
                            min_length: string_list["min_length"]
@@ -364,14 +1013,14 @@ defmodule Guppy.Style do
                                     config =
                                       Map.fetch!(
                                         @string_list_config,
-                                        String.to_atom(operation["name"])
+                                        Map.fetch!(@catalog_atoms, operation["name"])
                                       )
 
                                     {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
 
                                     %{
                                       prefix: prefix,
-                                      operation: String.to_atom(operation["name"]),
+                                      operation: Map.fetch!(@catalog_atoms, operation["name"]),
                                       min_items: config.min_items,
                                       min_length: config.min_length
                                     }
@@ -381,7 +1030,7 @@ defmodule Guppy.Style do
   @font_feature_config Map.new(@font_feature_operations, fn operation ->
                          font_features = operation["font_features"]
 
-                         {String.to_atom(operation["name"]),
+                         {Map.fetch!(@catalog_atoms, operation["name"]),
                           %{
                             min_items: font_features["min_items"],
                             tag_pattern: Regex.compile!(font_features["tag_pattern"]),
@@ -391,7 +1040,7 @@ defmodule Guppy.Style do
                        end)
 
   @font_feature_class_tokens Enum.flat_map(@font_feature_operations, fn operation ->
-                               operation_name = String.to_atom(operation["name"])
+                               operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
                                Enum.map(operation["class_tokens"], fn {token, value} ->
                                  {token, {operation_name, Enum.map(value, &List.to_tuple/1)}}
@@ -404,14 +1053,14 @@ defmodule Guppy.Style do
                                      config =
                                        Map.fetch!(
                                          @font_feature_config,
-                                         String.to_atom(operation["name"])
+                                         Map.fetch!(@catalog_atoms, operation["name"])
                                        )
 
                                      {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
 
                                      %{
                                        prefix: prefix,
-                                       operation: String.to_atom(operation["name"]),
+                                       operation: Map.fetch!(@catalog_atoms, operation["name"]),
                                        min_items: config.min_items,
                                        tag_pattern: config.tag_pattern,
                                        min_value: config.min_value,
@@ -420,25 +1069,27 @@ defmodule Guppy.Style do
                                    end)
                                    |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
 
-  @overflow_axes @overflow_operation["axes"] |> Map.keys() |> Enum.map(&String.to_atom/1)
-  @overflow_values @overflow_operation["values"] |> Enum.map(&String.to_atom/1)
+  @overflow_axes @overflow_operation["axes"]
+                 |> Enum.map(fn {axis, _config} -> Map.fetch!(@catalog_atoms, axis) end)
+  @overflow_values @overflow_operation["values"] |> Enum.map(&Map.fetch!(@catalog_atoms, &1))
   @overflow_class_tokens Map.new(@overflow_operation["class_tokens"], fn {token, [axis, value]} ->
-                           {token, {String.to_atom(axis), String.to_atom(value)}}
+                           {token,
+                            {Map.fetch!(@catalog_atoms, axis), Map.fetch!(@catalog_atoms, value)}}
                          end)
   @overflow_value_helpers @overflow_operation["helpers"]
                           |> Enum.filter(&(&1["kind"] == "value"))
                           |> Enum.map(fn helper ->
                             %{
-                              function: String.to_atom(helper["name"]),
-                              axis: String.to_atom(helper["axis"]),
-                              value: String.to_atom(helper["value"])
+                              function: Map.fetch!(@catalog_atoms, helper["name"]),
+                              axis: Map.fetch!(@catalog_atoms, helper["axis"]),
+                              value: Map.fetch!(@catalog_atoms, helper["value"])
                             }
                           end)
 
   @integer_config Map.new(@integer_operations, fn operation ->
                     integer = operation["integer"]
 
-                    {String.to_atom(operation["name"]),
+                    {Map.fetch!(@catalog_atoms, operation["name"]),
                      %{
                        min: integer["min"],
                        max: integer["max"]
@@ -446,53 +1097,50 @@ defmodule Guppy.Style do
                   end)
 
   @integer_class_tokens Enum.flat_map(@integer_operations, fn operation ->
-                          operation_name = String.to_atom(operation["name"])
+                          operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
                           operation
                           |> Map.get("class_tokens", %{})
                           |> Enum.map(fn {token, value} ->
-                            value = if is_binary(value), do: String.to_atom(value), else: value
+                            value =
+                              if is_binary(value),
+                                do: Map.fetch!(@catalog_atoms, value),
+                                else: value
+
                             {token, {operation_name, value}}
                           end)
                         end)
                         |> Map.new()
 
-  @integer_class_prefix_specs @integer_operations
-                              |> Enum.map(fn operation ->
-                                config =
-                                  Map.fetch!(@integer_config, String.to_atom(operation["name"]))
-
-                                {prefix, nil} = Enum.at(operation["class_prefixes"], 0)
-
-                                %{
-                                  prefix: prefix,
-                                  operation: String.to_atom(operation["name"]),
-                                  min: config.min,
-                                  max: config.max
-                                }
-                              end)
-                              |> Enum.sort_by(fn spec -> -String.length(spec.prefix) end)
+  @integer_class_prefix_specs @numeric_class_prefix_specs.(@integer_operations, @integer_config)
 
   @operation_config Map.new(@style_operations, fn operation ->
                       length = operation["length"]
 
                       axes =
                         case operation["axes"] do
-                          nil -> nil
-                          axes -> axes |> Map.keys() |> Enum.map(&String.to_atom/1)
+                          nil ->
+                            nil
+
+                          axes ->
+                            Enum.map(axes, fn {axis, _config} ->
+                              Map.fetch!(@catalog_atoms, axis)
+                            end)
                         end
 
-                      {String.to_atom(operation["name"]),
+                      {Map.fetch!(@catalog_atoms, operation["name"]),
                        %{
                          axes: axes,
                          allow_auto: length["auto"],
                          allow_negative: length["negative"],
-                         length_units: length["allowed_units"] |> Enum.map(&String.to_atom/1)
+                         length_units:
+                           length["allowed_units"] |> Enum.map(&Map.fetch!(@catalog_atoms, &1))
                        }}
                     end)
 
   @scale_helpers Enum.flat_map(@style_operations, fn operation ->
-                   config = Map.fetch!(@operation_config, String.to_atom(operation["name"]))
+                   config =
+                     Map.fetch!(@operation_config, Map.fetch!(@catalog_atoms, operation["name"]))
 
                    operation["helpers"]
                    |> Enum.filter(&(&1["kind"] == "scale"))
@@ -501,9 +1149,9 @@ defmodule Guppy.Style do
                    end)
                    |> Enum.map(fn helper ->
                      %{
-                       operation: String.to_atom(operation["name"]),
-                       function: String.to_atom(helper["name"]),
-                       axis: helper["axis"] && String.to_atom(helper["axis"]),
+                       operation: Map.fetch!(@catalog_atoms, operation["name"]),
+                       function: Map.fetch!(@catalog_atoms, helper["name"]),
+                       axis: helper["axis"] && Map.fetch!(@catalog_atoms, helper["axis"]),
                        allow_auto: config.allow_auto,
                        allow_negative: config.allow_negative,
                        length_units: config.length_units
@@ -513,13 +1161,17 @@ defmodule Guppy.Style do
 
   @class_prefix_specs @style_operations
                       |> Enum.flat_map(fn operation ->
-                        config = Map.fetch!(@operation_config, String.to_atom(operation["name"]))
+                        config =
+                          Map.fetch!(
+                            @operation_config,
+                            Map.fetch!(@catalog_atoms, operation["name"])
+                          )
 
                         Enum.map(operation["class_prefixes"], fn {prefix, axis} ->
                           %{
                             prefix: prefix,
-                            operation: String.to_atom(operation["name"]),
-                            axis: axis && String.to_atom(axis),
+                            operation: Map.fetch!(@catalog_atoms, operation["name"]),
+                            axis: axis && Map.fetch!(@catalog_atoms, axis),
                             allow_auto: config.allow_auto,
                             allow_negative: config.allow_negative,
                             length_units: config.length_units
@@ -556,14 +1208,27 @@ defmodule Guppy.Style do
                         end)
                         |> Map.new()
 
-                      {String.to_atom(operation["name"]), scale_lengths}
+                      {Map.fetch!(@catalog_atoms, operation["name"]), scale_lengths}
                     end)
 
   @doc "Returns the decoded style catalog used to generate this module."
   def catalog, do: @catalog
 
-  for {operation, config} <- @enum_config do
-    values = config.values
+  @doc false
+  def catalog_atom(value) when is_binary(value), do: Map.fetch!(@catalog_atoms, value)
+
+  for operation <- @enum_operations,
+      %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
+    value = Map.fetch!(@catalog_atoms, value)
+
+    @doc "Returns canonical #{value} #{operation_name} style."
+    def unquote(function)(), do: {unquote(operation_name), unquote(value)}
+  end
+
+  for {operation, config} <- Map.merge(@enum_config, @image_option_config) do
+    values = Macro.escape(config.values)
 
     @doc "Returns a canonical #{operation} tuple."
     def unquote(operation)(value) when value in unquote(values), do: {unquote(operation), value}
@@ -572,30 +1237,10 @@ defmodule Guppy.Style do
       do: raise(ArgumentError, "invalid #{unquote(operation)} value: #{inspect(value)}")
   end
 
-  for operation <- @enum_operations,
-      %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
-    value = String.to_atom(value)
-
-    @doc "Returns canonical #{value} #{operation_name} style."
-    def unquote(function)(), do: {unquote(operation_name), unquote(value)}
-  end
-
-  for {operation, config} <- @image_option_config do
-    values = Macro.escape(config.values)
-
-    @doc "Returns a canonical image-only #{operation} option tuple."
-    def unquote(operation)(value) when value in unquote(values), do: {unquote(operation), value}
-
-    def unquote(operation)(value),
-      do: raise(ArgumentError, "invalid #{unquote(operation)} value: #{inspect(value)}")
-  end
-
   for operation <- @boolean_operations,
       %{"kind" => "exact", "name" => name} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     @doc "Returns a canonical #{operation_name} boolean tuple."
     def unquote(function)(value) when is_boolean(value), do: {unquote(operation_name), value}
@@ -606,8 +1251,8 @@ defmodule Guppy.Style do
 
   for operation <- @boolean_operations,
       %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     @doc "Returns canonical #{inspect(value)} #{operation_name} style."
     def unquote(function)(), do: {unquote(operation_name), unquote(value)}
@@ -615,12 +1260,12 @@ defmodule Guppy.Style do
 
   for operation <- @image_option_operations,
       %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     value =
       case value do
-        value when is_binary(value) -> String.to_atom(value)
+        value when is_binary(value) -> Map.fetch!(@catalog_atoms, value)
         value when is_boolean(value) -> value
       end
 
@@ -629,14 +1274,14 @@ defmodule Guppy.Style do
   end
 
   for operation <- @hex_color_operations do
-    operation_name = String.to_atom(operation["name"])
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
     @doc "Returns a canonical #{operation_name} hex color tuple."
     def unquote(operation_name)(value), do: {unquote(operation_name), normalize_hex_color!(value)}
   end
 
   for operation <- @gradient_operations do
-    operation_name = String.to_atom(operation["name"])
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
     @doc "Returns a canonical #{operation_name} tuple."
     def unquote(operation_name)(options),
@@ -644,7 +1289,7 @@ defmodule Guppy.Style do
   end
 
   for operation <- @background_pattern_operations do
-    operation_name = String.to_atom(operation["name"])
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
     @doc "Returns a canonical #{operation_name} tuple."
     def unquote(operation_name)(options),
@@ -652,7 +1297,7 @@ defmodule Guppy.Style do
   end
 
   for operation <- @box_shadow_operations do
-    operation_name = String.to_atom(operation["name"])
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
 
     @doc "Returns a canonical #{operation_name} tuple."
     def unquote(operation_name)(shadows),
@@ -661,8 +1306,8 @@ defmodule Guppy.Style do
 
   for operation <- @number_operations,
       %{"kind" => "number", "name" => name} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     @doc "Returns a canonical #{operation_name} number tuple."
     def unquote(function)(value),
@@ -671,8 +1316,8 @@ defmodule Guppy.Style do
 
   for operation <- @unit_length_operations,
       %{"kind" => "unit_length", "name" => name} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     @doc "Returns a canonical #{operation_name} unit length tuple."
     def unquote(function)(length),
@@ -685,8 +1330,8 @@ defmodule Guppy.Style do
 
   for operation <- @string_operations,
       %{"kind" => "string", "name" => name} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     @doc "Returns a canonical #{operation_name} string tuple."
     def unquote(function)(value),
@@ -695,8 +1340,8 @@ defmodule Guppy.Style do
 
   for operation <- @string_list_operations,
       %{"kind" => "string_list", "name" => name} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     @doc "Returns a canonical #{operation_name} string-list tuple."
     def unquote(function)(value),
@@ -705,8 +1350,8 @@ defmodule Guppy.Style do
 
   for operation <- @font_feature_operations,
       %{"kind" => "font_features", "name" => name} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
 
     @doc "Returns a canonical #{operation_name} OpenType feature tuple."
     def unquote(function)(value),
@@ -715,8 +1360,8 @@ defmodule Guppy.Style do
 
   for operation <- @font_feature_operations,
       %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
     value = Enum.map(value, &List.to_tuple/1)
 
     @doc "Returns canonical #{operation_name} OpenType feature style."
@@ -749,9 +1394,9 @@ defmodule Guppy.Style do
 
   for operation <- @integer_operations,
       %{"kind" => "value", "name" => name, "value" => value} <- operation["helpers"] do
-    operation_name = String.to_atom(operation["name"])
-    function = String.to_atom(name)
-    value = if is_binary(value), do: String.to_atom(value), else: value
+    operation_name = Map.fetch!(@catalog_atoms, operation["name"])
+    function = Map.fetch!(@catalog_atoms, name)
+    value = if is_binary(value), do: Map.fetch!(@catalog_atoms, value), else: value
 
     @doc "Returns canonical #{inspect(value)} #{operation_name} style."
     def unquote(function)(), do: {unquote(operation_name), unquote(value)}
@@ -851,21 +1496,12 @@ defmodule Guppy.Style do
   def class_token_to_style(_token), do: :error
 
   @doc false
-  def class_token_to_image_option(token) when is_binary(token) do
-    case Map.fetch(@image_option_class_tokens, token) do
-      {:ok, {operation, value}} -> {:ok, {operation, value}}
-      :error -> :error
-    end
-  end
+  def class_token_to_image_option(token) when is_binary(token),
+    do: Map.fetch(@image_option_class_tokens, token)
 
   def class_token_to_image_option(_token), do: :error
 
-  defp parse_enum_class(token) do
-    case Map.fetch(@enum_class_tokens, token) do
-      {:ok, {operation, value}} -> {:ok, {operation, value}}
-      :error -> :error
-    end
-  end
+  defp parse_enum_class(token), do: Map.fetch(@enum_class_tokens, token)
 
   defp parse_overflow_class(token) do
     case Map.fetch(@overflow_class_tokens, token) do
@@ -874,12 +1510,7 @@ defmodule Guppy.Style do
     end
   end
 
-  defp parse_boolean_class(token) do
-    case Map.fetch(@boolean_class_tokens, token) do
-      {:ok, {operation, value}} -> {:ok, {operation, value}}
-      :error -> :error
-    end
-  end
+  defp parse_boolean_class(token), do: Map.fetch(@boolean_class_tokens, token)
 
   defp parse_integer_class(token) do
     case Map.fetch(@integer_class_tokens, token) do
@@ -955,9 +1586,9 @@ defmodule Guppy.Style do
     with [payload] <-
            Regex.run(~r/^bg-linear-gradient-\[(.+)\]$/, token, capture: :all_but_first),
          [angle, from, to] <- String.split(payload, ",", parts: 3),
-         {:ok, angle} <- parse_number(angle),
-         {:ok, from} <- parse_gradient_stop(from),
-         {:ok, to} <- parse_gradient_stop(to),
+         {:ok, angle} <- parse_class_number(angle),
+         {:ok, from} <- parse_class_gradient_stop(from),
+         {:ok, to} <- parse_class_gradient_stop(to),
          options <- [angle: angle, from: from, to: to],
          {:ok, options} <- normalize_linear_gradient_options(options) do
       {:ok, {:bg_linear_gradient, options}}
@@ -970,9 +1601,9 @@ defmodule Guppy.Style do
     with [payload] <-
            Regex.run(~r/^bg-pattern-slash-\[(.+)\]$/, token, capture: :all_but_first),
          [color, width, interval] <- String.split(payload, ",", parts: 3),
-         {:ok, color} <- parse_gradient_color(color),
-         {:ok, width} <- parse_number(width),
-         {:ok, interval} <- parse_number(interval),
+         {:ok, color} <- parse_class_gradient_color(color),
+         {:ok, width} <- parse_class_number(width),
+         {:ok, interval} <- parse_class_number(interval),
          options <- [color: color, width: width, interval: interval],
          {:ok, options} <- normalize_background_pattern_options(options) do
       {:ok, {:bg_pattern_slash, options}}
@@ -984,11 +1615,11 @@ defmodule Guppy.Style do
   defp parse_box_shadow_class(token) do
     with [payload] <- Regex.run(~r/^shadow-\[(.+)\]$/, token, capture: :all_but_first),
          [color, x, y, blur, spread] <- String.split(payload, ",", parts: 5),
-         {:ok, color} <- parse_gradient_color(color),
-         {:ok, x} <- parse_number(x),
-         {:ok, y} <- parse_number(y),
-         {:ok, blur} <- parse_number(blur),
-         {:ok, spread} <- parse_number(spread),
+         {:ok, color} <- parse_class_gradient_color(color),
+         {:ok, x} <- parse_class_number(x),
+         {:ok, y} <- parse_class_number(y),
+         {:ok, blur} <- parse_class_number(blur),
+         {:ok, spread} <- parse_class_number(spread),
          shadow <- [color: color, x: x, y: y, blur: blur, spread: spread],
          {:ok, shadows} <- normalize_box_shadow_list(shadow) do
       {:ok, {:box_shadow, shadows}}
@@ -1012,7 +1643,7 @@ defmodule Guppy.Style do
       with true <-
              String.starts_with?(token, spec.prefix <> "-[") and String.ends_with?(token, "]"),
            payload <- String.slice(token, (String.length(spec.prefix) + 2)..-2//1),
-           {:ok, value} <- parse_number(payload),
+           {:ok, value} <- parse_class_number(payload),
            {:ok, value} <- normalize_number(spec.operation, value) do
         {:ok, {spec.operation, value}}
       else
@@ -1275,14 +1906,22 @@ defmodule Guppy.Style do
   defp parse_arbitrary_length(payload, _allow_auto, allow_negative, length_units) do
     case Regex.run(~r/^(-?[0-9]+(?:\.[0-9]+)?)(px|rem|%)$/, payload, capture: :all_but_first) do
       [number, "px"] ->
-        validate_arbitrary_length({:px, parse_number!(number)}, allow_negative, length_units)
+        validate_arbitrary_length(
+          {:px, parse_class_number!(number)},
+          allow_negative,
+          length_units
+        )
 
       [number, "rem"] ->
-        validate_arbitrary_length({:rem, parse_number!(number)}, allow_negative, length_units)
+        validate_arbitrary_length(
+          {:rem, parse_class_number!(number)},
+          allow_negative,
+          length_units
+        )
 
       [number, "%"] ->
         validate_arbitrary_length(
-          {:fraction, parse_number!(number) / 100},
+          {:fraction, parse_class_number!(number) / 100},
           allow_negative,
           length_units
         )
@@ -1483,25 +2122,26 @@ defmodule Guppy.Style do
     end
   end
 
-  defp normalize_linear_gradient_options(options) when is_list(options) do
+  defp normalize_linear_gradient_options(options) do
+    if valid_linear_gradient_options?(options), do: {:ok, options}, else: :error
+  end
+
+  @doc false
+  def valid_linear_gradient_options?(options) when is_list(options) do
     if Keyword.keyword?(options) do
       keys = Keyword.keys(options)
 
-      if length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
-           Enum.sort(keys) == [:angle, :from, :to] and
-           valid_gradient_angle?(Keyword.fetch!(options, :angle)) and
-           valid_gradient_stop?(Keyword.fetch!(options, :from)) and
-           valid_gradient_stop?(Keyword.fetch!(options, :to)) do
-        {:ok, options}
-      else
-        :error
-      end
+      length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
+        Enum.sort(keys) == [:angle, :from, :to] and
+        valid_gradient_angle?(Keyword.fetch!(options, :angle)) and
+        valid_gradient_stop?(Keyword.fetch!(options, :from)) and
+        valid_gradient_stop?(Keyword.fetch!(options, :to))
     else
-      :error
+      false
     end
   end
 
-  defp normalize_linear_gradient_options(_options), do: :error
+  def valid_linear_gradient_options?(_options), do: false
 
   defp normalize_background_pattern_options!(options) do
     case normalize_background_pattern_options(options) do
@@ -1582,17 +2222,19 @@ defmodule Guppy.Style do
   defp valid_box_shadow_number?(value), do: is_number(value)
   defp valid_non_negative_box_shadow_number?(value), do: is_number(value) and value >= 0
 
-  defp parse_gradient_stop(stop) do
+  @doc false
+  def parse_class_gradient_stop(stop) do
     with [color, percentage] <- String.split(stop, ":", parts: 2),
-         {:ok, color} <- parse_gradient_color(color),
-         {:ok, percentage} <- parse_number(percentage) do
+         {:ok, color} <- parse_class_gradient_color(color),
+         {:ok, percentage} <- parse_class_number(percentage) do
       {:ok, {color, percentage}}
     else
       _ -> :error
     end
   end
 
-  defp parse_gradient_color(color) do
+  @doc false
+  def parse_class_gradient_color(color) do
     color = String.trim(color)
 
     cond do
@@ -1643,7 +2285,8 @@ defmodule Guppy.Style do
     raise ArgumentError, "style length does not support negative values: #{inspect(length)}"
   end
 
-  defp parse_number(number) do
+  @doc false
+  def parse_class_number(number) do
     number = String.trim(number)
 
     case Float.parse(number) do
@@ -1653,8 +2296,9 @@ defmodule Guppy.Style do
     end
   end
 
-  defp parse_number!(number) do
-    case parse_number(number) do
+  @doc false
+  def parse_class_number!(number) do
+    case parse_class_number(number) do
       {:ok, value} -> value
       :error -> raise ArgumentError, "invalid numeric style value: #{inspect(number)}"
     end

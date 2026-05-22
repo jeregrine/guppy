@@ -57,31 +57,28 @@ pub(crate) fn term_to_binary_str(term: &Term) -> Result<&str, String> {
     }
 }
 
-pub(crate) fn term_to_string_or_atom(term: &Term, message: &str) -> Result<String, String> {
-    match term {
-        Term::Binary(Binary { bytes }) | Term::ByteList(ByteList { bytes }) => {
-            std::str::from_utf8(bytes)
-                .map(str::to_owned)
-                .map_err(|error| error.to_string())
-        }
-        Term::Atom(Atom { name }) => Ok(name.clone()),
-        _ => Err(message.to_owned()),
-    }
-}
+pub(crate) fn ensure_atom_keyed_allowed_fields(
+    map: &HashMap<Term, Term>,
+    allowed: &[&str],
+    context: &str,
+) -> Result<(), String> {
+    for key in map.keys() {
+        let Some(key_name) = atom_name(key) else {
+            return Err(format!("{context} has non-atom field key: {key}"));
+        };
 
-pub(crate) fn term_key_matches(term: &Term, expected: &str) -> bool {
-    match term {
-        Term::Atom(atom) => atom.name == expected,
-        Term::Binary(Binary { bytes }) => bytes.as_slice() == expected.as_bytes(),
-        Term::ByteList(ByteList { bytes }) => bytes.as_slice() == expected.as_bytes(),
-        _ => false,
+        if !allowed.contains(&key_name) {
+            return Err(format!("unsupported {context} field: {key_name}"));
+        }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{expect_hash_map, expect_list, term_key_matches, term_to_binary_string};
-    use eetf::{Atom, Binary, Term};
+    use super::{expect_hash_map, expect_list, term_to_binary_string};
+    use eetf::{Atom, Term};
 
     #[test]
     fn shared_helpers_preserve_contextual_error_fragments() {
@@ -99,16 +96,5 @@ mod tests {
             term_to_binary_string(&atom).unwrap_err(),
             "expected utf8 binary/string, got 'not_a_map'"
         );
-    }
-
-    #[test]
-    fn shared_key_matching_accepts_atom_and_binary_keys() {
-        assert!(term_key_matches(&Term::Atom(Atom::from("width")), "width"));
-        assert!(term_key_matches(
-            &Term::Binary(Binary {
-                bytes: b"width".to_vec()
-            }),
-            "width"
-        ));
     }
 }

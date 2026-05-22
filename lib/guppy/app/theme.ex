@@ -9,7 +9,9 @@ defmodule Guppy.App.Theme do
   @catalog_path Path.expand("../../../data/gpui_style_catalog.json", __DIR__)
   @external_resource @catalog_path
   @catalog @catalog_path |> File.read!() |> JSON.decode!()
-  @named_color_tokens @catalog["color_tokens"] |> Enum.map(&String.to_atom/1) |> MapSet.new()
+  @named_color_tokens @catalog["color_tokens"]
+                      |> Enum.map(&Guppy.Style.catalog_atom/1)
+                      |> MapSet.new()
 
   @enforce_keys [:id, :name]
   defstruct id: nil,
@@ -162,9 +164,8 @@ defmodule Guppy.App.Theme do
   @doc "Looks up a semantic color token in a validated theme."
   @spec color(t(), atom() | String.t()) :: {:ok, color_value()} | {:error, term()}
   def color(%__MODULE__{colors: colors}, token) do
-    with {:ok, key} <- normalize_token_key(token),
-         {:ok, value} <- fetch_theme_color(colors, key) do
-      {:ok, value}
+    with {:ok, key} <- normalize_token_key(token) do
+      fetch_theme_color(colors, key)
     end
   end
 
@@ -219,20 +220,28 @@ defmodule Guppy.App.Theme do
 
   defp validate_colors(colors) when is_map(colors) do
     Enum.reduce_while(colors, {:ok, %{}}, fn {key, value}, {:ok, acc} ->
-      case normalize_token_key(key) do
-        {:ok, key} ->
-          case validate_color_value(value) do
-            {:ok, value} -> {:cont, {:ok, Map.put(acc, key, value)}}
-            :error -> {:halt, {:error, {:invalid_theme_color, {key, value}}}}
-          end
-
-        {:error, _reason} ->
-          {:halt, {:error, {:invalid_theme_color, {key, value}}}}
+      case validate_color_entry(key, value, acc) do
+        {:ok, next_acc} -> {:cont, {:ok, next_acc}}
+        {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
   end
 
   defp validate_colors(_colors), do: {:error, :invalid_theme_colors}
+
+  defp validate_color_entry(key, value, colors) do
+    case normalize_token_key(key) do
+      {:ok, key} -> validate_color_value_entry(key, value, colors)
+      {:error, _reason} -> {:error, {:invalid_theme_color, {key, value}}}
+    end
+  end
+
+  defp validate_color_value_entry(key, value, colors) do
+    case validate_color_value(value) do
+      {:ok, value} -> {:ok, Map.put(colors, key, value)}
+      :error -> {:error, {:invalid_theme_color, {key, value}}}
+    end
+  end
 
   defp validate_color_value(value) when is_atom(value) do
     if MapSet.member?(@named_color_tokens, value) do
@@ -260,7 +269,6 @@ defmodule Guppy.App.Theme do
         {:cont, {:ok, Map.put(acc, key, style)}}
       else
         {:error, reason} -> {:halt, {:error, reason}}
-        _error -> {:halt, {:error, {:invalid_theme_style, {key, style_def}}}}
       end
     end)
   end
@@ -274,12 +282,17 @@ defmodule Guppy.App.Theme do
   end
 
   defp normalize_style_def(style_def, colors) when is_list(style_def) do
-    Enum.reduce_while(style_def, {:ok, []}, fn item, {:ok, acc} ->
+    style_def
+    |> Enum.reduce_while({:ok, []}, fn item, {:ok, acc} ->
       case normalize_style_item(item, colors) do
-        {:ok, style} -> {:cont, {:ok, acc ++ List.wrap(style)}}
+        {:ok, style} -> {:cont, {:ok, Enum.reverse(List.wrap(style), acc)}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
+    |> case do
+      {:ok, styles} -> {:ok, Enum.reverse(styles)}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp normalize_style_def(style_def, _colors), do: {:error, {:invalid_theme_style, style_def}}

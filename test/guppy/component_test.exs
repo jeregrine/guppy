@@ -49,7 +49,7 @@ defmodule Guppy.ComponentTest do
     defmodule Guppy.BadStringStyleTemplate do
       use Guppy.Component
 
-      def render(assigns) do
+      def render(_assigns) do
         ~GUI\"\"\"
         <div style=\"p-2 text-white\">
           <text>Bad style</text>
@@ -76,6 +76,16 @@ defmodule Guppy.ComponentTest do
              style: [{:width, {:px, 10}}, {:height, {:px, 20}}],
              object_fit: :contain,
              grayscale: true
+           ]
+
+    assert Guppy.Component.merge_image_options(
+             ["object-cover", false, nil, "w-[4px] h-[8px]"],
+             nil,
+             nil,
+             nil
+           ) == [
+             style: [{:width, {:px, 4}}, {:height, {:px, 8}}],
+             object_fit: :cover
            ]
 
     assert Guppy.Component.merge_image_options("object-cover grayscale", nil, :fill, false) == [

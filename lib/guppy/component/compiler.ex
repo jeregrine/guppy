@@ -190,32 +190,46 @@ defmodule Guppy.Component.Compiler do
     directives = extract_directives(attrs)
     attrs = Map.drop(attrs, [":if", ":for"])
 
-    base =
-      case tag do
-        "div" -> compile_div(attrs, xmlElement(element, :content), caller)
-        "scroll" -> compile_scroll(attrs, xmlElement(element, :content), caller)
-        "uniform_list" -> compile_uniform_list(attrs, xmlElement(element, :content), caller)
-        "list" -> compile_generic_list(attrs, xmlElement(element, :content), caller)
-        "data_table" -> compile_data_table(attrs, xmlElement(element, :content), caller)
-        "tree" -> compile_tree(attrs, xmlElement(element, :content), caller)
-        "canvas" -> compile_canvas(attrs, xmlElement(element, :content), caller)
-        "popover" -> compile_popover(attrs, xmlElement(element, :content), caller)
-        "button" -> compile_button(attrs, xmlElement(element, :content), caller)
-        "checkbox" -> compile_checkbox(attrs, xmlElement(element, :content), caller)
-        "radio" -> compile_radio(attrs, xmlElement(element, :content), caller)
-        "select" -> compile_select(attrs, xmlElement(element, :content), caller)
-        "text_input" -> compile_text_input(attrs, caller)
-        "textarea" -> compile_textarea(attrs, caller)
-        "text" -> compile_text(attrs, xmlElement(element, :content), caller)
-        "rich_text" -> compile_rich_text(attrs, xmlElement(element, :content), caller)
-        "image" -> compile_image(attrs, xmlElement(element, :content), caller)
-        "icon" -> compile_icon(attrs, xmlElement(element, :content), caller)
-        "spacer" -> compile_spacer(attrs, xmlElement(element, :content), caller)
-        other -> compile_unknown_tag(other, attrs, xmlElement(element, :content), caller)
-      end
+    base = compile_tag(tag, attrs, xmlElement(element, :content), caller)
 
     apply_directives(base, directives, caller)
   end
+
+  defp compile_tag("div", attrs, content, caller), do: compile_div(attrs, content, caller)
+  defp compile_tag("scroll", attrs, content, caller), do: compile_scroll(attrs, content, caller)
+
+  defp compile_tag("uniform_list", attrs, content, caller),
+    do: compile_uniform_list(attrs, content, caller)
+
+  defp compile_tag("list", attrs, content, caller),
+    do: compile_generic_list(attrs, content, caller)
+
+  defp compile_tag("data_table", attrs, content, caller),
+    do: compile_data_table(attrs, content, caller)
+
+  defp compile_tag("tree", attrs, content, caller), do: compile_tree(attrs, content, caller)
+  defp compile_tag("canvas", attrs, content, caller), do: compile_canvas(attrs, content, caller)
+  defp compile_tag("popover", attrs, content, caller), do: compile_popover(attrs, content, caller)
+  defp compile_tag("button", attrs, content, caller), do: compile_button(attrs, content, caller)
+
+  defp compile_tag("checkbox", attrs, content, caller),
+    do: compile_checkbox(attrs, content, caller)
+
+  defp compile_tag("radio", attrs, content, caller), do: compile_radio(attrs, content, caller)
+  defp compile_tag("select", attrs, content, caller), do: compile_select(attrs, content, caller)
+  defp compile_tag("text_input", attrs, _content, caller), do: compile_text_input(attrs, caller)
+  defp compile_tag("textarea", attrs, _content, caller), do: compile_textarea(attrs, caller)
+  defp compile_tag("text", attrs, content, caller), do: compile_text(attrs, content, caller)
+
+  defp compile_tag("rich_text", attrs, content, caller),
+    do: compile_rich_text(attrs, content, caller)
+
+  defp compile_tag("image", attrs, content, caller), do: compile_image(attrs, content, caller)
+  defp compile_tag("icon", attrs, content, caller), do: compile_icon(attrs, content, caller)
+  defp compile_tag("spacer", attrs, content, caller), do: compile_spacer(attrs, content, caller)
+
+  defp compile_tag(other, attrs, content, caller),
+    do: compile_unknown_tag(other, attrs, content, caller)
 
   defp compile_div(attrs, content, caller) do
     assert_allowed_attrs!(attrs, div_allowed_attrs(), "div", caller)
@@ -586,7 +600,7 @@ defmodule Guppy.Component.Compiler do
     props = build_component_props_ast(attrs, content, caller)
     validated_assigns = Macro.unique_var(:component_assigns, __MODULE__)
 
-    case component_target_ast(tag) do
+    case component_target_ast(tag, caller) do
       {:local, function_name} ->
         quote do
           unquote(validated_assigns) =
@@ -702,7 +716,7 @@ defmodule Guppy.Component.Compiler do
       attrs
       |> Enum.map(fn {name, value} ->
         value_ast = parse_attribute_value(value, :string_or_expr, caller)
-        key = String.to_atom(name)
+        key = existing_atom!(name, caller, "component attribute")
 
         quote do
           {unquote(key), unquote(value_ast)}
@@ -909,14 +923,14 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
-  defp component_target_ast(tag) do
+  defp component_target_ast(tag, caller) do
     cond do
       local_component_tag?(tag) ->
         function_name =
           tag
           |> String.replace_prefix(@local_component_prefix, "")
           |> String.replace("-", "_")
-          |> String.to_atom()
+          |> existing_atom!(caller, "local component")
 
         {:local, function_name}
 
@@ -960,7 +974,10 @@ defmodule Guppy.Component.Compiler do
             event_ast = parse_attribute_value(value, :string_or_expr, caller)
 
             quote do
-              Guppy.Component.maybe_entry(unquote(String.to_atom(event_name)), unquote(event_ast))
+              Guppy.Component.maybe_entry(
+                unquote(existing_atom!(event_name, caller, "event attribute")),
+                unquote(event_ast)
+              )
             end
         end
       end)
@@ -989,7 +1006,10 @@ defmodule Guppy.Component.Compiler do
         parsed = parse_attribute_value(value, type, caller)
 
         quote do
-          Guppy.Component.maybe_entry(unquote(String.to_atom(name)), unquote(parsed))
+          Guppy.Component.maybe_entry(
+            unquote(existing_atom!(name, caller, "attribute")),
+            unquote(parsed)
+          )
         end
     end
   end
@@ -1645,6 +1665,13 @@ defmodule Guppy.Component.Compiler do
 
   defp base_allowed_attrs do
     [":if", ":for"] ++ Enum.map(@style_attr_pairs, &elem(&1, 0))
+  end
+
+  defp existing_atom!(name, caller, context) do
+    String.to_existing_atom(name)
+  rescue
+    ArgumentError ->
+      raise_compile_error!(caller, "unknown #{context}: #{inspect(name)}")
   end
 
   defp raise_compile_error!(nil, message), do: raise(CompileError, description: message)

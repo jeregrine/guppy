@@ -9,7 +9,9 @@ defmodule Guppy.MixProject do
       start_permanent: Mix.env() == :prod,
       description: "Elixir-owned native desktop UI rendering through GPUI.",
       package: package(),
-      deps: deps()
+      deps: deps(),
+      aliases: aliases(),
+      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs"]
     ]
   end
 
@@ -17,6 +19,12 @@ defmodule Guppy.MixProject do
     [
       mod: {Guppy.Application, []},
       extra_applications: [:logger, :xmerl]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [ci: :test]
     ]
   end
 
@@ -49,11 +57,30 @@ defmodule Guppy.MixProject do
 
   defp deps do
     [
+      {:ex_slop, "~> 0.4", only: [:dev, :test], runtime: false},
+      {:reach, "~> 2.0", only: [:dev, :test], runtime: false},
+      {:ex_dna, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:vibe_kit, "~> 0.1"},
       {:benchee, "~> 1.3", only: :dev, runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
       {:rustler, "~> 0.37.3"},
       {:rustler_precompiled, "~> 0.9.0"},
       {:telemetry, "~> 1.3"}
+    ]
+  end
+
+  defp aliases() do
+    [
+      ci: [
+        "compile --warnings-as-errors",
+        "format --check-formatted",
+        "test",
+        "credo --strict",
+        "dialyzer",
+        "ex_dna --max-clones 0",
+        "reach.check --arch --smells"
+      ]
     ]
   end
 end

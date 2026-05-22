@@ -8,6 +8,9 @@ defmodule Examples.StyleGalleryWindow do
     {:blue, "Blue", "#2563eb", "#eff6ff", "#3b82f6"},
     {:amber, "Amber", "#d97706", "#fffbeb", "#f59e0b"}
   ]
+  @swatch_ids Map.new(@swatches, fn {name, _label, _bg, _text, _border} ->
+                {Atom.to_string(name), name}
+              end)
 
   @impl Guppy.Window
   def mount(:ok, window) do
@@ -22,9 +25,10 @@ defmodule Examples.StyleGalleryWindow do
 
   @impl Guppy.Window
   def handle_event("select:" <> color_name, _event_data, window) do
-    selected = String.to_existing_atom(color_name)
-    IO.puts("selected #{selected}")
-    {:noreply, assign(window, :selected, selected)}
+    case Map.fetch(@swatch_ids, color_name) do
+      {:ok, selected} -> {:noreply, assign(window, :selected, selected)}
+      :error -> {:noreply, window}
+    end
   end
 
   @impl Guppy.Window

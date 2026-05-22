@@ -12,4 +12,10 @@ defmodule Guppy.Native do
   @callback request(GenServer.server(), command(), timeout()) :: response()
   @callback cast(GenServer.server(), command()) :: :ok
   @callback connected?(GenServer.server()) :: boolean()
+
+  @doc false
+  def telemetry_status(:ok), do: :ok
+  def telemetry_status({:ok, _payload}), do: :ok
+  def telemetry_status({:error, reason}), do: {:error, reason}
+  def telemetry_status(other), do: other
 end

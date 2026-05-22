@@ -1,4 +1,6 @@
-use super::{GuppyDockMenuAction, GuppyMenuAction, MenuItemSpec, MenuOsAction, MenuSpec};
+use super::{
+    GuppyDockMenuAction, GuppyMenuAction, MenuActionSpec, MenuItemSpec, MenuOsAction, MenuSpec,
+};
 use crate::bridge_text_input;
 use eetf::{Atom, Binary, List, Map, Term};
 use gpui::{Action, MenuItem, OsAction};
@@ -186,6 +188,34 @@ fn maps_custom_and_os_actions_to_gpui_menu_items() {
     match &gpui_menus[0].items[3] {
         MenuItem::SystemMenu(menu) => assert_eq!(menu.name.as_ref(), "Services"),
         other => panic!("expected system menu, got {}", menu_item_name(other)),
+    }
+}
+
+#[test]
+fn maps_internal_custom_action_without_callback_to_disabled_action() {
+    let gpui_menus = super::to_gpui_menus(vec![MenuSpec {
+        label: "File".into(),
+        items: vec![MenuItemSpec::Action(MenuActionSpec {
+            id: "invalid".into(),
+            label: "Invalid".into(),
+            callback: None,
+            shortcut: None,
+            enabled: true,
+            os_action: None,
+        })],
+    }]);
+
+    match &gpui_menus[0].items[0] {
+        MenuItem::Action {
+            name,
+            action,
+            os_action,
+        } => {
+            assert_eq!(name.as_ref(), "Invalid");
+            assert!(os_action.is_none());
+            assert!(action.as_any().is::<super::GuppyDisabledMenuAction>());
+        }
+        other => panic!("expected action, got {}", menu_item_name(other)),
     }
 }
 

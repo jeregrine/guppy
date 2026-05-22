@@ -186,12 +186,8 @@ defmodule Guppy.App.Config do
   defp validate_theme(nil, _theme_families), do: {:ok, nil}
   defp validate_theme(%Theme{} = theme, _theme_families), do: {:ok, theme}
 
-  defp validate_theme(theme_id, theme_families) when is_binary(theme_id) or is_atom(theme_id) do
-    case find_theme(theme_families, theme_id) do
-      {:ok, theme} -> {:ok, theme}
-      error -> error
-    end
-  end
+  defp validate_theme(theme_id, theme_families) when is_binary(theme_id) or is_atom(theme_id),
+    do: find_theme(theme_families, theme_id)
 
   defp validate_theme(theme, _theme_families), do: Theme.validate(theme)
 

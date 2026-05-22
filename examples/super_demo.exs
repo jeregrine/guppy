@@ -14,6 +14,7 @@ defmodule Guppy.SuperDemo do
   @timer_ticks 5
   @timer_interval_ms 1_000
   @demo_ids [:runtime, :components, :interactions, :windows, :styles, :layout, :scroll, :help]
+  @demo_id_by_name Map.new(@demo_ids, fn demo_id -> {Atom.to_string(demo_id), demo_id} end)
 
   prop(:feature_card, :id, :string, required: true)
   prop(:feature_card, :title, :string, required: true)
@@ -383,20 +384,21 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_main_click(state, node_id, callback_id) do
-    cond do
-      String.starts_with?(callback_id, "select_demo:") ->
-        demo_id =
-          callback_id |> String.split(":", parts: 2) |> List.last() |> String.to_existing_atom()
-
+  defp handle_main_click(state, node_id, "select_demo:" <> demo_name) do
+    case Map.fetch(@demo_id_by_name, demo_name) do
+      {:ok, demo_id} ->
         state
         |> Map.put(:selected_demo, demo_id)
         |> Map.put(:last_event, "selected #{demo_id} from #{node_id}")
         |> rerender!()
 
-      true ->
-        handle_main_action(state, node_id, callback_id)
+      :error ->
+        handle_main_action(state, node_id, "select_demo:" <> demo_name)
     end
+  end
+
+  defp handle_main_click(state, node_id, callback_id) do
+    handle_main_action(state, node_id, callback_id)
   end
 
   defp handle_main_action(state, node_id, callback_id) do

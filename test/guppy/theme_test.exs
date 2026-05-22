@@ -31,11 +31,14 @@ defmodule Guppy.ThemeTest do
     assert Guppy.Style.theme_color(:bg, :surface) == {:theme_color, :bg, :surface}
 
     assert {:ok, style} = Theme.style(theme, :card)
-    assert {:padding, :all, {:rem, 1}} in style
-    assert {:border_radius, :all, {:rem, 0.5}} in style
-    assert {:bg_hex, "#0f172a"} in style
-    assert {:text_color, :white} in style
-    assert {:border_color_hex, "#2563eb"} in style
+
+    assert style == [
+             {:padding, :all, {:rem, 1}},
+             {:border_radius, :all, {:rem, 0.5}},
+             {:bg_hex, "#0f172a"},
+             {:text_color, :white},
+             {:border_color_hex, "#2563eb"}
+           ]
   end
 
   test "theme validation rejects invalid color and style references" do

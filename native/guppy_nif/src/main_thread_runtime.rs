@@ -210,7 +210,7 @@ pub fn open_window(view_id: u64, ir: IrNode, options: WindowOptionsConfig) -> i3
         };
 
         let should_focus = options.focus.unwrap_or(true);
-        let Ok(gpui_options) = app.update(|cx| options.to_gpui(cx)) else {
+        let Ok(gpui_options) = app.update(|cx| options.into_gpui(cx)) else {
             return -1;
         };
 

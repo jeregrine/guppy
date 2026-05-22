@@ -25,7 +25,7 @@ defmodule Guppy do
 
   @doc "Returns runtime state for early bring-up and tests."
   def info do
-    Server.info()
+    Server.info(Server)
   end
 
   @doc "Pings the native bridge."
@@ -100,48 +100,6 @@ defmodule Guppy do
 
   @doc "Returns the active theme for an app."
   def active_theme(app), do: Guppy.App.theme(app)
-
-  @doc "Replaces the active theme in the current app context."
-  def set_theme(theme), do: Guppy.App.set_theme(nil, theme)
-
-  @doc "Replaces the active theme for an app."
-  def set_theme(app, theme), do: Guppy.App.set_theme(app, theme)
-
-  @doc "Registers a theme family in the current app context."
-  def register_theme_family(family), do: Guppy.App.register_theme_family(nil, family)
-
-  @doc "Registers a theme family for an app."
-  def register_theme_family(app, family), do: Guppy.App.register_theme_family(app, family)
-
-  @doc "Returns registered theme families for the current app context."
-  def theme_families, do: Guppy.App.theme_families()
-
-  @doc "Returns registered theme families for an app."
-  def theme_families(app), do: Guppy.App.theme_families(app)
-
-  @doc "Looks up a semantic theme color in the current app context."
-  def theme_color(token), do: Guppy.App.theme_color(token)
-
-  @doc "Looks up a semantic theme color for an app."
-  def theme_color(app, token), do: Guppy.App.theme_color(app, token)
-
-  @doc "Looks up a semantic theme color or raises when unavailable."
-  def theme_color!(token), do: Guppy.App.theme_color!(token)
-
-  @doc "Looks up a semantic theme color for an app or raises when unavailable."
-  def theme_color!(app, token), do: Guppy.App.theme_color!(app, token)
-
-  @doc "Looks up a semantic theme style in the current app context."
-  def theme_style(token), do: Guppy.App.theme_style(token)
-
-  @doc "Looks up a semantic theme style for an app."
-  def theme_style(app, token), do: Guppy.App.theme_style(app, token)
-
-  @doc "Looks up a semantic theme style or raises when unavailable."
-  def theme_style!(token), do: Guppy.App.theme_style!(token)
-
-  @doc "Looks up a semantic theme style for an app or raises when unavailable."
-  def theme_style!(app, token), do: Guppy.App.theme_style!(app, token)
 
   @doc "Returns the native-side open view count."
   def native_view_count(timeout \\ 5_000) do

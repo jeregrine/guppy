@@ -258,9 +258,14 @@ defmodule Examples.DataTableTreeWindow do
   defp visible_tasks(project), do: Enum.filter(@tasks, &(&1.project == project))
 
   defp sort_tasks(tasks, %{column_id: column_id, direction: direction}) do
-    sorted = Enum.sort_by(tasks, &Map.fetch!(&1, String.to_atom(column_id)))
+    sorted = Enum.sort_by(tasks, &task_sort_value(&1, column_id))
     if direction == :desc, do: Enum.reverse(sorted), else: sorted
   end
+
+  defp task_sort_value(task, "title"), do: task.title
+  defp task_sort_value(task, "status"), do: task.status
+  defp task_sort_value(task, "owner"), do: task.owner
+  defp task_sort_value(task, _unknown_column), do: task.title
 
   defp selected_label("all"), do: "All tasks"
   defp selected_label("platform"), do: "Platform"

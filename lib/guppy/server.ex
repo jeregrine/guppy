@@ -153,39 +153,8 @@ defmodule Guppy.Server do
 
   def handle_call({:open_window, owner, ir, opts, timeout}, {caller, _tag}, state)
       when is_pid(owner) do
-    if owner != caller do
-      {:reply, {:error, :owner_mismatch}, state}
-    else
-      with :ok <- Guppy.IR.validate(ir),
-           {:ok, opts} <- validate_window_options(opts) do
-        view_id = state.next_view_id
-        ir = Guppy.IR.unwrap(ir)
-
-        case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}, timeout) do
-          :ok ->
-            state =
-              state
-              |> put_view(view_id, owner)
-              |> increment_view_id()
-
-            {:reply, {:ok, view_id}, state}
-
-          {:ok, _payload} ->
-            state =
-              state
-              |> put_view(view_id, owner)
-              |> increment_view_id()
-
-            {:reply, {:ok, view_id}, state}
-
-          {:error, reason} ->
-            {:reply, {:error, reason}, state}
-        end
-      else
-        error ->
-          {:reply, error, state}
-      end
-    end
+    {reply, state} = open_window_for_owner(state, owner, caller, ir, opts, timeout)
+    {:reply, reply, state}
   end
 
   def handle_call({:render, view_id, ir, timeout}, {caller, _tag}, state) do
@@ -275,74 +244,20 @@ defmodule Guppy.Server do
 
   def handle_call({:set_menus, owner, menus, timeout}, {caller, _tag}, state)
       when is_pid(owner) do
-    cond do
-      owner != caller ->
-        {:reply, {:error, :owner_mismatch}, state}
-
-      app_owner_conflict?(state, owner) ->
-        {:reply, {:error, :native_app_owner_already_claimed}, state}
-
-      true ->
-        case validate_menus(menus) do
-          {:ok, menus} ->
-            case native_request(state, :set_menus, {:set_menus, [menus]}, timeout) do
-              :ok -> {:reply, :ok, put_menu_owner(state, owner, menus)}
-              {:ok, _payload} -> {:reply, :ok, put_menu_owner(state, owner, menus)}
-              {:error, reason} -> {:reply, {:error, reason}, state}
-            end
-
-          error ->
-            {:reply, error, state}
-        end
-    end
+    {reply, state} = set_menus_for_owner(state, owner, caller, menus, timeout)
+    {:reply, reply, state}
   end
 
   def handle_call({:set_dock_menu, owner, items, timeout}, {caller, _tag}, state)
       when is_pid(owner) do
-    cond do
-      owner != caller ->
-        {:reply, {:error, :owner_mismatch}, state}
-
-      app_owner_conflict?(state, owner) ->
-        {:reply, {:error, :native_app_owner_already_claimed}, state}
-
-      true ->
-        case validate_dock_menu(items) do
-          {:ok, items} ->
-            case native_request(state, :set_dock_menu, {:set_dock_menu, [items]}, timeout) do
-              :ok -> {:reply, :ok, put_dock_menu_owner(state, owner, items)}
-              {:ok, _payload} -> {:reply, :ok, put_dock_menu_owner(state, owner, items)}
-              {:error, reason} -> {:reply, {:error, reason}, state}
-            end
-
-          error ->
-            {:reply, error, state}
-        end
-    end
+    {reply, state} = set_dock_menu_for_owner(state, owner, caller, items, timeout)
+    {:reply, reply, state}
   end
 
   def handle_call({:set_app_badge, owner, label, timeout}, {caller, _tag}, state)
       when is_pid(owner) do
-    cond do
-      owner != caller ->
-        {:reply, {:error, :owner_mismatch}, state}
-
-      app_owner_conflict?(state, owner) ->
-        {:reply, {:error, :native_app_owner_already_claimed}, state}
-
-      true ->
-        case validate_app_badge(label) do
-          {:ok, label} ->
-            case native_request(state, :set_app_badge, {:set_app_badge, [label]}, timeout) do
-              :ok -> {:reply, :ok, put_app_badge_owner(state, owner, label)}
-              {:ok, _payload} -> {:reply, :ok, put_app_badge_owner(state, owner, label)}
-              {:error, reason} -> {:reply, {:error, reason}, state}
-            end
-
-          error ->
-            {:reply, error, state}
-        end
-    end
+    {reply, state} = set_app_badge_for_owner(state, owner, caller, label, timeout)
+    {:reply, reply, state}
   end
 
   def handle_call({:claim_app_owner, owner}, {caller, _tag}, state) when is_pid(owner) do
@@ -366,6 +281,82 @@ defmodule Guppy.Server do
       owner != caller -> {:reply, {:error, :owner_mismatch}, state}
       state.app_owner == owner -> {:reply, :ok, clear_app_owner(state)}
       true -> {:reply, :ok, state}
+    end
+  end
+
+  defp open_window_for_owner(state, owner, caller, ir, opts, timeout) do
+    with :ok <- validate_owner(owner, caller),
+         :ok <- Guppy.IR.validate(ir),
+         {:ok, opts} <- validate_window_options(opts) do
+      view_id = state.next_view_id
+      ir = Guppy.IR.unwrap(ir)
+
+      case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}, timeout) do
+        :ok -> {{:ok, view_id}, put_open_view(state, view_id, owner)}
+        {:ok, _payload} -> {{:ok, view_id}, put_open_view(state, view_id, owner)}
+        {:error, reason} -> {{:error, reason}, state}
+      end
+    else
+      error -> {error, state}
+    end
+  end
+
+  defp set_menus_for_owner(state, owner, caller, menus, timeout) do
+    with :ok <- validate_owner(owner, caller),
+         :ok <- validate_no_app_owner_conflict(state, owner),
+         {:ok, menus} <- validate_menus(menus) do
+      case native_request(state, :set_menus, {:set_menus, [menus]}, timeout) do
+        :ok -> {:ok, put_menu_owner(state, owner, menus)}
+        {:ok, _payload} -> {:ok, put_menu_owner(state, owner, menus)}
+        {:error, reason} -> {{:error, reason}, state}
+      end
+    else
+      error -> {error, state}
+    end
+  end
+
+  defp set_dock_menu_for_owner(state, owner, caller, items, timeout) do
+    with :ok <- validate_owner(owner, caller),
+         :ok <- validate_no_app_owner_conflict(state, owner),
+         {:ok, items} <- validate_dock_menu(items) do
+      case native_request(state, :set_dock_menu, {:set_dock_menu, [items]}, timeout) do
+        :ok -> {:ok, put_dock_menu_owner(state, owner, items)}
+        {:ok, _payload} -> {:ok, put_dock_menu_owner(state, owner, items)}
+        {:error, reason} -> {{:error, reason}, state}
+      end
+    else
+      error -> {error, state}
+    end
+  end
+
+  defp set_app_badge_for_owner(state, owner, caller, label, timeout) do
+    with :ok <- validate_owner(owner, caller),
+         :ok <- validate_no_app_owner_conflict(state, owner),
+         {:ok, label} <- validate_app_badge(label) do
+      case native_request(state, :set_app_badge, {:set_app_badge, [label]}, timeout) do
+        :ok -> {:ok, put_app_badge_owner(state, owner, label)}
+        {:ok, _payload} -> {:ok, put_app_badge_owner(state, owner, label)}
+        {:error, reason} -> {{:error, reason}, state}
+      end
+    else
+      error -> {error, state}
+    end
+  end
+
+  defp put_open_view(state, view_id, owner) do
+    state
+    |> put_view(view_id, owner)
+    |> increment_view_id()
+  end
+
+  defp validate_owner(owner, owner), do: :ok
+  defp validate_owner(_owner, _caller), do: {:error, :owner_mismatch}
+
+  defp validate_no_app_owner_conflict(state, owner) do
+    if app_owner_conflict?(state, owner) do
+      {:error, :native_app_owner_already_claimed}
+    else
+      :ok
     end
   end
 
@@ -575,7 +566,7 @@ defmodule Guppy.Server do
     :telemetry.execute(
       [:guppy, :native, :request],
       %{duration: duration},
-      %{command: command, status: telemetry_status(reply)}
+      %{command: command, status: Guppy.Native.telemetry_status(reply)}
     )
 
     reply
@@ -608,11 +599,6 @@ defmodule Guppy.Server do
       %{view_id: view_id, type: type, status: status}
     )
   end
-
-  defp telemetry_status(:ok), do: :ok
-  defp telemetry_status({:ok, _payload}), do: :ok
-  defp telemetry_status({:error, reason}), do: {:error, reason}
-  defp telemetry_status(other), do: other
 
   defp normalize_native_reply(:ok), do: :ok
   defp normalize_native_reply({:ok, _payload}), do: :ok
@@ -1015,9 +1001,8 @@ defmodule Guppy.Server do
          :ok <- validate_menu_action_target(item),
          :ok <- validate_menu_shortcut(Map.get(item, :shortcut), item),
          :ok <- validate_menu_enabled(Map.get(item, :enabled), item),
-         :ok <- validate_menu_os_action(Map.get(item, :os_action), item),
-         {:ok, seen_ids} <- track_menu_action_id(id, seen_ids) do
-      {:ok, seen_ids}
+         :ok <- validate_menu_os_action(Map.get(item, :os_action), item) do
+      track_menu_action_id(id, seen_ids)
     end
   end
 

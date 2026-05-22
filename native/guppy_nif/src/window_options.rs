@@ -90,66 +90,79 @@ impl WindowOptionsConfig {
         Self::from_term(&term)
     }
 
-    pub(crate) fn to_gpui(&self, cx: &mut App) -> WindowOptions {
-        let mut options = WindowOptions::default();
-        let display_id = self.display_id.and_then(|id| display_id_from_raw(id, cx));
+    pub(crate) fn into_gpui(self, cx: &mut App) -> WindowOptions {
+        let Self {
+            window_bounds,
+            titlebar,
+            focus,
+            show,
+            kind,
+            is_movable,
+            is_resizable,
+            is_minimizable,
+            display_id,
+            window_background,
+            app_id,
+            window_min_size,
+            window_decorations,
+            tabbing_identifier,
+        } = self;
 
-        if let Some(window_bounds) = self.window_bounds.as_ref() {
-            options.window_bounds = Some(window_bounds.to_gpui(display_id, cx));
+        let mut options = WindowOptions::default();
+        let display_id = display_id.and_then(|id| display_id_from_raw(id, cx));
+
+        if let Some(window_bounds) = window_bounds {
+            options.window_bounds = Some(window_bounds.into_gpui(display_id, cx));
         }
 
-        if let Some(titlebar) = self.titlebar.as_ref() {
+        if let Some(titlebar) = titlebar {
             options.titlebar = match titlebar {
                 TitlebarConfig::Hidden => None,
-                TitlebarConfig::Custom(config) => Some(config.to_gpui()),
+                TitlebarConfig::Custom(config) => Some(config.into_gpui()),
             };
         }
 
-        if let Some(focus) = self.focus {
+        if let Some(focus) = focus {
             options.focus = focus;
         }
 
-        if let Some(show) = self.show {
+        if let Some(show) = show {
             options.show = show;
         }
 
-        if let Some(kind) = self.kind {
+        if let Some(kind) = kind {
             options.kind = kind.to_gpui();
         }
 
-        if let Some(is_movable) = self.is_movable {
+        if let Some(is_movable) = is_movable {
             options.is_movable = is_movable;
         }
 
-        if let Some(is_resizable) = self.is_resizable {
+        if let Some(is_resizable) = is_resizable {
             options.is_resizable = is_resizable;
         }
 
-        if let Some(is_minimizable) = self.is_minimizable {
+        if let Some(is_minimizable) = is_minimizable {
             options.is_minimizable = is_minimizable;
         }
 
         options.display_id = display_id;
 
-        if let Some(window_background) = self.window_background {
+        if let Some(window_background) = window_background {
             options.window_background = window_background.to_gpui();
         }
 
-        if let Some(app_id) = self.app_id.as_ref() {
-            options.app_id = Some(app_id.clone());
-        }
+        options.app_id = app_id;
 
-        if let Some(window_min_size) = self.window_min_size {
+        if let Some(window_min_size) = window_min_size {
             options.window_min_size = Some(window_min_size.to_gpui());
         }
 
-        if let Some(window_decorations) = self.window_decorations {
+        if let Some(window_decorations) = window_decorations {
             options.window_decorations = Some(window_decorations.to_gpui());
         }
 
-        if let Some(tabbing_identifier) = self.tabbing_identifier.as_ref() {
-            options.tabbing_identifier = Some(tabbing_identifier.clone());
-        }
+        options.tabbing_identifier = tabbing_identifier;
 
         options
     }
@@ -232,7 +245,7 @@ impl WindowBoundsConfig {
         })
     }
 
-    fn to_gpui(&self, display_id: Option<DisplayId>, cx: &mut App) -> WindowBounds {
+    fn into_gpui(self, display_id: Option<DisplayId>, cx: &mut App) -> WindowBounds {
         let size_px = size(px(self.width as f32), px(self.height as f32));
 
         let bounds = match (self.x, self.y) {
@@ -271,12 +284,9 @@ impl TitlebarConfigOptions {
         })
     }
 
-    fn to_gpui(&self) -> TitlebarOptions {
+    fn into_gpui(self) -> TitlebarOptions {
         TitlebarOptions {
-            title: self
-                .title
-                .as_ref()
-                .map(|title| SharedString::from(title.clone())),
+            title: self.title.map(SharedString::from),
             appears_transparent: self.appears_transparent.unwrap_or_default(),
             traffic_light_position: self.traffic_light_position.map(PointConfig::to_gpui),
         }
@@ -385,22 +395,11 @@ fn parse_window_decorations(value: &str) -> Result<WindowDecorationsConfig, Stri
 }
 
 fn get_field<'a>(map: &'a Map, key: &str) -> Option<&'a Term> {
-    map.map
-        .iter()
-        .find_map(|(current_key, value)| key_matches(current_key, key).then_some(value))
+    etf_decode::get_atom_keyed_field(&map.map, key)
 }
 
 fn ensure_allowed_fields(map: &Map, allowed: &[&str], context: &str) -> Result<(), String> {
-    for key in map.map.keys() {
-        if !allowed
-            .iter()
-            .any(|allowed_key| key_matches(key, allowed_key))
-        {
-            return Err(format!("unsupported {context} field: {key}"));
-        }
-    }
-
-    Ok(())
+    etf_decode::ensure_atom_keyed_allowed_fields(&map.map, allowed, context)
 }
 
 fn get_optional_map_field<'a>(map: &'a Map, key: &str) -> Result<Option<&'a Map>, String> {
@@ -476,11 +475,7 @@ fn expect_map(term: &Term) -> Result<&Map, String> {
 }
 
 fn expect_string(term: &Term) -> Result<String, String> {
-    etf_decode::term_to_string_or_atom(term, "expected string")
-}
-
-fn key_matches(term: &Term, expected: &str) -> bool {
-    etf_decode::term_key_matches(term, expected)
+    etf_decode::term_to_binary_string(term)
 }
 
 #[cfg(test)]

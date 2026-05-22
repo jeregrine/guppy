@@ -43,21 +43,12 @@ defmodule Guppy.Component do
       Module.register_attribute(__MODULE__, :guppy_component_prop_declarations, accumulate: true)
       @before_compile Guppy.Component
 
-      import Guppy.Component,
-        only: [
-          sigil_GUI: 2,
-          prop: 3,
-          prop: 4,
-          assign: 2,
-          assign: 3,
-          update: 3,
-          put_private: 3,
-          put_window_opts: 2,
-          theme_color: 1,
-          theme_color!: 1,
-          theme_style: 1,
-          theme_style!: 1
-        ]
+      import Guppy.Component, only: [sigil_GUI: 2, prop: 3, prop: 4]
+
+      import Guppy.Window,
+        only: [assign: 2, assign: 3, update: 3, put_private: 3, put_window_opts: 2]
+
+      import Guppy.App, only: [theme_color: 1, theme_color!: 1, theme_style: 1, theme_style!: 1]
     end
   end
 
@@ -134,16 +125,6 @@ defmodule Guppy.Component do
       |> validate_prop_types!(module, component_name, schema)
     end
   end
-
-  def assign(window, key, value), do: Guppy.Window.assign(window, key, value)
-  def assign(window, attrs), do: Guppy.Window.assign(window, attrs)
-  def update(window, key, fun), do: Guppy.Window.update(window, key, fun)
-  def put_private(window, key, value), do: Guppy.Window.put_private(window, key, value)
-  def put_window_opts(window, opts), do: Guppy.Window.put_window_opts(window, opts)
-  def theme_color(token), do: Guppy.App.theme_color(token)
-  def theme_color!(token), do: Guppy.App.theme_color!(token)
-  def theme_style(token), do: Guppy.App.theme_style(token)
-  def theme_style!(token), do: Guppy.App.theme_style!(token)
 
   def maybe_entry(_key, nil), do: nil
   def maybe_entry(key, value), do: {key, value}
@@ -302,11 +283,32 @@ defmodule Guppy.Component do
   def to_text(value) when is_binary(value), do: value
   def to_text(value), do: to_string(value)
 
-  def class_to_style!(nil), do: []
-
-  def class_to_style!(value) when is_list(value) do
+  def class_to_style!(value) do
     value
-    |> Enum.flat_map(fn
+    |> class_tokens!()
+    |> Enum.flat_map(fn token -> List.wrap(class_token_to_style!(token)) end)
+  end
+
+  defp image_class_to_style_and_options!(value) do
+    value
+    |> class_tokens!()
+    |> Enum.reduce({[], %{}}, fn token, {styles, options} ->
+      case Guppy.Style.class_token_to_image_option(token) do
+        {:ok, {key, value}} -> {styles, Map.put(options, key, value)}
+        :error -> {Enum.reverse(List.wrap(class_token_to_style!(token)), styles), options}
+      end
+    end)
+    |> then(fn {styles, options} -> {Enum.reverse(styles), options} end)
+  end
+
+  defp class_tokens!(nil), do: []
+  defp class_tokens!(false), do: []
+
+  defp class_tokens!(value) when is_binary(value),
+    do: String.split(value, ~r/\s+/, trim: true)
+
+  defp class_tokens!(value) when is_list(value) do
+    Enum.flat_map(value, fn
       nil ->
         []
 
@@ -314,56 +316,14 @@ defmodule Guppy.Component do
         []
 
       item when is_binary(item) ->
-        class_to_style!(item)
+        class_tokens!(item)
 
       other ->
         raise ArgumentError, "expected class list entries to be strings, got: #{inspect(other)}"
     end)
   end
 
-  def class_to_style!(value) when is_binary(value) do
-    value
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.flat_map(fn token -> List.wrap(class_token_to_style!(token)) end)
-  end
-
-  def class_to_style!(other) do
-    raise ArgumentError,
-          "expected class to be a string or list of strings, got: #{inspect(other)}"
-  end
-
-  defp image_class_to_style_and_options!(nil), do: {[], %{}}
-  defp image_class_to_style_and_options!(false), do: {[], %{}}
-
-  defp image_class_to_style_and_options!(value) when is_list(value) do
-    Enum.reduce(value, {[], %{}}, fn
-      nil, acc ->
-        acc
-
-      false, acc ->
-        acc
-
-      item, {styles, options} when is_binary(item) ->
-        {item_styles, item_options} = image_class_to_style_and_options!(item)
-        {styles ++ item_styles, Map.merge(options, item_options)}
-
-      other, _acc ->
-        raise ArgumentError, "expected class list entries to be strings, got: #{inspect(other)}"
-    end)
-  end
-
-  defp image_class_to_style_and_options!(value) when is_binary(value) do
-    value
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.reduce({[], %{}}, fn token, {styles, options} ->
-      case Guppy.Style.class_token_to_image_option(token) do
-        {:ok, {key, value}} -> {styles, Map.put(options, key, value)}
-        :error -> {styles ++ [class_token_to_style!(token)], options}
-      end
-    end)
-  end
-
-  defp image_class_to_style_and_options!(other) do
+  defp class_tokens!(other) do
     raise ArgumentError,
           "expected class to be a string or list of strings, got: #{inspect(other)}"
   end
@@ -407,9 +367,6 @@ defmodule Guppy.Component do
       grid_style = parse_grid_style(token) ->
         grid_style
 
-      flag_style = parse_flag_style(token) ->
-        flag_style
-
       true ->
         raise ArgumentError, "unsupported Guppy class token: #{inspect(token)}"
     end
@@ -445,47 +402,21 @@ defmodule Guppy.Component do
     with [payload] <-
            Regex.run(~r/^bg-linear-gradient-\[(.+)\]$/, token, capture: :all_but_first),
          [angle, from, to] <- String.split(payload, ",", parts: 3),
-         {:ok, angle} <- parse_number(angle),
-         {:ok, from} <- parse_gradient_stop(from),
-         {:ok, to} <- parse_gradient_stop(to) do
+         {:ok, angle} <- Guppy.Style.parse_class_number(angle),
+         {:ok, from} <- Guppy.Style.parse_class_gradient_stop(from),
+         {:ok, to} <- Guppy.Style.parse_class_gradient_stop(to) do
       {:bg_linear_gradient, [angle: angle, from: from, to: to]}
     else
       _ -> nil
     end
   end
 
-  defp parse_gradient_stop(stop) do
-    with [color, percentage] <- String.split(stop, ":", parts: 2),
-         {:ok, color} <- parse_gradient_color(color),
-         {:ok, percentage} <- parse_number(percentage) do
-      {:ok, {color, percentage}}
-    else
-      _ -> :error
-    end
-  end
-
-  defp parse_gradient_color(color) do
-    color = String.trim(color)
-
-    case named_color(color) do
-      {:ok, color_atom} ->
-        {:ok, color_atom}
-
-      :error ->
-        if Regex.match?(~r/^#[0-9A-Fa-f]{6}$/, color) do
-          {:ok, color}
-        else
-          :error
-        end
-    end
-  end
-
   defp parse_size_style(token) do
     case Regex.run(~r/^(w|h)-\[([0-9]+(?:\.[0-9]+)?)(px|rem)\]$/, token, capture: :all_but_first) do
-      ["w", number, "px"] -> {:w_px, parse_number!(number)}
-      ["w", number, "rem"] -> {:w_rem, parse_number!(number)}
-      ["h", number, "px"] -> {:h_px, parse_number!(number)}
-      ["h", number, "rem"] -> {:h_rem, parse_number!(number)}
+      ["w", number, "px"] -> {:w_px, Guppy.Style.parse_class_number!(number)}
+      ["w", number, "rem"] -> {:w_rem, Guppy.Style.parse_class_number!(number)}
+      ["h", number, "px"] -> {:h_px, Guppy.Style.parse_class_number!(number)}
+      ["h", number, "rem"] -> {:h_rem, Guppy.Style.parse_class_number!(number)}
       _ -> nil
     end
   end
@@ -502,21 +433,6 @@ defmodule Guppy.Component do
     end
   end
 
-  defp parse_flag_style(token) do
-    atom_name = token |> String.replace("-", "_")
-
-    try do
-      atom = String.to_existing_atom(atom_name)
-
-      case Guppy.IR.validate(Guppy.IR.div([], style: [atom])) do
-        :ok -> atom
-        _ -> nil
-      end
-    rescue
-      ArgumentError -> nil
-    end
-  end
-
   defp color_key("bg"), do: {:ok, :bg}
   defp color_key("text"), do: {:ok, :text_color}
   defp color_key("border"), do: {:ok, :border_color}
@@ -530,21 +446,4 @@ defmodule Guppy.Component do
   defp named_color("white"), do: {:ok, :white}
   defp named_color("gray"), do: {:ok, :gray}
   defp named_color(_), do: :error
-
-  defp parse_number(number) do
-    number = String.trim(number)
-
-    case Float.parse(number) do
-      {value, ""} when value == trunc(value) -> {:ok, trunc(value)}
-      {value, ""} -> {:ok, value}
-      _ -> :error
-    end
-  end
-
-  defp parse_number!(number) do
-    case parse_number(number) do
-      {:ok, value} -> value
-      :error -> raise ArgumentError, "invalid numeric style value: #{inspect(number)}"
-    end
-  end
 end

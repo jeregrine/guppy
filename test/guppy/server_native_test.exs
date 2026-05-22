@@ -819,8 +819,10 @@ defmodule Guppy.ServerNativeTest do
         Process.exit(second_target, :kill)
 
         wait_until(fn ->
-          status = apply(Guppy.Native.Nif, :event_target_status, [])
-          match?({:ok, :none}, status)
+          match?(
+            {:ok, :none},
+            Guppy.Native.Nif.request(Guppy.Native.Nif, {:event_target_status, []})
+          )
         end)
 
       {:error, _reason} ->

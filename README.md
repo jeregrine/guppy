@@ -246,11 +246,7 @@ Themes are app-scoped Elixir data that compile semantic color/style tokens to pr
 Useful helpers:
 
 - `Guppy.active_theme/0` / `Guppy.active_theme/1`
-- `Guppy.set_theme/1` / `Guppy.set_theme/2`
-- `Guppy.register_theme_family/1` / `Guppy.register_theme_family/2`
-- `Guppy.theme_color/1` / `Guppy.theme_color/2`
-- `Guppy.theme_style/1` / `Guppy.theme_style/2`
-- app-scoped equivalents under `Guppy.App`
+- app-scoped helpers under `Guppy.App`, including `set_theme/2`, `register_theme_family/2`, `theme_color/1..2`, and `theme_style/1..2`
 - `Guppy.Style.theme_color/2` for semantic references inside theme style definitions
 - `theme_style!/1` / `theme_color!/1` inside `use Guppy.Window`
 
