@@ -3059,8 +3059,7 @@ defmodule Guppy.IR do
     if Keyword.keyword?(options) do
       keys = Keyword.keys(options)
 
-      length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
-        Enum.sort(keys) == [:color, :interval, :width] and
+      Enum.sort(keys) == [:color, :interval, :width] and
         valid_gradient_color?(Keyword.fetch!(options, :color)) and
         non_neg_native_f32_number?(Keyword.fetch!(options, :width)) and
         non_neg_native_f32_number?(Keyword.fetch!(options, :interval))
@@ -3080,8 +3079,7 @@ defmodule Guppy.IR do
     if Keyword.keyword?(options) do
       keys = Keyword.keys(options)
 
-      length(options) == 5 and MapSet.size(MapSet.new(keys)) == 5 and
-        Enum.sort(keys) == [:blur, :color, :spread, :x, :y] and
+      Enum.sort(keys) == [:blur, :color, :spread, :x, :y] and
         valid_gradient_color?(Keyword.fetch!(options, :color)) and
         native_f32_number?(Keyword.fetch!(options, :x)) and
         native_f32_number?(Keyword.fetch!(options, :y)) and

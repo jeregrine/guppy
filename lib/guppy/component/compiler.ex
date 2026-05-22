@@ -166,7 +166,7 @@ defmodule Guppy.Component.Compiler do
         document
     end
   rescue
-    error ->
+    error in [ArgumentError, ErlangError, RuntimeError] ->
       raise_compile_error!(caller, "failed to parse ~GUI template: #{Exception.message(error)}")
   end
 
@@ -1174,7 +1174,7 @@ defmodule Guppy.Component.Compiler do
     |> Code.string_to_quoted!(file: caller.file, line: caller.line)
     |> rewrite_assigns()
   rescue
-    error ->
+    error in [ArgumentError, SyntaxError, TokenMissingError] ->
       raise_compile_error!(
         caller,
         "invalid expression in ~GUI template: #{Exception.message(error)}"

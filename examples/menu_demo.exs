@@ -150,13 +150,13 @@ end
 {:ok, _} = Application.ensure_all_started(:guppy)
 
 IO.puts("Guppy menu demo")
-IO.inspect(Guppy.Native.Nif.load_status(), label: "load_status")
-IO.inspect(Guppy.native_build_info(), label: "native_build_info")
-IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
-IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
+IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
+IO.puts("native_build_info: #{inspect(Guppy.native_build_info())}")
+IO.puts("native_runtime_status: #{inspect(Guppy.native_runtime_status())}")
+IO.puts("native_gui_status: #{inspect(Guppy.native_gui_status())}")
 
 {:ok, pid} = Examples.MenuDemoWindow.start_link([])
-IO.inspect(Guppy.Window.view_id(pid), label: "opened_view_id")
+IO.puts("opened_view_id: #{inspect(Guppy.Window.view_id(pid))}")
 
 Process.monitor(pid)
 

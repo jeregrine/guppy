@@ -43,8 +43,7 @@ defmodule Guppy.MarkdownTest do
     assert {:text_color_hex, "#403E3C"} in code_block.style
 
     assert list.kind == :div
-    assert length(list.children) == 2
-    [first_item, second_item] = list.children
+    assert [first_item, second_item] = list.children
     assert Enum.at(first_item.children, 1).content == "One"
     assert Enum.at(second_item.children, 1).runs == [%{text: "Two", style: [:italic]}]
   end

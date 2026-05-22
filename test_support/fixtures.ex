@@ -46,6 +46,24 @@ defmodule Guppy.WindowAssignsTemplateExample do
   end
 end
 
+defmodule Guppy.NilAssignsWindowTemplateExample do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(_arg, window), do: {:ok, assign(window, :title, "Mounted title")}
+
+  @impl Guppy.Window
+  def render(window) do
+    assigns = nil
+
+    ~GUI"""
+    <div id="nil_assigns_window_template">
+      <text id="nil_assigns_window_title">{@title}</text>
+    </div>
+    """
+  end
+end
+
 defmodule Guppy.AppContextWindow do
   use Guppy.Window
 

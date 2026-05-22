@@ -64,6 +64,7 @@ defmodule Guppy.Native.Nif do
     end
   rescue
     UndefinedFunctionError -> {:error, :nif_not_loaded}
+    ErlangError -> {:error, :nif_not_loaded}
   end
 
   def loaded? do
@@ -71,47 +72,47 @@ defmodule Guppy.Native.Nif do
   end
 
   def native_ping do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_build_info do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_runtime_status do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_gui_status do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_performance_counters do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_open_window(_view_id, _ir, _opts) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_open_window(_view_id, _ir, _opts, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_set_event_target(_pid) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_set_menus(_menus, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_set_dock_menu(_items, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_set_app_badge(_label, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_open_file_dialog(
@@ -124,55 +125,55 @@ defmodule Guppy.Native.Nif do
         _owner_view_id,
         _timeout
       ) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_save_file_dialog(_directory, _default_name, _filters, _owner_view_id, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_read_clipboard_text(_timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_write_clipboard_text(_text, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_event_target_status do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_render(_view_id, _ir) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_render(_view_id, _ir, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_close_window(_view_id) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_close_window(_view_id, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_focus_window(_view_id, _timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_close_all(_timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_view_count do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def native_view_count(_timeout) do
-    {:error, :nif_not_loaded}
+    :erlang.nif_error(:nif_not_loaded)
   end
 
   def build_info do

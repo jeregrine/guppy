@@ -355,7 +355,7 @@ else
     "Try file dialogs, app badge buttons, cmd-b/cmd-o/cmd-2, and right-click/Shift-F10 on the context panel."
   )
 
-  IO.inspect(Guppy.Native.Nif.load_status(), label: "load_status")
+  IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
 
   {:ok, app_pid} = Guppy.Examples.NativeAppShellDemo.start_link([])
 

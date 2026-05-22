@@ -554,7 +554,7 @@ defmodule Guppy.IRTest do
 
     assert :ok = Guppy.IR.validate(uniform_list_ir)
     assert uniform_list_ir.kind == :uniform_list
-    assert length(uniform_list_ir.items) == 2
+    assert [_first_item, _second_item] = uniform_list_ir.items
     assert uniform_list_ir.events == %{click: "item_clicked", context_menu: "item_context"}
 
     list_ir =

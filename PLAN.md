@@ -58,7 +58,6 @@ Real native apps often need more than plain inputs. Treat this as a focused desi
 
 - [ ] Audit GPUI text/editor capabilities available in `gpui = 0.2.2` and decide what belongs in Guppy now versus later.
 - [ ] Improve `text_input`/`textarea`: selection APIs, cursor control, scroll control, validation hooks, IME correctness, and native event coverage. Explicit `actions`/`shortcuts` now work on text inputs/textareas; deeper editor parity remains.
-- [ ] Design a richer editor primitive only if a concrete example needs it: rich text editing, syntax highlighting, undo/redo integration, diagnostics, and multi-cursor/selection behavior.
 - [ ] Ensure editor-like controls interact correctly with commands, context menus, themes, focus scopes, and clipboard APIs.
 
 ## Deferred primitives and polish

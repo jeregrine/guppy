@@ -1,18 +1,9 @@
+Code.require_file("support/table_tree_shared.exs", __DIR__)
+
 defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
   use Guppy.Window
 
-  @tasks [
-    %{
-      id: "auth",
-      project: "platform",
-      title: "Auth refresh",
-      status: "In progress",
-      owner: "Maya"
-    },
-    %{id: "menus", project: "platform", title: "App menus", status: "Done", owner: "Jason"},
-    %{id: "gallery", project: "design", title: "Style gallery", status: "Ready", owner: "Noor"},
-    %{id: "qa", project: "release", title: "Release QA", status: "Blocked", owner: "Ren"}
-  ]
+  alias Examples.TableTreeShared
 
   @impl Guppy.Window
   def mount(_arg, window) do
@@ -41,10 +32,15 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
 
   @impl Guppy.Window
   def render(window) do
-    visible_tasks = visible_tasks(window.assigns.selected_tree_id)
-    sorted_tasks = sort_tasks(visible_tasks, window.assigns.sort)
-    selected_row_id = selected_row_id_for(sorted_tasks, window.assigns.selected_row_id)
-    selected_cell = selected_cell_for(selected_row_id, window.assigns.selected_cell)
+    visible_tasks = TableTreeShared.visible_tasks(window.assigns.selected_tree_id)
+    sorted_tasks = TableTreeShared.sort_tasks(visible_tasks, window.assigns.sort)
+
+    selected_row_id =
+      TableTreeShared.selected_row_id_for(sorted_tasks, window.assigns.selected_row_id)
+
+    selected_cell =
+      TableTreeShared.selected_cell_for(selected_row_id, window.assigns.selected_cell)
+
     command_bindings = command_bindings()
 
     assigns =
@@ -57,7 +53,10 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
         list_items: list_items(window.assigns.selected_list_row_id),
         tree_nodes: tree_nodes(window.assigns.expanded, window.assigns.selected_tree_id),
         table_columns:
-          table_columns(window.assigns.table_column_ids, window.assigns.table_column_widths),
+          TableTreeShared.table_columns(
+            window.assigns.table_column_ids,
+            window.assigns.table_column_widths
+          ),
         table_rows: table_rows(sorted_tasks, selected_row_id, selected_cell),
         selected_row_id: selected_row_id,
         selected_cell: selected_cell,
@@ -260,9 +259,15 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
   end
 
   def handle_event("tree_selected", %{item_id: item_id}, window) do
-    tasks = item_id |> visible_tasks() |> sort_tasks(window.assigns.sort)
-    selected_row_id = selected_row_id_for(tasks, window.assigns.selected_row_id)
-    selected_cell = selected_cell_for(selected_row_id, window.assigns.selected_cell)
+    tasks =
+      item_id
+      |> TableTreeShared.visible_tasks()
+      |> TableTreeShared.sort_tasks(window.assigns.sort)
+
+    selected_row_id = TableTreeShared.selected_row_id_for(tasks, window.assigns.selected_row_id)
+
+    selected_cell =
+      TableTreeShared.selected_cell_for(selected_row_id, window.assigns.selected_cell)
 
     {:noreply,
      window
@@ -322,7 +327,12 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
         window
       ) do
     next_ids =
-      reorder_column_ids(window.assigns.table_column_ids, column_id, target_column_id, direction)
+      TableTreeShared.reorder_column_ids(
+        window.assigns.table_column_ids,
+        column_id,
+        target_column_id,
+        direction
+      )
 
     {:noreply,
      window
@@ -482,43 +492,6 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
     ]
   end
 
-  defp table_columns(column_ids, column_widths) do
-    definitions = %{
-      "title" => %{id: "title", label: "Task", sortable: true, pinned: true},
-      "status" => %{id: "status", label: "Status", sortable: true},
-      "owner" => %{id: "owner", label: "Owner", sortable: true}
-    }
-
-    Enum.map(column_ids, fn column_id ->
-      Map.put(
-        Map.fetch!(definitions, column_id),
-        :width,
-        {:px, Map.fetch!(column_widths, column_id)}
-      )
-    end)
-  end
-
-  defp selected_row_id_for([], _selected_row_id), do: nil
-
-  defp selected_row_id_for(tasks, selected_row_id) do
-    task_ids = MapSet.new(tasks, & &1.id)
-
-    if MapSet.member?(task_ids, selected_row_id) do
-      selected_row_id
-    else
-      tasks |> List.first() |> Map.fetch!(:id)
-    end
-  end
-
-  defp selected_cell_for(nil, _selected_cell), do: nil
-
-  defp selected_cell_for(selected_row_id, {row_id, column_id})
-       when row_id == selected_row_id and column_id in ["title", "status", "owner"] do
-    {row_id, column_id}
-  end
-
-  defp selected_cell_for(selected_row_id, _selected_cell), do: {selected_row_id, "status"}
-
   defp table_rows(tasks, selected_row_id, selected_cell) do
     Enum.map(tasks, fn task ->
       %{
@@ -539,35 +512,6 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
       children: [Guppy.IR.text(text)],
       style: selected_cell_style(selected?)
     }
-  end
-
-  defp visible_tasks("all"), do: @tasks
-
-  defp visible_tasks(project) when project in ["platform", "design", "release"],
-    do: Enum.filter(@tasks, &(&1.project == project))
-
-  defp visible_tasks("task_" <> task_id), do: Enum.filter(@tasks, &(&1.id == task_id))
-  defp visible_tasks(task_id), do: Enum.filter(@tasks, &(&1.id == task_id))
-
-  defp sort_tasks(tasks, %{column_id: column_id, direction: direction}) do
-    sorted = Enum.sort_by(tasks, &task_sort_value(&1, column_id))
-    if direction == :desc, do: Enum.reverse(sorted), else: sorted
-  end
-
-  defp task_sort_value(task, "title"), do: task.title
-  defp task_sort_value(task, "status"), do: task.status
-  defp task_sort_value(task, "owner"), do: task.owner
-  defp task_sort_value(task, _unknown_column), do: task.title
-
-  defp reorder_column_ids(column_ids, column_id, target_column_id, direction) do
-    without_column = List.delete(column_ids, column_id)
-
-    target_index =
-      Enum.find_index(without_column, &(&1 == target_column_id)) || length(without_column)
-
-    insert_at = if direction == "right", do: target_index + 1, else: target_index
-
-    List.insert_at(without_column, insert_at, column_id)
   end
 
   defp resize_column_widths(column_widths, column_id, width_delta) do
@@ -661,10 +605,10 @@ else
     "Try Tab/Shift-Tab, arrows, Home/End, Enter/Space, Shift-F10, Cmd-K, Alt-Left/Right, and Shift-Left/Right."
   )
 
-  IO.inspect(Guppy.Native.Nif.load_status(), label: "load_status")
-  IO.inspect(Guppy.native_build_info(), label: "native_build_info")
-  IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
-  IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
+  IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
+  IO.puts("native_build_info: #{inspect(Guppy.native_build_info())}")
+  IO.puts("native_runtime_status: #{inspect(Guppy.native_runtime_status())}")
+  IO.puts("native_gui_status: #{inspect(Guppy.native_gui_status())}")
 
   {:ok, app_pid} = Guppy.Examples.Priority3FocusKeyboard.start_link([])
 

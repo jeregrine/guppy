@@ -35,6 +35,7 @@ defmodule Examples.MarkdownViewWindow do
       |> assign(:outline_headings, [])
       |> assign(:selected_heading_id, nil)
       |> assign(:scroll_target_id, nil)
+      |> assign(:heading_id_prefix, @heading_id_prefix)
       |> assign(:status, nil)
       |> maybe_open_initial_path(initial_path)
 
@@ -62,7 +63,8 @@ defmodule Examples.MarkdownViewWindow do
     {:noreply,
      window
      |> assign(:selected_heading_id, heading_id)
-     |> assign(:scroll_target_id, heading_id)}
+     |> assign(:scroll_target_id, heading_id)
+     |> refresh_view_assigns()}
   end
 
   def handle_info({:guppy_menu_event, %{callback: "open_file"}}, window) do
@@ -79,20 +81,6 @@ defmodule Examples.MarkdownViewWindow do
 
   @impl Guppy.Window
   def render(window) do
-    assigns =
-      Map.merge(window.assigns, %{
-        filename: filename(window.assigns.current_path),
-        path_label: path_label(window.assigns.current_path),
-        history_entries: history_entries(window.assigns.history, window.assigns.current_path),
-        history_count_label: count_label(window.assigns.history, "file"),
-        heading_id_prefix: @heading_id_prefix,
-        outline_rows:
-          outline_rows(window.assigns.outline_headings, window.assigns.selected_heading_id),
-        outline_title:
-          outline_title(window.assigns.current_path, window.assigns.outline_headings),
-        outline_count_label: count_label(window.assigns.outline_headings, "heading")
-      })
-
     ~GUI"""
     <div id="markdownview_root" class="flex flex-col w-full h-full bg-[#FFFCF0] text-[#403E3C]">
       <div id="top_header" class="flex flex-row items-center justify-between p-1 border-b-1 border-[#E6E4D9] bg-[#FFFCF0]">
@@ -167,6 +155,20 @@ defmodule Examples.MarkdownViewWindow do
     """
   end
 
+  defp refresh_view_assigns(window) do
+    assigns = window.assigns
+
+    assign(window,
+      filename: filename(assigns.current_path),
+      path_label: path_label(assigns.current_path),
+      history_entries: history_entries(assigns.history, assigns.current_path),
+      history_count_label: count_label(assigns.history, "file"),
+      outline_rows: outline_rows(assigns.outline_headings, assigns.selected_heading_id),
+      outline_title: outline_title(assigns.current_path, assigns.outline_headings),
+      outline_count_label: count_label(assigns.outline_headings, "heading")
+    )
+  end
+
   defp menu_spec do
     [
       %{label: "MarkdownView", items: []},
@@ -188,13 +190,13 @@ defmodule Examples.MarkdownViewWindow do
     """)
   end
 
-  defp maybe_open_initial_path(window, nil), do: window
+  defp maybe_open_initial_path(window, nil), do: refresh_view_assigns(window)
 
   defp maybe_open_initial_path(window, path) do
     if File.regular?(Path.expand(path)) do
       open_path(window, path)
     else
-      window
+      refresh_view_assigns(window)
     end
   end
 
@@ -229,6 +231,7 @@ defmodule Examples.MarkdownViewWindow do
           |> assign(:scroll_target_id, nil)
           |> assign(:history, history)
           |> assign(:status, nil)
+          |> refresh_view_assigns()
 
         save_metadata(window)
         window
@@ -239,31 +242,33 @@ defmodule Examples.MarkdownViewWindow do
   end
 
   defp choose_markdown_file do
-    with osascript when is_binary(osascript) <- System.find_executable("osascript") do
-      args = [
-        "-e",
-        ~S(set theFile to choose file with prompt "Open Markdown file"),
-        "-e",
-        "POSIX path of theFile"
-      ]
-
-      case System.cmd(osascript, args, stderr_to_stdout: true) do
-        {path, 0} ->
-          path = String.trim(path)
-          if path == "", do: :cancel, else: {:ok, path}
-
-        {message, _status} ->
-          message = String.trim(message)
-
-          if String.contains?(message, "User canceled") do
-            :cancel
-          else
-            {:error, message}
-          end
-      end
-    else
+    case System.find_executable("osascript") do
+      osascript when is_binary(osascript) -> run_markdown_file_picker(osascript)
       _ -> {:error, "osascript is not available on this machine"}
     end
+  end
+
+  defp run_markdown_file_picker(osascript) do
+    args = [
+      "-e",
+      ~S(set theFile to choose file with prompt "Open Markdown file"),
+      "-e",
+      "POSIX path of theFile"
+    ]
+
+    osascript
+    |> System.cmd(args, stderr_to_stdout: true)
+    |> parse_markdown_file_picker_result()
+  end
+
+  defp parse_markdown_file_picker_result({path, 0}) do
+    path = String.trim(path)
+    if path == "", do: :cancel, else: {:ok, path}
+  end
+
+  defp parse_markdown_file_picker_result({message, _status}) do
+    message = String.trim(message)
+    if String.contains?(message, "User canceled"), do: :cancel, else: {:error, message}
   end
 
   defp initial_path(argv, metadata) do
@@ -509,13 +514,13 @@ end
 {:ok, _} = Application.ensure_all_started(:guppy)
 
 IO.puts("Guppy MarkdownView")
-IO.inspect(Guppy.Native.Nif.load_status(), label: "load_status")
-IO.inspect(Guppy.native_build_info(), label: "native_build_info")
-IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
-IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
+IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
+IO.puts("native_build_info: #{inspect(Guppy.native_build_info())}")
+IO.puts("native_runtime_status: #{inspect(Guppy.native_runtime_status())}")
+IO.puts("native_gui_status: #{inspect(Guppy.native_gui_status())}")
 
 {:ok, pid} = Examples.MarkdownViewWindow.start_link(System.argv())
-IO.inspect(Guppy.Window.view_id(pid), label: "opened_view_id")
+IO.puts("opened_view_id: #{inspect(Guppy.Window.view_id(pid))}")
 IO.puts("metadata: /tmp/guppy_markdownview_metadata.etf")
 
 Process.monitor(pid)

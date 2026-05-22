@@ -549,7 +549,7 @@ defmodule Guppy.Server do
         try do
           state.native.request(state.native_server, request, timeout)
         rescue
-          _error -> {:error, :runtime_unavailable}
+          _error in [ArgumentError, ErlangError, RuntimeError] -> {:error, :runtime_unavailable}
         catch
           _kind, _reason -> {:error, :runtime_unavailable}
         end
@@ -678,8 +678,6 @@ defmodule Guppy.Server do
   defp app_owner_conflict?(%{app_owner: nil}, _owner), do: false
   defp app_owner_conflict?(%{app_owner: owner}, owner), do: false
   defp app_owner_conflict?(%{app_owner: app_owner}, _owner) when is_pid(app_owner), do: true
-
-  defp put_app_owner(%{app_owner: owner} = state, owner) when is_pid(owner), do: state
 
   defp put_app_owner(state, owner) do
     state = clear_app_owner(state)

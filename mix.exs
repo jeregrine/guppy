@@ -63,7 +63,7 @@ defmodule Guppy.MixProject do
       {:vibe_kit, "~> 0.1"},
       {:benchee, "~> 1.3", only: :dev, runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:rustler, "~> 0.37.3"},
+      {:rustler, "~> 0.38.0"},
       {:rustler_precompiled, "~> 0.9.0"},
       {:telemetry, "~> 1.3"}
     ]
@@ -77,9 +77,15 @@ defmodule Guppy.MixProject do
         "test",
         "credo --strict",
         "dialyzer",
-        "ex_dna --max-clones 0",
-        "reach.check --arch --smells"
+        "ex_dna lib examples --max-clones 0",
+        "reach.check --arch --smells",
+        &reach_examples/1
       ]
     ]
+  end
+
+  defp reach_examples(_args) do
+    Mix.Task.reenable("reach.check")
+    Mix.Task.run("reach.check", ["--smells", "examples/**/*.exs"])
   end
 end

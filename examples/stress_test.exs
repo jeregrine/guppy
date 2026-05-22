@@ -492,20 +492,21 @@ defmodule Examples.StressTest do
   end
 
   defp json_line(map) do
-    "{" <>
-      (map
-       |> Enum.sort_by(fn {key, _value} -> Atom.to_string(key) end)
-       |> Enum.map(fn {key, value} -> json_pair(key, value) end)
-       |> Enum.join(",")) <> "}"
+    pairs =
+      map
+      |> Enum.sort_by(fn {key, _value} -> Atom.to_string(key) end)
+      |> Enum.map_join(",", fn {key, value} -> json_pair(key, value) end)
+
+    "{" <> pairs <> "}"
   end
 
   defp json_pair(key, value), do: json_string(Atom.to_string(key)) <> ":" <> json_value(value)
+  defp json_value(nil), do: "null"
   defp json_value(value) when is_boolean(value), do: if(value, do: "true", else: "false")
   defp json_value(value) when is_atom(value), do: json_string(Atom.to_string(value))
   defp json_value(value) when is_binary(value), do: json_string(value)
   defp json_value(value) when is_integer(value), do: Integer.to_string(value)
   defp json_value(value) when is_float(value), do: :erlang.float_to_binary(value, decimals: 6)
-  defp json_value(nil), do: "null"
   defp json_value(value), do: json_string(inspect(value))
 
   defp json_string(value) do

@@ -89,15 +89,15 @@ end
 {:ok, _} = Application.ensure_all_started(:guppy)
 
 IO.puts("Guppy hello world")
-IO.inspect(Guppy.Native.Nif.load_status(), label: "load_status")
-IO.inspect(Guppy.native_build_info(), label: "native_build_info")
-IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
-IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
-IO.inspect(Guppy.ping(), label: "ping")
+IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
+IO.puts("native_build_info: #{inspect(Guppy.native_build_info())}")
+IO.puts("native_runtime_status: #{inspect(Guppy.native_runtime_status())}")
+IO.puts("native_gui_status: #{inspect(Guppy.native_gui_status())}")
+IO.puts("ping: #{inspect(Guppy.ping())}")
 
 {:ok, pid} = Examples.HelloWorldWindow.start_link(:ok)
-IO.inspect(Guppy.Window.view_id(pid), label: "opened_view_id")
-IO.inspect(Guppy.native_view_count(), label: "native_view_count")
+IO.puts("opened_view_id: #{inspect(Guppy.Window.view_id(pid))}")
+IO.puts("native_view_count: #{inspect(Guppy.native_view_count())}")
 IO.puts("opened and asked GPUI to activate/focus the window")
 IO.puts("rendered IR tree")
 
@@ -105,5 +105,5 @@ Process.monitor(pid)
 
 receive do
   {:DOWN, _ref, :process, ^pid, _reason} ->
-    IO.inspect(Guppy.native_view_count(), label: "native_view_count")
+    IO.puts("native_view_count: #{inspect(Guppy.native_view_count())}")
 end

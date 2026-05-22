@@ -1,18 +1,9 @@
+Code.require_file("support/table_tree_shared.exs", __DIR__)
+
 defmodule Examples.DataTableTreeWindow do
   use Guppy.Window
 
-  @tasks [
-    %{
-      id: "auth",
-      project: "platform",
-      title: "Auth refresh",
-      status: "In progress",
-      owner: "Maya"
-    },
-    %{id: "menus", project: "platform", title: "App menus", status: "Done", owner: "Jason"},
-    %{id: "gallery", project: "design", title: "Style gallery", status: "Ready", owner: "Noor"},
-    %{id: "qa", project: "release", title: "Release QA", status: "Blocked", owner: "Ren"}
-  ]
+  alias Examples.TableTreeShared
 
   @impl Guppy.Window
   def mount(_arg, window) do
@@ -80,7 +71,12 @@ defmodule Examples.DataTableTreeWindow do
      assign(
        window,
        :table_column_ids,
-       reorder_column_ids(window.assigns.table_column_ids, column_id, target_column_id, direction)
+       TableTreeShared.reorder_column_ids(
+         window.assigns.table_column_ids,
+         column_id,
+         target_column_id,
+         direction
+       )
      )}
   end
 
@@ -95,17 +91,20 @@ defmodule Examples.DataTableTreeWindow do
 
   @impl Guppy.Window
   def render(window) do
-    visible_tasks = visible_tasks(window.assigns.selected_tree_id)
-    sorted_tasks = sort_tasks(visible_tasks, window.assigns.sort)
+    visible_tasks = TableTreeShared.visible_tasks(window.assigns.selected_tree_id)
+    sorted_tasks = TableTreeShared.sort_tasks(visible_tasks, window.assigns.sort)
 
     assigns =
       Map.merge(window.assigns, %{
         table_columns:
-          table_columns(window.assigns.table_column_ids, window.assigns.table_column_widths),
+          TableTreeShared.table_columns(
+            window.assigns.table_column_ids,
+            window.assigns.table_column_widths
+          ),
         table_rows:
           table_rows(sorted_tasks, window.assigns.selected_row_id, window.assigns.selected_cell),
         tree_nodes: tree_nodes(window.assigns.expanded, window.assigns.selected_tree_id),
-        selected_label: selected_label(window.assigns.selected_tree_id),
+        selected_label: TableTreeShared.selected_label(window.assigns.selected_tree_id),
         selected_row_label: window.assigns.selected_row_id,
         sort_label: "#{window.assigns.sort.column_id} #{window.assigns.sort.direction}"
       })
@@ -159,33 +158,6 @@ defmodule Examples.DataTableTreeWindow do
       </div>
     </div>
     """
-  end
-
-  defp table_columns(column_ids, column_widths) do
-    definitions = %{
-      "title" => %{id: "title", label: "Task", sortable: true, pinned: true},
-      "status" => %{id: "status", label: "Status", sortable: true},
-      "owner" => %{id: "owner", label: "Owner", sortable: true}
-    }
-
-    Enum.map(column_ids, fn column_id ->
-      Map.put(
-        Map.fetch!(definitions, column_id),
-        :width,
-        {:px, Map.fetch!(column_widths, column_id)}
-      )
-    end)
-  end
-
-  defp reorder_column_ids(column_ids, column_id, target_column_id, direction) do
-    without_column = List.delete(column_ids, column_id)
-
-    target_index =
-      Enum.find_index(without_column, &(&1 == target_column_id)) || length(without_column)
-
-    insert_at = if direction == "right", do: target_index + 1, else: target_index
-
-    List.insert_at(without_column, insert_at, column_id)
   end
 
   defp resize_column_widths(column_widths, column_id, width_delta) do
@@ -253,37 +225,18 @@ defmodule Examples.DataTableTreeWindow do
     do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#eff6ff")]
 
   defp selected_tree_style(false), do: []
-
-  defp visible_tasks("all"), do: @tasks
-  defp visible_tasks(project), do: Enum.filter(@tasks, &(&1.project == project))
-
-  defp sort_tasks(tasks, %{column_id: column_id, direction: direction}) do
-    sorted = Enum.sort_by(tasks, &task_sort_value(&1, column_id))
-    if direction == :desc, do: Enum.reverse(sorted), else: sorted
-  end
-
-  defp task_sort_value(task, "title"), do: task.title
-  defp task_sort_value(task, "status"), do: task.status
-  defp task_sort_value(task, "owner"), do: task.owner
-  defp task_sort_value(task, _unknown_column), do: task.title
-
-  defp selected_label("all"), do: "All tasks"
-  defp selected_label("platform"), do: "Platform"
-  defp selected_label("design"), do: "Design"
-  defp selected_label("release"), do: "Release"
-  defp selected_label(other), do: other
 end
 
 {:ok, _} = Application.ensure_all_started(:guppy)
 
 IO.puts("Guppy data table/tree example")
-IO.inspect(Guppy.Native.Nif.load_status(), label: "load_status")
-IO.inspect(Guppy.native_build_info(), label: "native_build_info")
-IO.inspect(Guppy.native_runtime_status(), label: "native_runtime_status")
-IO.inspect(Guppy.native_gui_status(), label: "native_gui_status")
+IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
+IO.puts("native_build_info: #{inspect(Guppy.native_build_info())}")
+IO.puts("native_runtime_status: #{inspect(Guppy.native_runtime_status())}")
+IO.puts("native_gui_status: #{inspect(Guppy.native_gui_status())}")
 
 {:ok, pid} = Examples.DataTableTreeWindow.start_link([])
-IO.inspect(Guppy.Window.view_id(pid), label: "opened_view_id")
+IO.puts("opened_view_id: #{inspect(Guppy.Window.view_id(pid))}")
 
 Process.monitor(pid)
 

@@ -35,7 +35,8 @@ defmodule Guppy.Component do
   - `prop/4` can declare required props, defaults, and simple validations
 
   Expressions use `{...}` syntax. Assign lookups use `@name`, resolving from an
-  `assigns` map in scope or from a `Guppy.Window` value named `window`.
+  `assigns` map in scope when it is a map, otherwise from a `Guppy.Window` value
+  named `window`.
   """
 
   defmacro __using__(_opts) do
@@ -69,9 +70,15 @@ defmodule Guppy.Component do
         }
       end)
 
-    quote do
-      def __guppy_component_props__(component_name) do
-        Map.get(unquote(Macro.escape(grouped)), component_name, [])
+    if grouped == %{} do
+      quote do
+        def __guppy_component_props__(_component_name), do: []
+      end
+    else
+      quote do
+        def __guppy_component_props__(component_name) do
+          Map.get(unquote(Macro.escape(grouped)), component_name, [])
+        end
       end
     end
   end
@@ -132,6 +139,7 @@ defmodule Guppy.Component do
   defp fetch_template_assigns(binding) do
     case Keyword.fetch(binding, :assigns) do
       {:ok, assigns} when is_map(assigns) -> {:ok, assigns}
+      {:ok, nil} -> :error
       _ -> :error
     end
   end

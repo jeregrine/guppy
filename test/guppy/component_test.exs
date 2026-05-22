@@ -367,7 +367,7 @@ defmodule Guppy.ComponentTest do
     assert scroll.kind == :scroll
     assert scroll.id == "items"
     assert scroll.axis == :y
-    assert length(scroll.children) == 2
+    assert [_first_child, _second_child] = scroll.children
 
     assert Enum.map(scroll.children, & &1.id) == ["item_1", "item_2"]
 
@@ -421,7 +421,7 @@ defmodule Guppy.ComponentTest do
 
     assert canvas.kind == :canvas
     assert canvas.id == "summary_canvas"
-    assert length(canvas.commands) == 2
+    assert [_first_command, _second_command] = canvas.commands
     assert canvas.events == %{click: "canvas_clicked", context_menu: "canvas_context_menu"}
     assert {:width, {:px, 120}} in canvas.style
     assert {:height, {:px, 80}} in canvas.style
@@ -499,6 +499,16 @@ defmodule Guppy.ComponentTest do
 
     assert :ok = Guppy.IR.validate(ir)
     assert [%{kind: :text, content: "Window title", id: "window_assigns_title"}] = ir.children
+  end
+
+  test "Guppy.Component falls back to window assigns when local assigns is nil" do
+    ir =
+      Guppy.NilAssignsWindowTemplateExample.render(%Guppy.Window{
+        assigns: %{title: "Window title"}
+      })
+
+    assert :ok = Guppy.IR.validate(ir)
+    assert [%{kind: :text, content: "Window title", id: "nil_assigns_window_title"}] = ir.children
   end
 
   test "Guppy.Component keeps equals signs in text expressions out of attribute preprocessing" do

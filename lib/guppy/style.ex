@@ -1940,8 +1940,6 @@ defmodule Guppy.Style do
     end
   end
 
-  defp validate_length_units!(:auto, _length_units), do: :auto
-
   defp validate_length_units!({unit, _value} = length, length_units) do
     if unit in length_units do
       length
@@ -2131,8 +2129,7 @@ defmodule Guppy.Style do
     if Keyword.keyword?(options) do
       keys = Keyword.keys(options)
 
-      length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
-        Enum.sort(keys) == [:angle, :from, :to] and
+      Enum.sort(keys) == [:angle, :from, :to] and
         valid_gradient_angle?(Keyword.fetch!(options, :angle)) and
         valid_gradient_stop?(Keyword.fetch!(options, :from)) and
         valid_gradient_stop?(Keyword.fetch!(options, :to))
@@ -2154,8 +2151,7 @@ defmodule Guppy.Style do
     if Keyword.keyword?(options) do
       keys = Keyword.keys(options)
 
-      if length(options) == 3 and MapSet.size(MapSet.new(keys)) == 3 and
-           Enum.sort(keys) == [:color, :interval, :width] and
+      if Enum.sort(keys) == [:color, :interval, :width] and
            valid_gradient_color?(Keyword.fetch!(options, :color)) and
            valid_background_pattern_number?(Keyword.fetch!(options, :width)) and
            valid_background_pattern_number?(Keyword.fetch!(options, :interval)) do
@@ -2206,8 +2202,7 @@ defmodule Guppy.Style do
   defp normalize_single_box_shadow(options) do
     keys = Keyword.keys(options)
 
-    if length(options) == 5 and MapSet.size(MapSet.new(keys)) == 5 and
-         Enum.sort(keys) == [:blur, :color, :spread, :x, :y] and
+    if Enum.sort(keys) == [:blur, :color, :spread, :x, :y] and
          valid_gradient_color?(Keyword.fetch!(options, :color)) and
          valid_box_shadow_number?(Keyword.fetch!(options, :x)) and
          valid_box_shadow_number?(Keyword.fetch!(options, :y)) and

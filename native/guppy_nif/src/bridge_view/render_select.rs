@@ -36,33 +36,41 @@ pub(crate) fn render(
         );
     }
 
-    let mut trigger = apply_div_style(
-        div()
-            .id(node_id.to_shared_string())
-            .flex()
-            .flex_row()
-            .items_center()
-            .justify_between()
-            .gap_2()
-            .px_2()
-            .py_2()
-            .rounded_md()
-            .border_1()
-            .border_color(rgb(0x94a3b8))
-            .bg(if node.disabled {
-                rgb(0x334155)
-            } else {
-                rgb(0x0f172a)
-            })
-            .text_color(if node.disabled {
-                rgb(0x94a3b8)
-            } else {
-                rgb(0xf8fafc)
-            })
-            .child(selected_label(node))
-            .child("⌄"),
-        &node.style,
-    );
+    let mut trigger_base = div()
+        .id(node_id.to_shared_string())
+        .flex()
+        .flex_row()
+        .items_center()
+        .justify_between()
+        .gap_2()
+        .min_w(px(180.0))
+        .px_2()
+        .py_2()
+        .rounded_md()
+        .border_1()
+        .border_color(if node.open {
+            rgb(0x60a5fa)
+        } else {
+            rgb(0x475569)
+        })
+        .bg(if node.disabled {
+            rgb(0x334155)
+        } else {
+            rgb(0x0f172a)
+        })
+        .text_color(if node.disabled {
+            rgb(0x94a3b8)
+        } else {
+            rgb(0xf8fafc)
+        })
+        .child(selected_label(node))
+        .child(if node.open { "⌃" } else { "⌄" });
+
+    if !node.disabled {
+        trigger_base = trigger_base.cursor_pointer();
+    }
+
+    let mut trigger = apply_div_style(trigger_base, &node.style);
 
     if let Some(handle) = focus_handle.as_ref() {
         let handle = handle.clone();
@@ -79,8 +87,9 @@ pub(crate) fn render(
         if let Some(callback_id) = node.click.as_ref() {
             let callback_id = callback_id.clone();
             let click_node_id = node_key.clone();
-            trigger = trigger.on_click(move |_, _, _| {
+            trigger = trigger.on_click(move |_, _, cx| {
                 events::emit_click(view_id, &click_node_id, &callback_id);
+                cx.stop_propagation();
             });
         }
 
@@ -187,21 +196,24 @@ fn attach_keyboard_navigation(
 }
 
 fn render_option_list(view_id: u64, node_key: &str, node: &SelectNode) -> AnyElement {
-    let mut list = apply_div_style(
-        div()
-            .id(SharedString::from(format!("{node_key}.list")))
-            .flex()
-            .flex_col()
-            .min_w(px(180.0))
-            .p_1()
-            .rounded_md()
-            .border_1()
-            .border_color(rgb(0x94a3b8))
-            .shadow_lg()
-            .bg(rgb(0xffffff))
-            .text_color(rgb(0x0f172a)),
-        &node.list_style,
-    );
+    let mut list_base = div()
+        .id(SharedString::from(format!("{node_key}.list")))
+        .flex()
+        .flex_col()
+        .min_w(px(180.0))
+        .p_1()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(0x334155))
+        .shadow_lg()
+        .bg(rgb(0x0f172a))
+        .text_color(rgb(0xf8fafc));
+
+    if node.options.len() > 8 {
+        list_base = list_base.max_h(px(260.0)).overflow_y_scroll();
+    }
+
+    let mut list = apply_div_style(list_base, &node.list_style);
 
     if !node.disabled
         && let Some(callback_id) = node.close.as_ref()
@@ -220,6 +232,7 @@ fn render_option_list(view_id: u64, node_key: &str, node: &SelectNode) -> AnyEle
             option,
             &node.option_style,
             node.change.as_deref(),
+            node.value.as_deref() == Some(option.value.as_str()),
         )
     }))
     .into_any_element()
@@ -231,23 +244,44 @@ fn render_option(
     option: &SelectOption,
     option_style: &DivStyle,
     change: Option<&str>,
+    selected: bool,
 ) -> AnyElement {
     let option_key = format!("{node_key}.{}", option.value);
-    let mut row = apply_div_style(
-        div()
-            .id(SharedString::from(option_key.clone()))
-            .w_full()
-            .px_2()
-            .py_2()
-            .rounded_sm()
-            .text_color(if option.disabled {
-                rgb(0x94a3b8)
+    let mut row_base = div()
+        .id(SharedString::from(option_key.clone()))
+        .flex()
+        .flex_row()
+        .items_center()
+        .justify_between()
+        .gap_2()
+        .w_full()
+        .px_2()
+        .py_2()
+        .rounded_sm()
+        .text_color(if option.disabled {
+            rgb(0x64748b)
+        } else if selected {
+            rgb(0xffffff)
+        } else {
+            rgb(0xe2e8f0)
+        })
+        .child(option.label.clone());
+
+    if selected {
+        row_base = row_base.bg(rgb(0x1d4ed8)).child("✓");
+    }
+
+    if !option.disabled {
+        row_base = row_base.cursor_pointer().hover(move |style| {
+            style.bg(if selected {
+                rgb(0x2563eb)
             } else {
-                rgb(0x0f172a)
+                rgb(0x1e293b)
             })
-            .child(option.label.clone()),
-        option_style,
-    );
+        });
+    }
+
+    let mut row = apply_div_style(row_base, option_style);
 
     if !option.disabled
         && let Some(callback_id) = change
@@ -255,8 +289,9 @@ fn render_option(
         let callback_id = callback_id.to_owned();
         let event_node_id = node_key.to_owned();
         let value = option.value.clone();
-        row = row.on_click(move |_, _, _| {
+        row = row.on_click(move |_, _, cx| {
             events::emit_change(view_id, &event_node_id, &callback_id, &value);
+            cx.stop_propagation();
         });
     }
 

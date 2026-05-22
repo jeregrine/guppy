@@ -7,7 +7,10 @@ cd "$repo_root"
 mix test
 mix run --no-start examples/stress_test.exs -- --validate-only
 mix format --check-formatted
-mix credo
+mix credo --strict
+mix ex_dna lib examples --max-clones 0
+mix reach.check --arch --smells
+mix reach.check --smells 'examples/**/*.exs'
 
 cd "$repo_root/native/guppy_nif"
 cargo test

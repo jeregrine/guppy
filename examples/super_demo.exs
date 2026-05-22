@@ -1,5 +1,9 @@
+Code.require_file("support/table_tree_shared.exs", __DIR__)
+
 defmodule Guppy.SuperDemo do
   use Guppy.Component
+
+  alias Examples.TableTreeShared
 
   @palette [:gray, :red, :green, :blue, :yellow]
   @surface_base "#09111f"
@@ -13,8 +17,27 @@ defmodule Guppy.SuperDemo do
   @focus_ring "#facc15"
   @timer_ticks 5
   @timer_interval_ms 1_000
-  @demo_ids [:runtime, :components, :interactions, :windows, :styles, :layout, :scroll, :help]
+  @asset_icon_path "/tmp/guppy_super_demo_feature.svg"
+  @demo_ids [
+    :runtime,
+    :components,
+    :interactions,
+    :collections,
+    :windows,
+    :native_shell,
+    :styles,
+    :layout,
+    :scroll,
+    :help
+  ]
   @demo_id_by_name Map.new(@demo_ids, fn demo_id -> {Atom.to_string(demo_id), demo_id} end)
+  @palette_index_by_name %{
+    "gray" => 0,
+    "red" => 1,
+    "green" => 2,
+    "blue" => 3,
+    "yellow" => 4
+  }
 
   prop(:feature_card, :id, :string, required: true)
   prop(:feature_card, :title, :string, required: true)
@@ -25,6 +48,7 @@ defmodule Guppy.SuperDemo do
 
   def run do
     {:ok, _} = Application.ensure_all_started(:guppy)
+    ensure_demo_assets!()
 
     initial_state =
       %{
@@ -48,6 +72,19 @@ defmodule Guppy.SuperDemo do
         status_select_open: false,
         select_changes: 0,
         popover_open: false,
+        table_expanded: MapSet.new(["all", "platform"]),
+        table_selected_tree_id: "platform",
+        table_column_ids: ["title", "status", "owner"],
+        table_column_widths: %{"title" => 260, "status" => 120, "owner" => 100},
+        table_selected_row_id: "menus",
+        table_selected_cell: {"menus", "status"},
+        table_sort: %{column_id: "title", direction: :asc},
+        row_control_tasks: row_control_seed(),
+        row_control_last_event: "Click a row control to see row-aware payloads.",
+        canvas_state: :open,
+        shell_badge_count: 0,
+        shell_status: "Install menus, try file dialogs, or use clipboard helpers.",
+        shell_events: ["Native shell controls ready"],
         mouse_downs: 0,
         mouse_ups: 0,
         mouse_moves: 0,
@@ -58,6 +95,7 @@ defmodule Guppy.SuperDemo do
         key_downs: 0,
         key_ups: 0,
         context_menus: 0,
+        context_menu_open: false,
         action_events: 0,
         drag_starts: 0,
         drag_moves: 0,
@@ -87,6 +125,11 @@ defmodule Guppy.SuperDemo do
     state = %{initial_state | main_view_id: main_view_id}
     :ok = Guppy.render(main_view_id, render(state))
     loop(state)
+  end
+
+  defp loop({:stop, state}) do
+    cleanup(state)
+    :ok
   end
 
   defp loop(state) do
@@ -124,6 +167,11 @@ defmodule Guppy.SuperDemo do
         |> handle_drag_event(view_id, event)
         |> continue()
 
+      {:guppy_event, view_id, %{type: :window_close_requested}} ->
+        state
+        |> handle_window_close_requested(view_id)
+        |> continue()
+
       {:guppy_event, view_id, %{type: :window_closed}} ->
         state
         |> handle_window_closed(view_id)
@@ -147,6 +195,27 @@ defmodule Guppy.SuperDemo do
         |> Map.put(:last_event, "child owner window closed (#{inspect(reason)})")
         |> refresh_statuses()
         |> rerender!()
+        |> loop()
+
+      {:guppy_menu_event, event} ->
+        callback = Map.get(event, :callback, Map.get(event, :id, "unknown"))
+
+        case callback do
+          "badge_increment" ->
+            update_badge(state, state.shell_badge_count + 1)
+
+          "badge_clear" ->
+            clear_badge(state)
+
+          "write_clipboard" ->
+            write_clipboard(state)
+
+          _ ->
+            state
+            |> log_shell_event("Menu callback #{inspect(event)}")
+            |> Map.put(:last_event, "menu callback #{callback}")
+            |> rerender!()
+        end
         |> loop()
 
       {:DOWN, ref, :process, pid, reason} ->
@@ -188,10 +257,10 @@ defmodule Guppy.SuperDemo do
 
   defp continue(state), do: loop(state)
 
-  defp handle_click(state, view_id, %{id: node_id, callback: callback_id}) do
+  defp handle_click(state, view_id, %{id: node_id, callback: callback_id} = event) do
     cond do
       view_id == state.main_view_id ->
-        handle_main_click(state, node_id, callback_id)
+        handle_main_click(state, node_id, callback_id, event)
 
       view_id == state.aux_view_id ->
         handle_aux_click(state, node_id, callback_id)
@@ -201,6 +270,18 @@ defmodule Guppy.SuperDemo do
         |> Map.put(:last_event, "click from unknown view #{view_id}: #{node_id}/#{callback_id}")
         |> rerender!()
     end
+  end
+
+  defp handle_window_close_requested(state, view_id) when view_id == state.main_view_id do
+    Map.put(state, :last_event, "main window close requested")
+  end
+
+  defp handle_window_close_requested(state, view_id) when view_id == state.aux_view_id do
+    Map.put(state, :last_event, "auxiliary window close requested")
+  end
+
+  defp handle_window_close_requested(state, view_id) do
+    Map.put(state, :last_event, "window #{view_id} close requested")
   end
 
   defp handle_window_closed(state, view_id) when view_id == state.main_view_id do
@@ -247,55 +328,9 @@ defmodule Guppy.SuperDemo do
   end
 
   defp handle_change(state, view_id, %{id: node_id, callback: callback_id} = event) do
-    value = Map.get(event, :value, "")
-
     cond do
-      view_id == state.main_view_id and
-          node_id in ["priority_low", "priority_medium", "priority_high"] ->
-        state
-        |> Map.put(:selected_priority, value)
-        |> Map.update!(:radio_changes, &(&1 + 1))
-        |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
-        |> rerender!()
-
-      view_id == state.main_view_id and node_id == "notifications_checkbox" ->
-        checked = Map.get(event, :checked, false)
-
-        state
-        |> Map.put(:notifications_enabled, checked)
-        |> Map.update!(:checkbox_changes, &(&1 + 1))
-        |> Map.put(:last_event, "checkbox #{node_id}/#{callback_id} = #{checked}")
-        |> rerender!()
-
-      view_id == state.main_view_id and node_id == "demo_textarea" ->
-        state
-        |> Map.put(:textarea_value, value)
-        |> Map.update!(:textarea_changes, &(&1 + 1))
-        |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
-        |> rerender!()
-
-      view_id == state.main_view_id and String.starts_with?(node_id, "status_select") ->
-        state
-        |> Map.put(:selected_status, value)
-        |> Map.put(:status_select_open, false)
-        |> Map.update!(:select_changes, &(&1 + 1))
-        |> Map.put(:last_event, "select change #{node_id}/#{callback_id}")
-        |> rerender!()
-
-      view_id == state.main_view_id and Map.has_key?(event, :value) ->
-        state
-        |> Map.put(:text_input_value, value)
-        |> Map.update!(:text_input_changes, &(&1 + 1))
-        |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
-        |> rerender!()
-
       view_id == state.main_view_id ->
-        state
-        |> Map.put(
-          :last_event,
-          "change #{node_id}/#{callback_id}: #{inspect(Map.drop(event, [:type, :id, :callback]))}"
-        )
-        |> rerender!()
+        handle_main_change(state, node_id, callback_id, event)
 
       view_id == state.aux_view_id ->
         state
@@ -309,11 +344,84 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_pointer_event(
-         state,
-         view_id,
-         %{type: type, id: node_id, callback: callback_id} = event
-       ) do
+  defp handle_main_change(state, node_id, callback_id, event)
+       when node_id in ["priority_low", "priority_medium", "priority_high"] do
+    state
+    |> Map.put(:selected_priority, Map.get(event, :value, ""))
+    |> Map.update!(:radio_changes, &(&1 + 1))
+    |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_change(state, "notifications_checkbox" = node_id, callback_id, event) do
+    checked = Map.get(event, :checked, false)
+
+    state
+    |> Map.put(:notifications_enabled, checked)
+    |> Map.update!(:checkbox_changes, &(&1 + 1))
+    |> Map.put(:last_event, "checkbox #{node_id}/#{callback_id} = #{checked}")
+    |> rerender!()
+  end
+
+  defp handle_main_change(state, "demo_textarea" = node_id, callback_id, event) do
+    state
+    |> Map.put(:textarea_value, Map.get(event, :value, ""))
+    |> Map.update!(:textarea_changes, &(&1 + 1))
+    |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_change(state, "status_select" <> _suffix = node_id, callback_id, event) do
+    state
+    |> Map.put(:selected_status, Map.get(event, :value, ""))
+    |> Map.put(:status_select_open, false)
+    |> Map.update!(:select_changes, &(&1 + 1))
+    |> Map.put(:last_event, "select change #{node_id}/#{callback_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_change(state, node_id, "row_done_changed", event) do
+    row_id = Map.get(event, :row_id, "")
+    checked = Map.get(event, :checked, false)
+
+    state
+    |> update_row_control_task(row_id, &%{&1 | done: checked})
+    |> Map.put(:row_control_last_event, "done = #{checked} from #{row_id}/#{node_id}")
+    |> Map.put(:last_event, "row checkbox #{row_id}/#{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_change(state, node_id, "row_priority_changed", event) do
+    row_id = Map.get(event, :row_id, "")
+    value = Map.get(event, :value, "")
+
+    state
+    |> update_row_control_task(row_id, &%{&1 | priority: value})
+    |> Map.put(:row_control_last_event, "priority = #{value} from #{row_id}/#{node_id}")
+    |> Map.put(:last_event, "row radio #{row_id}/#{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_change(state, node_id, callback_id, %{value: value}) do
+    state
+    |> Map.put(:text_input_value, value)
+    |> Map.update!(:text_input_changes, &(&1 + 1))
+    |> Map.put(:last_event, "change #{node_id}/#{callback_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_change(state, node_id, callback_id, event) do
+    state
+    |> Map.put(
+      :last_event,
+      "change #{node_id}/#{callback_id}: #{inspect(Map.drop(event, [:type, :id, :callback]))}"
+    )
+    |> rerender!()
+  end
+
+  defp handle_pointer_event(state, view_id, event) do
+    {type, node_id, callback_id} = event_fields(event)
+
     cond do
       view_id == state.main_view_id ->
         state
@@ -334,15 +442,14 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_keyboard_event(
-         state,
-         view_id,
-         %{type: type, id: node_id, callback: callback_id} = event
-       ) do
+  defp handle_keyboard_event(state, view_id, event) do
+    {type, node_id, callback_id} = event_fields(event)
+
     cond do
       view_id == state.main_view_id ->
         state
         |> update_keyboard_counters(type)
+        |> maybe_open_context_menu(type)
         |> Map.put(:keyboard_status, format_keyboard_event(type, event))
         |> Map.put(:last_event, "#{type} #{node_id}/#{callback_id}")
         |> rerender!()
@@ -359,11 +466,9 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_drag_event(
-         state,
-         view_id,
-         %{type: type, id: node_id, callback: callback_id} = event
-       ) do
+  defp handle_drag_event(state, view_id, event) do
+    {type, node_id, callback_id} = event_fields(event)
+
     cond do
       view_id == state.main_view_id ->
         state
@@ -384,7 +489,10 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_main_click(state, node_id, "select_demo:" <> demo_name) do
+  defp event_fields(%{type: type, id: node_id, callback: callback_id}),
+    do: {type, node_id, callback_id}
+
+  defp handle_main_click(state, node_id, "select_demo:" <> demo_name, _event) do
     case Map.fetch(@demo_id_by_name, demo_name) do
       {:ok, demo_id} ->
         state
@@ -397,131 +505,287 @@ defmodule Guppy.SuperDemo do
     end
   end
 
-  defp handle_main_click(state, node_id, callback_id) do
-    handle_main_action(state, node_id, callback_id)
+  defp handle_main_click(state, node_id, callback_id, event) do
+    handle_main_action(state, node_id, callback_id, event)
   end
 
-  defp handle_main_action(state, node_id, callback_id) do
-    case callback_id do
-      "refresh_status" ->
+  defp handle_main_action(state, node_id, callback_id, event \\ %{})
+
+  defp handle_main_action(state, node_id, "refresh_status", _event) do
+    state
+    |> Map.put(:last_event, "refreshed status from #{node_id}")
+    |> refresh_statuses()
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "toggle_palette", _event) do
+    state
+    |> Map.update!(:palette_index, &rem(&1 + 1, length(@palette)))
+    |> Map.put(:last_event, "toggled palette from #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "select_palette:" <> color_name, _event) do
+    case Map.fetch(@palette_index_by_name, color_name) do
+      {:ok, palette_index} ->
         state
-        |> Map.put(:last_event, "refreshed status from #{node_id}")
-        |> refresh_statuses()
+        |> Map.put(:palette_index, palette_index)
+        |> Map.put(:last_event, "selected #{color_name} palette from #{node_id}")
         |> rerender!()
 
-      "toggle_palette" ->
+      :error ->
         state
-        |> Map.update!(:palette_index, &rem(&1 + 1, length(@palette)))
-        |> Map.put(:last_event, "toggled palette from #{node_id}")
-        |> rerender!()
-
-      "div_increment" ->
-        state
-        |> Map.update!(:div_clicks, &(&1 + 1))
-        |> Map.put(:last_event, "div click via #{node_id}")
-        |> rerender!()
-
-      "text_increment" ->
-        state
-        |> Map.update!(:text_clicks, &(&1 + 1))
-        |> Map.put(:last_event, "text click via #{node_id}")
-        |> rerender!()
-
-      "uniform_item_clicked" ->
-        state
-        |> Map.put(:last_event, "uniform list click via #{node_id}")
-        |> rerender!()
-
-      "generic_item_clicked" ->
-        state
-        |> Map.put(:last_event, "generic list click via #{node_id}")
-        |> rerender!()
-
-      "open_popover" ->
-        state
-        |> Map.put(:popover_open, true)
-        |> Map.put(:last_event, "opened popover via #{node_id}")
-        |> rerender!()
-
-      "close_popover" ->
-        state
-        |> Map.put(:popover_open, false)
-        |> Map.put(:last_event, "closed popover via #{node_id}")
-        |> rerender!()
-
-      "toggle_status_select" ->
-        state
-        |> Map.update!(:status_select_open, &(!&1))
-        |> Map.put(:last_event, "toggled select via #{node_id}")
-        |> rerender!()
-
-      "close_status_select" ->
-        state
-        |> Map.put(:status_select_open, false)
-        |> Map.put(:last_event, "closed select via #{node_id}")
-        |> rerender!()
-
-      "underlay_click" ->
-        state
-        |> Map.update!(:underlay_clicks, &(&1 + 1))
-        |> Map.put(:stack_status, "underlay clicked via #{node_id}")
-        |> Map.put(:last_event, "underlay click via #{node_id}")
-        |> rerender!()
-
-      "overlay_click" ->
-        state
-        |> Map.update!(:overlay_clicks, &(&1 + 1))
-        |> Map.put(:stack_status, "overlay clicked via #{node_id}")
-        |> Map.put(:last_event, "overlay click via #{node_id}")
-        |> rerender!()
-
-      "scroll_anchor_prev" ->
-        state
-        |> Map.update!(:scroll_anchor_index, &max(&1 - 1, 1))
-        |> Map.put(:last_event, "moved scroll anchor up from #{node_id}")
-        |> rerender!()
-
-      "scroll_anchor_next" ->
-        state
-        |> Map.update!(:scroll_anchor_index, &min(&1 + 1, 24))
-        |> Map.put(:last_event, "moved scroll anchor down from #{node_id}")
-        |> rerender!()
-
-      "start_timer" ->
-        if state.timer_running do
-          state
-          |> Map.put(:last_event, "timer already running")
-          |> rerender!()
-        else
-          Process.send_after(self(), :timer_tick, @timer_interval_ms)
-
-          state
-          |> Map.put(:timer_running, true)
-          |> Map.put(:timer_remaining, @timer_ticks)
-          |> Map.put(:last_event, "started timer updates")
-          |> rerender!()
-        end
-
-      "open_aux_window" ->
-        open_aux_window(state, node_id)
-
-      "close_aux_window" ->
-        close_aux_window(state, "main control")
-
-      "spawn_child_owner" ->
-        spawn_child_owner(state)
-
-      "kill_child_owner" ->
-        kill_child_owner(state)
-
-      "quit_demo" ->
-        {:stop, Map.put(state, :last_event, "quit requested from #{node_id}")}
-
-      _ ->
-        state
-        |> Map.put(:last_event, "unhandled main click #{node_id}/#{callback_id}")
+        |> Map.put(:last_event, "unknown palette #{color_name} from #{node_id}")
         |> rerender!()
     end
+  end
+
+  defp handle_main_action(state, node_id, "div_increment", _event) do
+    state
+    |> Map.update!(:div_clicks, &(&1 + 1))
+    |> Map.put(:last_event, "div click via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "text_increment", _event) do
+    state
+    |> Map.update!(:text_clicks, &(&1 + 1))
+    |> Map.put(:last_event, "text click via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "uniform_item_clicked", _event) do
+    state
+    |> Map.put(:last_event, "uniform list click via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "generic_item_clicked", _event) do
+    state
+    |> Map.put(:last_event, "generic list click via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "open_popover", _event) do
+    state
+    |> Map.put(:popover_open, true)
+    |> Map.put(:last_event, "opened popover via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "close_popover", _event) do
+    state
+    |> Map.put(:popover_open, false)
+    |> Map.put(:last_event, "closed popover via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "toggle_status_select", _event) do
+    state
+    |> Map.update!(:status_select_open, &(!&1))
+    |> Map.put(:last_event, "toggled select via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "close_status_select", _event) do
+    state
+    |> Map.put(:status_select_open, false)
+    |> Map.put(:last_event, "closed select via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "underlay_click", _event) do
+    state
+    |> Map.update!(:underlay_clicks, &(&1 + 1))
+    |> Map.put(:stack_status, "underlay clicked via #{node_id}")
+    |> Map.put(:last_event, "underlay click via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "overlay_click", _event) do
+    state
+    |> Map.update!(:overlay_clicks, &(&1 + 1))
+    |> Map.put(:stack_status, "overlay clicked via #{node_id}")
+    |> Map.put(:last_event, "overlay click via #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "scroll_anchor_prev", _event) do
+    state
+    |> Map.update!(:scroll_anchor_index, &max(&1 - 1, 1))
+    |> Map.put(:last_event, "moved scroll anchor up from #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "scroll_anchor_next", _event) do
+    state
+    |> Map.update!(:scroll_anchor_index, &min(&1 + 1, 24))
+    |> Map.put(:last_event, "moved scroll anchor down from #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "start_timer", _event) do
+    if state.timer_running do
+      state
+      |> Map.put(:last_event, "timer already running")
+      |> rerender!()
+    else
+      Process.send_after(self(), :timer_tick, @timer_interval_ms)
+
+      state
+      |> Map.put(:timer_running, true)
+      |> Map.put(:timer_remaining, @timer_ticks)
+      |> Map.put(:last_event, "started timer updates")
+      |> rerender!()
+    end
+  end
+
+  defp handle_main_action(state, _node_id, "collection_tree_select", event) do
+    item_id = Map.get(event, :item_id, "all")
+
+    state
+    |> Map.put(:table_selected_tree_id, item_id)
+    |> sync_table_selection()
+    |> Map.put(:last_event, "tree selected #{item_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "collection_tree_toggle", event) do
+    item_id = Map.get(event, :item_id, "all")
+
+    state
+    |> Map.update!(:table_expanded, &toggle_set(&1, item_id))
+    |> Map.put(:last_event, "tree toggled #{item_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "collection_row_select", event) do
+    row_id = Map.get(event, :row_id, "")
+
+    state
+    |> Map.put(:table_selected_row_id, row_id)
+    |> Map.put(:table_selected_cell, {row_id, "status"})
+    |> Map.put(:last_event, "table row #{row_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "collection_cell_select", event) do
+    row_id = Map.get(event, :row_id, "")
+    column_id = Map.get(event, :column_id, "status")
+
+    state
+    |> Map.put(:table_selected_row_id, row_id)
+    |> Map.put(:table_selected_cell, {row_id, column_id})
+    |> Map.put(:last_event, "table cell #{row_id}/#{column_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "collection_sort", event) do
+    column_id = Map.get(event, :column_id, "title")
+
+    state
+    |> Map.update!(:table_sort, &next_sort(&1, column_id))
+    |> sync_table_selection()
+    |> Map.put(:last_event, "table sort #{column_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "collection_column_reorder", event) do
+    state
+    |> Map.update!(:table_column_ids, fn column_ids ->
+      TableTreeShared.reorder_column_ids(
+        column_ids,
+        Map.get(event, :column_id, "title"),
+        Map.get(event, :target_column_id, "title"),
+        Map.get(event, :direction, "left")
+      )
+    end)
+    |> Map.put(:last_event, "table column reorder")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "collection_column_resize", event) do
+    state
+    |> Map.update!(:table_column_widths, fn widths ->
+      resize_column_widths(
+        widths,
+        Map.get(event, :column_id, "title"),
+        Map.get(event, :width_delta, 0)
+      )
+    end)
+    |> Map.put(:last_event, "table column resize")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "row_open", event) do
+    row_id = Map.get(event, :row_id, node_id)
+
+    state
+    |> Map.put(:row_control_last_event, "button clicked from #{row_id}/#{node_id}")
+    |> Map.put(:last_event, "row button #{row_id}/#{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "context_menu_action", _event) do
+    state
+    |> Map.put(:context_menu_open, false)
+    |> Map.put(:keyboard_status, "context menu action from #{node_id}")
+    |> Map.put(:last_event, "context menu action #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, node_id, "cycle_canvas", _event) do
+    state
+    |> Map.update!(:canvas_state, &next_canvas_state/1)
+    |> Map.put(:last_event, "cycled canvas from #{node_id}")
+    |> rerender!()
+  end
+
+  defp handle_main_action(state, _node_id, "badge_increment", _event),
+    do: update_badge(state, state.shell_badge_count + 1)
+
+  defp handle_main_action(state, _node_id, "badge_clear", _event), do: clear_badge(state)
+
+  defp handle_main_action(state, _node_id, "open_file_dialog", _event),
+    do: open_file_dialog(state)
+
+  defp handle_main_action(state, _node_id, "choose_directory_dialog", _event),
+    do: choose_directory_dialog(state)
+
+  defp handle_main_action(state, _node_id, "save_file_dialog", _event),
+    do: save_file_dialog(state)
+
+  defp handle_main_action(state, _node_id, "read_clipboard", _event), do: read_clipboard(state)
+  defp handle_main_action(state, _node_id, "write_clipboard", _event), do: write_clipboard(state)
+
+  defp handle_main_action(state, _node_id, "install_menus", _event),
+    do: install_super_demo_menus(state)
+
+  defp handle_main_action(state, _node_id, "install_dock_menu", _event),
+    do: install_super_demo_dock_menu(state)
+
+  defp handle_main_action(state, _node_id, "clear_shell_chrome", _event),
+    do: clear_shell_chrome(state)
+
+  defp handle_main_action(state, node_id, "open_aux_window", _event),
+    do: open_aux_window(state, node_id)
+
+  defp handle_main_action(state, _node_id, "close_aux_window", _event),
+    do: close_aux_window(state, "main control")
+
+  defp handle_main_action(state, _node_id, "spawn_child_owner", _event),
+    do: spawn_child_owner(state)
+
+  defp handle_main_action(state, _node_id, "kill_child_owner", _event),
+    do: kill_child_owner(state)
+
+  defp handle_main_action(state, node_id, "quit_demo", _event),
+    do: {:stop, Map.put(state, :last_event, "quit requested from #{node_id}")}
+
+  defp handle_main_action(state, node_id, callback_id, _event) do
+    state
+    |> Map.put(:last_event, "unhandled main click #{node_id}/#{callback_id}")
+    |> rerender!()
   end
 
   defp handle_aux_click(state, node_id, "close_aux_window") do
@@ -579,6 +843,9 @@ defmodule Guppy.SuperDemo do
     do: Map.update!(state, :context_menus, &(&1 + 1))
 
   defp update_keyboard_counters(state, :action), do: Map.update!(state, :action_events, &(&1 + 1))
+
+  defp maybe_open_context_menu(state, :context_menu), do: Map.put(state, :context_menu_open, true)
+  defp maybe_open_context_menu(state, _type), do: state
 
   defp update_drag_counters(state, :drag_start), do: Map.update!(state, :drag_starts, &(&1 + 1))
   defp update_drag_counters(state, :drag_move), do: Map.update!(state, :drag_moves, &(&1 + 1))
@@ -648,6 +915,363 @@ defmodule Guppy.SuperDemo do
 
   defp format_number(number) when is_float(number),
     do: :erlang.float_to_binary(number, decimals: 1)
+
+  defp ensure_demo_assets! do
+    File.write!(@asset_icon_path, """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect x="6" y="6" width="52" height="52" rx="14" fill="#172554" stroke="#60a5fa" stroke-width="4"/>
+      <path d="M18 34 L28 44 L47 20" fill="none" stroke="#f8fafc" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    """)
+  end
+
+  defp sync_table_selection(state) do
+    tasks =
+      state.table_selected_tree_id
+      |> TableTreeShared.visible_tasks()
+      |> TableTreeShared.sort_tasks(state.table_sort)
+
+    row_id = TableTreeShared.selected_row_id_for(tasks, state.table_selected_row_id)
+
+    state
+    |> Map.put(:table_selected_row_id, row_id)
+    |> Map.put(
+      :table_selected_cell,
+      TableTreeShared.selected_cell_for(row_id, state.table_selected_cell)
+    )
+  end
+
+  defp next_sort(%{column_id: column_id, direction: :asc}, column_id),
+    do: %{column_id: column_id, direction: :desc}
+
+  defp next_sort(_sort, column_id), do: %{column_id: column_id, direction: :asc}
+
+  defp toggle_set(set, value) do
+    if MapSet.member?(set, value), do: MapSet.delete(set, value), else: MapSet.put(set, value)
+  end
+
+  defp resize_column_widths(widths, column_id, width_delta) do
+    Map.update!(widths, column_id, fn width -> max(width + width_delta, 72) end)
+  end
+
+  defp collection_tree_nodes(expanded, selected_id) do
+    [
+      tree_item("all", "All tasks", expanded, selected_id,
+        children: [
+          tree_item("platform", "Platform", expanded, selected_id),
+          tree_item("design", "Design", expanded, selected_id),
+          tree_item("release", "Release", expanded, selected_id)
+        ]
+      )
+    ]
+  end
+
+  defp tree_item(id, label, expanded, selected_id, opts \\ []) do
+    %{id: id, label: label, style: selected_collection_style(id == selected_id)}
+    |> maybe_put_tree(:expanded, if(opts[:children], do: MapSet.member?(expanded, id)))
+    |> maybe_put_tree(:children, opts[:children])
+  end
+
+  defp maybe_put_tree(map, _key, nil), do: map
+  defp maybe_put_tree(map, key, value), do: Map.put(map, key, value)
+
+  defp collection_table_rows(tasks, selected_row_id, selected_cell) do
+    Enum.map(tasks, fn task ->
+      %{
+        id: task.id,
+        style: selected_row_style(task.id == selected_row_id),
+        cells: [
+          collection_table_cell("title", task.title, selected_cell == {task.id, "title"}),
+          collection_table_cell("status", task.status, selected_cell == {task.id, "status"}),
+          collection_table_cell("owner", task.owner, selected_cell == {task.id, "owner"})
+        ]
+      }
+    end)
+  end
+
+  defp collection_table_cell(column_id, text, selected?) do
+    %{
+      column_id: column_id,
+      children: [Guppy.IR.text(text)],
+      style: selected_cell_style(selected?)
+    }
+  end
+
+  defp selected_row_style(true), do: [{:bg_hex, "#172554"}, {:border_color_hex, "#2563eb"}]
+  defp selected_row_style(false), do: []
+  defp selected_cell_style(true), do: [{:bg_hex, "#1d4ed8"}, {:text_color_hex, "#eff6ff"}]
+  defp selected_cell_style(false), do: []
+  defp selected_collection_style(true), do: selected_cell_style(true)
+  defp selected_collection_style(false), do: []
+
+  defp super_context_menu(false), do: Guppy.IR.div([], id: "super_context_menu_placeholder")
+
+  defp super_context_menu(true) do
+    Guppy.ContextMenu.render(
+      [
+        menu_item("copy", "Copy", "context_menu_action"),
+        menu_item("rename", "Rename", "context_menu_action"),
+        :separator,
+        menu_item("disabled", "Disabled item", "context_menu_action", disabled: true)
+      ],
+      id: "super_context",
+      style: [
+        {:width, {:px, 240}},
+        {:padding, :all, {:rem, 0.25}},
+        {:bg_hex, "#ffffff"},
+        {:text_color, :black},
+        {:border_width, :all, {:px, 1}},
+        {:border_color_hex, "#34d399"}
+      ],
+      item_style: [{:padding, :all, {:rem, 0.5}}],
+      disabled_item_style: [{:padding, :all, {:rem, 0.5}}, {:text_color, :gray}],
+      separator_style: [{:height, {:px, 1}}, {:bg_hex, "#d1fae5"}]
+    )
+  end
+
+  defp row_control_seed do
+    [
+      row_control_task("row_task_1", "Wire row-control payloads", false, "high"),
+      row_control_task("row_task_2", "Keep row ids stable", true, "normal"),
+      row_control_task("row_task_3", "Prune retained controls", false, "normal")
+    ]
+  end
+
+  defp row_control_task(id, title, done, priority) do
+    %{id: id, title: title, done: done, priority: priority}
+  end
+
+  defp row_control_item(task) do
+    %{
+      id: task.id,
+      children: [
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text(task.title, id: "#{task.id}_title", style: [:font_semibold]),
+                Guppy.IR.text("row id: #{task.id}",
+                  style: [:text_xs, {:text_color_hex, @text_muted}]
+                )
+              ],
+              style: [:flex, :flex_col, :gap_1, :flex_1]
+            ),
+            Guppy.IR.checkbox("Done", task.done,
+              id: "row_done",
+              events: %{change: "row_done_changed"},
+              style: [:gap_2]
+            ),
+            Guppy.IR.radio("High", "high", task.priority == "high",
+              id: "row_priority_high",
+              events: %{change: "row_priority_changed"},
+              style: [:gap_2]
+            ),
+            Guppy.IR.radio("Normal", "normal", task.priority == "normal",
+              id: "row_priority_normal",
+              events: %{change: "row_priority_changed"},
+              style: [:gap_2]
+            ),
+            Guppy.IR.button("Open",
+              id: "row_open",
+              events: %{click: "row_open"},
+              style: [:p_2, :rounded_md, :border_1]
+            )
+          ],
+          id: "#{task.id}_layout",
+          style: [:flex, :flex_row, :items_center, :gap_4]
+        )
+      ]
+    }
+  end
+
+  defp update_row_control_task(state, row_id, fun) do
+    Map.update!(state, :row_control_tasks, fn tasks ->
+      Enum.map(tasks, fn
+        %{id: ^row_id} = task -> fun.(task)
+        task -> task
+      end)
+    end)
+  end
+
+  defp canvas_state(:open), do: canvas_state("Open", 0.42, "#2563eb", "#60a5fa")
+  defp canvas_state(:review), do: canvas_state("Review", 0.68, "#d97706", "#fbbf24")
+  defp canvas_state(:done), do: canvas_state("Done", 0.9, "#16a34a", "#86efac")
+
+  defp canvas_state(label, progress, fill, accent) do
+    %{label: label, progress: progress, fill: fill, accent: accent}
+  end
+
+  defp next_canvas_state(:open), do: :review
+  defp next_canvas_state(:review), do: :done
+  defp next_canvas_state(:done), do: :open
+
+  defp canvas_commands(state) do
+    progress_width = 248 * state.progress
+
+    [
+      canvas_command(:rounded_rect, 0, 0, 320, 180, radius: 18, fill: "#111827"),
+      canvas_command(:rounded_rect, 18, 18, 284, 144, radius: 14, fill: "#0f172a"),
+      canvas_command(:pattern_rect, 24, 24, 272, 46,
+        radius: 12,
+        color: state.accent,
+        line_width: 0.045,
+        interval: 0.16
+      ),
+      canvas_command(:rounded_rect, 36, 104, 248, 22, radius: 11, fill: "#334155"),
+      canvas_command(:rounded_rect, 36, 104, progress_width, 22, radius: 11, fill: state.fill),
+      canvas_command(:rounded_rect, 36, 140, 112, 16, radius: 8, fill: state.accent)
+    ]
+  end
+
+  defp canvas_command(op, x, y, width, height, opts) do
+    opts
+    |> Map.new()
+    |> Map.merge(%{op: op, x: x, y: y, width: width, height: height})
+  end
+
+  defp update_badge(state, count) do
+    result = Guppy.set_app_badge(Integer.to_string(count))
+
+    state
+    |> Map.put(:shell_badge_count, count)
+    |> Map.put(:shell_status, "set app badge to #{count}: #{inspect(result)}")
+    |> log_shell_event("Set app badge to #{count}")
+    |> Map.put(:last_event, "set app badge")
+    |> rerender!()
+  end
+
+  defp clear_badge(state) do
+    result = Guppy.set_app_badge(nil)
+
+    state
+    |> Map.put(:shell_badge_count, 0)
+    |> Map.put(:shell_status, "cleared app badge: #{inspect(result)}")
+    |> log_shell_event("Cleared app badge")
+    |> Map.put(:last_event, "cleared app badge")
+    |> rerender!()
+  end
+
+  defp open_file_dialog(state) do
+    result =
+      Guppy.open_file_dialog(
+        [
+          multiple: true,
+          prompt: "Open Elixir source",
+          directory: File.cwd!(),
+          filters: ["ex", "exs"],
+          owner_view_id: state.main_view_id
+        ],
+        120_000
+      )
+
+    shell_result(state, "open file dialog", result)
+  end
+
+  defp choose_directory_dialog(state) do
+    result =
+      Guppy.choose_directory_dialog(
+        [prompt: "Choose a directory", directory: File.cwd!(), owner_view_id: state.main_view_id],
+        120_000
+      )
+
+    shell_result(state, "choose directory dialog", result)
+  end
+
+  defp save_file_dialog(state) do
+    result =
+      Guppy.save_file_dialog(
+        [
+          directory: File.cwd!(),
+          default_name: "guppy-super-demo.txt",
+          filters: ["txt"],
+          owner_view_id: state.main_view_id
+        ],
+        120_000
+      )
+
+    shell_result(state, "save file dialog", result)
+  end
+
+  defp read_clipboard(state) do
+    result = Guppy.read_clipboard_text()
+    shell_result(state, "read clipboard", result)
+  end
+
+  defp write_clipboard(state) do
+    text = "Guppy super demo #{System.system_time(:second)}"
+    result = Guppy.write_clipboard_text(text)
+    shell_result(state, "write clipboard", result)
+  end
+
+  defp install_super_demo_menus(state) do
+    result = Guppy.set_menus(super_demo_menu_spec())
+    shell_result(state, "install menus", result)
+  end
+
+  defp install_super_demo_dock_menu(state) do
+    result = Guppy.set_dock_menu(super_demo_dock_menu_spec())
+    shell_result(state, "install Dock menu", result)
+  end
+
+  defp clear_shell_chrome(state) do
+    _ = Guppy.set_menus([])
+    _ = Guppy.set_dock_menu([])
+    _ = Guppy.set_app_badge(nil)
+
+    state
+    |> Map.put(:shell_badge_count, 0)
+    |> Map.put(:shell_status, "cleared menus, Dock menu, and badge")
+    |> log_shell_event("Cleared native shell chrome")
+    |> Map.put(:last_event, "cleared shell chrome")
+    |> rerender!()
+  end
+
+  defp shell_result(state, label, result) do
+    message = "#{label}: #{format_shell_result(result)}"
+
+    state
+    |> Map.put(:shell_status, message)
+    |> log_shell_event(message)
+    |> Map.put(:last_event, label)
+    |> rerender!()
+  end
+
+  defp log_shell_event(state, message) do
+    timestamp = DateTime.utc_now() |> DateTime.truncate(:second) |> Calendar.strftime("%H:%M:%S")
+    Map.update!(state, :shell_events, &Enum.take(["#{timestamp} #{message}" | &1], 6))
+  end
+
+  defp format_shell_result({:ok, nil}), do: "cancel"
+  defp format_shell_result({:ok, values}) when is_list(values), do: Enum.join(values, ", ")
+  defp format_shell_result({:ok, value}), do: inspect(value)
+  defp format_shell_result(:ok), do: ":ok"
+  defp format_shell_result(other), do: inspect(other)
+
+  defp super_demo_menu_spec do
+    [
+      %{label: "Guppy", items: []},
+      %{
+        label: "Demo",
+        items: [
+          menu_item("super_badge", "Increment Badge", "badge_increment", shortcut: "cmd-b"),
+          menu_item("super_clipboard", "Write Clipboard", "write_clipboard")
+        ]
+      }
+    ]
+  end
+
+  defp super_demo_dock_menu_spec do
+    [
+      menu_item("super_badge_dock", "Increment Badge", "badge_increment"),
+      menu_item("super_clear_dock", "Clear Badge", "badge_clear")
+    ]
+  end
+
+  defp menu_item(id, label, callback, opts \\ []) do
+    %{id: id, label: label, callback: callback}
+    |> maybe_put_tree(:shortcut, opts[:shortcut])
+    |> maybe_put_tree(:disabled, opts[:disabled])
+  end
 
   defp open_aux_window(%{aux_view_id: view_id} = state, _node_id) when not is_nil(view_id) do
     state
@@ -747,6 +1371,9 @@ defmodule Guppy.SuperDemo do
   defp cleanup(state) do
     if state.aux_view_id, do: _ = Guppy.close_window(state.aux_view_id)
     if state.child_owner_pid, do: send(state.child_owner_pid, :stop)
+    _ = Guppy.set_menus([])
+    _ = Guppy.set_dock_menu([])
+    _ = Guppy.set_app_badge(nil)
   end
 
   defp rerender!(state) do
@@ -854,7 +1481,9 @@ defmodule Guppy.SuperDemo do
       "detail_panel",
       [
         Guppy.IR.text("selected_demo = #{state.selected_demo}", id: "selected_demo_label"),
-        Guppy.IR.text("native_view_count = #{inspect(state.statuses.native_view_count)}"),
+        Guppy.IR.text(
+          "live native windows (Guppy.native_view_count) = #{inspect(state.statuses.native_view_count)}"
+        ),
         Guppy.IR.scroll(
           [detail_content(state)],
           id: "detail_scroll",
@@ -878,7 +1507,9 @@ defmodule Guppy.SuperDemo do
   defp detail_content(%{selected_demo: :runtime} = state), do: runtime_demo(state)
   defp detail_content(%{selected_demo: :components} = state), do: components_demo(state)
   defp detail_content(%{selected_demo: :interactions} = state), do: interactions_demo(state)
+  defp detail_content(%{selected_demo: :collections} = state), do: collections_demo(state)
   defp detail_content(%{selected_demo: :windows} = state), do: windows_demo(state)
+  defp detail_content(%{selected_demo: :native_shell} = state), do: native_shell_demo(state)
   defp detail_content(%{selected_demo: :styles} = state), do: styles_demo(state)
   defp detail_content(%{selected_demo: :layout} = state), do: layout_demo(state)
   defp detail_content(%{selected_demo: :scroll} = state), do: scroll_demo(state)
@@ -969,9 +1600,9 @@ defmodule Guppy.SuperDemo do
           click="toggle_status_select"
           change="status_select_changed"
           close="close_status_select"
-          class="w-[240px]"
-          list_class="p-1 shadow-lg"
-          option_class="p-2"
+          class="w-[240px] border-1 border-[#60a5fa] bg-[#0b1220] text-[#f8fafc] cursor-pointer"
+          list_class="w-[240px] p-1 rounded-lg border-1 border-[#334155] bg-[#0f172a] text-[#e2e8f0] shadow-lg"
+          option_class="p-2 rounded-md"
         />
 
         <popover
@@ -1104,9 +1735,24 @@ defmodule Guppy.SuperDemo do
           value: state.selected_status,
           open: state.status_select_open,
           placeholder: "Pick status",
-          style: [:w_full],
-          list_style: [:p_1, :shadow_lg],
-          option_style: [:p_2],
+          style: [
+            {:w_px, 240},
+            :cursor_pointer,
+            {:border_color_hex, "#60a5fa"},
+            {:bg_hex, "#0b1220"},
+            {:text_color_hex, "#f8fafc"}
+          ],
+          list_style: [
+            {:w_px, 240},
+            :p_1,
+            :rounded_lg,
+            :border_1,
+            {:border_color_hex, "#334155"},
+            {:bg_hex, "#0f172a"},
+            {:text_color_hex, "#e2e8f0"},
+            :shadow_lg
+          ],
+          option_style: [:p_2, :rounded_md],
           events: %{
             click: "toggle_status_select",
             change: "status_select_changed",
@@ -1239,6 +1885,7 @@ defmodule Guppy.SuperDemo do
           id: "keyboard_status_panel",
           style: [:p_2, :rounded_md, :border_1, {:border_color, :white}, {:bg, :gray}, :text_sm]
         ),
+        super_context_menu(state.context_menu_open),
         Guppy.IR.div(
           [
             Guppy.IR.div(
@@ -1391,6 +2038,218 @@ defmodule Guppy.SuperDemo do
     )
   end
 
+  defp collections_demo(state) do
+    visible_tasks = TableTreeShared.visible_tasks(state.table_selected_tree_id)
+    sorted_tasks = TableTreeShared.sort_tasks(visible_tasks, state.table_sort)
+    state = sync_table_selection(%{state | table_selected_row_id: state.table_selected_row_id})
+    canvas = canvas_state(state.canvas_state)
+
+    panel(
+      "collections_demo",
+      [
+        Guppy.IR.text("Semantic collections, row controls, and canvas"),
+        Guppy.IR.text(
+          "This combines the standalone table/tree, list-row-control, and canvas examples in one tab."
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Project tree", id: "collection_tree_title"),
+                Guppy.IR.tree(
+                  collection_tree_nodes(state.table_expanded, state.table_selected_tree_id),
+                  id: "collection_project_tree",
+                  selected_id: state.table_selected_tree_id,
+                  style: [{:h_px, 240}, :rounded_lg, :border_1, {:bg_hex, "#0b1220"}],
+                  row_style: [:border_b_1, {:border_color_hex, "#1e293b"}],
+                  events: %{select: "collection_tree_select", toggle: "collection_tree_toggle"}
+                )
+              ],
+              id: "collection_tree_panel",
+              style: [:flex, :flex_col, :gap_2, {:w_px, 260}]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Task table", id: "collection_table_title"),
+                Guppy.IR.data_table(
+                  TableTreeShared.table_columns(
+                    state.table_column_ids,
+                    state.table_column_widths
+                  ),
+                  collection_table_rows(
+                    sorted_tasks,
+                    state.table_selected_row_id,
+                    state.table_selected_cell
+                  ),
+                  id: "collection_task_table",
+                  selected_row_id: state.table_selected_row_id,
+                  selected_cell: state.table_selected_cell,
+                  sort: state.table_sort,
+                  style: [{:h_px, 260}, :rounded_lg, :border_1, {:bg_hex, "#0b1220"}],
+                  header_style: [
+                    :border_b_1,
+                    {:border_color_hex, "#334155"},
+                    {:bg_hex, "#172554"},
+                    {:text_color_hex, "#bfdbfe"},
+                    :font_bold
+                  ],
+                  row_style: [:border_b_1, {:border_color_hex, "#1e293b"}],
+                  cell_style: [:text_sm],
+                  events: %{
+                    row_click: "collection_row_select",
+                    cell_click: "collection_cell_select",
+                    sort: "collection_sort",
+                    column_reorder: "collection_column_reorder",
+                    column_resize: "collection_column_resize"
+                  }
+                )
+              ],
+              id: "collection_table_panel",
+              style: [:flex, :flex_col, :gap_2, :flex_1]
+            )
+          ],
+          id: "collection_tree_table_row",
+          style: [:flex, :flex_row, :gap_4, :w_full]
+        ),
+        Guppy.IR.text(
+          "Scope #{TableTreeShared.selected_label(state.table_selected_tree_id)}; selected #{inspect(state.table_selected_cell)}; sort #{state.table_sort.column_id} #{state.table_sort.direction}"
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Row controls", id: "row_controls_title"),
+                Guppy.IR.list(
+                  Enum.map(state.row_control_tasks, &row_control_item/1),
+                  id: "row_control_list",
+                  style: [{:h_px, 220}, :rounded_lg, :border_1, {:bg_hex, "#0b1220"}],
+                  item_style: [:p_2, :border_b_1, {:border_color_hex, "#1e293b"}]
+                ),
+                Guppy.IR.div(
+                  [
+                    Guppy.IR.text(state.row_control_last_event,
+                      id: "row_control_status",
+                      style: [:truncate]
+                    )
+                  ],
+                  id: "row_control_status_panel",
+                  style: [
+                    :w_full,
+                    :overflow_hidden,
+                    :p_2,
+                    :rounded_md,
+                    {:bg_hex, "#0b1220"},
+                    :text_sm
+                  ]
+                )
+              ],
+              id: "row_controls_panel",
+              style: [:flex, :flex_col, :gap_2, :flex_1, :flex_shrink, {:min_width, {:px, 0}}]
+            ),
+            Guppy.IR.div(
+              [
+                Guppy.IR.text("Canvas + pattern", id: "canvas_title"),
+                Guppy.IR.canvas(
+                  canvas_commands(canvas),
+                  id: "collection_canvas",
+                  style: [{:w_px, 320}, {:h_px, 180}, :rounded_xl, :overflow_hidden],
+                  events: %{click: "cycle_canvas"}
+                ),
+                Guppy.IR.text("#{canvas.label}: #{round(canvas.progress * 100)}% complete"),
+                Guppy.IR.text("Click the canvas to cycle the data-only draw commands.")
+              ],
+              id: "canvas_panel",
+              style: [:flex, :flex_col, :gap_2, :flex_none, {:w_px, 360}]
+            )
+          ],
+          id: "row_controls_canvas_row",
+          style: [:flex, :flex_row, :items_start, :gap_4, :w_full]
+        )
+      ],
+      style: [{:bg_hex, @surface_panel}]
+    )
+  end
+
+  defp native_shell_demo(state) do
+    panel(
+      "native_shell_demo",
+      [
+        Guppy.IR.text("Native shell, assets, and dialogs"),
+        Guppy.IR.text(
+          "This tab covers the standalone menu, MarkdownView asset, and native shell examples: app badge, menus, Dock menu, file dialogs, clipboard, icon, and image primitives."
+        ),
+        Guppy.IR.div(
+          [
+            Guppy.IR.icon({:path, @asset_icon_path},
+              id: "native_shell_icon",
+              style: [{:w_px, 36}, {:h_px, 36}]
+            ),
+            Guppy.IR.image({:path, @asset_icon_path},
+              id: "native_shell_image",
+              object_fit: :contain,
+              grayscale: false,
+              style: [{:w_px, 96}, {:h_px, 64}, :rounded_lg, :border_1, {:bg_hex, "#0b1220"}]
+            ),
+            Guppy.IR.text("Shared SVG rendered once as <icon> and once as <image>.")
+          ],
+          id: "asset_preview_row",
+          style: [:flex, :flex_row, :items_center, :gap_4, :w_full]
+        ),
+        Guppy.IR.div(
+          [
+            action_button(
+              "Increment app badge",
+              "badge_increment_button",
+              "badge_increment",
+              :blue
+            ),
+            action_button("Clear app badge", "badge_clear_button", "badge_clear", :gray),
+            action_button("Install app menus", "install_menus_button", "install_menus", :green),
+            action_button(
+              "Install Dock menu",
+              "install_dock_button",
+              "install_dock_menu",
+              :green
+            ),
+            action_button("Clear menus/badge", "clear_shell_button", "clear_shell_chrome", :red)
+          ],
+          id: "shell_chrome_buttons",
+          style: [:flex, :flex_row, :flex_wrap, :gap_2]
+        ),
+        Guppy.IR.div(
+          [
+            action_button("Open file…", "open_file_dialog_button", "open_file_dialog", :yellow),
+            action_button(
+              "Choose directory…",
+              "choose_directory_dialog_button",
+              "choose_directory_dialog",
+              :yellow
+            ),
+            action_button("Save file…", "save_file_dialog_button", "save_file_dialog", :yellow),
+            action_button("Read clipboard", "read_clipboard_button", "read_clipboard", :white),
+            action_button("Write clipboard", "write_clipboard_button", "write_clipboard", :white)
+          ],
+          id: "dialog_clipboard_buttons",
+          style: [:flex, :flex_row, :flex_wrap, :gap_2]
+        ),
+        Guppy.IR.text("badge_count = #{state.shell_badge_count}"),
+        Guppy.IR.div(
+          [Guppy.IR.text("shell_status = #{state.shell_status}", id: "shell_status_text")],
+          id: "shell_status_panel",
+          style: [:p_2, :rounded_md, :border_1, {:border_color_hex, @border_subtle}, :text_sm]
+        ),
+        Guppy.IR.div(
+          Enum.map(Enum.with_index(state.shell_events, 1), fn {event, index} ->
+            Guppy.IR.text("#{index}. #{event}", id: "shell_event_#{index}", style: [:text_sm])
+          end),
+          id: "shell_event_log",
+          style: [:flex, :flex_col, :gap_1, :p_2, :rounded_md, {:bg_hex, "#0b1220"}]
+        )
+      ],
+      style: [{:bg_hex, @surface_panel}]
+    )
+  end
+
   defp windows_demo(state) do
     panel(
       "windows_demo",
@@ -1428,7 +2287,7 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text("Style tokens and palette changes"),
         Guppy.IR.text("palette = #{theme.label} (#{theme.accent})"),
         Guppy.IR.text(
-          "Toggle palette now recolors the header, the selected nav button, the preview card, and the swatches below."
+          "Click a swatch to select a palette. Palette changes recolor the header, the selected nav button, the preview card, and the swatches below."
         ),
         Guppy.IR.div(
           Enum.map(@palette, fn color ->
@@ -2218,7 +3077,8 @@ defmodule Guppy.SuperDemo do
             )
           ],
           id: "tracked_row_#{index}",
-          anchor_scroll: active?,
+          anchor_scroll: true,
+          scroll_to: active?,
           style: [
             :flex,
             :flex_col,
@@ -2360,7 +3220,7 @@ defmodule Guppy.SuperDemo do
         Guppy.Markdown.render(%{
           id: "help_markdown",
           source:
-            "## What to try\n\nUse the demos to exercise **native GPUI** features rendered from Elixir IR. Inline `code` and lists come from the Markdown component.\n\n- Runtime: refresh status without leaving the window.\n- Components: inspect `~GUI`, local function components, checkbox/select/popover controls, and animation.\n- Interactions: click text, controls, pointer, and keyboard pads."
+            "## What to try\n\nUse the demos to exercise **native GPUI** features rendered from Elixir IR. Inline `code` and lists come from the Markdown component.\n\n- Runtime: refresh status without leaving the window.\n- Components: inspect `~GUI`, local function components, checkbox/select/popover controls, and animation.\n- Interactions: click text, controls, pointer, drag/drop, and keyboard pads.\n- Collections: use tree/table selection, list row controls, and canvas drawing.\n- Native shell: try menus, Dock menu, badges, file dialogs, clipboard, icon, and image."
         }),
         Guppy.IR.text("1. Runtime: refresh status without leaving the window."),
         Guppy.IR.text(
@@ -2369,14 +3229,20 @@ defmodule Guppy.SuperDemo do
         Guppy.IR.text(
           "3. Interactions: click the div button, the text line, the pointer pad, and the keyboard pad, then start timer rerenders."
         ),
-        Guppy.IR.text("4. Windows: open/close the aux window and kill the child owner process."),
-        Guppy.IR.text("5. Styles: rotate palette colors and inspect contrast/readability."),
-        Guppy.IR.text("6. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),
         Guppy.IR.text(
-          "7. Scroll: select the Scroll demo and verify tracked scroll state, scroll anchoring, and nested scrollbar widths."
+          "4. Collections: select tree rows, table rows/cells, row controls, and canvas states."
+        ),
+        Guppy.IR.text("5. Windows: open/close the aux window and kill the child owner process."),
+        Guppy.IR.text(
+          "6. Native shell: install menus/Dock menu, use dialogs, and read/write clipboard."
+        ),
+        Guppy.IR.text("7. Styles: rotate palette colors and inspect contrast/readability."),
+        Guppy.IR.text("8. Layout: inspect flex wrap/grow/shrink behavior in the Layout demo."),
+        Guppy.IR.text(
+          "9. Scroll: select the Scroll demo and verify tracked scroll state, scroll anchoring, and nested scrollbar widths."
         ),
         Guppy.IR.text(
-          "8. Close the traffic-light button on any window to test window_closed handling."
+          "10. Close the traffic-light button on any window to test window_closed handling."
         ),
         Guppy.IR.div(
           [
@@ -2423,48 +3289,51 @@ defmodule Guppy.SuperDemo do
     theme = palette_theme(palette_color(state))
 
     [
-      %{
-        id: "component_card_templates",
-        title: "Template components",
-        badge: "~GUI",
-        body:
-          "Local function components keep example markup small while prop declarations catch bad calls early.",
-        detail: "This card is rendered by <.feature_card> with typed props and nested children.",
-        detail_id: "component_card_templates_detail",
-        class: feature_card_class("#172554", "#60a5fa", "#dbeafe"),
-        animation: nil
-      },
-      %{
-        id: "component_card_controls",
-        title: "Native controls",
-        badge: "forms",
-        body:
-          "Checkbox, select, text input, textarea, radio, and popover nodes all roundtrip to Elixir state.",
-        detail:
-          "Toggle the checkbox below and watch the owning Elixir process rerender the full tree.",
-        detail_id: "component_card_controls_detail",
-        class: feature_card_class("#052e16", "#22c55e", "#dcfce7"),
-        animation: nil
-      },
-      %{
-        id: "component_card_animation",
-        title: "Opacity animation",
-        badge: "stable id",
-        body:
-          "Animations are keyed by stable ids so native state can survive full-tree replacements.",
-        detail:
-          "This card pulses gently while the palette, checkbox, and select state continue to rerender.",
-        detail_id: "component_card_animation_detail",
-        class: feature_card_class(theme.soft, theme.border, @text_primary),
-        animation: %{
+      component_card(
+        "component_card_templates",
+        "Template components",
+        "~GUI",
+        "Local function components keep example markup small while prop declarations catch bad calls early.",
+        "This card is rendered by <.feature_card> with typed props and nested children.",
+        feature_card_class("#172554", "#60a5fa", "#dbeafe")
+      ),
+      component_card(
+        "component_card_controls",
+        "Native controls",
+        "forms",
+        "Checkbox, select, text input, textarea, radio, and popover nodes all roundtrip to Elixir state.",
+        "Toggle the checkbox below and watch the owning Elixir process rerender the full tree.",
+        feature_card_class("#052e16", "#22c55e", "#dcfce7")
+      ),
+      component_card(
+        "component_card_animation",
+        "Opacity animation",
+        "stable id",
+        "Animations are keyed by stable ids so native state can survive full-tree replacements.",
+        "This card pulses gently while the palette, checkbox, and select state continue to rerender.",
+        feature_card_class(theme.soft, theme.border, @text_primary),
+        %{
           id: "super_demo_component_card_pulse",
           duration_ms: 1_400,
           repeat: true,
           from: 0.78,
           to: 1.0
         }
-      }
+      )
     ]
+  end
+
+  defp component_card(id, title, badge, body, detail, class, animation \\ nil) do
+    %{
+      id: id,
+      title: title,
+      badge: badge,
+      body: body,
+      detail: detail,
+      detail_id: "#{id}_detail",
+      class: class,
+      animation: animation
+    }
   end
 
   defp feature_card(assigns) do
@@ -2610,6 +3479,7 @@ defmodule Guppy.SuperDemo do
         :w_32,
         :p_2,
         :rounded_md,
+        :cursor_pointer,
         {:bg_hex, theme.accent},
         {:text_color_hex, theme.text},
         {:border_color_hex, if(selected?, do: @focus_ring, else: theme.border)}
@@ -2620,7 +3490,14 @@ defmodule Guppy.SuperDemo do
     Guppy.IR.div(
       [Guppy.IR.text(label, id: "palette_swatch_#{color}_label")],
       id: "palette_swatch_#{color}",
-      style: style
+      style: style,
+      hover_style: [
+        {:border_color_hex, @focus_ring},
+        {:bg_hex, theme.soft},
+        :shadow_md
+      ],
+      active_style: [{:opacity, 0.86}],
+      events: %{click: "select_palette:#{color}"}
     )
   end
 
@@ -2647,7 +3524,9 @@ defmodule Guppy.SuperDemo do
   defp demo_label(:runtime), do: "Runtime"
   defp demo_label(:components), do: "Components"
   defp demo_label(:interactions), do: "Interactions"
+  defp demo_label(:collections), do: "Collections"
   defp demo_label(:windows), do: "Windows"
+  defp demo_label(:native_shell), do: "Native shell"
   defp demo_label(:styles), do: "Styles"
   defp demo_label(:layout), do: "Layout"
   defp demo_label(:scroll), do: "Scroll"
@@ -2655,63 +3534,31 @@ defmodule Guppy.SuperDemo do
 
   defp palette_color(state), do: Enum.at(@palette, state.palette_index)
 
-  defp palette_theme(:gray) do
-    %{
-      label: "Slate",
-      accent: "#334155",
-      soft: "#1e293b",
-      border: "#64748b",
-      text: "#f8fafc"
-    }
-  end
+  defp palette_theme(:gray),
+    do: palette_theme("Slate", "#334155", "#1e293b", "#64748b", "#f8fafc")
 
-  defp palette_theme(:red) do
-    %{
-      label: "Rose",
-      accent: "#be123c",
-      soft: "#3f0a1f",
-      border: "#fb7185",
-      text: "#fff1f2"
-    }
-  end
+  defp palette_theme(:red), do: palette_theme("Rose", "#be123c", "#3f0a1f", "#fb7185", "#fff1f2")
 
-  defp palette_theme(:green) do
-    %{
-      label: "Emerald",
-      accent: "#047857",
-      soft: "#052e2b",
-      border: "#34d399",
-      text: "#ecfdf5"
-    }
-  end
+  defp palette_theme(:green),
+    do: palette_theme("Emerald", "#047857", "#052e2b", "#34d399", "#ecfdf5")
 
-  defp palette_theme(:blue) do
-    %{
-      label: "Sky",
-      accent: "#2563eb",
-      soft: "#172554",
-      border: "#60a5fa",
-      text: "#eff6ff"
-    }
-  end
+  defp palette_theme(:blue), do: palette_theme("Sky", "#2563eb", "#172554", "#60a5fa", "#eff6ff")
 
-  defp palette_theme(:yellow) do
-    %{
-      label: "Amber",
-      accent: "#f59e0b",
-      soft: "#451a03",
-      border: "#fbbf24",
-      text: "#111827"
-    }
+  defp palette_theme(:yellow),
+    do: palette_theme("Amber", "#f59e0b", "#451a03", "#fbbf24", "#111827")
+
+  defp palette_theme(label, accent, soft, border, text) do
+    %{label: label, accent: accent, soft: soft, border: border, text: text}
   end
 
   defp button_theme(color) when color in [:gray, :red, :green, :blue, :yellow] do
     theme = palette_theme(color)
-    %{bg: theme.accent, border: theme.border, text: theme.text}
+    button_theme(theme.accent, theme.border, theme.text)
   end
 
-  defp button_theme(:white), do: %{bg: "#f8fafc", border: "#cbd5e1", text: "#0f172a"}
-  defp button_theme(:black), do: %{bg: "#020617", border: "#475569", text: "#f8fafc"}
+  defp button_theme(:white), do: button_theme("#f8fafc", "#cbd5e1", "#0f172a")
+  defp button_theme(:black), do: button_theme("#020617", "#475569", "#f8fafc")
+  defp button_theme(bg, border, text), do: %{bg: bg, border: border, text: text}
 
   defp aux_window_ir do
     ~GUI"""
