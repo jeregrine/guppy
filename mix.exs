@@ -60,7 +60,6 @@ defmodule Guppy.MixProject do
       {:reach, "~> 2.0", only: [:dev, :test], runtime: false},
       {:ex_dna, "~> 1.0", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:vibe_kit, "~> 0.1"},
       {:benchee, "~> 1.3", only: :dev, runtime: false},
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
       {:rustler, "~> 0.38.0"},

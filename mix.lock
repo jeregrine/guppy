@@ -17,5 +17,4 @@
   "sourceror": {:hex, :sourceror, "1.12.0", "da354c5f35aad3cc1132f5d5b0d8437d865e2661c263260480bab51b5eedb437", [:mix], [], "hexpm", "755703683bd014ebcd5de9acc24b68fb874a660a568d1d63f8f98cd8a6ef9cd0"},
   "statistex": {:hex, :statistex, "1.1.0", "7fec1eb2f580a0d2c1a05ed27396a084ab064a40cfc84246dbfb0c72a5c761e5", [:mix], [], "hexpm", "f5950ea26ad43246ba2cce54324ac394a4e7408fdcf98b8e230f503a0cba9cf5"},
   "telemetry": {:hex, :telemetry, "1.4.2", "a0cb522801dffb1c49fe6e30561badffc7b6d0e180db1300df759faa22062855", [:rebar3], [], "hexpm", "928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1"},
-  "vibe_kit": {:hex, :vibe_kit, "0.1.2", "67d8f63606b3af05779a37783256f7f8baa56c2b1e0076d9bfbd47c9118dcbd9", [:mix], [{:igniter, "~> 0.7", [hex: :igniter, repo: "hexpm", optional: true]}], "hexpm", "49068e1366bfe74a536c880d46c7b081cf12070223f7c9517531be6e98b968ef"},
 }
