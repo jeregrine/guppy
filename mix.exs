@@ -5,7 +5,7 @@ defmodule Guppy.MixProject do
     [
       app: :guppy,
       version: "0.1.0",
-      elixir: "~> 1.19",
+      elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
       description: "Elixir-owned native desktop UI rendering through GPUI.",
       package: package(),

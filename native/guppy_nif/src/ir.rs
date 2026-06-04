@@ -3523,63 +3523,74 @@ fn parse_atom_color(term: &Term) -> Result<ColorToken, String> {
     }
 }
 
-fn parse_linear_gradient_options(
-    term: &Term,
-) -> Result<(f32, LinearGradientStop, LinearGradientStop), String> {
-    let options = get_list(term)?;
-    let mut angle = None;
-    let mut from = None;
-    let mut to = None;
-
-    for option in options {
+fn for_each_keyword_option<F>(term: &Term, context: &str, mut parse: F) -> Result<(), String>
+where
+    F: FnMut(&str, &Term) -> Result<(), String>,
+{
+    for option in get_list(term)? {
         let Term::Tuple(Tuple { elements }) = option else {
-            return Err(format!("expected gradient option tuple, got {option}"));
+            return Err(format!("expected {context} option tuple, got {option}"));
         };
 
         if elements.len() != 2 {
             return Err(format!(
-                "expected gradient option tuple with 2 elements, got {option}"
+                "expected {context} option tuple with 2 elements, got {option}"
             ));
         }
 
         let Term::Atom(key) = &elements[0] else {
             return Err(format!(
-                "expected gradient option key atom, got {}",
+                "expected {context} option key atom, got {}",
                 elements[0]
             ));
         };
 
-        match key.name.as_str() {
-            "angle" => {
-                if angle.is_some() {
-                    return Err("duplicate gradient angle option".into());
-                }
-
-                angle = Some(parse_gradient_angle(&elements[1])?);
-            }
-            "from" => {
-                if from.is_some() {
-                    return Err("duplicate gradient from option".into());
-                }
-
-                from = Some(parse_linear_gradient_stop(&elements[1])?);
-            }
-            "to" => {
-                if to.is_some() {
-                    return Err("duplicate gradient to option".into());
-                }
-
-                to = Some(parse_linear_gradient_stop(&elements[1])?);
-            }
-            other => return Err(format!("unsupported gradient option: {other}")),
-        }
+        parse(&key.name, &elements[1])?;
     }
+
+    Ok(())
+}
+
+fn parse_linear_gradient_options(
+    term: &Term,
+) -> Result<(f32, LinearGradientStop, LinearGradientStop), String> {
+    let mut angle = None;
+    let mut from = None;
+    let mut to = None;
+
+    for_each_keyword_option(term, "gradient", |key, value| match key {
+        "angle" => set_once(
+            &mut angle,
+            parse_gradient_angle(value)?,
+            "duplicate gradient angle option",
+        ),
+        "from" => set_once(
+            &mut from,
+            parse_linear_gradient_stop(value)?,
+            "duplicate gradient from option",
+        ),
+        "to" => set_once(
+            &mut to,
+            parse_linear_gradient_stop(value)?,
+            "duplicate gradient to option",
+        ),
+        other => Err(format!("unsupported gradient option: {other}")),
+    })?;
 
     Ok((
         angle.ok_or_else(|| "missing gradient angle option".to_string())?,
         from.ok_or_else(|| "missing gradient from option".to_string())?,
         to.ok_or_else(|| "missing gradient to option".to_string())?,
     ))
+}
+
+fn set_once<T>(slot: &mut Option<T>, value: T, duplicate_error: &str) -> Result<(), String> {
+    if slot.is_some() {
+        Err(duplicate_error.into())
+    } else {
+        *slot = Some(value);
+        Ok(())
+    }
 }
 
 fn parse_gradient_angle(term: &Term) -> Result<f32, String> {
@@ -3593,65 +3604,29 @@ fn parse_gradient_angle(term: &Term) -> Result<f32, String> {
 }
 
 fn parse_background_pattern_slash(term: &Term) -> Result<BackgroundPatternSlash, String> {
-    let options = get_list(term)?;
     let mut color = None;
     let mut width = None;
     let mut interval = None;
 
-    for option in options {
-        let Term::Tuple(Tuple { elements }) = option else {
-            return Err(format!(
-                "expected background pattern option tuple, got {option}"
-            ));
-        };
-
-        if elements.len() != 2 {
-            return Err(format!(
-                "expected background pattern option tuple with 2 elements, got {option}"
-            ));
-        }
-
-        let Term::Atom(key) = &elements[0] else {
-            return Err(format!(
-                "expected background pattern option key atom, got {}",
-                elements[0]
-            ));
-        };
-
-        match key.name.as_str() {
-            "color" => {
-                if color.is_some() {
-                    return Err("duplicate background pattern color option".into());
-                }
-
-                color = Some(
-                    parse_style_color(&elements[1])
-                        .map_err(|error| format!("invalid background pattern color: {error}"))?,
-                );
-            }
-            "width" => {
-                if width.is_some() {
-                    return Err("duplicate background pattern width option".into());
-                }
-
-                width = Some(parse_non_negative_style_f32(
-                    &elements[1],
-                    "background pattern width",
-                )?);
-            }
-            "interval" => {
-                if interval.is_some() {
-                    return Err("duplicate background pattern interval option".into());
-                }
-
-                interval = Some(parse_non_negative_style_f32(
-                    &elements[1],
-                    "background pattern interval",
-                )?);
-            }
-            other => return Err(format!("unsupported background pattern option: {other}")),
-        }
-    }
+    for_each_keyword_option(term, "background pattern", |key, value| match key {
+        "color" => set_once(
+            &mut color,
+            parse_style_color(value)
+                .map_err(|error| format!("invalid background pattern color: {error}"))?,
+            "duplicate background pattern color option",
+        ),
+        "width" => set_once(
+            &mut width,
+            parse_non_negative_style_f32(value, "background pattern width")?,
+            "duplicate background pattern width option",
+        ),
+        "interval" => set_once(
+            &mut interval,
+            parse_non_negative_style_f32(value, "background pattern interval")?,
+            "duplicate background pattern interval option",
+        ),
+        other => Err(format!("unsupported background pattern option: {other}")),
+    })?;
 
     Ok(BackgroundPatternSlash {
         color: color.ok_or_else(|| "missing background pattern color option".to_string())?,
@@ -3671,76 +3646,41 @@ fn parse_box_shadows(term: &Term) -> Result<Vec<BoxShadowSpec>, String> {
 }
 
 fn parse_box_shadow_spec(term: &Term) -> Result<BoxShadowSpec, String> {
-    let options = get_list(term)?;
     let mut color = None;
     let mut x = None;
     let mut y = None;
     let mut blur = None;
     let mut spread = None;
 
-    for option in options {
-        let Term::Tuple(Tuple { elements }) = option else {
-            return Err(format!("expected box shadow option tuple, got {option}"));
-        };
-
-        if elements.len() != 2 {
-            return Err(format!(
-                "expected box shadow option tuple with 2 elements, got {option}"
-            ));
-        }
-
-        let Term::Atom(key) = &elements[0] else {
-            return Err(format!(
-                "expected box shadow option key atom, got {}",
-                elements[0]
-            ));
-        };
-
-        match key.name.as_str() {
-            "color" => {
-                if color.is_some() {
-                    return Err("duplicate box shadow color option".into());
-                }
-
-                color = Some(
-                    parse_style_color(&elements[1])
-                        .map_err(|error| format!("invalid box shadow color: {error}"))?,
-                );
-            }
-            "x" => {
-                if x.is_some() {
-                    return Err("duplicate box shadow x option".into());
-                }
-
-                x = Some(parse_finite_style_f32(&elements[1], "box shadow x")?);
-            }
-            "y" => {
-                if y.is_some() {
-                    return Err("duplicate box shadow y option".into());
-                }
-
-                y = Some(parse_finite_style_f32(&elements[1], "box shadow y")?);
-            }
-            "blur" => {
-                if blur.is_some() {
-                    return Err("duplicate box shadow blur option".into());
-                }
-
-                blur = Some(parse_non_negative_style_f32(
-                    &elements[1],
-                    "box shadow blur",
-                )?);
-            }
-            "spread" => {
-                if spread.is_some() {
-                    return Err("duplicate box shadow spread option".into());
-                }
-
-                spread = Some(parse_finite_style_f32(&elements[1], "box shadow spread")?);
-            }
-            other => return Err(format!("unsupported box shadow option: {other}")),
-        }
-    }
+    for_each_keyword_option(term, "box shadow", |key, value| match key {
+        "color" => set_once(
+            &mut color,
+            parse_style_color(value)
+                .map_err(|error| format!("invalid box shadow color: {error}"))?,
+            "duplicate box shadow color option",
+        ),
+        "x" => set_once(
+            &mut x,
+            parse_finite_style_f32(value, "box shadow x")?,
+            "duplicate box shadow x option",
+        ),
+        "y" => set_once(
+            &mut y,
+            parse_finite_style_f32(value, "box shadow y")?,
+            "duplicate box shadow y option",
+        ),
+        "blur" => set_once(
+            &mut blur,
+            parse_non_negative_style_f32(value, "box shadow blur")?,
+            "duplicate box shadow blur option",
+        ),
+        "spread" => set_once(
+            &mut spread,
+            parse_finite_style_f32(value, "box shadow spread")?,
+            "duplicate box shadow spread option",
+        ),
+        other => Err(format!("unsupported box shadow option: {other}")),
+    })?;
 
     Ok(BoxShadowSpec {
         color: color.ok_or_else(|| "missing box shadow color option".to_string())?,
