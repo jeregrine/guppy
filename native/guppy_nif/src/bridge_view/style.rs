@@ -1265,15 +1265,17 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
     let mut highlight = HighlightStyle::default();
 
     for op in ops.iter() {
+        if let Some(color) = highlight_text_color(op) {
+            highlight.color = Some(color);
+            continue;
+        }
+
+        if let Some(color) = highlight_background_color(op) {
+            highlight.background_color = Some(color);
+            continue;
+        }
+
         match op {
-            StyleOp::TextColor(color) => highlight.color = Some(color_token_to_color(*color)),
-            StyleOp::TextColorHex(value) => highlight.color = Some(hex_color_to_color(*value)),
-            StyleOp::Bg(color) | StyleOp::TextBg(color) => {
-                highlight.background_color = Some(color_token_to_color(*color));
-            }
-            StyleOp::BgHex(value) | StyleOp::TextBgHex(value) => {
-                highlight.background_color = Some(hex_color_to_color(*value));
-            }
             StyleOp::FontThin => highlight.font_weight = Some(FontWeight::THIN),
             StyleOp::FontExtralight => highlight.font_weight = Some(FontWeight::EXTRA_LIGHT),
             StyleOp::FontLight => highlight.font_weight = Some(FontWeight::LIGHT),
@@ -1325,17 +1327,11 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
                 highlight.underline = None;
                 highlight.strikethrough = None;
             }
-            StyleOp::TextDecorationColor(color) => {
+            StyleOp::TextDecorationColor(_) | StyleOp::TextDecorationColorHex(_) => {
                 highlight
                     .underline
                     .get_or_insert_with(Default::default)
-                    .color = Some(color_token_to_color(*color));
-            }
-            StyleOp::TextDecorationColorHex(value) => {
-                highlight
-                    .underline
-                    .get_or_insert_with(Default::default)
-                    .color = Some(hex_color_to_color(*value));
+                    .color = highlight_decoration_color(op);
             }
             StyleOp::TextDecorationLineStyle(line_style) => {
                 highlight
@@ -1349,17 +1345,11 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
                     .get_or_insert_with(Default::default)
                     .thickness = px(*value);
             }
-            StyleOp::StrikethroughColor(color) => {
+            StyleOp::StrikethroughColor(_) | StyleOp::StrikethroughColorHex(_) => {
                 highlight
                     .strikethrough
                     .get_or_insert_with(Default::default)
-                    .color = Some(color_token_to_color(*color));
-            }
-            StyleOp::StrikethroughColorHex(value) => {
-                highlight
-                    .strikethrough
-                    .get_or_insert_with(Default::default)
-                    .color = Some(hex_color_to_color(*value));
+                    .color = highlight_strikethrough_color(op);
             }
             StyleOp::StrikethroughThickness(value) => {
                 highlight
@@ -1373,6 +1363,38 @@ pub(crate) fn style_ops_to_highlight_style(ops: &DivStyle) -> HighlightStyle {
     }
 
     highlight
+}
+
+fn highlight_text_color(op: &StyleOp) -> Option<gpui::Hsla> {
+    match op {
+        StyleOp::TextColor(color) => Some(color_token_to_color(*color)),
+        StyleOp::TextColorHex(value) => Some(hex_color_to_color(*value)),
+        _ => None,
+    }
+}
+
+fn highlight_background_color(op: &StyleOp) -> Option<gpui::Hsla> {
+    match op {
+        StyleOp::Bg(color) | StyleOp::TextBg(color) => Some(color_token_to_color(*color)),
+        StyleOp::BgHex(value) | StyleOp::TextBgHex(value) => Some(hex_color_to_color(*value)),
+        _ => None,
+    }
+}
+
+fn highlight_decoration_color(op: &StyleOp) -> Option<gpui::Hsla> {
+    match op {
+        StyleOp::TextDecorationColor(color) => Some(color_token_to_color(*color)),
+        StyleOp::TextDecorationColorHex(value) => Some(hex_color_to_color(*value)),
+        _ => None,
+    }
+}
+
+fn highlight_strikethrough_color(op: &StyleOp) -> Option<gpui::Hsla> {
+    match op {
+        StyleOp::StrikethroughColor(color) => Some(color_token_to_color(*color)),
+        StyleOp::StrikethroughColorHex(value) => Some(hex_color_to_color(*value)),
+        _ => None,
+    }
 }
 
 pub(crate) fn apply_refinement_style(
