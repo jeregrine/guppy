@@ -204,7 +204,14 @@ defmodule Guppy.BrokenRenderWindow do
 end
 
 defmodule Guppy.BuggyNative do
-  def request(_server, {:ping, []}, _timeout), do: Map.fetch!(%{}, :missing)
+  # Raises a raw :badkey erlang error (not a struct raise) so the server's
+  # ErlangError rescue/reraise branch is what gets exercised. The map comes
+  # from the process dictionary to keep the type checker from proving the
+  # lookup always fails and warning on every compile.
+  def request(_server, {:ping, []}, _timeout) do
+    Map.fetch!(Process.get(:guppy_buggy_native_map, %{}), :missing)
+  end
+
   def request(_server, _request, _timeout), do: :ok
 end
 
