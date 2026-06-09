@@ -168,7 +168,7 @@ defmodule Examples.KanbanTodoWindow do
       })
 
     ~GUI"""
-    <div id="kanban_root" class="flex flex-col w-full h-full gap-2 p-2 bg-[#09111f] text-[#1d1d1f]">
+    <div id="kanban_root" class="flex flex-col w-full h-full gap-2 p-2 bg-[#f5f5f7] text-[#1d1d1f]">
       <div id="top_shell" class="flex flex-col gap-2 p-2 rounded-md border-1 border-[#ececf0] bg-[#f5f5f7]">
         <div id="board_header" class="flex flex-row items-center justify-between gap-2">
           <div id="board_header_copy" class="flex flex-col gap-1 flex-1">
@@ -221,7 +221,7 @@ defmodule Examples.KanbanTodoWindow do
         </div>
       </div>
 
-      <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-md border-1 border-[#ececf0] bg-[#0d1526] p-2">
+      <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-md border-1 border-[#ececf0] bg-[#ececf0] p-2">
         <scroll id="board_scroll" axis="x" class="flex-1 min-h-0 scrollbar-w-[10px]">
           <div id="board_columns" class={@board_columns_class}>
             <.kanban_lane :for={column <- @columns} lane={column} />
@@ -453,7 +453,7 @@ defmodule Examples.KanbanTodoWindow do
       count_badge_class:
         "px-2 py-2 rounded-full border-1 bg-[#ffffff] border-[#{meta.accent}] text-[#1d1d1f]",
       empty_class:
-        "p-2 rounded-lg border-1 border-dashed border-[#{meta.accent}] bg-[#09111f] opacity-[0.9]",
+        "p-2 rounded-lg border-1 border-dashed border-[#{meta.accent}] bg-[#f5f5f7] opacity-[0.9]",
       tasks: Enum.map(column_tasks, &task_view(&1, dragging_task_id, last_moved_task_id))
     }
   end
@@ -648,7 +648,7 @@ defmodule Examples.KanbanTodoWindow do
     classes([
       "flex flex-col flex-none w-[264px] h-full gap-2 p-2 rounded-md border-1",
       "border-[#{accent}]",
-      if(dragging?, do: "bg-[#0f1a2b]", else: "bg-[#ffffff]"),
+      if(dragging?, do: "bg-[#eaf2fe]", else: "bg-[#ffffff]"),
       if(flash?, do: "shadow-lg", else: "shadow-sm")
     ])
   end
@@ -669,7 +669,7 @@ defmodule Examples.KanbanTodoWindow do
   defp task_card_class(false, true) do
     classes([
       base_task_card_class(),
-      "border-[#22c55e] bg-[#052e16]"
+      "border-[#22c55e] bg-[#e8f7ec]"
     ])
   end
 
@@ -721,7 +721,7 @@ defmodule Examples.KanbanTodoWindow do
 
   defp team_badge_class("DOCS"),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#0f766e] bg-[#042f2e] text-[#99f6e4] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#b9e2dd] bg-[#e0f5f2] text-[#0f766e] text-xs font-semibold"
 
   defp team_badge_class("ELIXIR"),
     do:
