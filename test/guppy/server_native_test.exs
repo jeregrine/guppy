@@ -148,6 +148,26 @@ defmodule Guppy.ServerNativeTest do
     assert {:error, :unknown_view_id} = Guppy.Server.focus_window(server, view_id + 1, 37)
   end
 
+  test "timed-out window opens reap the possibly orphaned native window" do
+    server = :"guppy_timeout_open_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutOpenNative,
+       native_server: self(),
+       native_request_timeout: 50}
+    )
+
+    ir = Guppy.IR.text("never opens in time")
+    assert {:error, :native_timeout} = Guppy.Server.open_window(server, self(), ir, [], 50)
+
+    assert_receive {:guppy_test_open_window, view_id}
+    assert_receive {:guppy_test_close_window, ^view_id}
+
+    assert Guppy.Server.info(server).views == %{}
+  end
+
   test "in-flight file dialogs do not block other server requests" do
     server = :"guppy_async_dialog_native_#{System.unique_integer([:positive])}"
 

@@ -307,9 +307,18 @@ defmodule Guppy.Server do
       ir = Guppy.IR.unwrap(ir)
 
       case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}, timeout) do
-        :ok -> {{:ok, view_id}, put_open_view(state, view_id, owner)}
-        {:ok, _payload} -> {{:ok, view_id}, put_open_view(state, view_id, owner)}
-        {:error, reason} -> {{:error, reason}, state}
+        :ok ->
+          {{:ok, view_id}, put_open_view(state, view_id, owner)}
+
+        {:ok, _payload} ->
+          {{:ok, view_id}, put_open_view(state, view_id, owner)}
+
+        {:error, :native_timeout} ->
+          reap_possibly_orphaned_view(state, view_id)
+          {{:error, :native_timeout}, state}
+
+        {:error, reason} ->
+          {{:error, reason}, state}
       end
     else
       error -> {error, state}
@@ -356,6 +365,25 @@ defmodule Guppy.Server do
     else
       error -> {error, state}
     end
+  end
+
+  # A timed-out open may still land after the caller gave up, leaving a live
+  # native window with no owner. The main-thread queue is FIFO, so a close
+  # enqueued now runs after the stale open and reaps the orphan; if the open
+  # was deadline-dropped instead, the close is a harmless unknown-view no-op.
+  defp reap_possibly_orphaned_view(state, view_id) do
+    {:ok, _pid} =
+      Task.start(fn ->
+        _ =
+          native_request(
+            state,
+            :close_window,
+            {:close_window, [view_id]},
+            state.native_request_timeout
+          )
+      end)
+
+    :ok
   end
 
   defp put_open_view(state, view_id, owner) do

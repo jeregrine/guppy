@@ -208,6 +208,20 @@ defmodule Guppy.BuggyNative do
   def request(_server, _request, _timeout), do: :ok
 end
 
+defmodule Guppy.TimeoutOpenNative do
+  def request(test_pid, {:open_window, [view_id, _ir, _opts]}, _timeout) do
+    send(test_pid, {:guppy_test_open_window, view_id})
+    {:error, :native_timeout}
+  end
+
+  def request(test_pid, {:close_window, [view_id]}, _timeout) do
+    send(test_pid, {:guppy_test_close_window, view_id})
+    :ok
+  end
+
+  def request(_test_pid, _request, _timeout), do: :ok
+end
+
 defmodule Guppy.DialogBlockingNative do
   def request(test_pid, {dialog, [_opts]}, _timeout)
       when dialog in [:open_file_dialog, :save_file_dialog] do
