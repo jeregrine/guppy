@@ -23,25 +23,25 @@ defmodule Guppy.Examples.NativeAppShellDemo.MainWindow do
     command_shortcuts = Keyword.fetch!(command_bindings, :shortcuts)
 
     ~GUI"""
-    <div id="shell_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]" actions={command_actions} shortcuts={command_shortcuts}>
-      <div id="header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-        <text id="title" class="text-3xl font-black">Native app shell APIs</text>
-        <text id="subtitle" class="text-base text-[#94a3b8] leading-snug">
+    <div id="shell_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#f5f5f7] text-[#1d1d1f]" actions={command_actions} shortcuts={command_shortcuts}>
+      <div id="header" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff]">
+        <text id="title" class="text-3xl font-semibold">Native app shell APIs</text>
+        <text id="subtitle" class="text-base text-[#6e6e73] leading-snug">
           Test app badges, file dialogs with filters/defaults/owner view ids, app-window focus, lifecycle events, and context-menu focus return.
         </text>
-        <text id="status" class="text-sm text-[#bfdbfe]">Status: {@status}</text>
+        <text id="status" class="text-sm text-[#6e6e73]">Status: {@status}</text>
       </div>
 
       <div id="button_grid" class="grid grid-cols-2 gap-3">
-        <button id="badge_inc" click="badge_inc" class="p-3 rounded-lg border-1 border-[#2563eb] bg-[#1d4ed8] text-[#ffffff]">Increment app badge</button>
-        <button id="badge_clear" click="badge_clear" class="p-3 rounded-lg border-1 border-[#334155] bg-[#1e293b]">Clear app badge</button>
-        <button id="open_file" click="open_file" class="p-3 rounded-lg border-1 border-[#334155] bg-[#111827]">Open .ex/.exs file...</button>
-        <button id="choose_dir" click="choose_dir" class="p-3 rounded-lg border-1 border-[#334155] bg-[#111827]">Choose directory...</button>
-        <button id="save_file" click="save_file" class="p-3 rounded-lg border-1 border-[#334155] bg-[#111827]">Save .txt path...</button>
-        <button id="open_secondary" click="open_secondary" class="p-3 rounded-lg border-1 border-[#334155] bg-[#111827]">Open/focus secondary window</button>
+        <button id="badge_inc" click="badge_inc" class="p-3 rounded-lg border-1 border-[#007aff] bg-[#1d4ed8] text-[#ffffff]">Increment app badge</button>
+        <button id="badge_clear" click="badge_clear" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ececf0]">Clear app badge</button>
+        <button id="open_file" click="open_file" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff]">Open .ex/.exs file...</button>
+        <button id="choose_dir" click="choose_dir" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff]">Choose directory...</button>
+        <button id="save_file" click="save_file" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff]">Save .txt path...</button>
+        <button id="open_secondary" click="open_secondary" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff]">Open/focus secondary window</button>
       </div>
 
-      <div id="context_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#7c3aed] bg-[#1e1b4b]">
+      <div id="context_panel" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#7c3aed] bg-[#1e1b4b]">
         <text id="context_title" class="text-lg font-bold">Context menu + focus return</text>
         <text class="text-sm text-[#c4b5fd]">Right-click this panel or focus it and press Shift-F10. Selecting an item dispatches an app command, closes the popup, and focuses this main window again.</text>
         <div id="context_target" context_menu="open_context_menu" focusable="true" tab_index="1" class="p-4 rounded-lg border-1 border-[#a78bfa] bg-[#312e81] cursor-context-menu">
@@ -50,10 +50,10 @@ defmodule Guppy.Examples.NativeAppShellDemo.MainWindow do
         <button id="context_button" click="open_context_menu" class="p-2 rounded-lg border-1 border-[#a78bfa] bg-[#4c1d95] text-[#ffffff]">Open same context menu from button</button>
       </div>
 
-      <div id="lifecycle_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] flex-1">
+      <div id="lifecycle_panel" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff] flex-1">
         <text id="events_title" class="text-lg font-bold">Recent shell/lifecycle events</text>
-        <div :for={{event, index} <- Enum.with_index(@events)} id={"event_#{index}"} class="p-2 rounded-md bg-[#0b1220]">
-          <text class="text-sm text-[#e2e8f0]">{event}</text>
+        <div :for={{event, index} <- Enum.with_index(@events)} id={"event_#{index}"} class="p-2 rounded-md bg-[#ffffff]">
+          <text class="text-sm text-[#1d1d1f]">{event}</text>
         </div>
       </div>
     </div>
@@ -226,10 +226,10 @@ defmodule Guppy.Examples.NativeAppShellDemo.SecondaryWindow do
   @impl Guppy.Window
   def render(window) do
     ~GUI"""
-    <div id="secondary_root" class="flex flex-col gap-3 p-5 bg-[#111827] text-[#f8fafc]">
+    <div id="secondary_root" class="flex flex-col gap-3 p-5 bg-[#ffffff] text-[#1d1d1f]">
       <text id="secondary_title" class="text-xl font-bold">Secondary window</text>
-      <text id="secondary_status" class="text-sm text-[#bfdbfe]">{@status}</text>
-      <button id="focus_main" click="focus_main" class="p-3 rounded-lg border-1 border-[#334155] bg-[#1e293b]">Focus main window</button>
+      <text id="secondary_status" class="text-sm text-[#6e6e73]">{@status}</text>
+      <button id="focus_main" click="focus_main" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ececf0]">Focus main window</button>
     </div>
     """
   end

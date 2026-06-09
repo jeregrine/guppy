@@ -168,13 +168,13 @@ defmodule Examples.KanbanTodoWindow do
       })
 
     ~GUI"""
-    <div id="kanban_root" class="flex flex-col w-full h-full gap-2 p-2 bg-[#09111f] text-[#f8fafc]">
-      <div id="top_shell" class="flex flex-col gap-2 p-2 rounded-xl border-1 border-[#1e293b] bg-[#0f172a] shadow-md">
+    <div id="kanban_root" class="flex flex-col w-full h-full gap-2 p-2 bg-[#09111f] text-[#1d1d1f]">
+      <div id="top_shell" class="flex flex-col gap-2 p-2 rounded-md border-1 border-[#ececf0] bg-[#f5f5f7]">
         <div id="board_header" class="flex flex-row items-center justify-between gap-2">
           <div id="board_header_copy" class="flex flex-col gap-1 flex-1">
             <text id="eyebrow" class="text-xs font-semibold text-[#93c5fd]">PRODUCT DELIVERY</text>
-            <text id="title" class="text-xl font-black">Launch readiness board</text>
-            <text id="subtitle" class="text-xs text-[#94a3b8] leading-snug">
+            <text id="title" class="text-xl font-semibold">Launch readiness board</text>
+            <text id="subtitle" class="text-xs text-[#6e6e73] leading-snug">
               Release work, blockers, and final polish in one dense production-style surface.
             </text>
           </div>
@@ -190,16 +190,16 @@ defmodule Examples.KanbanTodoWindow do
             value={@draft_title}
             placeholder="Add a bug, feature, or release task"
             change="draft_changed"
-            class="flex-1 p-2 rounded-lg border-1 border-[#334155] bg-[#0b1220] text-[#f8fafc]"
+            class="flex-1 p-2 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff] text-[#1d1d1f]"
           />
 
           <button
             id="add_task_button"
             click="add_task"
             disabled={@add_disabled}
-            class="p-2 rounded-lg border-1 border-[#2563eb] bg-[#2563eb] text-[#eff6ff] shadow-sm"
-            hover_class="bg-[#3b82f6]"
-            disabled_class="border-[#1e293b] bg-[#0b1220] text-[#475569]"
+            class="p-2 rounded-lg border-1 border-[#007aff] bg-[#007aff] text-[#ffffff]"
+            hover_class="bg-[#0070e8]"
+            disabled_class="border-[#ececf0] bg-[#ffffff] text-[#d2d2d7]"
           >
             Add card
           </button>
@@ -208,9 +208,9 @@ defmodule Examples.KanbanTodoWindow do
             id="archive_done_button"
             click="archive_done"
             disabled={@done_count == 0}
-            class="p-2 rounded-lg border-1 border-[#334155] bg-[#111827] text-[#e2e8f0]"
-            hover_class="bg-[#1e293b]"
-            disabled_class="border-[#1e293b] bg-[#0b1220] text-[#475569]"
+            class="p-2 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff] text-[#1d1d1f]"
+            hover_class="bg-[#ececf0]"
+            disabled_class="border-[#ececf0] bg-[#ffffff] text-[#d2d2d7]"
           >
             Archive completed
           </button>
@@ -221,7 +221,7 @@ defmodule Examples.KanbanTodoWindow do
         </div>
       </div>
 
-      <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-xl border-1 border-[#1e293b] bg-[#0d1526] shadow-md p-2">
+      <div id="board_panel" class="flex flex-col flex-1 min-h-0 rounded-md border-1 border-[#ececf0] bg-[#0d1526] p-2">
         <scroll id="board_scroll" axis="x" class="flex-1 min-h-0 scrollbar-w-[10px]">
           <div id="board_columns" class={@board_columns_class}>
             <.kanban_lane :for={column <- @columns} lane={column} />
@@ -451,7 +451,7 @@ defmodule Examples.KanbanTodoWindow do
       class: lane_class(meta.accent, dragging?, flash?),
       accent_class: "w-[8px] h-[8px] rounded-full bg-[#{meta.accent}]",
       count_badge_class:
-        "px-2 py-2 rounded-full border-1 bg-[#111827] border-[#{meta.accent}] text-[#e2e8f0]",
+        "px-2 py-2 rounded-full border-1 bg-[#ffffff] border-[#{meta.accent}] text-[#1d1d1f]",
       empty_class:
         "p-2 rounded-lg border-1 border-dashed border-[#{meta.accent}] bg-[#09111f] opacity-[0.9]",
       tasks: Enum.map(column_tasks, &task_view(&1, dragging_task_id, last_moved_task_id))
@@ -497,7 +497,7 @@ defmodule Examples.KanbanTodoWindow do
   defp metric_badge(assigns) do
     ~GUI"""
     <div id={@metric.id} class={@metric.class}>
-      <text id={@metric.id <> "_label"} class="text-xs text-[#94a3b8]">{@metric.label}</text>
+      <text id={@metric.id <> "_label"} class="text-xs text-[#6e6e73]">{@metric.label}</text>
       <text id={@metric.id <> "_value"} class="text-sm font-bold">{@metric.value}</text>
     </div>
     """
@@ -520,7 +520,7 @@ defmodule Examples.KanbanTodoWindow do
       <scroll id={@lane.scroll_id} axis="y" class="flex-1 min-h-0 scrollbar-w-[8px]">
         <div id={@lane.stack_id} class="flex flex-col gap-2 pr-2">
           <div :if={@lane.empty} id={@lane.empty_id} class={@lane.empty_class}>
-            <text id={@lane.empty_text_id} class="text-xs text-[#94a3b8]">
+            <text id={@lane.empty_text_id} class="text-xs text-[#6e6e73]">
               No work items in this stage.
             </text>
           </div>
@@ -539,7 +539,7 @@ defmodule Examples.KanbanTodoWindow do
       drag_start="drag_started"
       drag_move="drag_moved"
       class={@task.card_class}
-      hover_class="bg-[#162033]"
+      hover_class="bg-[#ececf0]"
       animation={@task.animation}
     >
       <div id={@task.top_id} class="flex flex-row items-center justify-between gap-2">
@@ -552,13 +552,13 @@ defmodule Examples.KanbanTodoWindow do
 
       <div id={@task.body_id} class="flex flex-col gap-1">
         <text id={@task.title_id} class="text-sm font-semibold leading-snug">{@task.title}</text>
-        <text id={@task.summary_id} class="text-xs text-[#94a3b8] leading-snug line-clamp-2 whitespace-normal">
+        <text id={@task.summary_id} class="text-xs text-[#6e6e73] leading-snug line-clamp-2 whitespace-normal">
           {@task.summary}
         </text>
       </div>
 
       <div id={@task.footer_id} class="flex flex-row items-center justify-between gap-2">
-        <div id={@task.assignee_wrap_id} class="flex flex-col gap-1 flex-1 text-xs text-[#cbd5e1]">
+        <div id={@task.assignee_wrap_id} class="flex flex-col gap-1 flex-1 text-xs text-[#3a3a3c]">
           <text id={@task.assignee_label_id}>OWNER</text>
           <text id={@task.assignee_id}>{@task.assignee}</text>
         </div>
@@ -572,8 +572,8 @@ defmodule Examples.KanbanTodoWindow do
         <button
           id={@task.archive_button_id}
           click={@task.archive_click}
-          class="p-2 rounded-lg border-1 border-[#166534] bg-[#14532d] text-[#dcfce7]"
-          hover_class="bg-[#166534]"
+          class="p-2 rounded-lg border-1 border-[#bfe5cb] bg-[#e8f7ec] text-[#166534]"
+          hover_class="bg-[#d8f0df]"
         >
           Archive
         </button>
@@ -646,9 +646,9 @@ defmodule Examples.KanbanTodoWindow do
 
   defp lane_class(accent, dragging?, flash?) do
     classes([
-      "flex flex-col flex-none w-[264px] h-full gap-2 p-2 rounded-xl border-1",
+      "flex flex-col flex-none w-[264px] h-full gap-2 p-2 rounded-md border-1",
       "border-[#{accent}]",
-      if(dragging?, do: "bg-[#0f1a2b]", else: "bg-[#0b1220]"),
+      if(dragging?, do: "bg-[#0f1a2b]", else: "bg-[#ffffff]"),
       if(flash?, do: "shadow-lg", else: "shadow-sm")
     ])
   end
@@ -662,19 +662,19 @@ defmodule Examples.KanbanTodoWindow do
   defp task_card_class(true, _moved?) do
     classes([
       base_task_card_class(),
-      "border-[#60a5fa] bg-[#172554] opacity-[0.82] shadow-lg"
+      "border-[#007aff] bg-[#eaf2fe] opacity-[0.82]"
     ])
   end
 
   defp task_card_class(false, true) do
     classes([
       base_task_card_class(),
-      "border-[#22c55e] bg-[#052e16] shadow-lg"
+      "border-[#22c55e] bg-[#052e16]"
     ])
   end
 
   defp task_card_class(false, false) do
-    classes([base_task_card_class(), "border-[#1e293b] bg-[#111827] shadow-sm"])
+    classes([base_task_card_class(), "border-[#ececf0] bg-[#ffffff]"])
   end
 
   defp task_animation(id, true, _moved?) do
@@ -697,27 +697,27 @@ defmodule Examples.KanbanTodoWindow do
 
   defp priority_badge_class(:high),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#7f1d1d] bg-[#450a0a] text-[#fecaca] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#f3c4c4] bg-[#fdeaea] text-[#991b1b] text-xs font-semibold"
 
   defp priority_badge_class(:medium),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#92400e] bg-[#451a03] text-[#fde68a] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#f3dfb8] bg-[#fdf3e1] text-[#92400e] text-xs font-semibold"
 
   defp priority_badge_class(:low),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#334155] bg-[#0f172a] text-[#cbd5e1] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#d2d2d7] bg-[#f5f5f7] text-[#3a3a3c] text-xs font-semibold"
 
   defp team_badge_class("UX"),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#1d4ed8] bg-[#172554] text-[#bfdbfe] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#1d4ed8] bg-[#eaf2fe] text-[#6e6e73] text-xs font-semibold"
 
   defp team_badge_class("UI"),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#7c3aed] bg-[#2e1065] text-[#ddd6fe] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#ddd2f7] bg-[#f3eefe] text-[#6d28d9] text-xs font-semibold"
 
   defp team_badge_class("CORE"),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#991b1b] bg-[#450a0a] text-[#fecaca] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#f3c4c4] bg-[#fdeaea] text-[#991b1b] text-xs font-semibold"
 
   defp team_badge_class("DOCS"),
     do:
@@ -725,40 +725,40 @@ defmodule Examples.KanbanTodoWindow do
 
   defp team_badge_class("ELIXIR"),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#6d28d9] bg-[#2e1065] text-[#e9d5ff] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#ddd2f7] bg-[#f3eefe] text-[#6d28d9] text-xs font-semibold"
 
   defp team_badge_class("OPS"),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#b45309] bg-[#451a03] text-[#fde68a] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#f3dfb8] bg-[#fdf3e1] text-[#92400e] text-xs font-semibold"
 
   defp team_badge_class("PM"),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#2563eb] bg-[#172554] text-[#dbeafe] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#007aff] bg-[#eaf2fe] text-[#3a3a3c] text-xs font-semibold"
 
   defp team_badge_class(_team),
     do:
-      "px-2 py-2 rounded-full border-1 border-[#334155] bg-[#0f172a] text-[#cbd5e1] text-xs font-semibold"
+      "px-2 py-2 rounded-full border-1 border-[#d2d2d7] bg-[#f5f5f7] text-[#3a3a3c] text-xs font-semibold"
 
   defp notice_class(:neutral),
-    do: "p-2 rounded-lg border-1 border-[#334155] bg-[#111827] text-[#cbd5e1]"
+    do: "p-2 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff] text-[#3a3a3c]"
 
   defp notice_class(:ready),
-    do: "p-2 rounded-lg border-1 border-[#2563eb] bg-[#172554] text-[#dbeafe]"
+    do: "p-2 rounded-lg border-1 border-[#007aff] bg-[#eaf2fe] text-[#3a3a3c]"
 
   defp notice_class(:warning),
-    do: "p-2 rounded-lg border-1 border-[#92400e] bg-[#451a03] text-[#fde68a]"
+    do: "p-2 rounded-lg border-1 border-[#f3dfb8] bg-[#fdf3e1] text-[#92400e]"
 
   defp notice_class(:success),
-    do: "p-2 rounded-lg border-1 border-[#166534] bg-[#14532d] text-[#dcfce7]"
+    do: "p-2 rounded-lg border-1 border-[#bfe5cb] bg-[#e8f7ec] text-[#166534]"
 
   defp metric_class(:open),
-    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#2563eb] bg-[#111827] min-w-32"
+    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#007aff] bg-[#ffffff] min-w-32"
 
   defp metric_class(:blocked),
-    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#991b1b] bg-[#111827] min-w-32"
+    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#f3c4c4] bg-[#ffffff] min-w-32"
 
   defp metric_class(:done),
-    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#166534] bg-[#111827] min-w-32"
+    do: "flex flex-col gap-1 px-2 py-2 rounded-lg border-1 border-[#bfe5cb] bg-[#ffffff] min-w-32"
 
   defp task_sort_key(task), do: {priority_rank(task.priority), task.id}
 

@@ -66,20 +66,20 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
       })
 
     ~GUI"""
-    <div id="priority3_root" class="w-full h-full bg-[#0f172a] text-[#f8fafc]" actions={@command_actions} shortcuts={@command_shortcuts}>
+    <div id="priority3_root" class="w-full h-full bg-[#f5f5f7] text-[#1d1d1f]" actions={@command_actions} shortcuts={@command_shortcuts}>
       <scroll id="priority3_scroll" axis="y" class="w-full h-full scrollbar-w-[10px]">
         <div id="priority3_content" class="flex flex-col gap-4 p-5">
-          <div id="header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-            <text id="title" class="text-3xl font-black">Priority 3: keyboard, focus, semantic widgets</text>
-            <text id="subtitle" class="text-sm text-[#94a3b8] leading-snug">
+          <div id="header" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff]">
+            <text id="title" class="text-3xl font-semibold">Priority 3: keyboard, focus, semantic widgets</text>
+            <text id="subtitle" class="text-sm text-[#6e6e73] leading-snug">
               Focus scopes, roving focus, shortcut priority, data-table/tree keyboard behavior, focus-visible affordances, Elixir-owned selection state, and the current accessibility boundary.
             </text>
-            <text id="instructions" class="text-sm text-[#bfdbfe]">
+            <text id="instructions" class="text-sm text-[#6e6e73]">
               Try Tab / Shift-Tab, arrows, Home/End, Enter/Space, Shift-F10, Cmd-K, Alt-Left/Alt-Right on table headers, and Shift-Left/Shift-Right on table headers.
             </text>
           </div>
 
-          <div id="shortcut_panel" class="flex flex-row gap-4 p-4 rounded-xl border-1 border-[#7c3aed] bg-[#1e1b4b] shadow-md">
+          <div id="shortcut_panel" class="flex flex-row gap-4 p-4 rounded-md border-1 border-[#7c3aed] bg-[#1e1b4b]">
             <div id="shortcut_notes" class="flex flex-col gap-2 flex-1">
               <text class="text-lg font-bold text-[#ddd6fe]">Shortcut priority</text>
               <text class="text-sm text-[#c4b5fd] leading-snug">
@@ -92,7 +92,7 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
                 id="priority_note"
                 value={@note}
                 placeholder="Type here"
-                class="p-3 rounded-lg border-1 border-[#a78bfa] bg-[#0b1220] text-[#f8fafc]"
+                class="p-3 rounded-lg border-1 border-[#a78bfa] bg-[#ffffff] text-[#1d1d1f]"
                 actions={@input_actions}
                 shortcuts={@input_shortcuts}
                 change="note_changed"
@@ -103,32 +103,32 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
             </div>
           </div>
 
-          <div id="virtual_panel" class="flex flex-col gap-3 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+          <div id="virtual_panel" class="flex flex-col gap-3 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff]">
             <div class="flex flex-col gap-1">
               <text class="text-lg font-bold">Virtual list roving focus</text>
-              <text class="text-sm text-[#94a3b8] leading-snug">
+              <text class="text-sm text-[#6e6e73] leading-snug">
                 uniform_list and list rows with click/context_menu callbacks are tab stops. Up/Down/Home/End rove focus; Enter/Space activate; Shift-F10 emits context_menu. Keyboard-focused retained rows/items draw native focus-visible borders.
               </text>
             </div>
             <div id="list_columns" class="flex flex-row gap-4">
               <div class="flex flex-col gap-2 flex-1">
-                <text class="text-sm font-bold text-[#bfdbfe]">uniform_list</text>
+                <text class="text-sm font-bold text-[#6e6e73]">uniform_list</text>
                 <uniform_list
                   id="priority_uniform"
                   items={@uniform_items}
-                  class="h-[150px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-                  item_class="p-2 border-b-1 border-[#1e293b]"
+                  class="h-[150px] rounded-lg border-1 border-[#ececf0] bg-[#ffffff]"
+                  item_class="p-2 border-b-1 border-[#ececf0]"
                   click="uniform_clicked"
                   context_menu="uniform_context"
                 />
               </div>
               <div class="flex flex-col gap-2 flex-1">
-                <text class="text-sm font-bold text-[#bfdbfe]">generic list</text>
+                <text class="text-sm font-bold text-[#6e6e73]">generic list</text>
                 <list
                   id="priority_list"
                   items={@list_items}
-                  class="h-[150px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-                  item_class="p-2 border-b-1 border-[#1e293b]"
+                  class="h-[150px] rounded-lg border-1 border-[#ececf0] bg-[#ffffff]"
+                  item_class="p-2 border-b-1 border-[#ececf0]"
                   click="list_clicked"
                   context_menu="list_context"
                 />
@@ -136,22 +136,22 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
             </div>
           </div>
 
-          <div id="tree_table_panel" class="flex flex-col gap-3 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+          <div id="tree_table_panel" class="flex flex-col gap-3 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff]">
             <div class="flex flex-row gap-3">
-              <text class="text-sm text-[#bfdbfe]">Tree: {@selected_tree_id}</text>
-              <text class="text-sm text-[#bfdbfe]">Sort: {@sort_label}</text>
-              <text class="text-sm text-[#bfdbfe]">Cell: {@selected_cell_label}</text>
+              <text class="text-sm text-[#6e6e73]">Tree: {@selected_tree_id}</text>
+              <text class="text-sm text-[#6e6e73]">Sort: {@sort_label}</text>
+              <text class="text-sm text-[#6e6e73]">Cell: {@selected_cell_label}</text>
             </div>
             <div class="flex flex-row gap-4">
               <div id="tree_panel" class="flex flex-col gap-2 w-[300px]">
                 <text class="text-lg font-bold">Tree</text>
-                <text class="text-xs text-[#94a3b8] leading-snug">Rows support Up/Down/Home/End, Left/Right parent-child focus, selection, disclosure, and context menus.</text>
+                <text class="text-xs text-[#6e6e73] leading-snug">Rows support Up/Down/Home/End, Left/Right parent-child focus, selection, disclosure, and context menus.</text>
                 <tree
                   id="priority_tree"
                   nodes={@tree_nodes}
                   selected_id={@selected_tree_id}
-                  class="h-[260px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-                  row_class="border-b-1 border-[#1e293b]"
+                  class="h-[260px] rounded-lg border-1 border-[#ececf0] bg-[#ffffff]"
+                  row_class="border-b-1 border-[#ececf0]"
                   select="tree_selected"
                   toggle="tree_toggled"
                   context_menu="tree_context"
@@ -160,7 +160,7 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
 
               <div id="table_panel" class="flex flex-col gap-2 flex-1">
                 <text class="text-lg font-bold">Data table</text>
-                <text class="text-xs text-[#94a3b8] leading-snug">
+                <text class="text-xs text-[#6e6e73] leading-snug">
                   Pinned title column renders first. Headers sort with Enter/Space, reorder with Alt-Left/Alt-Right or pointer Alt-drag, resize with Shift-Left/Shift-Right or pointer drag, and move focus with arrows/Home/End. Rows/cells own selection styles in Elixir.
                 </text>
                 <data_table
@@ -170,9 +170,9 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
                   selected_row_id={@selected_row_id}
                   selected_cell={@selected_cell}
                   sort_state={@sort}
-                  class="h-[260px] rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-                  header_class="border-b-1 border-[#334155] bg-[#172554] text-[#bfdbfe] font-bold"
-                  row_class="border-b-1 border-[#1e293b]"
+                  class="h-[260px] rounded-lg border-1 border-[#ececf0] bg-[#ffffff]"
+                  header_class="border-b-1 border-[#d2d2d7] bg-[#eaf2fe] text-[#6e6e73] font-bold"
+                  row_class="border-b-1 border-[#ececf0]"
                   cell_class="text-sm"
                   row_click="table_row_selected"
                   cell_click="table_cell_selected"
@@ -186,18 +186,18 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
             </div>
           </div>
 
-          <div id="accessibility_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#475569] bg-[#111827] shadow-md">
+          <div id="accessibility_panel" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff]">
             <text class="text-lg font-bold">Accessibility/semantics boundary</text>
-            <text class="text-sm text-[#cbd5e1] leading-snug">
+            <text class="text-sm text-[#3a3a3c] leading-snug">
               GPUI 0.2.2 does not expose public element-level role/label/state APIs, so Guppy intentionally rejects placeholder role/aria fields. The example uses truthful semantics instead: stable ids, labels, selected/sort/expanded state, focus handles, and typed event payloads owned by Elixir.
             </text>
           </div>
 
-          <div id="event_log" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
+          <div id="event_log" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff]">
             <text class="text-lg font-bold">Recent semantic events</text>
             <div id="event_rows" class="grid grid-cols-2 gap-2">
-              <div :for={{event, index} <- @recent_events} id={"event_#{index}"} class="p-2 rounded-md bg-[#0b1220]">
-                <text class="text-xs text-[#e2e8f0]">{event}</text>
+              <div :for={{event, index} <- @recent_events} id={"event_#{index}"} class="p-2 rounded-md bg-[#ffffff]">
+                <text class="text-xs text-[#1d1d1f]">{event}</text>
               </div>
             </div>
           </div>
@@ -425,7 +425,7 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
           [
             Guppy.IR.text(title, style: [:font_bold]),
             Guppy.IR.text(detail,
-              style: [:text_xs, {:text_color_hex, if(selected?, do: "#dbeafe", else: "#94a3b8")}]
+              style: [:text_xs, {:text_color_hex, if(selected?, do: "#3a3a3c", else: "#6e6e73")}]
             )
           ],
           id: "#{id}_content",
@@ -523,17 +523,17 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
   end
 
   defp row_style(true),
-    do: [Guppy.Style.bg_hex("#172554"), Guppy.Style.border_color_hex("#2563eb")]
+    do: [Guppy.Style.bg_hex("#eaf2fe"), Guppy.Style.border_color_hex("#007aff")]
 
   defp row_style(false), do: []
 
   defp selected_style(true),
-    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#eff6ff")]
+    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#ffffff")]
 
   defp selected_style(false), do: []
 
   defp selected_cell_style(true),
-    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#eff6ff")]
+    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#ffffff")]
 
   defp selected_cell_style(false), do: []
 
