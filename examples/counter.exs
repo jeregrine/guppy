@@ -27,7 +27,10 @@ defmodule CounterWindow do
   end
 end
 
+{:ok, _} = Application.ensure_all_started(:guppy)
+
 {:ok, pid} = CounterWindow.start_link(:ok)
+Process.monitor(pid)
 
 receive do
   {:DOWN, _ref, :process, ^pid, _reason} ->

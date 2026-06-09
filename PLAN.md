@@ -35,7 +35,7 @@ Each of these is measurable with the existing counters/benchmarks; verify before
 - [ ] Sweep the rest of `bridge_view/` for other near-twin renderers worth merging (no other line-for-line pair as close as checkbox/radio was spotted in review; verify before merging anything).
 - [x] Move the hardcoded control palette (`0x2563eb`, `0x94a3b8`, `0x0f172a`, etc. in checkbox/radio indicators and labels) toward style-op-driven values with these as defaults. Done so far: the palette is consolidated in `render_choice.rs`, and labels inherit a wrapper default text color applied before user style ops, so `text_color` ops theme choice-control labels from Elixir. Indicator border/fill remain native defaults: redirecting the existing `border_color`/`bg` ops would silently break wrapper styling, so full indicator theming needs an explicit indicator style field — deferred per the no-IR-broadening rule until a concrete app need.
 - [x] Use the existing `normalize_native_reply/1` in the four `Guppy.Server` call sites that re-pattern-match `:ok` / `{:ok, _payload}` arms inline.
-- [ ] Consider one schema-driven helper for the option-map validators (window options, dialogs, menus) in `Guppy.Server`; keep node IR validation explicit.
+- [x] Consider one schema-driven helper for the option-map validators (window options, dialogs, menus) in `Guppy.Server`; keep node IR validation explicit. Decision 2026-06-09: declined — the per-field rules (bounds x/y pairing, display-id range, point maps) make a generic schema helper more indirect than the explicit clauses; revisit only if the option surface grows.
 
 ## Priority 3.5: Examples and docs sync (2026-06-09 examples review)
 
