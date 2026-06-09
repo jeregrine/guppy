@@ -11,7 +11,7 @@ mod window_options;
 use crate::ir::IrNode;
 use crate::menu::{MenuItemSpec, MenuSpec};
 use crate::window_options::WindowOptionsConfig;
-use rustler::{Atom, Encoder, Env, LocalPid, Monitor, Resource, ResourceArc, Term};
+use rustler::{Atom, Encoder, Env, LocalPid, Monitor, OwnedBinary, Resource, ResourceArc, Term};
 use std::ffi::{CString, c_char, c_void};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -276,11 +276,7 @@ fn native_open_window<'a>(
         options_decode_started_at.elapsed(),
     );
 
-    let ir = match decode_ir_binary(
-        ir_binary.as_slice(),
-        &OPEN_IR_DECODE_COUNT,
-        &OPEN_IR_DECODE_NANOS,
-    ) {
+    let ir = match decode_ir_binary(ir_binary, &OPEN_IR_DECODE_COUNT, &OPEN_IR_DECODE_NANOS) {
         Ok(ir) => ir,
         Err(reason) => return error_reason_tuple(env, decode_error(), reason),
     };
@@ -486,11 +482,7 @@ fn native_render<'a>(env: Env<'a>, view_id: u64, ir: Term<'a>, timeout_ms: u64) 
         to_binary_started_at.elapsed(),
     );
 
-    let ir = match decode_ir_binary(
-        ir_binary.as_slice(),
-        &RENDER_IR_DECODE_COUNT,
-        &RENDER_IR_DECODE_NANOS,
-    ) {
+    let ir = match decode_ir_binary(ir_binary, &RENDER_IR_DECODE_COUNT, &RENDER_IR_DECODE_NANOS) {
         Ok(ir) => ir,
         Err(reason) => return error_reason_tuple(env, decode_error(), reason),
     };
@@ -554,21 +546,27 @@ fn native_view_count<'a>(env: Env<'a>, timeout_ms: u64) -> Term<'a> {
 }
 
 struct IrDecodeJob {
-    bytes: Vec<u8>,
+    // OwnedBinary is Send and process-independent, so the ETF payload moves
+    // to the decode worker without copying the full tree.
+    binary: OwnedBinary,
     reply: Sender<Result<IrNode, String>>,
 }
 
-fn decode_ir_binary(bytes: &[u8], count: &AtomicU64, nanos: &AtomicU64) -> Result<IrNode, String> {
+fn decode_ir_binary(
+    binary: OwnedBinary,
+    count: &AtomicU64,
+    nanos: &AtomicU64,
+) -> Result<IrNode, String> {
     let started_at = Instant::now();
-    let decoded = decode_ir_binary_on_worker(bytes);
+    let decoded = decode_ir_binary_on_worker(binary);
     record_counter(count, nanos, started_at.elapsed());
     decoded
 }
 
-fn decode_ir_binary_on_worker(bytes: &[u8]) -> Result<IrNode, String> {
+fn decode_ir_binary_on_worker(binary: OwnedBinary) -> Result<IrNode, String> {
     let (reply_tx, reply_rx) = mpsc::channel();
     let mut job = Some(IrDecodeJob {
-        bytes: bytes.to_vec(),
+        binary,
         reply: reply_tx,
     });
 
@@ -622,7 +620,7 @@ fn clear_ir_decode_worker() {
 
 fn ir_decode_worker_loop(receiver: Receiver<IrDecodeJob>) {
     for job in receiver {
-        let result = IrNode::decode_etf(&job.bytes);
+        let result = IrNode::decode_etf(job.binary.as_slice());
         let _ = job.reply.send(result);
     }
 }
