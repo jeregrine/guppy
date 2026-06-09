@@ -56,7 +56,29 @@ defmodule Guppy.Native.Nif do
     }
   end
 
+  @load_status_cache_key {__MODULE__, :load_status}
+
+  # A loaded NIF stays loaded for the VM lifetime, so a successful check is
+  # cached and dispatches skip the per-call ping. Failures are re-checked.
   def load_status do
+    case :persistent_term.get(@load_status_cache_key, :unknown) do
+      :ok -> :ok
+      :unknown -> check_and_cache_load_status()
+    end
+  end
+
+  defp check_and_cache_load_status do
+    case checked_load_status() do
+      :ok ->
+        :persistent_term.put(@load_status_cache_key, :ok)
+        :ok
+
+      error ->
+        error
+    end
+  end
+
+  defp checked_load_status do
     case apply(__MODULE__, :native_ping, []) do
       :pong -> :ok
       {:error, reason} -> {:error, reason}

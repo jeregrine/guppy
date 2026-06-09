@@ -84,6 +84,16 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  test "NIF load status is cached after the first successful check" do
+    case Guppy.Native.Nif.load_status() do
+      :ok ->
+        assert :persistent_term.get({Guppy.Native.Nif, :load_status}, :missing) == :ok
+
+      {:error, _reason} ->
+        assert :persistent_term.get({Guppy.Native.Nif, :load_status}, :missing) == :missing
+    end
+  end
+
   @tag capture_log: true
   test "native request bugs crash loudly instead of reporting runtime unavailable" do
     server = :"guppy_buggy_native_#{System.unique_integer([:positive])}"

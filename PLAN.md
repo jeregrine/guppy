@@ -26,7 +26,7 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 Each of these is measurable with the existing counters/benchmarks; verify before/after per the planning rules.
 
 - [x] Drop the per-request `Task.async` wrapper in `Guppy.Server.native_request/4` in favor of inline `try/catch`; the task adds no concurrency (it is yielded immediately) and copies the full IR term to a fresh process on every render.
-- [ ] Cache NIF load status in `Guppy.Native.Nif` after first success instead of calling `native_ping` through `apply` + rescue on every dispatch (`with_loaded/1`).
+- [x] Cache NIF load status in `Guppy.Native.Nif` after first success instead of calling `native_ping` through `apply` + rescue on every dispatch (`with_loaded/1`).
 - [ ] Remove the `bytes.to_vec()` copy on the IR decode worker handoff in `native/guppy_nif/src/lib.rs` if a borrow/ownership transfer is practical.
 
 ## Priority 3: Native de-slopification pass, concrete first steps (2026-06-09 code review)
