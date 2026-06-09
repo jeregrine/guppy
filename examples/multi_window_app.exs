@@ -1,12 +1,16 @@
+Code.require_file("support/ui.exs", __DIR__)
+
 defmodule Guppy.Examples.MultiWindowApp.MainWindow do
   use Guppy.Window
+
+  alias Examples.UI
 
   def mount(_arg, window) do
     {:ok,
      window
      |> put_window_opts(
-       titlebar: [title: "Guppy App"],
-       window_bounds: [width: 760, height: 520],
+       titlebar: [title: "Multi-window app"],
+       window_bounds: [width: 560, height: 380],
        focus: true,
        show: true
      )
@@ -22,16 +26,18 @@ defmodule Guppy.Examples.MultiWindowApp.MainWindow do
     command_shortcuts = Keyword.fetch!(command_bindings, :shortcuts)
 
     ~GUI"""
-    <div id="main" class="flex flex-col gap-3 p-4" style={theme_window_style} actions={command_actions} shortcuts={command_shortcuts}>
-      <text id="title" class="text-3xl font-bold">Guppy.App multi-window demo</text>
-      <text id="message">{@message}</text>
-      <button id="palette" click="palette" class="p-2 rounded-md border-1">Open command palette</button>
-      <button id="secondary" click="secondary" class="p-2 rounded-md border-1">Open secondary window</button>
+    <div id="main" class="flex flex-col gap-4 p-5" style={theme_window_style} actions={command_actions} shortcuts={command_shortcuts}>
+      <text id="title" class="text-lg font-semibold">Multi-window app</text>
+      <text id="message" class="text-sm">{@message}</text>
+      <div id="actions" class="flex flex-row gap-2">
+        <button id="palette" click="palette" class={UI.button_class()} hover_class={UI.button_hover_class()}>Open command palette</button>
+        <button id="secondary" click="secondary" class={UI.button_class()} hover_class={UI.button_hover_class()}>Open secondary window</button>
+      </div>
       <div id="theme_card" style={theme_card_style}>
-        <text>Theme styles resolve semantic color tokens to primitive IR style tuples.</text>
+        <text class="text-sm">Theme styles resolve semantic color tokens to primitive IR style tuples.</text>
       </div>
       <div id="styled_card" style={Keyword.get(app_styles, :style)} hover_style={Keyword.get(app_styles, :hover_style)}>
-        <text>Stylesheet class refs resolve in Elixir, including state variants.</text>
+        <text class="text-sm">Stylesheet class refs resolve in Elixir, including state variants.</text>
       </div>
     </div>
     """
@@ -63,9 +69,9 @@ defmodule Guppy.Examples.MultiWindowApp.SecondaryWindow do
 
   def render(_window) do
     ~GUI"""
-    <div id="secondary" class="flex flex-col gap-2 p-4 bg-[#111827] text-[#f8fafc]">
-      <text id="secondary_title" class="text-xl font-bold">Secondary app window</text>
-      <text id="secondary_body">This window is opened and tracked by the app coordinator.</text>
+    <div id="secondary" class="flex flex-col gap-2 p-5 bg-[#f5f5f7] text-[#1d1d1f]">
+      <text id="secondary_title" class="text-lg font-semibold">Secondary window</text>
+      <text id="secondary_body" class="text-sm">This window is opened and tracked by the app coordinator.</text>
     </div>
     """
   end
@@ -77,12 +83,12 @@ defmodule Guppy.Examples.MultiWindowApp do
       %{id: "main", module: Guppy.Examples.MultiWindowApp.MainWindow, start: false},
       %{id: "secondary", module: Guppy.Examples.MultiWindowApp.SecondaryWindow, start: false}
     ],
-    theme: %{Guppy.App.Theme.default(:dark) | id: "demo-dark", name: "Demo Dark"},
+    theme: %{Guppy.App.Theme.default(:light) | id: "demo-light", name: "Demo Light"},
     stylesheet: %{
       classes: %{
         "card" => %{
-          style: "p-4 rounded-lg border-1 border-white bg-[#1e293b]",
-          hover_style: "bg-blue"
+          style: "p-3 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff]",
+          hover_style: "bg-[#ececf0]"
         }
       }
     },
