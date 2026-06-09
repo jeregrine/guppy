@@ -144,6 +144,36 @@ mix run examples/hello_world.exs
 
 Shortest bring-up smoke test.
 
+```bash
+mix run examples/counter.exs
+```
+
+Smallest interactive example: one window process, one assign, one click handler.
+
+```bash
+mix run examples/click_counter.exs
+```
+
+Annotated click-counter variant with multiple buttons, event logging, and panel styling.
+
+```bash
+mix run examples/text_clicks.exs
+```
+
+Clickable `text` nodes routing distinct callbacks through one window process.
+
+```bash
+mix run examples/style_gallery.exs
+```
+
+Style showcase across class-driven layout, color, border, shadow, and typography ops.
+
+```bash
+mix run examples/markdownview.exs
+```
+
+`Guppy.Markdown` example rendering a Markdown subset to IR with heading anchor scrolling.
+
 ## Supported UI surface
 
 Native node kinds:
