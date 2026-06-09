@@ -1,8 +1,6 @@
 use super::{BridgeView, render_choice, render_pass::RenderPass};
 use crate::{ir::CheckboxNode, native_events};
-use gpui::{
-    AnyElement, Context, IntoElement, KeyDownEvent, ParentElement, Styled, Window, div, px, rgb,
-};
+use gpui::{AnyElement, Context, IntoElement, ParentElement, Styled, Window, div, px, rgb};
 
 pub(crate) fn render(
     pass: &mut RenderPass<'_>,
@@ -32,7 +30,7 @@ pub(crate) fn render(
             disabled_style: &node.disabled_style,
         },
         checkbox_indicator(node.checked, node.disabled),
-        checkbox_label(node),
+        render_choice::choice_label(&node.label),
         move |view_id, node_id, callback_id| {
             let _ = native_events::send_checkbox_change_event(
                 view_id,
@@ -47,14 +45,6 @@ pub(crate) fn render(
 }
 
 pub(crate) fn checkbox_indicator(checked: bool, disabled: bool) -> AnyElement {
-    let border = if disabled { 0x5b6472 } else { 0x94a3b8 };
-    let fill = if checked {
-        if disabled { 0x475569 } else { 0x2563eb }
-    } else {
-        0x0f172a
-    };
-    let text = if disabled { 0xcbd5e1 } else { 0xffffff };
-
     div()
         .w(px(16.0))
         .h(px(16.0))
@@ -63,22 +53,9 @@ pub(crate) fn checkbox_indicator(checked: bool, disabled: bool) -> AnyElement {
         .justify_center()
         .border_1()
         .rounded_sm()
-        .border_color(rgb(border))
-        .bg(rgb(fill))
-        .text_color(rgb(text))
+        .border_color(rgb(render_choice::indicator_border_color(disabled)))
+        .bg(rgb(render_choice::indicator_fill_color(checked, disabled)))
+        .text_color(rgb(render_choice::glyph_color(disabled)))
         .child(if checked { "✓" } else { "" })
         .into_any_element()
-}
-
-pub(crate) fn checkbox_label(node: &CheckboxNode) -> AnyElement {
-    let text_color = if node.disabled { 0x94a3b8 } else { 0xe2e8f0 };
-
-    div()
-        .text_color(rgb(text_color))
-        .child(node.label.clone())
-        .into_any_element()
-}
-
-pub(crate) fn is_checkbox_toggle_key(event: &KeyDownEvent) -> bool {
-    render_choice::is_choice_toggle_key(event)
 }

@@ -1,7 +1,7 @@
 use super::{
     events::{self, RowControlEventContext},
     identity::{NodeIdentity, RowControlKey},
-    render_checkbox,
+    render_checkbox, render_choice,
     render_pass::RenderPass,
     render_radio, render_text,
     style::{apply_div_style, apply_refinement_style, apply_semantic_focus_visible_affordance},
@@ -12,7 +12,7 @@ use crate::{
 };
 use gpui::{
     AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
-    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div, list,
+    ParentElement, SharedString, StatefulInteractiveElement, Styled, Window, div, list, rgb,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -586,11 +586,12 @@ fn render_row_checkbox(
             .flex_row()
             .items_center()
             .gap_2()
+            .text_color(rgb(render_choice::default_text_color(node.disabled)))
             .child(render_checkbox::checkbox_indicator(
                 node.checked,
                 node.disabled,
             ))
-            .child(render_checkbox::checkbox_label(node)),
+            .child(render_choice::choice_label(&node.label)),
         &node.style,
     );
 
@@ -629,7 +630,7 @@ fn render_row_checkbox(
         let key_context = state.context.clone();
         let key_callback_id = callback_id.clone();
         checkbox = checkbox.on_key_down(move |event: &KeyDownEvent, _, cx| {
-            if render_checkbox::is_checkbox_toggle_key(event) {
+            if render_choice::is_choice_toggle_key(event) {
                 events::emit_row_control_checkbox_change(
                     view_id,
                     &key_context,
@@ -666,8 +667,9 @@ fn render_row_radio(
             .flex_row()
             .items_center()
             .gap_2()
+            .text_color(rgb(render_choice::default_text_color(node.disabled)))
             .child(render_radio::radio_indicator(node.checked, node.disabled))
-            .child(render_radio::radio_label(node)),
+            .child(render_choice::choice_label(&node.label)),
         &node.style,
     );
 
@@ -707,7 +709,7 @@ fn render_row_radio(
         let key_callback_id = callback_id.clone();
         let key_value = node.value.clone();
         radio = radio.on_key_down(move |event: &KeyDownEvent, _, cx| {
-            if render_radio::is_radio_toggle_key(event) {
+            if render_choice::is_choice_toggle_key(event) {
                 events::emit_row_control_change(
                     view_id,
                     &key_context,

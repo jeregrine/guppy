@@ -7,8 +7,60 @@ use super::{
 use crate::ir::DivStyle;
 use gpui::{
     AnyElement, Context, InteractiveElement, IntoElement, KeyDownEvent, ParentElement,
-    StatefulInteractiveElement, Styled, Window, div,
+    StatefulInteractiveElement, Styled, Window, div, rgb,
 };
+
+// Default choice-control palette, shared by checkbox and radio. The wrapper
+// receives the default text color before user style ops run, so `text_color`
+// ops on the node theme the label (and checkbox glyph background contrast
+// stays an indicator-local concern).
+pub(crate) const CHOICE_BORDER: u32 = 0x94a3b8;
+pub(crate) const CHOICE_BORDER_DISABLED: u32 = 0x5b6472;
+pub(crate) const CHOICE_FILL_CHECKED: u32 = 0x2563eb;
+pub(crate) const CHOICE_FILL_CHECKED_DISABLED: u32 = 0x475569;
+pub(crate) const CHOICE_FILL_UNCHECKED: u32 = 0x0f172a;
+pub(crate) const CHOICE_GLYPH: u32 = 0xffffff;
+pub(crate) const CHOICE_GLYPH_DISABLED: u32 = 0xcbd5e1;
+pub(crate) const CHOICE_TEXT: u32 = 0xe2e8f0;
+pub(crate) const CHOICE_TEXT_DISABLED: u32 = 0x94a3b8;
+
+pub(crate) fn indicator_border_color(disabled: bool) -> u32 {
+    if disabled {
+        CHOICE_BORDER_DISABLED
+    } else {
+        CHOICE_BORDER
+    }
+}
+
+pub(crate) fn indicator_fill_color(checked: bool, disabled: bool) -> u32 {
+    match (checked, disabled) {
+        (true, true) => CHOICE_FILL_CHECKED_DISABLED,
+        (true, false) => CHOICE_FILL_CHECKED,
+        (false, _) => CHOICE_FILL_UNCHECKED,
+    }
+}
+
+pub(crate) fn glyph_color(disabled: bool) -> u32 {
+    if disabled {
+        CHOICE_GLYPH_DISABLED
+    } else {
+        CHOICE_GLYPH
+    }
+}
+
+pub(crate) fn default_text_color(disabled: bool) -> u32 {
+    if disabled {
+        CHOICE_TEXT_DISABLED
+    } else {
+        CHOICE_TEXT
+    }
+}
+
+/// Label element that inherits the wrapper text color, so `text_color` style
+/// ops on the node theme it from Elixir.
+pub(crate) fn choice_label(label: &str) -> AnyElement {
+    div().child(label.to_owned()).into_any_element()
+}
 
 /// Shared shape of the checkbox/radio choice controls: everything except the
 /// indicator element, the label element, and the change event payload.
@@ -63,6 +115,7 @@ where
             .flex_row()
             .items_center()
             .gap_2()
+            .text_color(rgb(default_text_color(spec.disabled)))
             .child(indicator)
             .child(label),
         spec.style,
@@ -146,8 +199,28 @@ pub(crate) fn is_choice_toggle_key(event: &KeyDownEvent) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{enabled_change_callback, is_choice_toggle_key};
+    use super::{
+        CHOICE_BORDER, CHOICE_BORDER_DISABLED, CHOICE_FILL_CHECKED, CHOICE_FILL_CHECKED_DISABLED,
+        CHOICE_FILL_UNCHECKED, CHOICE_TEXT, CHOICE_TEXT_DISABLED, default_text_color,
+        enabled_change_callback, indicator_border_color, indicator_fill_color,
+        is_choice_toggle_key,
+    };
     use gpui::{KeyDownEvent, Keystroke};
+
+    #[test]
+    fn palette_helpers_map_disabled_states() {
+        assert_eq!(indicator_border_color(false), CHOICE_BORDER);
+        assert_eq!(indicator_border_color(true), CHOICE_BORDER_DISABLED);
+        assert_eq!(indicator_fill_color(true, false), CHOICE_FILL_CHECKED);
+        assert_eq!(
+            indicator_fill_color(true, true),
+            CHOICE_FILL_CHECKED_DISABLED
+        );
+        assert_eq!(indicator_fill_color(false, false), CHOICE_FILL_UNCHECKED);
+        assert_eq!(indicator_fill_color(false, true), CHOICE_FILL_UNCHECKED);
+        assert_eq!(default_text_color(false), CHOICE_TEXT);
+        assert_eq!(default_text_color(true), CHOICE_TEXT_DISABLED);
+    }
 
     #[test]
     fn disabled_choice_controls_do_not_attach_change_handlers() {
