@@ -2,6 +2,7 @@ mod events;
 mod identity;
 mod render_canvas;
 mod render_checkbox;
+mod render_choice;
 mod render_data_table;
 mod render_div;
 mod render_icon;

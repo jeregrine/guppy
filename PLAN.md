@@ -31,7 +31,8 @@ Each of these is measurable with the existing counters/benchmarks; verify before
 
 ## Priority 3: Native de-slopification pass, concrete first steps (2026-06-09 code review)
 
-- [ ] Merge `render_checkbox.rs` and `render_radio.rs` (~90% line-for-line clones: focus handling, six style-state blocks, `enabled_change_callback`, toggle-key helpers, tests) into a shared choice-control renderer parameterized by indicator + emit function; sweep `bridge_view/` for the same pattern in other renderers.
+- [x] Merge `render_checkbox.rs` and `render_radio.rs` (~90% line-for-line clones: focus handling, six style-state blocks, `enabled_change_callback`, toggle-key helpers, tests) into a shared choice-control renderer parameterized by indicator + emit function (`render_choice.rs`).
+- [ ] Sweep the rest of `bridge_view/` for other near-twin renderers worth merging (no other line-for-line pair as close as checkbox/radio was spotted in review; verify before merging anything).
 - [ ] Move the hardcoded control palette (`0x2563eb`, `0x94a3b8`, `0x0f172a`, etc. in checkbox/radio indicators and labels) to style-op-driven values with these as defaults; today Elixir cannot fully theme native controls, which violates "higher-level theming stays in Elixir".
 - [ ] Use the existing `normalize_native_reply/1` in the four `Guppy.Server` call sites that re-pattern-match `:ok` / `{:ok, _payload}` arms inline.
 - [ ] Consider one schema-driven helper for the option-map validators (window options, dialogs, menus) in `Guppy.Server`; keep node IR validation explicit.
