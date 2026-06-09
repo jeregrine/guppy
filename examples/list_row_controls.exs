@@ -1,5 +1,9 @@
+Code.require_file("support/ui.exs", __DIR__)
+
 defmodule Examples.ListRowControlsWindow do
   use Guppy.Window
+
+  alias Examples.UI
 
   @initial_tasks [
     %{id: "task_1", title: "Wire row-control event payloads", done: false, priority: "high"},
@@ -12,8 +16,8 @@ defmodule Examples.ListRowControlsWindow do
     {:ok,
      window
      |> put_window_opts(
-       window_bounds: [width: 760, height: 520],
-       titlebar: [title: "Guppy list row controls"]
+       window_bounds: [width: 640, height: 420],
+       titlebar: [title: "List row controls"]
      )
      |> assign(:tasks, @initial_tasks)
      |> assign(:last_event, "Click a row button, checkbox, or radio control")}
@@ -44,27 +48,20 @@ defmodule Examples.ListRowControlsWindow do
 
     Guppy.IR.div(
       [
-        Guppy.IR.div(
-          [
-            Guppy.IR.text("List row controls", id: "title", style: [:text_2xl, :font_black]),
-            Guppy.IR.text(
-              "Generic list rows can now host retained button, checkbox, and radio controls with row-aware event payloads.",
-              id: "subtitle",
-              style: [:text_sm, {:text_color_hex, "#94a3b8"}]
-            )
-          ],
-          id: "header",
-          style: [:flex, :flex_col, :gap_1]
-        ),
         Guppy.IR.list(rows,
           id: "task_list",
-          style: [{:h_px, 300}, :rounded_lg, :border_1, {:border_color_hex, "#334155"}],
-          item_style: [:p_2, :border_b_1, {:border_color_hex, "#1e293b"}]
+          style: [
+            {:h_px, 280},
+            :rounded_md,
+            :border_1,
+            {:border_color_hex, UI.border()},
+            {:bg_hex, UI.surface()}
+          ],
+          item_style: [:p_2, :border_b_1, {:border_color_hex, "#ececf0"}]
         ),
-        Guppy.IR.div(
-          [Guppy.IR.text(window.assigns.last_event, id: "last_event", style: [:text_sm])],
-          id: "event_panel",
-          style: [:p_2, :rounded_md, {:bg_hex, "#111827"}, {:text_color_hex, "#e2e8f0"}]
+        Guppy.IR.text(window.assigns.last_event,
+          id: "last_event",
+          style: [:text_xs, {:text_color_hex, UI.text_secondary()}]
         )
       ],
       id: "list_row_controls_root",
@@ -72,11 +69,11 @@ defmodule Examples.ListRowControlsWindow do
         :flex,
         :flex_col,
         :gap_4,
-        :p_6,
+        :p_4,
         :w_full,
         :h_full,
-        {:bg_hex, "#0f172a"},
-        {:text_color_hex, "#f8fafc"}
+        {:bg_hex, UI.window_bg()},
+        {:text_color_hex, UI.text()}
       ]
     )
   end
@@ -91,7 +88,7 @@ defmodule Examples.ListRowControlsWindow do
               [
                 Guppy.IR.text(task.title, id: "#{task.id}_title", style: [:font_semibold]),
                 Guppy.IR.text("row id: #{task.id}",
-                  style: [:text_xs, {:text_color_hex, "#94a3b8"}]
+                  style: [:text_xs, {:text_color_hex, UI.text_secondary()}]
                 )
               ],
               style: [:flex, :flex_col, :gap_1, :flex_1]
@@ -99,17 +96,24 @@ defmodule Examples.ListRowControlsWindow do
             Guppy.IR.checkbox("Done", task.done,
               id: "done",
               events: %{change: "toggle_done"},
-              style: [:gap_2]
+              style: [:gap_2, {:text_color_hex, UI.text()}]
             ),
             Guppy.IR.radio("High", "high", task.priority == "high",
               id: "priority_high",
               events: %{change: "set_priority"},
-              style: [:gap_2]
+              style: [:gap_2, {:text_color_hex, UI.text()}]
             ),
             Guppy.IR.button("Open",
               id: "open",
               events: %{click: "open_row"},
-              style: [:p_2, :rounded_md, :border_1]
+              style: [
+                :p_1,
+                :rounded_md,
+                :border_1,
+                :text_sm,
+                {:border_color_hex, UI.border()},
+                {:bg_hex, UI.surface()}
+              ]
             )
           ],
           id: "#{task.id}_layout",

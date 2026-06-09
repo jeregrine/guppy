@@ -34,7 +34,8 @@ Sentence case for labels. No `font-black`.
 
 ## Spacing and grouping
 
-- Window padding `p-5`; `gap-4` between groups, `gap-2` within a group
+- Window padding `p-5` (class form) or `:p_4` (style-op lists support fewer
+  steps); `gap-4` between groups, `gap-2` within a group
 - Group with whitespace first; use a hairline border or a surface panel only
   when content needs real separation (a list, an input cluster)
 - No card-in-card nesting, no `rounded-xl` chrome, no shadows on static
