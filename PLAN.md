@@ -43,6 +43,18 @@ Each of these is measurable with the existing counters/benchmarks; verify before
 - [x] Sync the README example list: `counter.exs`, `click_counter.exs`, `text_clicks.exs`, `style_gallery.exs`, and `markdownview.exs` are now listed; `counter.exs` is documented as the smallest interactive example (kept separate from `click_counter.exs` rather than folded).
 - [x] Optional: add a debug-level log on the `Guppy.Window` unmatched-callback no-op path so app authors notice typo'd callback names.
 
+## Priority 3.6: Example design/UI/UX de-slop
+
+The examples read as obviously AI-designed: every screen is the same dark slate Tailwind palette (`#0f172a` / `#111827` / `#334155`), everything is a rounded-xl "card" with a border and shadow, every window opens with a hero panel + title + subtitle, and several examples end with a decorative "info panel" of bullet rows with little colored dots explaining the demo to itself. Clean them up into consistent, restrained, native-looking apps.
+
+- [ ] Define one shared example visual language and write it down (a short `examples/STYLE.md` or comment header convention): one type scale, one spacing scale, one light-or-dark neutral palette with a single accent, when to use borders vs spacing for grouping, and native-feeling control sizes. Prefer macOS-feeling restraint over web-dashboard chrome.
+- [ ] Remove the AI-slop tells: hero/title/subtitle headers that restate the file name, self-describing "what this example shows" info panels with dot bullets, gratuitous rounded-xl card-in-card nesting, and shadows on static content. An example's UI should look like a small real app, not a feature tour slide.
+- [ ] Stop hardcoding the same hex palette in every file: hoist shared palette/spacing helpers into `examples/support/` (the table/tree examples already share `table_tree_shared.exs`) and have examples consume them, so a palette change is one edit.
+- [ ] Make the small examples (`counter`, `click_counter`, `text_clicks`, `hello_world`) visually minimal: standard window padding, system-feeling typography, one accent color, no decorative panels — their job is teaching the API in as few visual concepts as possible.
+- [ ] Keep one deliberate showcase (`super_demo`/`style_gallery`) where heavy styling is the point; align the rest (kanban, markdownview, menu/overlay/table demos) to the shared language and audit window sizes/titles for consistency.
+- [ ] Sweep `IO.puts` startup diagnostics: keep them in `hello_world` (bring-up smoke test), drop or trim them elsewhere so examples don't all open with the same boilerplate console dump.
+- [ ] Verify each reworked example by running it (`mix run examples/<name>.exs`, release native for the interactive ones) and update README/AGENTS example descriptions where the look or scope changes.
+
 ## Priority 4: Packaging and distribution hardening
 
 Before external users rely on Guppy, make source builds and release consumption boring.
