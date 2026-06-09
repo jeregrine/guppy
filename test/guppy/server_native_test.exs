@@ -84,6 +84,18 @@ defmodule Guppy.ServerNativeTest do
     end
   end
 
+  @tag capture_log: true
+  test "native request bugs crash loudly instead of reporting runtime unavailable" do
+    server = :"guppy_buggy_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server, name: server, native: Guppy.BuggyNative, native_server: Guppy.BuggyNative}
+    )
+
+    assert {{%KeyError{key: :missing}, _stacktrace}, _call} =
+             catch_exit(Guppy.Server.ping(server, 100))
+  end
+
   test "native request timeouts are bounded and leave the server responsive" do
     server = :"guppy_blocking_native_#{System.unique_integer([:positive])}"
     handler_id = {__MODULE__, self(), :blocking_native_request_telemetry}

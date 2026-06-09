@@ -193,6 +193,11 @@ defmodule Guppy.BlockingNative do
   end
 end
 
+defmodule Guppy.BuggyNative do
+  def request(_server, {:ping, []}, _timeout), do: Map.fetch!(%{}, :missing)
+  def request(_server, _request, _timeout), do: :ok
+end
+
 defmodule Guppy.DialogBlockingNative do
   def request(test_pid, {dialog, [_opts]}, _timeout)
       when dialog in [:open_file_dialog, :save_file_dialog] do

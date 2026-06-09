@@ -572,14 +572,25 @@ defmodule Guppy.Server do
   defp native_request(state, command, request, timeout) do
     start_time = System.monotonic_time()
 
+    # Rescue only NIF load/availability failures and exits from a downed
+    # native server; anything else is a real bug and must crash loudly.
+    # Note `rescue _ in [ErlangError]` matches every raw Erlang error, so the
+    # clause must reraise everything except the NIF-not-loaded marker.
     task =
       Task.async(fn ->
         try do
           state.native.request(state.native_server, request, timeout)
         rescue
-          _error in [ArgumentError, ErlangError, RuntimeError] -> {:error, :runtime_unavailable}
+          _error in [UndefinedFunctionError] ->
+            {:error, :runtime_unavailable}
+
+          error in [ErlangError] ->
+            case error do
+              %ErlangError{original: :nif_not_loaded} -> {:error, :runtime_unavailable}
+              _other -> reraise(error, __STACKTRACE__)
+            end
         catch
-          _kind, _reason -> {:error, :runtime_unavailable}
+          :exit, _reason -> {:error, :runtime_unavailable}
         end
       end)
 
