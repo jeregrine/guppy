@@ -1,11 +1,15 @@
+Code.require_file("support/ui.exs", __DIR__)
+
 defmodule CounterWindow do
   use Guppy.Window
+
+  alias Examples.UI
 
   def mount(_arg, window) do
     {:ok,
      window
      |> put_window_opts(
-       window_bounds: [width: 760, height: 560],
+       window_bounds: [width: 320, height: 220],
        titlebar: [title: "Counter"]
      )
      |> assign(:count, 0)}
@@ -13,9 +17,14 @@ defmodule CounterWindow do
 
   def render(window) do
     ~GUI"""
-    <div class="flex flex-col gap-2 p-4 bg-[#0f172a] text-[#f8fafc]">
-      <text id="count_label" class="text-2xl font-bold">count = {@count}</text>
-      <button id="increment_button" click="increment" class="p-2 rounded-md border-1">
+    <div class={UI.window_class() <> " items-center justify-center"}>
+      <text id="count_label" class="text-3xl font-semibold">{@count}</text>
+      <button
+        id="increment_button"
+        click="increment"
+        class={UI.primary_button_class()}
+        hover_class={UI.primary_button_hover_class()}
+      >
         Increment
       </button>
     </div>
