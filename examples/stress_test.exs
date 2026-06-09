@@ -675,7 +675,7 @@ defmodule Examples.StressTest do
           id: "volatile_select",
           value: Integer.to_string(rem(frame, 6)),
           open: false,
-          style: input_style() ++ [{:w_px, 170}],
+          style: input_style(170),
           list_style: [
             :p_1,
             :rounded_lg,
@@ -1132,12 +1132,12 @@ defmodule Examples.StressTest do
     ]
   end
 
-  defp input_style do
+  defp input_style(width \\ 300) do
     [
       :p_2,
       :rounded_lg,
       :border_1,
-      {:w_px, 300},
+      {:w_px, width},
       {:border_color_hex, "#334155"},
       {:bg_hex, "#020617"},
       {:text_color_hex, "#e2e8f0"}

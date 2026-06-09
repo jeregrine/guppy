@@ -867,7 +867,9 @@ defmodule Guppy.Component.Compiler do
       end)
       |> Enum.reject(&is_nil/1)
 
-    keyword_ast(scalar_entries ++ style_entries ++ [events_entry(attrs, event_names, caller)])
+    keyword_ast(
+      Enum.concat([scalar_entries, style_entries, [events_entry(attrs, event_names, caller)]])
+    )
   end
 
   defp build_scroll_opts(attrs, caller) do

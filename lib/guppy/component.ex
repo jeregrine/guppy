@@ -188,7 +188,7 @@ defmodule Guppy.Component do
   end
 
   defp validate_unknown_props!(assigns, module, component_name, schema) do
-    allowed = MapSet.new(Enum.map(schema, & &1.name) ++ [:children])
+    allowed = MapSet.new([:children | Enum.map(schema, & &1.name)])
 
     unknown =
       assigns

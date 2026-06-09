@@ -72,8 +72,10 @@ defmodule Guppy.Markdown do
     heading_id = "#{heading_id_prefix}_#{next_heading_index}"
 
     nodes =
-      heading_anchor(heading_id, selected_heading_id) ++
+      Enum.concat(
+        heading_anchor(heading_id, selected_heading_id),
         [inline_text(children, heading_style(tag))]
+      )
 
     {nodes, next_heading_index}
   end
