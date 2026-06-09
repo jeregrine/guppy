@@ -1,13 +1,17 @@
+Code.require_file("support/ui.exs", __DIR__)
+
 defmodule Examples.MenuDemoWindow do
   use Guppy.Window
+
+  alias Examples.UI
 
   @impl Guppy.Window
   def mount(_arg, window) do
     window =
       window
       |> put_window_opts(
-        window_bounds: [width: 760, height: 560],
-        titlebar: [title: "Guppy menu demo"]
+        window_bounds: [width: 560, height: 420],
+        titlebar: [title: "Notes"]
       )
       |> assign(:draft, "Focus this field, then use the Edit menu for Cut/Copy/Paste/Select All.")
       |> assign(:menu_events, [])
@@ -67,35 +71,26 @@ defmodule Examples.MenuDemoWindow do
       })
 
     ~GUI"""
-    <div id="menu_demo_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
-      <div id="menu_header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-        <text id="menu_title" class="text-2xl font-black">App menu demo</text>
-        <text id="menu_subtitle" class="text-base text-[#94a3b8] leading-snug">
-          The File and Help menus send callbacks back to this window process. The Edit menu uses GPUI OS edit actions against the focused text input.
+    <div id="menu_demo_root" class={UI.window_class()}>
+      <textarea
+        id="draft_editor"
+        value={@draft}
+        placeholder="Type here, then try the app menu"
+        change="draft_changed"
+        class={"flex-1 p-2 rounded-md border-1 border-[" <> UI.border() <> "] bg-[" <> UI.surface() <> "] text-sm text-[" <> UI.text() <> "]"}
+      />
+
+      <div id="events_panel" class="flex flex-col gap-1">
+        <text id="events_title" class="text-sm font-semibold">Recent menu callbacks</text>
+        <text :if={@events == []} id="no_events" class={UI.caption_class()}>
+          Choose File -> New Note, File -> Insert Timestamp, or Help -> About Guppy. The Edit menu drives the focused field.
         </text>
-        <text id="menu_status" class="text-sm text-[#bfdbfe]">Guppy.set_menus/1 returned {@menu_status}</text>
+        <text :for={{event, index} <- @events} id={"menu_event_#{index}"} class={UI.caption_class()}>
+          {format_menu_event(event)}
+        </text>
       </div>
 
-      <div id="editor_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#1e40af] bg-[#172554] shadow-md flex-1">
-        <text id="editor_label" class="text-sm font-bold text-[#bfdbfe]">Scratch note</text>
-        <textarea
-          id="draft_editor"
-          value={@draft}
-          placeholder="Type here, then try the app menu"
-          change="draft_changed"
-          class="flex-1 p-4 rounded-lg border-1 border-[#2563eb] bg-[#0b1220] text-[#f8fafc]"
-        />
-      </div>
-
-      <div id="events_panel" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-        <text id="events_title" class="text-base font-bold">Recent menu callbacks</text>
-        <div :if={@events == []} id="no_events" class="p-2 rounded-md bg-[#0b1220]">
-          <text class="text-sm text-[#94a3b8]">Choose File -> New Note, File -> Insert Timestamp, or Help -> About Guppy.</text>
-        </div>
-        <div :for={{event, index} <- @events} id={"menu_event_#{index}"} class="p-2 rounded-md bg-[#0b1220]">
-          <text class="text-sm text-[#e2e8f0]">{format_menu_event(event)}</text>
-        </div>
-      </div>
+      <text id="menu_status" class={UI.caption_class()}>Guppy.set_menus/1 returned {@menu_status}</text>
     </div>
     """
   end
