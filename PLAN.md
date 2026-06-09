@@ -11,37 +11,36 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 - Do not preserve old internal shapes for compatibility; this project is unreleased. DO NOT deprecate.
 - Preserve the architectural invariant that Elixir owns app/UI state and renders data IR; native code should stay a typed GPUI bridge.
 
-## Priority 1: Native app shell APIs
+## Priority 1: Runtime stability findings (2026-06-09 code review)
 
-These are the biggest missing pieces for building real desktop apps. Add them as narrow, typed APIs with process ownership and restart behavior, not as ad hoc NIF calls.
+`Guppy.Server` is a single GenServer that blocks inside `native_request/4` for the full duration of every native call. Fix the blocking model before broadening anything else.
 
-- [x] App/window command model: command registry, keyboard shortcut registration, routing priority, enable/disable state, and `Guppy.Window` integration.
-- [x] Element-local/context menus: right-click/context menu primitives for rows, trees, canvas items, editors, and general elements; include keyboard invocation and app context-menu focus return.
-- [x] File dialogs: open file(s), save file, choose directory, extension filters, default directories/names, cancellation semantics, and caller-owned `owner_view_id` liveness/ownership association; native sheet parenting remains deferred because GPUI 0.2.2 exposes no sheet-style owner-window API.
-- [x] Clipboard APIs: read/write text, later images/files if GPUI/platform support is practical; define permission/error behavior.
-- [x] App/window lifecycle events: app activated/deactivated and window focused/blurred/moved/resized are routed; app hidden/unhidden is documented as deferred because GPUI 0.2.2 exposes hide actions but no lifecycle notification hook.
-- [x] Notifications/badges where platform support is practical; app/Dock badge labels are process-owned and app-owned, while desktop notifications are documented as deferred because GPUI 0.2.2 exposes no notification API.
-- [x] Dock/system menu follow-ups: dock menus, Services submenu, and dynamic menu enablement only after the command model is in place.
+- [ ] Make `Guppy.Server` non-blocking for slow native requests, file dialogs first: validate ownership/options in `handle_call`, run the NIF call in a spawned task, and reply via `GenServer.reply/2` from a continuation. Today a 30s file dialog stalls all event routing, renders, closes, and clipboard calls for every window. (The native-side `runModal` main-thread freeze is a documented GPUI 0.2.2 limit and stays.)
+- [ ] Narrow the blanket `catch _kind, _reason -> {:error, :runtime_unavailable}` in `Guppy.Server.native_request/4`; it currently reports real bugs (e.g. `FunctionClauseError` in the native module) as runtime unavailability.
+- [ ] Add backoff or a retry cap to the `Guppy.Window` reopen loop (`lib/guppy/window.ex` reopen retry); on persistent failure it retries every 50ms forever against a struggling runtime.
+- [ ] Make `native_gui_status` honest on non-macOS: `maybe_start_main_thread_runtime` stores `GUI_STARTED = true` without ever calling `run_app()`, so status reports `"started"` while every request times out. Report not-started/unsupported instead.
+- [ ] Document (or reconcile) the open-window timeout race: if `native_open_window` succeeds natively but the reply lands after the caller timeout, Elixir drops the view id and the native window is live but ownerless.
 
-## Priority 2: Overlay, popover, and select hardening
+## Priority 2: Measured hot-path cleanups (2026-06-09 code review)
 
-Current popover/select support is first-pass. Native apps need reliable overlays before complex menus/forms feel right.
+Each of these is measurable with the existing counters/benchmarks; verify before/after per the planning rules.
 
-- [x] Define overlay lifecycle semantics: open/close ownership, escape behavior, click-outside behavior, focus return, and stale-owner cleanup are documented in `docs/overlays.md` and covered by select/popover/context-menu behavior.
-- [x] Harden positioning: popover exposes anchor position/mode/fit/offset/margin controls, select exposes list anchor offset/fit/margin controls, and documented GPUI window-edge/scroll-parent limits are explicit.
-- [x] Add keyboard behavior for select/menu-like overlays: arrows, home/end, single-character typeahead, enter/space, escape, and disabled-option skipping are implemented/tested for select; popover supports Enter/Space toggle and Escape close.
-- [x] Support nested overlays deliberately or reject/document unsupported nesting with tests: nested native `popover`/`select` nodes inside popovers are rejected by Elixir validation and native decode, and documented as unsupported.
-- [x] Add examples that exercise dropdowns, context menus, nested panels, and form-like select usage: `examples/overlay_demo.exs` validates and demonstrates these flows.
+- [ ] Drop the per-request `Task.async` wrapper in `Guppy.Server.native_request/4` in favor of inline `try/catch`; the task adds no concurrency (it is yielded immediately) and copies the full IR term to a fresh process on every render.
+- [ ] Cache NIF load status in `Guppy.Native.Nif` after first success instead of calling `native_ping` through `apply` + rescue on every dispatch (`with_loaded/1`).
+- [ ] Remove the `bytes.to_vec()` copy on the IR decode worker handoff in `native/guppy_nif/src/lib.rs` if a borrow/ownership transfer is practical.
 
-## Priority 3: Keyboard, focus, accessibility, data table, and tree interactions
+## Priority 3: Native de-slopification pass, concrete first steps (2026-06-09 code review)
 
-Focus and keyboard behavior are now more important than broadening visual primitives.
+- [ ] Merge `render_checkbox.rs` and `render_radio.rs` (~90% line-for-line clones: focus handling, six style-state blocks, `enabled_change_callback`, toggle-key helpers, tests) into a shared choice-control renderer parameterized by indicator + emit function; sweep `bridge_view/` for the same pattern in other renderers.
+- [ ] Move the hardcoded control palette (`0x2563eb`, `0x94a3b8`, `0x0f172a`, etc. in checkbox/radio indicators and labels) to style-op-driven values with these as defaults; today Elixir cannot fully theme native controls, which violates "higher-level theming stays in Elixir".
+- [ ] Use the existing `normalize_native_reply/1` in the four `Guppy.Server` call sites that re-pattern-match `:ok` / `{:ok, _payload}` arms inline.
+- [ ] Consider one schema-driven helper for the option-map validators (window options, dialogs, menus) in `Guppy.Server`; keep node IR validation explicit.
 
-- [x] Define focus scopes and roving-focus patterns for list/tree/table/menu-like widgets: documented in `docs/focus-keyboard.md` with current table/tree/select/list behavior and deferred gaps; uniform-list items and list rows with click/context-menu callbacks are keyboard-actionable with Up/Down/Home/End focus movement.
-- [x] Add shortcut bubbling/priority rules that work with app commands, focused controls, and text inputs: documented in `docs/focus-keyboard.md`; focused element/text-input shortcuts emit actions and stop propagation before ancestor/root app-command shortcuts.
-- [x] Improve data-table/tree keyboard navigation, row/cell/item focus-visible behavior, selection affordances, disclosure behavior, and context-menu integration: table sortable headers/rows/cells and tree rows are keyboard-actionable for activation/disclosure/context-menu callbacks; table sortable headers/body rows/cells support arrow-key focus movement including sortable-header and body Home/End plus sortable header/body and row/cell transitions; tree rows support Up/Down/Home/End focus movement plus Left/Right parent-child focus movement; retained table headers/rows/cells, tree rows, list rows, and uniform-list items draw native focus-visible borders when keyboard-focused; and `examples/data_table_tree.exs` demonstrates explicit Elixir-owned selection styles.
-- [x] Add data-table column resize/reorder and pinned header/column behavior only after navigation/focus semantics are stable: data-table headers support keyboard `column_reorder` callbacks with source column, target neighbor, and direction so Elixir can own column order, plus keyboard and pointer-drag `column_resize` callbacks with signed width deltas so Elixir can own column widths; pointer Alt-drag `column_reorder` callbacks; the header is pinned outside the virtualized body list; columns with `pinned: true` render before unpinned columns while preserving order within each group, and header/body focus order follows the rendered order.
-- [x] Audit GPUI accessibility/semantics support and expose labels/roles/states where practical through typed IR: documented in `docs/accessibility.md`; `gpui = 0.2.2` exposes no public element-level role/label/state mapping, so Guppy keeps current semantic ids/labels/state and rejects inert placeholder accessibility fields.
+## Priority 3.5: Examples and docs sync (2026-06-09 examples review)
+
+- [ ] Fix `examples/counter.exs`: it `receive`s a `:DOWN` message but never calls `Process.monitor(pid)`, so the script hangs forever after the window closes. Also add the `Application.ensure_all_started(:guppy)` line for consistency.
+- [ ] Sync the README example list: `counter.exs`, `click_counter.exs`, `text_clicks.exs`, `style_gallery.exs`, and `markdownview.exs` are not referenced (and `style_gallery` is in the AGENTS.md run list). Consider promoting the fixed `counter.exs` as the README's minimal quickstart, or fold it into `click_counter.exs`.
+- [ ] Optional: add a debug-level log on the `Guppy.Window` unmatched-callback no-op path so app authors notice typo'd callback names.
 
 ## Priority 4: Packaging and distribution hardening
 
