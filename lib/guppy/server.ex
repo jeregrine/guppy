@@ -597,35 +597,32 @@ defmodule Guppy.Server do
     {:noreply, state}
   end
 
+  # Runs the native request in the calling process: spawning a per-request
+  # task would copy the full IR term on every render, and the Guppy.Native
+  # contract makes implementations own timeout enforcement (the NIF bounds
+  # every request with a deadline-aware wait).
+  #
+  # Rescue only NIF load/availability failures and exits from a downed
+  # native server; anything else is a real bug and must crash loudly.
+  # Note `rescue _ in [ErlangError]` matches every raw Erlang error, so the
+  # clause must reraise everything except the NIF-not-loaded marker.
   defp native_request(state, command, request, timeout) do
     start_time = System.monotonic_time()
 
-    # Rescue only NIF load/availability failures and exits from a downed
-    # native server; anything else is a real bug and must crash loudly.
-    # Note `rescue _ in [ErlangError]` matches every raw Erlang error, so the
-    # clause must reraise everything except the NIF-not-loaded marker.
-    task =
-      Task.async(fn ->
-        try do
-          state.native.request(state.native_server, request, timeout)
-        rescue
-          _error in [UndefinedFunctionError] ->
-            {:error, :runtime_unavailable}
-
-          error in [ErlangError] ->
-            case error do
-              %ErlangError{original: :nif_not_loaded} -> {:error, :runtime_unavailable}
-              _other -> reraise(error, __STACKTRACE__)
-            end
-        catch
-          :exit, _reason -> {:error, :runtime_unavailable}
-        end
-      end)
-
     reply =
-      case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
-        {:ok, reply} -> reply
-        nil -> {:error, :native_timeout}
+      try do
+        state.native.request(state.native_server, request, timeout)
+      rescue
+        _error in [UndefinedFunctionError] ->
+          {:error, :runtime_unavailable}
+
+        error in [ErlangError] ->
+          case error do
+            %ErlangError{original: :nif_not_loaded} -> {:error, :runtime_unavailable}
+            _other -> reraise(error, __STACKTRACE__)
+          end
+      catch
+        :exit, _reason -> {:error, :runtime_unavailable}
       end
 
     duration = System.monotonic_time() - start_time

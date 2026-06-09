@@ -184,12 +184,12 @@ defmodule Guppy.CrashingNative do
 end
 
 defmodule Guppy.BlockingNative do
-  def request(_server, _request, _timeout) do
-    receive do
-      :never -> :ok
-    after
-      :infinity -> :ok
-    end
+  # Models the Guppy.Native timeout contract: a request that cannot complete
+  # in time returns {:error, :native_timeout} within its timeout instead of
+  # blocking the caller indefinitely.
+  def request(_server, _request, timeout) do
+    Process.sleep(timeout)
+    {:error, :native_timeout}
   end
 end
 

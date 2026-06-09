@@ -9,6 +9,14 @@ defmodule Guppy.Native do
   @type command :: term()
   @type response :: {:ok, term()} | {:error, term()}
 
+  @doc """
+  Performs a native request.
+
+  Implementations own timeout enforcement: `request/3` must return within the
+  given timeout (returning `{:error, :native_timeout}` when the underlying
+  work cannot complete in time) rather than blocking the caller indefinitely.
+  The NIF implementation bounds every request with a deadline-aware wait.
+  """
   @callback request(GenServer.server(), command(), timeout()) :: response()
   @callback cast(GenServer.server(), command()) :: :ok
   @callback connected?(GenServer.server()) :: boolean()

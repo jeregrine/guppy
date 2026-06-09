@@ -62,6 +62,18 @@ After the native IR/style and event-payload cleanup pass that tightened native s
 | High-frequency mouse move payload encode | 0.48 μs | 0.50 μs |
 | High-frequency scroll wheel payload encode | 0.49 μs | 0.54 μs |
 
+## 2026-06-09 server dispatch cleanup spot-check
+
+After `Guppy.Server` stopped spawning a per-request task (which copied the
+full IR term on every render) and started calling the native layer inline,
+debug-native `mix run bench/guppy_bench.exs --native` on the same M1 Pro
+class machine moved `Guppy.Window` routed event-to-rerender latency from
+0.21 ms to 0.143 ms average (repeated 10-event pressure: 3.65 ms to 1.58 ms).
+`Guppy.render/2` native request latency was unchanged (~40 ms debug-native,
+dominated by native decode of the large benchmark tree). Timeout enforcement
+now lives in the `Guppy.Native` contract; the NIF bounds every request with
+its deadline-aware wait.
+
 ## Release native snapshot
 
 With an optimized native build, selected `GUPPY_NATIVE_RELEASE=1 mix run bench/guppy_bench.exs --native` results after native IR schema hardening:
