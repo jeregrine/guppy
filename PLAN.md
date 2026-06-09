@@ -47,13 +47,13 @@ Each of these is measurable with the existing counters/benchmarks; verify before
 
 The examples read as obviously AI-designed: every screen is the same dark slate Tailwind palette (`#0f172a` / `#111827` / `#334155`), everything is a rounded-xl "card" with a border and shadow, every window opens with a hero panel + title + subtitle, and several examples end with a decorative "info panel" of bullet rows with little colored dots explaining the demo to itself. Clean them up into consistent, restrained, native-looking apps.
 
-- [ ] Define one shared example visual language and write it down (a short `examples/STYLE.md` or comment header convention): one type scale, one spacing scale, one light-or-dark neutral palette with a single accent, when to use borders vs spacing for grouping, and native-feeling control sizes. Prefer macOS-feeling restraint over web-dashboard chrome.
-- [ ] Remove the AI-slop tells: hero/title/subtitle headers that restate the file name, self-describing "what this example shows" info panels with dot bullets, gratuitous rounded-xl card-in-card nesting, and shadows on static content. An example's UI should look like a small real app, not a feature tour slide.
-- [ ] Stop hardcoding the same hex palette in every file: hoist shared palette/spacing helpers into `examples/support/` (the table/tree examples already share `table_tree_shared.exs`) and have examples consume them, so a palette change is one edit.
-- [ ] Make the small examples (`counter`, `click_counter`, `text_clicks`, `hello_world`) visually minimal: standard window padding, system-feeling typography, one accent color, no decorative panels — their job is teaching the API in as few visual concepts as possible.
-- [ ] Keep one deliberate showcase (`super_demo`/`style_gallery`) where heavy styling is the point; align the rest (kanban, markdownview, menu/overlay/table demos) to the shared language and audit window sizes/titles for consistency.
-- [ ] Sweep `IO.puts` startup diagnostics: keep them in `hello_world` (bring-up smoke test), drop or trim them elsewhere so examples don't all open with the same boilerplate console dump.
-- [ ] Verify each reworked example by running it (`mix run examples/<name>.exs`, release native for the interactive ones) and update README/AGENTS example descriptions where the look or scope changes.
+- [x] Define one shared example visual language and write it down: `examples/STYLE.md` (light neutral palette + system-blue accent, type scale, spacing rules, control metrics, explicit slop-tell don't list).
+- [ ] Remove the AI-slop tells from the remaining mid-size examples (kanban, menu/overlay/table/canvas/list-row demos, app shell, priority3): hero/title/subtitle headers restating the file name, self-describing info panels with dot bullets, rounded-xl card-in-card nesting, shadows on static content. Done for the four small examples.
+- [x] Stop hardcoding the same hex palette in every file: `examples/support/ui.exs` (`Examples.UI`) carries palette + class helpers; the small examples consume it. Mid-size examples adopt it as they are realigned.
+- [x] Make the small examples (`counter`, `click_counter`, `text_clicks`, `hello_world`) visually minimal: light palette, one accent, no decorative panels; `hello_world` stays self-contained for bring-up.
+- [ ] Align the mid-size examples (kanban, markdownview, menu/overlay/table demos) to the shared language and audit window sizes/titles for consistency; `super_demo`/`style_gallery` stay deliberate showcases.
+- [x] Sweep `IO.puts` startup diagnostics: removed the load-status/build-info/view-id dumps from ten examples; `hello_world` keeps them (bring-up smoke test) and multi-line usage-instruction prints stay.
+- [ ] Verify each reworked example by running it and update README/AGENTS example descriptions where the look or scope changes. Done for the four small examples (template compile + IR validation headlessly, plus brief live runs); repeat per mid-size example as each is realigned.
 
 ## Priority 4: Packaging and distribution hardening
 
