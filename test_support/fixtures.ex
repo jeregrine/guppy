@@ -193,6 +193,19 @@ defmodule Guppy.BlockingNative do
   end
 end
 
+defmodule Guppy.DialogBlockingNative do
+  def request(test_pid, {dialog, [_opts]}, _timeout)
+      when dialog in [:open_file_dialog, :save_file_dialog] do
+    send(test_pid, {:guppy_test_dialog_started, dialog, self()})
+
+    receive do
+      {:guppy_test_dialog_release, reply} -> reply
+    end
+  end
+
+  def request(_test_pid, _request, _timeout), do: :ok
+end
+
 defmodule Guppy.TimeoutRecordingNative do
   def request(server, request, timeout) do
     send(server, {:guppy_test_native_request, request, timeout})

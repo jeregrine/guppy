@@ -136,6 +136,33 @@ defmodule Guppy.ServerNativeTest do
     assert {:error, :unknown_view_id} = Guppy.Server.focus_window(server, view_id + 1, 37)
   end
 
+  test "in-flight file dialogs do not block other server requests" do
+    server = :"guppy_async_dialog_native_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.DialogBlockingNative,
+       native_server: self(),
+       native_request_timeout: 100}
+    )
+
+    open_task = Task.async(fn -> Guppy.Server.open_file_dialog(server, [], 5_000) end)
+    assert_receive {:guppy_test_dialog_started, :open_file_dialog, open_dialog_pid}
+
+    save_task = Task.async(fn -> Guppy.Server.save_file_dialog(server, [], 5_000) end)
+    assert_receive {:guppy_test_dialog_started, :save_file_dialog, save_dialog_pid}
+
+    assert :ok = Guppy.Server.ping(server, 100)
+    assert :ok = Guppy.Server.write_clipboard_text(server, "still responsive", 100)
+
+    send(open_dialog_pid, {:guppy_test_dialog_release, {:ok, ["/tmp/one.txt"]}})
+    send(save_dialog_pid, {:guppy_test_dialog_release, {:ok, "/tmp/two.txt"}})
+
+    assert {:ok, ["/tmp/one.txt"]} = Task.await(open_task)
+    assert {:ok, "/tmp/two.txt"} = Task.await(save_task)
+  end
+
   test "file dialog APIs validate options and route through native" do
     server = :"guppy_file_dialog_native_#{System.unique_integer([:positive])}"
 

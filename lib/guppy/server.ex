@@ -193,33 +193,48 @@ defmodule Guppy.Server do
     end
   end
 
-  def handle_call({:open_file_dialog, opts, timeout}, {caller, _tag}, state) do
+  def handle_call({:open_file_dialog, opts, timeout}, {caller, _tag} = from, state) do
     case validate_open_file_dialog_options(state, caller, opts, files: true, directories: false) do
       {:ok, opts} ->
-        reply = native_request(state, :open_file_dialog, {:open_file_dialog, [opts]}, timeout)
-        {:reply, reply, state}
+        reply_with_native_request_async(
+          state,
+          from,
+          :open_file_dialog,
+          {:open_file_dialog, [opts]},
+          timeout
+        )
 
       error ->
         {:reply, error, state}
     end
   end
 
-  def handle_call({:choose_directory_dialog, opts, timeout}, {caller, _tag}, state) do
+  def handle_call({:choose_directory_dialog, opts, timeout}, {caller, _tag} = from, state) do
     case validate_open_file_dialog_options(state, caller, opts, files: false, directories: true) do
       {:ok, opts} ->
-        reply = native_request(state, :open_file_dialog, {:open_file_dialog, [opts]}, timeout)
-        {:reply, reply, state}
+        reply_with_native_request_async(
+          state,
+          from,
+          :open_file_dialog,
+          {:open_file_dialog, [opts]},
+          timeout
+        )
 
       error ->
         {:reply, error, state}
     end
   end
 
-  def handle_call({:save_file_dialog, opts, timeout}, {caller, _tag}, state) do
+  def handle_call({:save_file_dialog, opts, timeout}, {caller, _tag} = from, state) do
     case validate_save_file_dialog_options(state, caller, opts) do
       {:ok, opts} ->
-        reply = native_request(state, :save_file_dialog, {:save_file_dialog, [opts]}, timeout)
-        {:reply, reply, state}
+        reply_with_native_request_async(
+          state,
+          from,
+          :save_file_dialog,
+          {:save_file_dialog, [opts]},
+          timeout
+        )
 
       error ->
         {:reply, error, state}
@@ -539,6 +554,19 @@ defmodule Guppy.Server do
       {:ok, _payload} -> state
       {:error, _reason} -> state
     end
+  end
+
+  # Dialog-style requests can legitimately stay open for a long time (the
+  # 30s default dialog timeout); replying from a spawned process keeps the
+  # server free to route events and serve other windows meanwhile. Only
+  # requests that need no state update after the native reply may use this.
+  defp reply_with_native_request_async(state, from, command, request, timeout) do
+    {:ok, _pid} =
+      Task.start(fn ->
+        GenServer.reply(from, native_request(state, command, request, timeout))
+      end)
+
+    {:noreply, state}
   end
 
   defp native_request(state, command, request, timeout) do
