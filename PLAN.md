@@ -18,7 +18,7 @@ Operational rules, checks, architecture notes, and maintenance reminders live in
 - [x] Make `Guppy.Server` non-blocking for slow native requests, file dialogs first: validate ownership/options in `handle_call`, run the NIF call in a spawned task, and reply via `GenServer.reply/2` from a continuation. Today a 30s file dialog stalls all event routing, renders, closes, and clipboard calls for every window. (The native-side `runModal` main-thread freeze is a documented GPUI 0.2.2 limit and stays.)
 - [x] Narrow the blanket `catch _kind, _reason -> {:error, :runtime_unavailable}` in `Guppy.Server.native_request/4`; it currently reports real bugs (e.g. `FunctionClauseError` in the native module) as runtime unavailability.
 - [x] Add backoff or a retry cap to the `Guppy.Window` reopen loop (`lib/guppy/window.ex` reopen retry); on persistent failure it retries every 50ms forever against a struggling runtime.
-- [ ] Make `native_gui_status` honest on non-macOS: `maybe_start_main_thread_runtime` stores `GUI_STARTED = true` without ever calling `run_app()`, so status reports `"started"` while every request times out. Report not-started/unsupported instead.
+- [x] Make `native_gui_status` honest on non-macOS: `maybe_start_main_thread_runtime` stores `GUI_STARTED = true` without ever calling `run_app()`, so status reports `"started"` while every request times out. Report not-started/unsupported instead.
 - [ ] Document (or reconcile) the open-window timeout race: if `native_open_window` succeeds natively but the reply lands after the caller timeout, Elixir drops the view id and the native window is live but ownerless.
 
 ## Priority 2: Measured hot-path cleanups (2026-06-09 code review)

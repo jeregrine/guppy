@@ -186,6 +186,7 @@ fn native_runtime_status() -> &'static str {
     }
 }
 
+#[cfg(target_os = "macos")]
 #[rustler::nif]
 fn native_gui_status() -> &'static str {
     if GUI_STARTED.load(Ordering::SeqCst) {
@@ -193,6 +194,12 @@ fn native_gui_status() -> &'static str {
     } else {
         "failed"
     }
+}
+
+#[cfg(not(target_os = "macos"))]
+#[rustler::nif]
+fn native_gui_status() -> &'static str {
+    "unsupported"
 }
 
 #[rustler::nif]
@@ -770,8 +777,10 @@ fn maybe_start_main_thread_runtime() -> bool {
 
     #[cfg(not(target_os = "macos"))]
     {
-        GUI_STARTED.store(true, Ordering::SeqCst);
-        true
+        // GPUI bootstrap is only wired for the macOS main-thread handoff
+        // today. Leave GUI_STARTED false so status stays honest and requests
+        // fail fast instead of timing out against a queue nothing drains.
+        false
     }
 }
 
