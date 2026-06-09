@@ -171,9 +171,10 @@ defmodule Guppy.Server do
   def handle_call({:close_window, view_id, timeout}, {caller, _tag}, state) do
     case validate_owned_view(state, caller, view_id) do
       :ok ->
-        case native_request(state, :close_window, {:close_window, [view_id]}, timeout) do
+        reply = native_request(state, :close_window, {:close_window, [view_id]}, timeout)
+
+        case normalize_native_reply(reply) do
           :ok -> {:reply, :ok, delete_view(state, view_id)}
-          {:ok, _payload} -> {:reply, :ok, delete_view(state, view_id)}
           {:error, reason} -> {:reply, {:error, reason}, state}
         end
 
@@ -306,11 +307,10 @@ defmodule Guppy.Server do
       view_id = state.next_view_id
       ir = Guppy.IR.unwrap(ir)
 
-      case native_request(state, :open_window, {:open_window, [view_id, ir, opts]}, timeout) do
-        :ok ->
-          {{:ok, view_id}, put_open_view(state, view_id, owner)}
+      reply = native_request(state, :open_window, {:open_window, [view_id, ir, opts]}, timeout)
 
-        {:ok, _payload} ->
+      case normalize_native_reply(reply) do
+        :ok ->
           {{:ok, view_id}, put_open_view(state, view_id, owner)}
 
         {:error, :native_timeout} ->
@@ -329,9 +329,10 @@ defmodule Guppy.Server do
     with :ok <- validate_owner(owner, caller),
          :ok <- validate_no_app_owner_conflict(state, owner),
          {:ok, menus} <- validate_menus(menus) do
-      case native_request(state, :set_menus, {:set_menus, [menus]}, timeout) do
+      case normalize_native_reply(
+             native_request(state, :set_menus, {:set_menus, [menus]}, timeout)
+           ) do
         :ok -> {:ok, put_menu_owner(state, owner, menus)}
-        {:ok, _payload} -> {:ok, put_menu_owner(state, owner, menus)}
         {:error, reason} -> {{:error, reason}, state}
       end
     else
@@ -343,9 +344,10 @@ defmodule Guppy.Server do
     with :ok <- validate_owner(owner, caller),
          :ok <- validate_no_app_owner_conflict(state, owner),
          {:ok, items} <- validate_dock_menu(items) do
-      case native_request(state, :set_dock_menu, {:set_dock_menu, [items]}, timeout) do
+      reply = native_request(state, :set_dock_menu, {:set_dock_menu, [items]}, timeout)
+
+      case normalize_native_reply(reply) do
         :ok -> {:ok, put_dock_menu_owner(state, owner, items)}
-        {:ok, _payload} -> {:ok, put_dock_menu_owner(state, owner, items)}
         {:error, reason} -> {{:error, reason}, state}
       end
     else
@@ -357,9 +359,10 @@ defmodule Guppy.Server do
     with :ok <- validate_owner(owner, caller),
          :ok <- validate_no_app_owner_conflict(state, owner),
          {:ok, label} <- validate_app_badge(label) do
-      case native_request(state, :set_app_badge, {:set_app_badge, [label]}, timeout) do
+      reply = native_request(state, :set_app_badge, {:set_app_badge, [label]}, timeout)
+
+      case normalize_native_reply(reply) do
         :ok -> {:ok, put_app_badge_owner(state, owner, label)}
-        {:ok, _payload} -> {:ok, put_app_badge_owner(state, owner, label)}
         {:error, reason} -> {{:error, reason}, state}
       end
     else
@@ -564,24 +567,20 @@ defmodule Guppy.Server do
   end
 
   defp maybe_register_event_target(state) do
-    case native_request(
-           state,
-           :set_event_target,
-           {:set_event_target, [self()]},
-           state.native_request_timeout
-         ) do
-      :ok -> state
-      {:ok, _payload} -> state
-      {:error, _reason} -> state
-    end
+    _ =
+      native_request(
+        state,
+        :set_event_target,
+        {:set_event_target, [self()]},
+        state.native_request_timeout
+      )
+
+    state
   end
 
   defp maybe_reset_native_views(state) do
-    case native_request(state, :close_all, {:close_all, []}, state.native_request_timeout) do
-      :ok -> state
-      {:ok, _payload} -> state
-      {:error, _reason} -> state
-    end
+    _ = native_request(state, :close_all, {:close_all, []}, state.native_request_timeout)
+    state
   end
 
   # Dialog-style requests can legitimately stay open for a long time (the
