@@ -1,9 +1,11 @@
 Code.require_file("support/table_tree_shared.exs", __DIR__)
+Code.require_file("support/ui.exs", __DIR__)
 
 defmodule Examples.DataTableTreeWindow do
   use Guppy.Window
 
   alias Examples.TableTreeShared
+  alias Examples.UI
 
   @impl Guppy.Window
   def mount(_arg, window) do
@@ -11,7 +13,7 @@ defmodule Examples.DataTableTreeWindow do
      window
      |> put_window_opts(
        window_bounds: [width: 920, height: 640],
-       titlebar: [title: "Guppy data/table tree demo"]
+       titlebar: [title: "Tasks"]
      )
      |> assign(:expanded, MapSet.new(["all", "platform"]))
      |> assign(:selected_tree_id, "platform")
@@ -110,33 +112,22 @@ defmodule Examples.DataTableTreeWindow do
       })
 
     ~GUI"""
-    <div id="table_tree_root" class="flex flex-col w-full h-full gap-4 p-6 bg-[#0f172a] text-[#f8fafc]">
-      <div id="header" class="flex flex-col gap-2 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-        <text id="title" class="text-2xl font-black">Semantic table + tree</text>
-        <text id="subtitle" class="text-base text-[#94a3b8]">
-          Tree expansion, table row/cell selection, sorting, pinned-leading columns, Alt-Left/Alt-Right header reordering, and Shift-Left/Shift-Right header resizing are Elixir-owned state driven by native semantic events.
-        </text>
-        <text id="state_summary" class="text-sm text-[#bfdbfe]">
-          Scope {@selected_label}; selected row {@selected_row_label}; sort {@sort_label}
-        </text>
-      </div>
-
+    <div id="table_tree_root" class={UI.window_class()}>
       <div id="workspace" class="flex flex-row gap-4 flex-1 min-h-0">
-        <div id="tree_panel" class="flex flex-col gap-2 w-[240px] p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-          <text id="tree_title" class="text-lg font-bold">Projects</text>
+        <div id="tree_panel" class="flex flex-col gap-2 w-[220px]">
+          <text id="tree_title" class="text-sm font-semibold">Projects</text>
           <tree
             id="project_tree"
             nodes={@tree_nodes}
             selected_id={@selected_tree_id}
-            class="flex-1 rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-            row_class="border-b-1 border-[#1e293b]"
+            class={"flex-1 " <> UI.panel_class()}
             select="select_tree"
             toggle="toggle_tree"
           />
         </div>
 
-        <div id="table_panel" class="flex flex-col gap-2 flex-1 p-4 rounded-xl border-1 border-[#334155] bg-[#111827] shadow-md">
-          <text id="table_title" class="text-lg font-bold">Tasks</text>
+        <div id="table_panel" class="flex flex-col gap-2 flex-1">
+          <text id="table_title" class="text-sm font-semibold">Tasks</text>
           <data_table
             id="task_table"
             columns={@table_columns}
@@ -144,9 +135,9 @@ defmodule Examples.DataTableTreeWindow do
             selected_row_id={@selected_row_id}
             selected_cell={@selected_cell}
             sort_state={@sort}
-            class="flex-1 rounded-lg border-1 border-[#1e293b] bg-[#0b1220]"
-            header_class="border-b-1 border-[#334155] bg-[#172554] text-[#bfdbfe] font-bold"
-            row_class="border-b-1 border-[#1e293b]"
+            class={"flex-1 " <> UI.panel_class()}
+            header_class={"border-b-1 border-[#d2d2d7] bg-[#f5f5f7] font-semibold text-[" <> UI.text_secondary() <> "]"}
+            row_class="border-b-1 border-[#ececf0]"
             cell_class="text-sm"
             row_click="select_row"
             cell_click="select_cell"
@@ -156,6 +147,10 @@ defmodule Examples.DataTableTreeWindow do
           />
         </div>
       </div>
+
+      <text id="state_summary" class={UI.caption_class()}>
+        Scope {@selected_label}; selected row {@selected_row_label}; sort {@sort_label}. Click headers to sort, Alt-Left/Alt-Right to reorder, Shift-Left/Shift-Right to resize.
+      </text>
     </div>
     """
   end
@@ -212,17 +207,17 @@ defmodule Examples.DataTableTreeWindow do
   end
 
   defp selected_row_style(true),
-    do: [Guppy.Style.bg_hex("#172554"), Guppy.Style.border_color_hex("#2563eb")]
+    do: [Guppy.Style.bg_hex("#eaf2fe"), Guppy.Style.border_color_hex(UI.accent())]
 
   defp selected_row_style(false), do: []
 
   defp selected_cell_style(true),
-    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#eff6ff")]
+    do: [Guppy.Style.bg_hex(UI.accent()), Guppy.Style.text_color_hex("#ffffff")]
 
   defp selected_cell_style(false), do: []
 
   defp selected_tree_style(true),
-    do: [Guppy.Style.bg_hex("#1d4ed8"), Guppy.Style.text_color_hex("#eff6ff")]
+    do: [Guppy.Style.bg_hex(UI.accent()), Guppy.Style.text_color_hex("#ffffff")]
 
   defp selected_tree_style(false), do: []
 end
