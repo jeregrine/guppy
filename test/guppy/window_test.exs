@@ -108,6 +108,42 @@ defmodule Guppy.WindowTest do
     assert %Guppy.Window{view_id: nil, assigns: %{count: 7}} = next_state.window
   end
 
+  test "reopen retry delay backs off exponentially and caps" do
+    assert Guppy.Window.reopen_retry_delay_ms(0) == 50
+    assert Guppy.Window.reopen_retry_delay_ms(1) == 100
+    assert Guppy.Window.reopen_retry_delay_ms(2) == 200
+    assert Guppy.Window.reopen_retry_delay_ms(6) == 3_200
+    assert Guppy.Window.reopen_retry_delay_ms(7) == 5_000
+    assert Guppy.Window.reopen_retry_delay_ms(50) == 5_000
+  end
+
+  test "failed reopen retries track the attempt count for backoff" do
+    state = %Guppy.Window.State{
+      module: Guppy.BrokenRenderWindow,
+      window: %Guppy.Window{view_id: nil, assigns: %{}},
+      server_monitor: nil
+    }
+
+    assert {:noreply, retried} =
+             Guppy.Window.handle_window_message(
+               Guppy.BrokenRenderWindow,
+               :guppy_reopen_after_server_restart,
+               state
+             )
+
+    assert retried.reopen_attempts == 1
+    assert retried.window.view_id == nil
+
+    assert {:noreply, retried_again} =
+             Guppy.Window.handle_window_message(
+               Guppy.BrokenRenderWindow,
+               :guppy_reopen_after_server_restart,
+               retried
+             )
+
+    assert retried_again.reopen_attempts == 2
+  end
+
   test "Guppy.Window reopens after Guppy.Server restarts" do
     case Guppy.Native.Nif.load_status() do
       :ok ->

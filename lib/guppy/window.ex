@@ -46,7 +46,26 @@ defmodule Guppy.Window do
 
   defmodule State do
     @moduledoc false
-    defstruct module: nil, window: nil, server_monitor: nil, app: nil, app_window_id: nil
+    defstruct module: nil,
+              window: nil,
+              server_monitor: nil,
+              app: nil,
+              app_window_id: nil,
+              reopen_attempts: 0
+  end
+
+  @reopen_retry_base_delay_ms 50
+  @reopen_retry_max_delay_ms 5_000
+
+  @doc """
+  Returns the reopen retry delay for a failed-reopen attempt count.
+
+  Delays double from #{@reopen_retry_base_delay_ms}ms and cap at
+  #{@reopen_retry_max_delay_ms}ms so a persistently failing runtime is not
+  hammered with reopen attempts.
+  """
+  def reopen_retry_delay_ms(attempt) when is_integer(attempt) and attempt >= 0 do
+    min(@reopen_retry_base_delay_ms * Integer.pow(2, attempt), @reopen_retry_max_delay_ms)
   end
 
   defmacro __using__(_opts) do
@@ -270,11 +289,27 @@ defmodule Guppy.Window do
     case safe_open_window(ir, window_options) do
       {:ok, view_id} ->
         {:noreply,
-         %{state | window: %{window | view_id: view_id}, server_monitor: monitor_server()}}
+         %{
+           state
+           | window: %{window | view_id: view_id},
+             server_monitor: monitor_server(),
+             reopen_attempts: 0
+         }}
 
       {:error, _reason} ->
-        Process.send_after(self(), :guppy_reopen_after_server_restart, 50)
-        {:noreply, %{state | window: %{window | view_id: nil}, server_monitor: monitor_server()}}
+        Process.send_after(
+          self(),
+          :guppy_reopen_after_server_restart,
+          reopen_retry_delay_ms(state.reopen_attempts)
+        )
+
+        {:noreply,
+         %{
+           state
+           | window: %{window | view_id: nil},
+             server_monitor: monitor_server(),
+             reopen_attempts: state.reopen_attempts + 1
+         }}
     end
   end
 

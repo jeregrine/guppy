@@ -193,6 +193,16 @@ defmodule Guppy.BlockingNative do
   end
 end
 
+defmodule Guppy.BrokenRenderWindow do
+  use Guppy.Window
+
+  @impl Guppy.Window
+  def mount(:ok, window), do: {:ok, window}
+
+  @impl Guppy.Window
+  def render(_window), do: %{kind: :not_a_real_node}
+end
+
 defmodule Guppy.BuggyNative do
   def request(_server, {:ping, []}, _timeout), do: Map.fetch!(%{}, :missing)
   def request(_server, _request, _timeout), do: :ok
