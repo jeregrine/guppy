@@ -79,15 +79,15 @@ defmodule Guppy.Examples.Priority3FocusKeyboard.MainWindow do
             </text>
           </div>
 
-          <div id="shortcut_panel" class="flex flex-row gap-4 p-4 rounded-md border-1 border-[#7c3aed] bg-[#1e1b4b]">
+          <div id="shortcut_panel" class="flex flex-row gap-4 p-4 rounded-md border-1 border-[#ddd2f7] bg-[#f3eefe]">
             <div id="shortcut_notes" class="flex flex-col gap-2 flex-1">
-              <text class="text-lg font-bold text-[#ddd6fe]">Shortcut priority</text>
-              <text class="text-sm text-[#c4b5fd] leading-snug">
+              <text class="text-lg font-bold text-[#1d1d1f]">Shortcut priority</text>
+              <text class="text-sm text-[#6e6e73] leading-snug">
                 The window root has an app command on Cmd-K. The text input has its own Cmd-K shortcut. Focus the input and press Cmd-K: the focused text-input action stops propagation before the app-command root.
               </text>
             </div>
             <div id="shortcut_input_box" class="flex flex-col gap-2 w-[520px]">
-              <text class="text-sm font-bold text-[#ddd6fe]">Local text-input shortcut target</text>
+              <text class="text-sm font-bold text-[#1d1d1f]">Local text-input shortcut target</text>
               <text_input
                 id="priority_note"
                 value={@note}

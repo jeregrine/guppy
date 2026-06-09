@@ -33,7 +33,7 @@ defmodule Guppy.Examples.NativeAppShellDemo.MainWindow do
       </div>
 
       <div id="button_grid" class="grid grid-cols-2 gap-3">
-        <button id="badge_inc" click="badge_inc" class="p-3 rounded-lg border-1 border-[#007aff] bg-[#1d4ed8] text-[#ffffff]">Increment app badge</button>
+        <button id="badge_inc" click="badge_inc" class="p-3 rounded-lg border-1 border-[#007aff] bg-[#007aff] text-[#ffffff]">Increment app badge</button>
         <button id="badge_clear" click="badge_clear" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ececf0]">Clear app badge</button>
         <button id="open_file" click="open_file" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff]">Open .ex/.exs file...</button>
         <button id="choose_dir" click="choose_dir" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff]">Choose directory...</button>
@@ -41,13 +41,13 @@ defmodule Guppy.Examples.NativeAppShellDemo.MainWindow do
         <button id="open_secondary" click="open_secondary" class="p-3 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff]">Open/focus secondary window</button>
       </div>
 
-      <div id="context_panel" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#7c3aed] bg-[#1e1b4b]">
+      <div id="context_panel" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#ddd2f7] bg-[#f3eefe]">
         <text id="context_title" class="text-lg font-bold">Context menu + focus return</text>
-        <text class="text-sm text-[#c4b5fd]">Right-click this panel or focus it and press Shift-F10. Selecting an item dispatches an app command, closes the popup, and focuses this main window again.</text>
-        <div id="context_target" context_menu="open_context_menu" focusable="true" tab_index="1" class="p-4 rounded-lg border-1 border-[#a78bfa] bg-[#312e81] cursor-context-menu">
+        <text class="text-sm text-[#6e6e73]">Right-click this panel or focus it and press Shift-F10. Selecting an item dispatches an app command, closes the popup, and focuses this main window again.</text>
+        <div id="context_target" context_menu="open_context_menu" focusable="true" tab_index="1" class="p-4 rounded-lg border-1 border-[#ddd2f7] bg-[#ffffff] cursor-context-menu">
           <text>Context target - right-click / Shift-F10 here</text>
         </div>
-        <button id="context_button" click="open_context_menu" class="p-2 rounded-lg border-1 border-[#a78bfa] bg-[#4c1d95] text-[#ffffff]">Open same context menu from button</button>
+        <button id="context_button" click="open_context_menu" class="p-2 rounded-lg border-1 border-[#d2d2d7] bg-[#ffffff] text-[#1d1d1f]">Open same context menu from button</button>
       </div>
 
       <div id="lifecycle_panel" class="flex flex-col gap-2 p-4 rounded-md border-1 border-[#d2d2d7] bg-[#ffffff] flex-1">

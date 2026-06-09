@@ -172,11 +172,7 @@ defmodule Examples.KanbanTodoWindow do
       <div id="top_shell" class="flex flex-col gap-2 p-2 rounded-md border-1 border-[#ececf0] bg-[#f5f5f7]">
         <div id="board_header" class="flex flex-row items-center justify-between gap-2">
           <div id="board_header_copy" class="flex flex-col gap-1 flex-1">
-            <text id="eyebrow" class="text-xs font-semibold text-[#93c5fd]">PRODUCT DELIVERY</text>
-            <text id="title" class="text-xl font-semibold">Launch readiness board</text>
-            <text id="subtitle" class="text-xs text-[#6e6e73] leading-snug">
-              Release work, blockers, and final polish in one dense production-style surface.
-            </text>
+            <text id="title" class="text-xl font-semibold">Launch readiness</text>
           </div>
 
           <div id="header_metrics" class="flex flex-row items-center gap-2">
