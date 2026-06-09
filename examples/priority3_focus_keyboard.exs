@@ -605,11 +605,6 @@ else
     "Try Tab/Shift-Tab, arrows, Home/End, Enter/Space, Shift-F10, Cmd-K, Alt-Left/Right, and Shift-Left/Right."
   )
 
-  IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
-  IO.puts("native_build_info: #{inspect(Guppy.native_build_info())}")
-  IO.puts("native_runtime_status: #{inspect(Guppy.native_runtime_status())}")
-  IO.puts("native_gui_status: #{inspect(Guppy.native_gui_status())}")
-
   {:ok, app_pid} = Guppy.Examples.Priority3FocusKeyboard.start_link([])
 
   {:ok, _main_window} =

@@ -775,13 +775,8 @@ end
 {:ok, _} = Application.ensure_all_started(:guppy)
 
 IO.puts("Guppy kanban board example")
-IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
-IO.puts("native_build_info: #{inspect(Guppy.native_build_info())}")
-IO.puts("native_runtime_status: #{inspect(Guppy.native_runtime_status())}")
-IO.puts("native_gui_status: #{inspect(Guppy.native_gui_status())}")
 
 {:ok, pid} = Examples.KanbanTodoWindow.start_link(:ok)
-IO.puts("opened_view_id: #{inspect(Guppy.Window.view_id(pid))}")
 
 Process.monitor(pid)
 

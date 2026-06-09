@@ -212,8 +212,6 @@ else
     "Try select keyboard controls, popover Escape/outside close, and right-click/Shift-F10 context menu."
   )
 
-  IO.puts("load_status: #{inspect(Guppy.Native.Nif.load_status())}")
-
   {:ok, pid} = Guppy.Examples.OverlayDemoWindow.start_link([])
   ref = Process.monitor(pid)
 
