@@ -108,6 +108,27 @@ defmodule Guppy.WindowTest do
     assert %Guppy.Window{view_id: nil, assigns: %{count: 7}} = next_state.window
   end
 
+  test "unmatched window callbacks log a debug skip" do
+    state = %Guppy.Window.State{
+      module: Guppy.TestCounterWindow,
+      window: %Guppy.Window{view_id: 1, assigns: %{count: 0}},
+      server_monitor: nil
+    }
+
+    log =
+      ExUnit.CaptureLog.capture_log([level: :debug], fn ->
+        assert {:noreply, _next_state} =
+                 Guppy.Window.handle_window_message(
+                   Guppy.TestCounterWindow,
+                   {:guppy_event, 1, %{type: :click, callback: "no_such_callback", id: "x"}},
+                   state
+                 )
+      end)
+
+    assert log =~ "TestCounterWindow"
+    assert log =~ "no_such_callback"
+  end
+
   test "reopen retry delay backs off exponentially and caps" do
     assert Guppy.Window.reopen_retry_delay_ms(0) == 50
     assert Guppy.Window.reopen_retry_delay_ms(1) == 100

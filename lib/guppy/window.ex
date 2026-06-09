@@ -25,6 +25,8 @@ defmodule Guppy.Window do
   so window modules can be supervised directly.
   """
 
+  require Logger
+
   @type t :: %__MODULE__{
           view_id: pos_integer() | nil,
           assigns: map(),
@@ -368,19 +370,21 @@ defmodule Guppy.Window do
   defp invoke_callback(module, function, args) do
     apply(module, function, args)
   rescue
-    error in FunctionClauseError ->
+    error in [FunctionClauseError, UndefinedFunctionError] ->
       if callback_error?(error, module, function, args) do
+        log_unmatched_callback(module, function, args)
         {:noreply, List.last(args), :skip_render}
       else
         reraise error, __STACKTRACE__
       end
+  end
 
-    error in UndefinedFunctionError ->
-      if callback_error?(error, module, function, args) do
-        {:noreply, List.last(args), :skip_render}
-      else
-        reraise error, __STACKTRACE__
-      end
+  defp log_unmatched_callback(module, function, args) do
+    Logger.debug(fn ->
+      head = inspect(List.first(args), limit: 5, printable_limit: 120)
+
+      "#{inspect(module)}.#{function}/#{length(args)} has no clause for #{head}; skipping rerender"
+    end)
   end
 
   defp callback_error?(error, module, function, args) do

@@ -41,7 +41,7 @@ Each of these is measurable with the existing counters/benchmarks; verify before
 
 - [x] Fix `examples/counter.exs`: it `receive`s a `:DOWN` message but never calls `Process.monitor(pid)`, so the script hangs forever after the window closes. Also add the `Application.ensure_all_started(:guppy)` line for consistency.
 - [x] Sync the README example list: `counter.exs`, `click_counter.exs`, `text_clicks.exs`, `style_gallery.exs`, and `markdownview.exs` are now listed; `counter.exs` is documented as the smallest interactive example (kept separate from `click_counter.exs` rather than folded).
-- [ ] Optional: add a debug-level log on the `Guppy.Window` unmatched-callback no-op path so app authors notice typo'd callback names.
+- [x] Optional: add a debug-level log on the `Guppy.Window` unmatched-callback no-op path so app authors notice typo'd callback names.
 
 ## Priority 4: Packaging and distribution hardening
 
