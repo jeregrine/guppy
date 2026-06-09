@@ -86,7 +86,7 @@ defmodule Examples.MarkdownViewWindow do
       <div id="top_header" class="flex flex-row items-center justify-between p-1 border-b-1 border-[#E6E4D9] bg-[#FFFCF0]">
         <div id="traffic_light_spacer" class="w-[74px] flex-shrink-0" />
         <div id="title_block" class="flex flex-col gap-1 flex-1 w-[0px]">
-          <text id="current_filename" class="text-lg font-black text-[#100F0F]">{@filename}</text>
+          <text id="current_filename" class="text-lg font-semibold text-[#100F0F]">{@filename}</text>
           <text id="current_path" class="text-xs text-[#6F6E69]">{@path_label}</text>
         </div>
         <div id="open_file_button" click="open_file" tooltip="Open Markdown file" class="w-[36px] h-[36px] rounded-full border-1 border-[#DAD8CE] bg-[#F2F0E5] cursor-pointer flex items-center justify-center" hover_class="bg-[#E6E4D9]">

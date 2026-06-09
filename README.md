@@ -154,7 +154,7 @@ Smallest interactive example: one window process, one assign, one click handler.
 mix run examples/click_counter.exs
 ```
 
-Annotated click-counter variant with multiple buttons, event logging, and panel styling.
+Click-counter variant with a second action and derived label state.
 
 ```bash
 mix run examples/text_clicks.exs
