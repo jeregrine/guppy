@@ -34,3 +34,7 @@ guppy-*.tar
 # Local planning scratchpad.
 PLANS.md
 
+# Claude Code worktrees and session files. Important for colocated jj, which
+# would otherwise snapshot entire worktrees into the working-copy commit.
+/.claude/
+

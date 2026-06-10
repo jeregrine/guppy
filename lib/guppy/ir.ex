@@ -1116,17 +1116,102 @@ defmodule Guppy.IR do
   @list_row_radio_keys [:value | @list_row_checkbox_keys]
 
   @spec text(String.t(), keyword()) :: text_node()
-  def text(content, opts \\ []) when is_binary(content) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    events = Keyword.get(opts, :events)
 
-    %{kind: :text, content: content}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:events, events)
+  @state_style_opt_keys [
+    :hover_style,
+    :focus_style,
+    :focus_visible_style,
+    :in_focus_style,
+    :active_style,
+    :disabled_style
+  ]
+
+  @div_opt_keys [:id, :style] ++
+                  @state_style_opt_keys ++
+                  [
+                    :animation,
+                    :disabled,
+                    :stack_priority,
+                    :occlude,
+                    :focusable,
+                    :tab_stop,
+                    :tab_index,
+                    :track_scroll,
+                    :anchor_scroll,
+                    :scroll_to,
+                    :tooltip,
+                    :actions,
+                    :shortcuts,
+                    :events
+                  ]
+
+  @popover_opt_keys [
+    :id,
+    :style,
+    :popover_style,
+    :anchor,
+    :anchor_position,
+    :anchor_offset,
+    :anchor_position_mode,
+    :anchor_fit,
+    :snap_margin,
+    :close_on_click_outside,
+    :stack_priority,
+    :disabled,
+    :events
+  ]
+
+  @select_opt_keys [
+    :id,
+    :value,
+    :open,
+    :placeholder,
+    :style,
+    :list_style,
+    :option_style,
+    :anchor,
+    :anchor_offset,
+    :anchor_fit,
+    :snap_margin,
+    :disabled,
+    :tab_index,
+    :events
+  ]
+
+  @choice_opt_keys [:value, :id, :style] ++
+                     @state_style_opt_keys ++ [:disabled, :tab_index, :events]
+
+  @button_opt_keys [:id, :style] ++
+                     @state_style_opt_keys ++
+                     [:animation, :disabled, :tab_index, :actions, :shortcuts, :events]
+
+  @input_opt_keys [
+    :id,
+    :placeholder,
+    :style,
+    :disabled,
+    :tab_index,
+    :actions,
+    :shortcuts,
+    :events
+  ]
+
+  # Copies the known optional keys from opts onto the node, skipping nils.
+  defp put_opts(node, opts, keys) do
+    Enum.reduce(keys, node, fn key, acc -> maybe_put(acc, key, Keyword.get(opts, key)) end)
   end
 
+  @doc "Builds a text leaf node; `opts` may carry `:id`, `:style`, and `:events`."
+  def text(content, opts \\ []) when is_binary(content) and is_list(opts) do
+    put_opts(%{kind: :text, content: content}, opts, [:id, :style, :events])
+  end
+
+  @doc """
+  Builds a text node from a list of styled runs.
+
+  Runs may be plain strings, `{text, style}` tuples, or `%{text: ..., style: ...}`
+  maps; the node's `content` is the concatenation of all run text.
+  """
   @spec rich_text([text_run() | String.t() | {String.t(), style()}], keyword()) :: text_node()
   def rich_text(runs, opts \\ []) when is_list(runs) and is_list(opts) do
     normalized_runs = Enum.map(runs, &normalize_text_run!/1)
@@ -1151,256 +1236,123 @@ defmodule Guppy.IR do
     raise ArgumentError, "invalid rich text run: #{inspect(other)}"
   end
 
+  @doc """
+  Builds a container node with flex/grid layout, styling, and event options.
+
+  See the module type docs for the supported `opts` keys (`:id`, `:style`,
+  state styles, `:events`, focus/scroll behavior flags, `:actions`, and
+  `:shortcuts`).
+  """
   @spec div([ir_node()], keyword()) :: div_node()
   def div(children, opts \\ []) when is_list(children) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    events = Keyword.get(opts, :events)
-    hover_style = Keyword.get(opts, :hover_style)
-    focus_style = Keyword.get(opts, :focus_style)
-    focus_visible_style = Keyword.get(opts, :focus_visible_style)
-    in_focus_style = Keyword.get(opts, :in_focus_style)
-    active_style = Keyword.get(opts, :active_style)
-    disabled_style = Keyword.get(opts, :disabled_style)
-    animation = Keyword.get(opts, :animation)
-    disabled = Keyword.get(opts, :disabled)
-    stack_priority = Keyword.get(opts, :stack_priority)
-    occlude = Keyword.get(opts, :occlude)
-    focusable = Keyword.get(opts, :focusable)
-    tab_stop = Keyword.get(opts, :tab_stop)
-    tab_index = Keyword.get(opts, :tab_index)
-    track_scroll = Keyword.get(opts, :track_scroll)
-    anchor_scroll = Keyword.get(opts, :anchor_scroll)
-    scroll_to = Keyword.get(opts, :scroll_to)
-    tooltip = Keyword.get(opts, :tooltip)
-    actions = Keyword.get(opts, :actions)
-    shortcuts = Keyword.get(opts, :shortcuts)
-
-    %{kind: :div, children: children}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:hover_style, hover_style)
-    |> maybe_put(:focus_style, focus_style)
-    |> maybe_put(:focus_visible_style, focus_visible_style)
-    |> maybe_put(:in_focus_style, in_focus_style)
-    |> maybe_put(:active_style, active_style)
-    |> maybe_put(:disabled_style, disabled_style)
-    |> maybe_put(:animation, animation)
-    |> maybe_put(:disabled, disabled)
-    |> maybe_put(:stack_priority, stack_priority)
-    |> maybe_put(:occlude, occlude)
-    |> maybe_put(:focusable, focusable)
-    |> maybe_put(:tab_stop, tab_stop)
-    |> maybe_put(:tab_index, tab_index)
-    |> maybe_put(:track_scroll, track_scroll)
-    |> maybe_put(:anchor_scroll, anchor_scroll)
-    |> maybe_put(:scroll_to, scroll_to)
-    |> maybe_put(:tooltip, tooltip)
-    |> maybe_put(:actions, actions)
-    |> maybe_put(:shortcuts, shortcuts)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: :div, children: children}, opts, @div_opt_keys)
   end
 
+  @doc "Builds a scrollable container; `:axis` may be `:x`, `:y`, or `:both`."
   @spec scroll([ir_node()], keyword()) :: scroll_node()
   def scroll(children, opts \\ []) when is_list(children) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    axis = Keyword.get(opts, :axis)
-    style = Keyword.get(opts, :style)
-
-    %{kind: :scroll, children: children}
-    |> maybe_put(:id, id)
-    |> maybe_put(:axis, axis)
-    |> maybe_put(:style, style)
+    put_opts(%{kind: :scroll, children: children}, opts, [:id, :axis, :style])
   end
 
+  @doc """
+  Builds a popover trigger labeled `label` whose overlay children render while
+  `open` is true. Anchor/fit/close behavior is controlled through `opts`.
+  """
   @spec popover(String.t(), boolean(), [ir_node()], keyword()) :: popover_node()
   def popover(label, open, children, opts \\ [])
       when is_binary(label) and is_boolean(open) and is_list(children) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    popover_style = Keyword.get(opts, :popover_style)
-    anchor = Keyword.get(opts, :anchor)
-    anchor_position = Keyword.get(opts, :anchor_position)
-    anchor_offset = Keyword.get(opts, :anchor_offset)
-    anchor_position_mode = Keyword.get(opts, :anchor_position_mode)
-    anchor_fit = Keyword.get(opts, :anchor_fit)
-    snap_margin = Keyword.get(opts, :snap_margin)
-    close_on_click_outside = Keyword.get(opts, :close_on_click_outside)
-    stack_priority = Keyword.get(opts, :stack_priority)
-    disabled = Keyword.get(opts, :disabled)
-    events = Keyword.get(opts, :events)
-
-    %{kind: :popover, label: label, open: open, children: children}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:popover_style, popover_style)
-    |> maybe_put(:anchor, anchor)
-    |> maybe_put(:anchor_position, anchor_position)
-    |> maybe_put(:anchor_offset, anchor_offset)
-    |> maybe_put(:anchor_position_mode, anchor_position_mode)
-    |> maybe_put(:anchor_fit, anchor_fit)
-    |> maybe_put(:snap_margin, snap_margin)
-    |> maybe_put(:close_on_click_outside, close_on_click_outside)
-    |> maybe_put(:stack_priority, stack_priority)
-    |> maybe_put(:disabled, disabled)
-    |> maybe_put(:events, events)
+    put_opts(
+      %{kind: :popover, label: label, open: open, children: children},
+      opts,
+      @popover_opt_keys
+    )
   end
 
+  @doc "Builds a virtualized list of uniform-height items."
   @spec uniform_list([uniform_list_item()], keyword()) :: uniform_list_node()
   def uniform_list(items, opts \\ []) when is_list(items) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    item_style = Keyword.get(opts, :item_style)
-    events = Keyword.get(opts, :events)
-
-    %{kind: :uniform_list, items: items}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:item_style, item_style)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: :uniform_list, items: items}, opts, [:id, :style, :item_style, :events])
   end
 
+  @doc "Builds a virtualized list of variable-height rows with optional row controls."
   @spec list([list_item()], keyword()) :: list_node()
   def list(items, opts \\ []) when is_list(items) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    item_style = Keyword.get(opts, :item_style)
-    events = Keyword.get(opts, :events)
-
-    %{kind: :list, items: items}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:item_style, item_style)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: :list, items: items}, opts, [:id, :style, :item_style, :events])
   end
 
+  @doc """
+  Builds a semantic virtualized table from column specs and row data.
+
+  Selection (`:selected_row_id`, `:selected_cell`) and `:sort` are
+  Elixir-owned state echoed back through table events.
+  """
   @spec data_table([data_table_column()], [data_table_row()], keyword()) :: data_table_node()
   def data_table(columns, rows, opts \\ [])
       when is_list(columns) and is_list(rows) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    header_style = Keyword.get(opts, :header_style)
-    row_style = Keyword.get(opts, :row_style)
-    cell_style = Keyword.get(opts, :cell_style)
-    selected_row_id = Keyword.get(opts, :selected_row_id)
-    selected_cell = Keyword.get(opts, :selected_cell)
-    sort = Keyword.get(opts, :sort)
-    events = Keyword.get(opts, :events)
-
-    %{kind: :data_table, columns: columns, rows: rows}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:header_style, header_style)
-    |> maybe_put(:row_style, row_style)
-    |> maybe_put(:cell_style, cell_style)
-    |> maybe_put(:selected_row_id, selected_row_id)
-    |> maybe_put(:selected_cell, selected_cell)
-    |> maybe_put(:sort, sort)
-    |> maybe_put(:events, events)
+    put_opts(
+      %{kind: :data_table, columns: columns, rows: rows},
+      opts,
+      [
+        :id,
+        :style,
+        :header_style,
+        :row_style,
+        :cell_style,
+        :selected_row_id,
+        :selected_cell,
+        :sort,
+        :events
+      ]
+    )
   end
 
+  @doc "Builds a semantic tree with Elixir-owned selection and expansion state."
   @spec tree([tree_item()], keyword()) :: tree_node()
   def tree(nodes, opts \\ []) when is_list(nodes) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    row_style = Keyword.get(opts, :row_style)
-    selected_id = Keyword.get(opts, :selected_id)
-    events = Keyword.get(opts, :events)
-
-    %{kind: :tree, nodes: nodes}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:row_style, row_style)
-    |> maybe_put(:selected_id, selected_id)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: :tree, nodes: nodes}, opts, [:id, :style, :row_style, :selected_id, :events])
   end
 
+  @doc "Builds a data-only canvas that paints ordered rect/rounded-rect/pattern commands."
   @spec canvas([canvas_command()], keyword()) :: canvas_node()
   def canvas(commands, opts \\ []) when is_list(commands) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    events = Keyword.get(opts, :events)
-
-    %{kind: :canvas, commands: commands}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: :canvas, commands: commands}, opts, [:id, :style, :events])
   end
 
+  @doc "Builds a select control over `options`; `:value` and `:open` are Elixir-owned."
   @spec select([select_option()], keyword()) :: select_node()
   def select(options, opts \\ []) when is_list(options) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    value = Keyword.get(opts, :value)
-    open = Keyword.get(opts, :open)
-    placeholder = Keyword.get(opts, :placeholder)
-    style = Keyword.get(opts, :style)
-    list_style = Keyword.get(opts, :list_style)
-    option_style = Keyword.get(opts, :option_style)
-    anchor = Keyword.get(opts, :anchor)
-    anchor_offset = Keyword.get(opts, :anchor_offset)
-    anchor_fit = Keyword.get(opts, :anchor_fit)
-    snap_margin = Keyword.get(opts, :snap_margin)
-    disabled = Keyword.get(opts, :disabled)
-    tab_index = Keyword.get(opts, :tab_index)
-    events = Keyword.get(opts, :events)
-
-    %{kind: :select, options: options}
-    |> maybe_put(:id, id)
-    |> maybe_put(:value, value)
-    |> maybe_put(:open, open)
-    |> maybe_put(:placeholder, placeholder)
-    |> maybe_put(:style, style)
-    |> maybe_put(:list_style, list_style)
-    |> maybe_put(:option_style, option_style)
-    |> maybe_put(:anchor, anchor)
-    |> maybe_put(:anchor_offset, anchor_offset)
-    |> maybe_put(:anchor_fit, anchor_fit)
-    |> maybe_put(:snap_margin, snap_margin)
-    |> maybe_put(:disabled, disabled)
-    |> maybe_put(:tab_index, tab_index)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: :select, options: options}, opts, @select_opt_keys)
   end
 
+  @doc """
+  Builds an image node. `source` is a URL string or a `{:path, path}`,
+  `{:uri, uri}`, or `{:embedded, key}` tuple.
+  """
   @spec image(image_source(), keyword()) :: image_node()
   def image(source, opts \\ []) when is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    object_fit = Keyword.get(opts, :object_fit)
-    grayscale = Keyword.get(opts, :grayscale)
-
-    %{kind: :image, source: source}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:object_fit, object_fit)
-    |> maybe_put(:grayscale, grayscale)
+    put_opts(%{kind: :image, source: source}, opts, [:id, :style, :object_fit, :grayscale])
   end
 
+  @doc "Builds a flexible spacer node."
   @spec spacer(keyword()) :: spacer_node()
   def spacer(opts \\ []) when is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-
-    %{kind: :spacer}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
+    put_opts(%{kind: :spacer}, opts, [:id, :style])
   end
 
+  @doc "Builds an icon node; `source` matches `image/2` sources."
   @spec icon(image_source(), keyword()) :: icon_node()
   def icon(source, opts \\ []) when is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-
-    %{kind: :icon, source: source}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
+    put_opts(%{kind: :icon, source: source}, opts, [:id, :style])
   end
 
+  @doc "Builds a checkbox; `checked` is Elixir-owned and `change` events report toggles."
   @spec checkbox(String.t(), boolean(), keyword()) :: checkbox_node()
   def checkbox(label, checked, opts \\ [])
       when is_binary(label) and is_boolean(checked) and is_list(opts) do
     choice_node(:checkbox, label, checked, opts)
   end
 
+  @doc "Builds a radio button carrying `value`; group state lives in Elixir."
   @spec radio(String.t(), String.t(), boolean(), keyword()) :: radio_node()
   def radio(label, value, checked, opts \\ [])
       when is_binary(label) and is_binary(value) and is_boolean(checked) and is_list(opts) do
@@ -1411,99 +1363,35 @@ defmodule Guppy.IR do
     do: Map.new(kind: kind, label: label, checked: checked)
 
   defp choice_node(kind, label, checked, opts) do
-    id = Keyword.get(opts, :id)
-    value = Keyword.get(opts, :value)
-    style = Keyword.get(opts, :style)
-    events = Keyword.get(opts, :events)
-    hover_style = Keyword.get(opts, :hover_style)
-    focus_style = Keyword.get(opts, :focus_style)
-    focus_visible_style = Keyword.get(opts, :focus_visible_style)
-    in_focus_style = Keyword.get(opts, :in_focus_style)
-    active_style = Keyword.get(opts, :active_style)
-    disabled_style = Keyword.get(opts, :disabled_style)
-    disabled = Keyword.get(opts, :disabled)
-    tab_index = Keyword.get(opts, :tab_index)
-
-    choice_base(kind, label, checked)
-    |> maybe_put(:value, value)
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:hover_style, hover_style)
-    |> maybe_put(:focus_style, focus_style)
-    |> maybe_put(:focus_visible_style, focus_visible_style)
-    |> maybe_put(:in_focus_style, in_focus_style)
-    |> maybe_put(:active_style, active_style)
-    |> maybe_put(:disabled_style, disabled_style)
-    |> maybe_put(:disabled, disabled)
-    |> maybe_put(:tab_index, tab_index)
-    |> maybe_put(:events, events)
+    put_opts(choice_base(kind, label, checked), opts, @choice_opt_keys)
   end
 
+  @doc "Builds a button with a text label; wire `:events` (e.g. `%{click: callback}`)."
   @spec button(String.t(), keyword()) :: button_node()
   def button(label, opts \\ []) when is_binary(label) and is_list(opts) do
-    id = Keyword.get(opts, :id)
-    style = Keyword.get(opts, :style)
-    events = Keyword.get(opts, :events)
-    hover_style = Keyword.get(opts, :hover_style)
-    focus_style = Keyword.get(opts, :focus_style)
-    focus_visible_style = Keyword.get(opts, :focus_visible_style)
-    in_focus_style = Keyword.get(opts, :in_focus_style)
-    active_style = Keyword.get(opts, :active_style)
-    disabled_style = Keyword.get(opts, :disabled_style)
-    animation = Keyword.get(opts, :animation)
-    disabled = Keyword.get(opts, :disabled)
-    tab_index = Keyword.get(opts, :tab_index)
-    actions = Keyword.get(opts, :actions)
-    shortcuts = Keyword.get(opts, :shortcuts)
-
-    %{kind: :button, label: label}
-    |> maybe_put(:id, id)
-    |> maybe_put(:style, style)
-    |> maybe_put(:hover_style, hover_style)
-    |> maybe_put(:focus_style, focus_style)
-    |> maybe_put(:focus_visible_style, focus_visible_style)
-    |> maybe_put(:in_focus_style, in_focus_style)
-    |> maybe_put(:active_style, active_style)
-    |> maybe_put(:disabled_style, disabled_style)
-    |> maybe_put(:animation, animation)
-    |> maybe_put(:disabled, disabled)
-    |> maybe_put(:tab_index, tab_index)
-    |> maybe_put(:actions, actions)
-    |> maybe_put(:shortcuts, shortcuts)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: :button, label: label}, opts, @button_opt_keys)
   end
 
+  @doc "Builds a single-line text input; `value` is Elixir-owned, edits arrive as `change` events."
   @spec text_input(String.t(), keyword()) :: text_input_node()
   def text_input(value, opts \\ []) when is_binary(value) and is_list(opts) do
     input_node(:text_input, value, opts)
   end
 
+  @doc "Builds a multi-line text input with the same contract as `text_input/2`."
   @spec textarea(String.t(), keyword()) :: textarea_node()
   def textarea(value, opts \\ []) when is_binary(value) and is_list(opts) do
     input_node(:textarea, value, opts)
   end
 
   defp input_node(kind, value, opts) do
-    id = Keyword.get(opts, :id)
-    placeholder = Keyword.get(opts, :placeholder)
-    style = Keyword.get(opts, :style)
-    disabled = Keyword.get(opts, :disabled)
-    tab_index = Keyword.get(opts, :tab_index)
-    actions = Keyword.get(opts, :actions)
-    shortcuts = Keyword.get(opts, :shortcuts)
-    events = Keyword.get(opts, :events)
-
-    %{kind: kind, value: value}
-    |> maybe_put(:id, id)
-    |> maybe_put(:placeholder, placeholder)
-    |> maybe_put(:style, style)
-    |> maybe_put(:disabled, disabled)
-    |> maybe_put(:tab_index, tab_index)
-    |> maybe_put(:actions, actions)
-    |> maybe_put(:shortcuts, shortcuts)
-    |> maybe_put(:events, events)
+    put_opts(%{kind: kind, value: value}, opts, @input_opt_keys)
   end
 
+  @doc """
+  Validates an IR tree and wraps it in `Guppy.IR.Validated` so later render
+  calls can skip the full-tree walk.
+  """
   @spec validated(ir_node()) :: {:ok, Guppy.IR.Validated.t()} | {:error, term()}
   def validated(%Guppy.IR.Validated{} = validated), do: {:ok, validated}
 
@@ -1513,6 +1401,7 @@ defmodule Guppy.IR do
     end
   end
 
+  @doc "Like `validated/1` but raises `ArgumentError` on invalid IR."
   @spec validated!(ir_node()) :: Guppy.IR.Validated.t()
   def validated!(ir) do
     case validated(ir) do
@@ -1521,9 +1410,11 @@ defmodule Guppy.IR do
     end
   end
 
+  @doc "Returns the raw IR tree from a `Guppy.IR.Validated` wrapper (or the term unchanged)."
   def unwrap(%Guppy.IR.Validated{ir: ir}), do: ir
   def unwrap(ir), do: ir
 
+  @doc "Validates a full IR tree, returning `:ok` or `{:error, reason}`."
   @spec validate(ir_node() | Guppy.IR.Validated.t()) :: :ok | {:error, term()}
   def validate(%Guppy.IR.Validated{}), do: :ok
 

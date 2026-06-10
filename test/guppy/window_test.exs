@@ -108,7 +108,7 @@ defmodule Guppy.WindowTest do
     assert %Guppy.Window{view_id: nil, assigns: %{count: 7}} = next_state.window
   end
 
-  test "unmatched window callbacks log a debug skip" do
+  test "unmatched user-wired event callbacks log a warning skip" do
     state = %Guppy.Window.State{
       module: Guppy.TestCounterWindow,
       window: %Guppy.Window{view_id: 1, assigns: %{count: 0}},
@@ -116,7 +116,7 @@ defmodule Guppy.WindowTest do
     }
 
     log =
-      ExUnit.CaptureLog.capture_log([level: :debug], fn ->
+      ExUnit.CaptureLog.capture_log([level: :warning], fn ->
         assert {:noreply, _next_state} =
                  Guppy.Window.handle_window_message(
                    Guppy.TestCounterWindow,
@@ -127,6 +127,45 @@ defmodule Guppy.WindowTest do
 
     assert log =~ "TestCounterWindow"
     assert log =~ "no_such_callback"
+  end
+
+  test "unmatched lifecycle events and handle_info skip at debug level only" do
+    state = %Guppy.Window.State{
+      module: Guppy.TestCounterWindow,
+      window: %Guppy.Window{view_id: 1, assigns: %{count: 0}},
+      server_monitor: nil
+    }
+
+    warning_log =
+      ExUnit.CaptureLog.capture_log([level: :warning], fn ->
+        assert {:noreply, _next_state} =
+                 Guppy.Window.handle_window_message(
+                   Guppy.TestCounterWindow,
+                   {:guppy_event, 1, %{type: :window_focused}},
+                   state
+                 )
+
+        assert {:noreply, _next_state} =
+                 Guppy.Window.handle_window_message(
+                   Guppy.TestCounterWindow,
+                   :some_random_message,
+                   state
+                 )
+      end)
+
+    assert warning_log == ""
+
+    debug_log =
+      ExUnit.CaptureLog.capture_log([level: :debug], fn ->
+        assert {:noreply, _next_state} =
+                 Guppy.Window.handle_window_message(
+                   Guppy.TestCounterWindow,
+                   {:guppy_event, 1, %{type: :window_focused}},
+                   state
+                 )
+      end)
+
+    assert debug_log =~ "window_focused"
   end
 
   test "reopen retry delay backs off exponentially and caps" do

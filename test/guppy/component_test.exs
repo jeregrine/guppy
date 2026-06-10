@@ -631,4 +631,134 @@ defmodule Guppy.ComponentTest do
       })
     end
   end
+
+  test "malformed templates raise CompileError with template position" do
+    source = """
+    defmodule Guppy.MismatchedTagTemplate do
+      use Guppy.Component
+
+      def render(assigns) do
+        ~GUI\"\"\"
+        <div><text>hi</div>
+        \"\"\"
+      end
+    end
+    """
+
+    error =
+      assert_raise CompileError, fn ->
+        Code.compile_string(source)
+      end
+
+    assert error.description =~ "mismatched closing tag"
+    assert error.description =~ "</text>"
+    assert error.description =~ "</div>"
+    assert error.description =~ "template line 1"
+  end
+
+  test "raw ampersand in template text raises a readable CompileError" do
+    source = """
+    defmodule Guppy.AmpersandTemplate do
+      use Guppy.Component
+
+      def render(assigns) do
+        ~GUI\"\"\"
+        <div><text>Tom & Jerry</text></div>
+        \"\"\"
+      end
+    end
+    """
+
+    error =
+      assert_raise CompileError, fn ->
+        Code.compile_string(source)
+      end
+
+    assert error.description =~ "&amp;"
+  end
+
+  test "static class strings with unsupported tokens fail at compile time" do
+    source = """
+    defmodule Guppy.BadStaticClassTemplate do
+      use Guppy.Component
+
+      def render(assigns) do
+        ~GUI\"\"\"
+        <div class="flex bg-orange"><text>hi</text></div>
+        \"\"\"
+      end
+    end
+    """
+
+    error =
+      assert_raise CompileError, fn ->
+        Code.compile_string(source)
+      end
+
+    assert error.description =~ "bg-orange"
+  end
+
+  test "static class strings compile to literal style lists" do
+    defmodule StaticClassTemplate do
+      use Guppy.Component
+
+      def render(_assigns) do
+        ~GUI"""
+        <div class="flex py-1 bg-[#0f172a]"><text>hi</text></div>
+        """
+      end
+    end
+
+    assert %{kind: :div, style: style} = StaticClassTemplate.render(%{})
+    assert style == [{:display, :flex}, {:padding, :y, {:rem, 0.25}}, {:bg_hex, "#0f172a"}]
+  end
+
+  test "static class merges with dynamic style at runtime" do
+    defmodule StaticClassDynamicStyleTemplate do
+      use Guppy.Component
+
+      def render(assigns) do
+        ~GUI"""
+        <div class="flex" style={@extra}><text>hi</text></div>
+        """
+      end
+    end
+
+    assert %{kind: :div, style: [{:display, :flex}, {:bg, :red}]} =
+             StaticClassDynamicStyleTemplate.render(%{extra: [{:bg, :red}]})
+  end
+
+  test "unsupported color-like class tokens explain the supported palette" do
+    error =
+      assert_raise CompileError, fn ->
+        Code.compile_string("""
+        defmodule Guppy.BadColorClassTemplate do
+          use Guppy.Component
+
+          def render(_assigns) do
+            ~GUI\"\"\"
+            <div class="bg-slate-800"><text>hi</text></div>
+            \"\"\"
+          end
+        end
+        """)
+      end
+
+    assert error.description =~ "bg-slate-800"
+    assert error.description =~ "red/green/blue/yellow/black/white/gray"
+    assert error.description =~ "bg-[#"
+  end
+
+  test "dynamic class token parses are memoized in the class style cache" do
+    Guppy.Component.create_class_style_cache()
+
+    token = "py-1"
+    :ets.delete(:guppy_class_style_cache, token)
+
+    assert Guppy.Component.class_to_style!(token) == [{:padding, :y, {:rem, 0.25}}]
+    assert [{^token, {:padding, :y, {:rem, 0.25}}}] = :ets.lookup(:guppy_class_style_cache, token)
+
+    # Cached value is served on subsequent parses.
+    assert Guppy.Component.class_to_style!(token) == [{:padding, :y, {:rem, 0.25}}]
+  end
 end

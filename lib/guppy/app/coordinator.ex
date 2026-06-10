@@ -3,6 +3,8 @@ defmodule Guppy.App.Coordinator do
 
   use GenServer
 
+  require Logger
+
   alias Guppy.App.{Command, Config, Stylesheet, Theme, ThemeFamily, WindowSpec}
 
   defstruct module: nil,
@@ -12,9 +14,11 @@ defmodule Guppy.App.Coordinator do
             window_supervisor: nil,
             runtime_server: Guppy.Server,
             server_monitor: nil,
-            windows: %{}
+            windows: %{},
+            pending_opens: %{}
 
   @type window_entry :: %{pid: pid(), spec: WindowSpec.t()}
+  @type pending_open :: %{starter: pid(), monitor: reference(), from: GenServer.from()}
   @type state :: %__MODULE__{
           module: module(),
           app_ref: GenServer.server(),
@@ -23,7 +27,8 @@ defmodule Guppy.App.Coordinator do
           window_supervisor: GenServer.server(),
           runtime_server: GenServer.server(),
           server_monitor: reference() | nil,
-          windows: %{optional(String.t()) => window_entry()}
+          windows: %{optional(String.t()) => window_entry()},
+          pending_opens: %{optional(String.t()) => pending_open()}
         }
 
   @type callback_result :: {:noreply, state()} | {:stop, term(), state()}
@@ -86,12 +91,16 @@ defmodule Guppy.App.Coordinator do
       {:ok, spec, state} ->
         parent = self()
 
-        spawn(fn ->
-          result = start_window_child(state, spec)
-          send(parent, {:guppy_app_window_started, from, spec, result})
-        end)
+        # Monitored so a starter that dies without reporting still unblocks
+        # the caller instead of leaving the call to time out.
+        {starter, monitor_ref} =
+          spawn_monitor(fn ->
+            result = start_window_child(state, spec)
+            send(parent, {:guppy_app_window_started, self(), from, spec, result})
+          end)
 
-        {:noreply, state}
+        pending = %{starter: starter, monitor: monitor_ref, from: from}
+        {:noreply, %{state | pending_opens: Map.put(state.pending_opens, spec.id, pending)}}
 
       {:error, reason, state} ->
         {:reply, {:error, reason}, state}
@@ -250,14 +259,14 @@ defmodule Guppy.App.Coordinator do
 
   @impl true
   def handle_cast({:dispatch_command, command_id, payload}, state) do
-    {:noreply, dispatch_command(state, command_id, payload)}
+    dispatch_command(state, command_id, payload)
   end
 
   def handle_cast({:dispatch_key, key, payload}, state) do
     command_id = first_enabled_key_command(state, key)
 
     if is_binary(command_id) do
-      {:noreply, dispatch_command(state, command_id, Map.put(payload, :key, key))}
+      dispatch_command(state, command_id, Map.put(payload, :key, key))
     else
       {:noreply, state}
     end
@@ -266,7 +275,7 @@ defmodule Guppy.App.Coordinator do
   @impl true
   def handle_info({:guppy_menu_event, %{callback: command_id} = payload}, state)
       when is_binary(command_id) do
-    {:noreply, dispatch_command(state, command_id, payload)}
+    dispatch_command(state, command_id, payload)
   end
 
   def handle_info({:guppy_app_event, %{type: type} = payload}, state) when is_atom(type) do
@@ -288,7 +297,9 @@ defmodule Guppy.App.Coordinator do
     {:noreply, %{state | server_monitor: nil}}
   end
 
-  def handle_info({:guppy_app_window_started, from, spec, result}, state) do
+  def handle_info({:guppy_app_window_started, starter, from, spec, result}, state) do
+    state = clear_pending_open(state, spec.id, starter)
+
     case result do
       {:ok, pid} ->
         GenServer.reply(from, {:ok, pid})
@@ -300,19 +311,26 @@ defmodule Guppy.App.Coordinator do
     end
   end
 
-  def handle_info({:DOWN, monitor_ref, :process, _pid, _reason}, state) do
-    case window_id_for_monitor(state, monitor_ref) do
+  def handle_info({:DOWN, monitor_ref, :process, _pid, reason}, state) do
+    case pending_open_for_monitor(state, monitor_ref) do
+      {window_id, %{from: from}} ->
+        GenServer.reply(from, {:error, {:window_start_failed, reason}})
+        {:noreply, %{state | pending_opens: Map.delete(state.pending_opens, window_id)}}
+
       nil ->
-        {:noreply, state}
+        case window_id_for_monitor(state, monitor_ref) do
+          nil ->
+            {:noreply, state}
 
-      window_id ->
-        next_state =
-          state
-          |> delete_window(window_id)
-          |> close_dependent_windows(window_id)
-          |> maybe_stop_app_after_last_window()
+          window_id ->
+            next_state =
+              state
+              |> delete_window(window_id)
+              |> close_dependent_windows(window_id)
+              |> maybe_stop_app_after_last_window()
 
-        {:noreply, next_state}
+            {:noreply, next_state}
+        end
     end
   end
 
@@ -437,8 +455,17 @@ defmodule Guppy.App.Coordinator do
   end
 
   defp prepare_open_window(state, window_id, overrides) do
-    state = refresh_windows(state)
+    # The pending check must come before refresh_windows: window inits run
+    # inside the DynamicSupervisor, so which_children blocks while a window is
+    # starting and a same-id duplicate would deadlock until that init returns.
+    if Map.has_key?(state.pending_opens, window_id) do
+      {:error, {:duplicate_window_id, window_id}, state}
+    else
+      state |> refresh_windows() |> prepare_refreshed_open_window(window_id, overrides)
+    end
+  end
 
+  defp prepare_refreshed_open_window(state, window_id, overrides) do
     if Map.has_key?(state.windows, window_id) do
       {:error, {:duplicate_window_id, window_id}, state}
     else
@@ -447,6 +474,21 @@ defmodule Guppy.App.Coordinator do
         {:error, reason} -> {:error, reason, state}
       end
     end
+  end
+
+  defp clear_pending_open(state, window_id, starter) do
+    case Map.fetch(state.pending_opens, window_id) do
+      {:ok, %{starter: ^starter, monitor: monitor_ref}} ->
+        Process.demonitor(monitor_ref, [:flush])
+        %{state | pending_opens: Map.delete(state.pending_opens, window_id)}
+
+      _other ->
+        state
+    end
+  end
+
+  defp pending_open_for_monitor(state, monitor_ref) do
+    Enum.find(state.pending_opens, fn {_window_id, %{monitor: ref}} -> ref == monitor_ref end)
   end
 
   defp find_or_build_spec(config, window_id, overrides) do
@@ -635,13 +677,17 @@ defmodule Guppy.App.Coordinator do
           state,
           invoke_callback(state.module, :handle_command, [command_id, payload, state])
         )
-        |> elem(1)
 
       {:ok, %Command{enabled: false}} ->
-        state
+        {:noreply, state}
 
       :error ->
-        state
+        Logger.warning(
+          "#{inspect(state.module)} dispatched unknown command #{inspect(command_id)}; " <>
+            "it is not in the app command registry"
+        )
+
+        {:noreply, state}
     end
   end
 

@@ -212,38 +212,59 @@ defmodule Guppy.Window do
     |> apply_callback(invoke_callback(module, :handle_info, [message, state.window]), false)
   end
 
+  @doc """
+  Returns the native view id of a running window process.
+
+  Reads the process state via `:sys.get_state/1`, so it is intended for tests
+  and debugging rather than hot paths.
+  """
   def view_id(server) do
     %State{window: %__MODULE__{view_id: view_id}} = :sys.get_state(server)
     view_id
   end
 
+  @doc "Asks a running window process to activate/focus its native window."
   def focus(server, timeout \\ 5_000) do
     send(server, {:guppy_focus_window, timeout})
     :ok
   end
 
+  @doc """
+  Returns the `Guppy.Window` struct of a running window process.
+
+  Reads the process state via `:sys.get_state/1`, so it is intended for tests
+  and debugging rather than hot paths.
+  """
   def state(server) do
     %State{window: window} = :sys.get_state(server)
     window
   end
 
+  @doc "Puts one assign on the window."
   def assign(%__MODULE__{} = window, key, value) when is_atom(key) do
     %{window | assigns: Map.put(window.assigns, key, value)}
   end
 
+  @doc "Puts many assigns on the window from a map or keyword list."
   def assign(%__MODULE__{} = window, attrs) when is_list(attrs) or is_map(attrs) do
     Enum.reduce(attrs, window, fn {key, value}, acc -> assign(acc, key, value) end)
   end
 
+  @doc "Updates one assign with a function of its current value."
   def update(%__MODULE__{} = window, key, fun) when is_atom(key) and is_function(fun, 1) do
     current = Map.get(window.assigns, key)
     assign(window, key, fun.(current))
   end
 
+  @doc "Puts framework-private state on the window; not for app data."
   def put_private(%__MODULE__{} = window, key, value) when is_atom(key) do
     %{window | private: Map.put(window.private, key, value)}
   end
 
+  @doc """
+  Merges native window options applied when the window opens; see the
+  "Window options" section of the README for the supported keys.
+  """
   def put_window_opts(%__MODULE__{} = window, opts) when is_list(opts) or is_map(opts) do
     current = Map.get(window.private, :window_options, [])
 
@@ -379,12 +400,25 @@ defmodule Guppy.Window do
       end
   end
 
-  defp log_unmatched_callback(module, function, args) do
-    Logger.debug(fn ->
-      head = inspect(List.first(args), limit: 5, printable_limit: 120)
+  @lifecycle_event_names ~w(window_focused window_blurred window_moved window_resized)
 
-      "#{inspect(module)}.#{function}/#{length(args)} has no clause for #{head}; skipping rerender"
-    end)
+  # An unmatched handle_event clause for an event the user explicitly wired
+  # (a callback id from their own template/IR) is almost always a typo, so it
+  # warns. Lifecycle events and plain messages are routinely unhandled and
+  # stay at debug.
+  defp log_unmatched_callback(module, :handle_event, [event_name | _rest] = args)
+       when is_binary(event_name) and event_name not in @lifecycle_event_names do
+    Logger.warning(unmatched_callback_message(module, :handle_event, args))
+  end
+
+  defp log_unmatched_callback(module, function, args) do
+    Logger.debug(fn -> unmatched_callback_message(module, function, args) end)
+  end
+
+  defp unmatched_callback_message(module, function, args) do
+    head = inspect(List.first(args), limit: 5, printable_limit: 120)
+
+    "#{inspect(module)}.#{function}/#{length(args)} has no clause for #{head}; skipping rerender"
   end
 
   defp callback_error?(error, module, function, args) do

@@ -278,14 +278,30 @@ defmodule Guppy.ServerNativeTest do
                        }
                      ]}, 39}
 
+    assert {:ok, :pong} =
+             Guppy.Server.open_file_dialog(server, %{multiple: true, prompt: "Map opts"}, 41)
+
+    assert_receive {:guppy_test_native_request,
+                    {:open_file_dialog,
+                     [%{files: true, directories: false, multiple: true, prompt: "Map opts"}]},
+                    41}
+
+    assert {:ok, :pong} = Guppy.Server.save_file_dialog(server, %{default_name: "map.txt"}, 42)
+
+    assert_receive {:guppy_test_native_request, {:save_file_dialog, [%{default_name: "map.txt"}]},
+                    42}
+
     assert {:error, :unknown_view_id} =
              Guppy.Server.open_file_dialog(server, [owner_view_id: view_id + 1], 37)
 
-    assert {:error, :invalid_file_dialog_options} =
+    assert {:error, {:invalid_file_dialog_options, :multiple}} =
              Guppy.Server.open_file_dialog(server, [multiple: :yes], 37)
 
-    assert {:error, :invalid_file_dialog_options} =
+    assert {:error, {:invalid_file_dialog_options, :filters}} =
              Guppy.Server.save_file_dialog(server, [filters: [""]], 37)
+
+    assert {:error, {:invalid_file_dialog_options, :options}} =
+             Guppy.Server.open_file_dialog(server, :not_options, 37)
 
     refute_receive {:guppy_test_native_request, {:open_file_dialog, _}, _}
   end
@@ -1126,19 +1142,19 @@ defmodule Guppy.ServerNativeTest do
                tabbing_identifier: "example-tab-group"
              )
 
-    assert {:error, :invalid_window_options} =
+    assert {:error, {:invalid_window_options, :window_bounds}} =
              Guppy.Server.validate_window_options_for_test(window_bounds: [width: 960])
 
-    assert {:error, :invalid_window_options} =
+    assert {:error, {:invalid_window_options, :window_min_size}} =
              Guppy.Server.validate_window_options_for_test(window_min_size: [width: 640])
 
-    assert {:error, :invalid_window_options} =
+    assert {:error, {:invalid_window_options, :titlebar}} =
              Guppy.Server.validate_window_options_for_test(titlebar: [unknown: true])
 
-    assert {:error, :invalid_window_options} =
+    assert {:error, {:invalid_window_options, {:unknown_keys, [:unknown_key]}}} =
              Guppy.Server.validate_window_options_for_test(unknown_key: true)
 
-    assert {:error, :invalid_window_options} =
+    assert {:error, {:invalid_window_options, :kind}} =
              Guppy.Server.validate_window_options_for_test(kind: :dialog)
   end
 
@@ -1930,5 +1946,38 @@ defmodule Guppy.ServerNativeTest do
       {:error, _reason} ->
         assert {:error, :nif_not_loaded} = Guppy.open_window(Guppy.IR.text("hello"))
     end
+  end
+
+  test "server survives stray and malformed messages" do
+    server = :"guppy_stray_message_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    pid = Process.whereis(server)
+
+    send(pid, :totally_unexpected)
+    send(pid, {:guppy_native_event, 7, :click, %{}})
+    send(pid, {:guppy_native_event, "bad", nil, :nope})
+
+    assert {:ok, :pong} = Guppy.Server.ping(server, 25)
+    assert Process.alive?(pid)
+  end
+
+  test "render and open_window validate IR on the caller side" do
+    # No server is registered under this name, so reaching the GenServer
+    # would exit with :noproc; invalid IR must be rejected before the call.
+    missing = :"guppy_no_server_#{System.unique_integer([:positive])}"
+
+    assert {:error, {:invalid_ir, _node}} =
+             Guppy.Server.render(missing, 1, %{kind: :nope}, 25)
+
+    assert {:error, {:invalid_ir, _node}} =
+             Guppy.Server.open_window(missing, self(), %{kind: :nope}, [], 25)
   end
 end

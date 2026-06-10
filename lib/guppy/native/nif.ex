@@ -41,28 +41,11 @@ defmodule Guppy.Native.Nif do
     dispatch(command, timeout)
   end
 
-  @impl Guppy.Native
-  def cast(server \\ __MODULE__, command) do
-    _ = request(server, command)
-    :ok
-  end
-
-  @impl Guppy.Native
-  def connected?(_server \\ __MODULE__) do
-    loaded?()
-  end
-
-  def info(_server \\ __MODULE__) do
-    %{
-      status: status_from_load_status(load_status()),
-      load_status: load_status()
-    }
-  end
-
   @load_status_cache_key {__MODULE__, :load_status}
 
   # A loaded NIF stays loaded for the VM lifetime, so a successful check is
   # cached and dispatches skip the per-call ping. Failures are re-checked.
+  @doc "Returns `:ok` once the NIF is loaded, caching the successful check."
   def load_status do
     case :persistent_term.get(@load_status_cache_key, :unknown) do
       :ok -> :ok
@@ -92,54 +75,62 @@ defmodule Guppy.Native.Nif do
     ErlangError -> {:error, :nif_not_loaded}
   end
 
+  @doc "Returns true when the NIF is loaded."
   def loaded? do
     load_status() == :ok
   end
 
+  @doc false
   def native_ping do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_build_info do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_runtime_status do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_gui_status do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_performance_counters do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def native_open_window(_view_id, _ir, _opts) do
-    :erlang.nif_error(:nif_not_loaded)
-  end
-
+  @doc false
   def native_open_window(_view_id, _ir, _opts, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_set_event_target(_pid) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_set_menus(_menus, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_set_dock_menu(_items, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_set_app_badge(_label, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_open_file_dialog(
         _files,
         _directories,
@@ -153,54 +144,52 @@ defmodule Guppy.Native.Nif do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_save_file_dialog(_directory, _default_name, _filters, _owner_view_id, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_read_clipboard_text(_timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_write_clipboard_text(_text, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_event_target_status do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def native_render(_view_id, _ir) do
-    :erlang.nif_error(:nif_not_loaded)
-  end
-
+  @doc false
   def native_render(_view_id, _ir, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def native_close_window(_view_id) do
-    :erlang.nif_error(:nif_not_loaded)
-  end
-
+  @doc false
   def native_close_window(_view_id, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_focus_window(_view_id, _timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc false
   def native_close_all(_timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def native_view_count do
-    :erlang.nif_error(:nif_not_loaded)
-  end
-
+  @doc false
   def native_view_count(_timeout) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  @doc "Returns native build info when the NIF is loaded."
   def build_info do
     case load_status() do
       :ok -> {:ok, native_build_info() |> native_string_to_string()}
@@ -208,6 +197,7 @@ defmodule Guppy.Native.Nif do
     end
   end
 
+  @doc "Returns the native runtime status when the NIF is loaded."
   def runtime_status do
     case load_status() do
       :ok -> {:ok, native_runtime_status() |> native_string_to_string()}
@@ -215,6 +205,7 @@ defmodule Guppy.Native.Nif do
     end
   end
 
+  @doc "Returns the native GUI bootstrap status when the NIF is loaded."
   def gui_status do
     case load_status() do
       :ok -> {:ok, native_gui_status() |> native_string_to_string()}
@@ -222,6 +213,7 @@ defmodule Guppy.Native.Nif do
     end
   end
 
+  @doc "Returns native performance counters when the NIF is loaded."
   def performance_counters do
     case load_status() do
       :ok -> {:ok, native_performance_counters()}
@@ -229,6 +221,7 @@ defmodule Guppy.Native.Nif do
     end
   end
 
+  @doc "Returns the registered native event target generation, for diagnostics."
   def event_target_status do
     case load_status() do
       :ok -> {:ok, native_event_target_status()}
@@ -405,7 +398,4 @@ defmodule Guppy.Native.Nif do
   defp normalize_file_dialog_path(value) when is_nil(value), do: {:ok, nil}
   defp normalize_file_dialog_path(path) when is_binary(path), do: {:ok, path}
   defp normalize_file_dialog_path(_other), do: {:error, :runtime_unavailable}
-
-  defp status_from_load_status(:ok), do: :loaded
-  defp status_from_load_status(_), do: :not_loaded
 end

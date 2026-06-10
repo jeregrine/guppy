@@ -7,6 +7,8 @@ defmodule Guppy.Application do
   def start(_type, _args) do
     native = Application.get_env(:guppy, :native, Guppy.Native.Nif)
 
+    Guppy.Component.create_class_style_cache()
+
     Supervisor.start_link(
       [{Guppy.Server, native: native, native_server: native}],
       strategy: :one_for_one,

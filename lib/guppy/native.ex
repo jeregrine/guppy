@@ -18,8 +18,6 @@ defmodule Guppy.Native do
   The NIF implementation bounds every request with a deadline-aware wait.
   """
   @callback request(GenServer.server(), command(), timeout()) :: response()
-  @callback cast(GenServer.server(), command()) :: :ok
-  @callback connected?(GenServer.server()) :: boolean()
 
   @doc false
   def telemetry_status(:ok), do: :ok

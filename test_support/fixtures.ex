@@ -489,3 +489,53 @@ defmodule Guppy.TestSupport do
     end
   end
 end
+
+defmodule Guppy.StoppingCommandApp do
+  use Guppy.App,
+    commands: [
+      %{id: "ping", label: "Ping"},
+      %{id: "stop_me", label: "Stop"}
+    ]
+
+  @impl Guppy.App
+  def init(opts) do
+    parent = Keyword.fetch!(opts, :parent)
+
+    opts =
+      opts
+      |> Keyword.delete(:parent)
+      |> Keyword.put(:metadata, %{parent: parent})
+
+    {:ok, opts}
+  end
+
+  @impl Guppy.App
+  def handle_command("ping", payload, state) do
+    send(state.config.metadata.parent, {:app_command, "ping", payload})
+    {:noreply, state}
+  end
+
+  def handle_command("stop_me", _payload, state) do
+    {:stop, :normal, state}
+  end
+end
+
+defmodule Guppy.SlowStartWindow do
+  @moduledoc false
+  use GenServer
+
+  def start_link({:guppy_app_window, _app, _window_id, arg}, opts) do
+    GenServer.start_link(__MODULE__, arg, opts)
+  end
+
+  @impl true
+  def init(%{block_on: parent} = arg) do
+    send(parent, {:slow_start_begun, self()})
+
+    receive do
+      :guppy_release_slow_start -> :ok
+    end
+
+    {:ok, arg}
+  end
+end

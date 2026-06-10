@@ -85,22 +85,19 @@ defmodule Guppy.Component.Compiler do
 
   @local_component_prefix "guppy-local-"
 
-  @style_attr_pairs [
-    {"class", :style},
-    {"style", :style},
-    {"hover_class", :hover_style},
-    {"hover_style", :hover_style},
-    {"focus_class", :focus_style},
-    {"focus_style", :focus_style},
-    {"focus_visible_class", :focus_visible_style},
-    {"focus_visible_style", :focus_visible_style},
-    {"in_focus_class", :in_focus_style},
-    {"in_focus_style", :in_focus_style},
-    {"active_class", :active_style},
-    {"active_style", :active_style},
-    {"disabled_class", :disabled_style},
-    {"disabled_style", :disabled_style}
+  @style_attr_triples [
+    {"class", "style", :style},
+    {"hover_class", "hover_style", :hover_style},
+    {"focus_class", "focus_style", :focus_style},
+    {"focus_visible_class", "focus_visible_style", :focus_visible_style},
+    {"in_focus_class", "in_focus_style", :in_focus_style},
+    {"active_class", "active_style", :active_style},
+    {"disabled_class", "disabled_style", :disabled_style}
   ]
+
+  @style_attr_names Enum.flat_map(@style_attr_triples, fn {class_key, style_key, _target} ->
+                      [class_key, style_key]
+                    end)
 
   @common_node_attrs [
     {"id", :string},
@@ -158,8 +155,12 @@ defmodule Guppy.Component.Compiler do
     Process.delete({__MODULE__, :uses_assigns})
   end
 
+  # The synthetic root element added around the template before xmerl parsing;
+  # its length is subtracted from column positions xmerl reports on line 1.
+  @template_root_prefix "<guppy_root>"
+
   defp parse_template!(template, caller) do
-    wrapped = "<guppy_root>" <> template <> "</guppy_root>"
+    wrapped = @template_root_prefix <> template <> "</guppy_root>"
 
     case :xmerl_scan.string(String.to_charlist(wrapped), quiet: true) do
       {document, _rest} ->
@@ -168,7 +169,50 @@ defmodule Guppy.Component.Compiler do
   rescue
     error in [ArgumentError, ErlangError, RuntimeError] ->
       raise_compile_error!(caller, "failed to parse ~GUI template: #{Exception.message(error)}")
+  catch
+    # xmerl reports fatal parse errors via exit/1, not exceptions.
+    :exit, {:fatal, {reason, _file, {:line, line}, {:col, col}}} ->
+      col = if line == 1, do: max(col - String.length(@template_root_prefix), 1), else: col
+
+      raise CompileError,
+        file: caller && caller.file,
+        line: template_error_line(caller, line),
+        description:
+          "failed to parse ~GUI template (template line #{line}, column #{col}): " <>
+            describe_xmerl_reason(reason)
+
+    :exit, reason ->
+      raise_compile_error!(
+        caller,
+        "failed to parse ~GUI template: #{inspect(reason, limit: 10)}"
+      )
   end
+
+  # Heredoc template content starts on the line after the sigil, so template
+  # line N maps to caller.line + N; single-line ~GUI"..." templates are off by
+  # one, which the template line/column in the message compensates for.
+  defp template_error_line(nil, _line), do: nil
+  defp template_error_line(caller, line), do: caller.line + line
+
+  defp describe_xmerl_reason({:endtag_does_not_match, {:was, was, :should_have_been, expected}}) do
+    "mismatched closing tag: expected </#{expected}>, got </#{was}>"
+  end
+
+  defp describe_xmerl_reason(:error_scanning_entity_ref) do
+    "invalid `&` — templates are parsed as XML, so write `&amp;` for a literal ampersand"
+  end
+
+  defp describe_xmerl_reason(:unexpected_end) do
+    "unexpected end of template; check for an unclosed tag or quote"
+  end
+
+  defp describe_xmerl_reason({:unexpected_end, _context}) do
+    "unexpected end of template; check for an unclosed tag or quote"
+  end
+
+  defp describe_xmerl_reason(reason) when is_binary(reason), do: reason
+  defp describe_xmerl_reason(reason) when is_list(reason), do: to_string(reason)
+  defp describe_xmerl_reason(reason), do: inspect(reason, limit: 10)
 
   defp compile_children(nodes, caller) do
     Enum.map(nodes, &compile_child(&1, caller))
@@ -187,7 +231,7 @@ defmodule Guppy.Component.Compiler do
   defp compile_element(element, caller) do
     tag = element |> xmlElement(:name) |> to_string()
     attrs = attribute_map(xmlElement(element, :attributes))
-    directives = extract_directives(attrs)
+    directives = extract_directives(attrs, caller)
     attrs = Map.drop(attrs, [":if", ":for"])
 
     base = compile_tag(tag, attrs, xmlElement(element, :content), caller)
@@ -259,8 +303,8 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
-        style_entry(attrs, "item_class", "item_style", :item_style),
+        style_entry(attrs, "class", "style", :style, caller),
+        style_entry(attrs, "item_class", "item_style", :item_style, caller),
         events_entry(attrs, @list_events, caller)
       ])
 
@@ -277,8 +321,8 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
-        style_entry(attrs, "item_class", "item_style", :item_style),
+        style_entry(attrs, "class", "style", :style, caller),
+        style_entry(attrs, "item_class", "item_style", :item_style, caller),
         events_entry(attrs, @list_events, caller)
       ])
 
@@ -296,10 +340,10 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
-        style_entry(attrs, "header_class", "header_style", :header_style),
-        style_entry(attrs, "row_class", "row_style", :row_style),
-        style_entry(attrs, "cell_class", "cell_style", :cell_style),
+        style_entry(attrs, "class", "style", :style, caller),
+        style_entry(attrs, "header_class", "header_style", :header_style, caller),
+        style_entry(attrs, "row_class", "row_style", :row_style, caller),
+        style_entry(attrs, "cell_class", "cell_style", :cell_style, caller),
         maybe_attr_entry(attrs, "selected_row_id", :string_or_expr, caller),
         maybe_attr_entry(attrs, "selected_cell", :expr_only, caller),
         renamed_attr_entry(attrs, "sort_state", :sort, :expr_only, caller),
@@ -331,8 +375,8 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
-        style_entry(attrs, "row_class", "row_style", :row_style),
+        style_entry(attrs, "class", "style", :style, caller),
+        style_entry(attrs, "row_class", "row_style", :row_style, caller),
         maybe_attr_entry(attrs, "selected_id", :string_or_expr, caller),
         events_entry(attrs, ["select", "toggle", "context_menu"], caller)
       ])
@@ -350,7 +394,7 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "class", "style", :style, caller),
         events_entry(attrs, ["click", "context_menu"], caller)
       ])
 
@@ -368,8 +412,8 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
-        style_entry(attrs, "popover_class", "popover_style", :popover_style),
+        style_entry(attrs, "class", "style", :style, caller),
+        style_entry(attrs, "popover_class", "popover_style", :popover_style, caller),
         maybe_attr_entry(attrs, "anchor", :popover_anchor, caller),
         maybe_attr_entry(attrs, "anchor_position", :expr_only, caller),
         maybe_attr_entry(attrs, "anchor_offset", :expr_only, caller),
@@ -408,9 +452,9 @@ defmodule Guppy.Component.Compiler do
         maybe_attr_entry(attrs, "value", :string_or_expr, caller),
         maybe_attr_entry(attrs, "open", :boolean, caller),
         maybe_attr_entry(attrs, "placeholder", :string_or_expr, caller),
-        style_entry(attrs, "class", "style", :style),
-        style_entry(attrs, "list_class", "list_style", :list_style),
-        style_entry(attrs, "option_class", "option_style", :option_style),
+        style_entry(attrs, "class", "style", :style, caller),
+        style_entry(attrs, "list_class", "list_style", :list_style, caller),
+        style_entry(attrs, "option_class", "option_style", :option_style, caller),
         maybe_attr_entry(attrs, "anchor", :popover_anchor, caller),
         maybe_attr_entry(attrs, "anchor_offset", :expr_only, caller),
         maybe_attr_entry(attrs, "anchor_fit", :popover_anchor_fit, caller),
@@ -441,7 +485,7 @@ defmodule Guppy.Component.Compiler do
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
         maybe_attr_entry(attrs, "placeholder", :string_or_expr, caller),
-        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "class", "style", :style, caller),
         maybe_attr_entry(attrs, "disabled", :boolean, caller),
         maybe_attr_entry(attrs, "tab_index", :integer, caller),
         maybe_attr_entry(attrs, "actions", :expr_only, caller),
@@ -478,30 +522,21 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp build_choice_opts(attrs, events, caller) do
-    keyword_ast([
-      maybe_attr_entry(attrs, "id", :string, caller),
-      style_entry(attrs, "class", "style", :style),
-      style_entry(attrs, "hover_class", "hover_style", :hover_style),
-      style_entry(attrs, "focus_class", "focus_style", :focus_style),
-      style_entry(
-        attrs,
-        "focus_visible_class",
-        "focus_visible_style",
-        :focus_visible_style
-      ),
-      style_entry(attrs, "in_focus_class", "in_focus_style", :in_focus_style),
-      style_entry(attrs, "active_class", "active_style", :active_style),
-      style_entry(attrs, "disabled_class", "disabled_style", :disabled_style),
-      maybe_attr_entry(attrs, "disabled", :boolean, caller),
-      maybe_attr_entry(attrs, "tab_index", :integer, caller),
-      events_entry(attrs, events, caller)
-    ])
+    keyword_ast(
+      [maybe_attr_entry(attrs, "id", :string, caller)] ++
+        all_style_entries(attrs, caller) ++
+        [
+          maybe_attr_entry(attrs, "disabled", :boolean, caller),
+          maybe_attr_entry(attrs, "tab_index", :integer, caller),
+          events_entry(attrs, events, caller)
+        ]
+    )
   end
 
   defp compile_text(attrs, content, caller) do
     assert_allowed_attrs!(attrs, text_allowed_attrs(), "text", caller)
     text_node = compile_text_node(attrs, content, caller)
-    wrapper_style = merged_style_entry(attrs, "class", "style")
+    wrapper_style = merged_style_entry(attrs, "class", "style", caller)
 
     if wrapper_style == nil do
       text_node
@@ -522,7 +557,7 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style),
+        style_entry(attrs, "class", "style", :style, caller),
         events_entry(attrs, @text_events, caller)
       ])
 
@@ -537,20 +572,44 @@ defmodule Guppy.Component.Compiler do
     source = build_image_source_ast(attrs, caller)
 
     id_opts = keyword_ast([maybe_attr_entry(attrs, "id", :string, caller)])
+    class_value = Map.get(attrs, "class")
 
     image_opts =
-      quote do
-        Guppy.Component.merge_image_options(
-          unquote(style_value_ast(Map.get(attrs, "class"))),
-          unquote(raw_style_ast(Map.get(attrs, "style"))),
-          unquote(optional_attr_value_ast(attrs, "object_fit", :object_fit, caller)),
-          unquote(optional_attr_value_ast(attrs, "grayscale", :boolean, caller))
-        )
+      if is_nil(class_value) or static_class_value?(class_value) do
+        {class_styles, class_options} = compile_static_image_class!(class_value, caller)
+
+        quote do
+          Guppy.Component.merge_image_options_precompiled(
+            unquote(Macro.escape(class_styles)),
+            unquote(Macro.escape(class_options)),
+            unquote(raw_style_ast(Map.get(attrs, "style"))),
+            unquote(optional_attr_value_ast(attrs, "object_fit", :object_fit, caller)),
+            unquote(optional_attr_value_ast(attrs, "grayscale", :boolean, caller))
+          )
+        end
+      else
+        quote do
+          Guppy.Component.merge_image_options(
+            unquote(style_value_ast(class_value)),
+            unquote(raw_style_ast(Map.get(attrs, "style"))),
+            unquote(optional_attr_value_ast(attrs, "object_fit", :object_fit, caller)),
+            unquote(optional_attr_value_ast(attrs, "grayscale", :boolean, caller))
+          )
+        end
       end
 
     quote do
       Guppy.IR.image(unquote(source), Keyword.merge(unquote(id_opts), unquote(image_opts)))
     end
+  end
+
+  defp compile_static_image_class!(nil, _caller), do: {[], %{}}
+
+  defp compile_static_image_class!(class_value, caller) do
+    Guppy.Component.image_class_to_style_and_options!(class_value)
+  rescue
+    error in [ArgumentError] ->
+      raise_compile_error!(caller, Exception.message(error))
   end
 
   defp compile_icon(attrs, content, caller) do
@@ -561,7 +620,7 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style)
+        style_entry(attrs, "class", "style", :style, caller)
       ])
 
     quote do
@@ -576,7 +635,7 @@ defmodule Guppy.Component.Compiler do
     opts =
       keyword_ast([
         maybe_attr_entry(attrs, "id", :string, caller),
-        style_entry(attrs, "class", "style", :style)
+        style_entry(attrs, "class", "style", :style, caller)
       ])
 
     quote do
@@ -818,70 +877,49 @@ defmodule Guppy.Component.Compiler do
     )
   end
 
-  defp extract_directives(attrs) do
+  defp extract_directives(attrs, caller) do
     %{}
-    |> maybe_put_directive(:if, Map.get(attrs, ":if"))
-    |> maybe_put_directive(:for, Map.get(attrs, ":for"))
+    |> maybe_put_directive(:if, Map.get(attrs, ":if"), caller)
+    |> maybe_put_directive(:for, Map.get(attrs, ":for"), caller)
   end
 
-  defp maybe_put_directive(map, _key, nil), do: map
+  defp maybe_put_directive(map, _key, nil, _caller), do: map
 
-  defp maybe_put_directive(map, key, value) do
-    Map.put(map, key, parse_expression!(extract_wrapped_expression!(value), nil))
+  defp maybe_put_directive(map, key, value, caller) do
+    Map.put(map, key, parse_expression!(extract_wrapped_expression!(value), caller))
   end
 
   defp build_div_like_opts(attrs, event_names, extra_attrs, caller) do
     scalar_entries =
       Enum.map(extra_attrs, fn {name, type} -> maybe_attr_entry(attrs, name, type, caller) end)
 
-    style_entries =
-      Enum.map(@style_attr_pairs, fn
-        {"class", _} ->
-          style_entry(attrs, "class", "style", :style)
-
-        {"hover_class", _} ->
-          style_entry(attrs, "hover_class", "hover_style", :hover_style)
-
-        {"focus_class", _} ->
-          style_entry(attrs, "focus_class", "focus_style", :focus_style)
-
-        {"focus_visible_class", _} ->
-          style_entry(
-            attrs,
-            "focus_visible_class",
-            "focus_visible_style",
-            :focus_visible_style
-          )
-
-        {"in_focus_class", _} ->
-          style_entry(attrs, "in_focus_class", "in_focus_style", :in_focus_style)
-
-        {"active_class", _} ->
-          style_entry(attrs, "active_class", "active_style", :active_style)
-
-        {"disabled_class", _} ->
-          style_entry(attrs, "disabled_class", "disabled_style", :disabled_style)
-
-        _ ->
-          nil
-      end)
-      |> Enum.reject(&is_nil/1)
-
     keyword_ast(
-      Enum.concat([scalar_entries, style_entries, [events_entry(attrs, event_names, caller)]])
+      Enum.concat([
+        scalar_entries,
+        all_style_entries(attrs, caller),
+        [events_entry(attrs, event_names, caller)]
+      ])
     )
+  end
+
+  defp all_style_entries(attrs, caller) do
+    @style_attr_triples
+    |> Enum.map(fn {class_key, style_key, target_key} ->
+      style_entry(attrs, class_key, style_key, target_key, caller)
+    end)
+    |> Enum.reject(&is_nil/1)
   end
 
   defp build_scroll_opts(attrs, caller) do
     keyword_ast([
       maybe_attr_entry(attrs, "id", :string, caller),
       maybe_attr_entry(attrs, "axis", :axis, caller),
-      style_entry(attrs, "class", "style", :style)
+      style_entry(attrs, "class", "style", :style, caller)
     ])
   end
 
-  defp style_entry(attrs, class_key, style_key, target_key) do
-    merged = merged_style_entry(attrs, class_key, style_key)
+  defp style_entry(attrs, class_key, style_key, target_key, caller) do
+    merged = merged_style_entry(attrs, class_key, style_key, caller)
 
     if merged == nil do
       nil
@@ -890,20 +928,54 @@ defmodule Guppy.Component.Compiler do
     end
   end
 
-  defp merged_style_entry(attrs, class_key, style_key) do
+  defp merged_style_entry(attrs, class_key, style_key, caller) do
     class_value = Map.get(attrs, class_key)
     style_value = Map.get(attrs, style_key)
 
-    if is_nil(class_value) and is_nil(style_value) do
-      nil
-    else
-      quote do
-        Guppy.Component.merge_styles(
-          unquote(style_value_ast(class_value)),
-          unquote(raw_style_ast(style_value))
-        )
-      end
+    cond do
+      is_nil(class_value) and is_nil(style_value) ->
+        nil
+
+      static_class_value?(class_value) ->
+        class_styles = compile_static_class!(class_value, caller)
+
+        cond do
+          is_nil(style_value) and class_styles == [] ->
+            nil
+
+          is_nil(style_value) ->
+            Macro.escape(class_styles)
+
+          true ->
+            quote do
+              Guppy.Component.merge_precompiled_styles(
+                unquote(Macro.escape(class_styles)),
+                unquote(raw_style_ast(style_value))
+              )
+            end
+        end
+
+      true ->
+        quote do
+          Guppy.Component.merge_styles(
+            unquote(style_value_ast(class_value)),
+            unquote(raw_style_ast(style_value))
+          )
+        end
     end
+  end
+
+  # A class attribute that is not a single {expression} placeholder is a
+  # literal string, so its tokens can be parsed (and rejected) at compile time.
+  defp static_class_value?(class_value) do
+    is_binary(class_value) and not single_expression?(class_value)
+  end
+
+  defp compile_static_class!(class_value, caller) do
+    Guppy.Component.class_to_style!(class_value)
+  rescue
+    error in [ArgumentError] ->
+      raise_compile_error!(caller, Exception.message(error))
   end
 
   defp style_value_ast(nil), do: nil
@@ -1653,12 +1725,12 @@ defmodule Guppy.Component.Compiler do
 
   defp checkbox_allowed_attrs do
     [":if", ":for", "id", "label", "checked", "disabled", "tab_index"] ++
-      Enum.map(@style_attr_pairs, &elem(&1, 0)) ++ @checkbox_events
+      @style_attr_names ++ @checkbox_events
   end
 
   defp radio_allowed_attrs do
     [":if", ":for", "id", "label", "value", "checked", "disabled", "tab_index"] ++
-      Enum.map(@style_attr_pairs, &elem(&1, 0)) ++ @radio_events
+      @style_attr_names ++ @radio_events
   end
 
   defp spacer_allowed_attrs do
@@ -1666,7 +1738,7 @@ defmodule Guppy.Component.Compiler do
   end
 
   defp base_allowed_attrs do
-    [":if", ":for"] ++ Enum.map(@style_attr_pairs, &elem(&1, 0))
+    [":if", ":for"] ++ @style_attr_names
   end
 
   defp existing_atom!(name, caller, context) do

@@ -8,6 +8,8 @@ defmodule Guppy.Server do
 
   use GenServer
 
+  require Logger
+
   defstruct native: nil,
             native_server: nil,
             native_request_timeout: 5_000,
@@ -49,78 +51,117 @@ defmodule Guppy.Server do
           app_owner_monitor: reference() | nil
         }
 
+  # Menu, Dock menu, and app badge are app-global native resources owned by
+  # one process each. The slot table maps each resource to its state fields
+  # and the native request that clears it when the owner dies.
+  @owner_slots %{
+    menu: {:menu_owner, :menu_monitor, {:set_menus, [[]]}},
+    dock_menu: {:dock_menu_owner, :dock_menu_monitor, {:set_dock_menu, [[]]}},
+    app_badge: {:app_badge_owner, :app_badge_monitor, {:set_app_badge, [nil]}}
+  }
+
+  @doc "Starts the server; `:native` and `:native_server` select the bridge implementation."
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
   end
 
+  @doc "Returns the full server state; intended for debugging and tests."
   def info(server \\ __MODULE__) do
     GenServer.call(server, :info)
   end
 
+  @doc "Pings the native bridge through the server."
   def ping(server \\ __MODULE__, timeout \\ 5_000) do
     GenServer.call(server, {:ping, timeout}, gen_call_timeout(timeout))
   end
 
+  # IR validation walks the full tree, so it runs here in the calling process
+  # (parallel per window) rather than inside the server, which only re-checks
+  # the already-validated wrapper. The wrapped term still goes through the
+  # call so ownership checks and native dispatch stay centralized.
+  @doc """
+  Validates IR and window options and opens a native window owned by `owner`
+  (which must be the calling process).
+  """
   def open_window(server \\ __MODULE__, owner, ir, opts \\ [], timeout \\ 5_000) do
-    GenServer.call(server, {:open_window, owner, ir, opts, timeout}, gen_call_timeout(timeout))
+    with {:ok, ir} <- Guppy.IR.validated(ir) do
+      GenServer.call(server, {:open_window, owner, ir, opts, timeout}, gen_call_timeout(timeout))
+    end
   end
 
+  @doc "Validates a full IR tree and renders it into a caller-owned window."
   def render(server \\ __MODULE__, view_id, ir, timeout \\ 5_000) do
-    GenServer.call(server, {:render, view_id, ir, timeout}, gen_call_timeout(timeout))
+    with {:ok, ir} <- Guppy.IR.validated(ir) do
+      GenServer.call(server, {:render, view_id, ir, timeout}, gen_call_timeout(timeout))
+    end
   end
 
+  @doc "Closes a caller-owned native window."
   def close_window(server \\ __MODULE__, view_id, timeout \\ 5_000) do
     GenServer.call(server, {:close_window, view_id, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Activates a caller-owned native window."
   def focus_window(server \\ __MODULE__, view_id, timeout \\ 5_000) do
     GenServer.call(server, {:focus_window, view_id, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Validates and installs the app menu bar; `owner` must be the calling process."
   def set_menus(server \\ __MODULE__, owner, menus, timeout \\ 5_000) do
     GenServer.call(server, {:set_menus, owner, menus, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Validates and installs the Dock menu; `owner` must be the calling process."
   def set_dock_menu(server \\ __MODULE__, owner, items, timeout \\ 5_000) do
     GenServer.call(server, {:set_dock_menu, owner, items, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Sets or clears (nil) the app badge; `owner` must be the calling process."
   def set_app_badge(server \\ __MODULE__, owner, label, timeout \\ 5_000) do
     GenServer.call(server, {:set_app_badge, owner, label, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Opens a platform file-open dialog; see `Guppy.open_file_dialog/2` for options."
   def open_file_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
     GenServer.call(server, {:open_file_dialog, opts, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Opens a platform directory chooser; see `Guppy.choose_directory_dialog/2`."
   def choose_directory_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
     GenServer.call(server, {:choose_directory_dialog, opts, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Opens a platform save dialog; see `Guppy.save_file_dialog/2`."
   def save_file_dialog(server \\ __MODULE__, opts \\ [], timeout \\ 30_000) do
     GenServer.call(server, {:save_file_dialog, opts, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Reads text from the platform clipboard."
   def read_clipboard_text(server \\ __MODULE__, timeout \\ 5_000) do
     GenServer.call(server, {:read_clipboard_text, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc "Writes text to the platform clipboard."
   def write_clipboard_text(server \\ __MODULE__, text, timeout \\ 5_000) do
     GenServer.call(server, {:write_clipboard_text, text, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc false
   def claim_app_owner(server \\ __MODULE__, owner) when is_pid(owner) do
     GenServer.call(server, {:claim_app_owner, owner})
   end
 
+  @doc false
   def release_app_owner(server \\ __MODULE__, owner) when is_pid(owner) do
     GenServer.call(server, {:release_app_owner, owner})
   end
 
+  @doc "Returns the native-side open view count."
   def view_count(server \\ __MODULE__, timeout \\ 5_000) do
     GenServer.call(server, {:view_count, timeout}, gen_call_timeout(timeout))
   end
 
+  @doc false
   def validate_window_options_for_test(opts), do: validate_window_options(opts)
 
   @impl true
@@ -332,7 +373,7 @@ defmodule Guppy.Server do
       case normalize_native_reply(
              native_request(state, :set_menus, {:set_menus, [menus]}, timeout)
            ) do
-        :ok -> {:ok, put_menu_owner(state, owner, menus)}
+        :ok -> {:ok, put_slot_owner(state, :menu, owner, menus == [])}
         {:error, reason} -> {{:error, reason}, state}
       end
     else
@@ -347,7 +388,7 @@ defmodule Guppy.Server do
       reply = native_request(state, :set_dock_menu, {:set_dock_menu, [items]}, timeout)
 
       case normalize_native_reply(reply) do
-        :ok -> {:ok, put_dock_menu_owner(state, owner, items)}
+        :ok -> {:ok, put_slot_owner(state, :dock_menu, owner, items == [])}
         {:error, reason} -> {{:error, reason}, state}
       end
     else
@@ -362,7 +403,7 @@ defmodule Guppy.Server do
       reply = native_request(state, :set_app_badge, {:set_app_badge, [label]}, timeout)
 
       case normalize_native_reply(reply) do
-        :ok -> {:ok, put_app_badge_owner(state, owner, label)}
+        :ok -> {:ok, put_slot_owner(state, :app_badge, owner, is_nil(label))}
         {:error, reason} -> {{:error, reason}, state}
       end
     else
@@ -534,9 +575,11 @@ defmodule Guppy.Server do
   end
 
   def handle_info({:DOWN, monitor_ref, :process, owner, _reason}, state) do
-    state = maybe_clear_dead_menu_owner(state, owner, monitor_ref)
-    state = maybe_clear_dead_dock_menu_owner(state, owner, monitor_ref)
-    state = maybe_clear_dead_app_badge_owner(state, owner, monitor_ref)
+    state =
+      Enum.reduce(Map.keys(@owner_slots), state, fn slot, acc ->
+        maybe_clear_dead_slot_owner(acc, slot, owner, monitor_ref)
+      end)
+
     state = maybe_clear_dead_app_owner(state, owner, monitor_ref)
 
     case Map.fetch(state.monitors, monitor_ref) do
@@ -547,6 +590,29 @@ defmodule Guppy.Server do
       _ ->
         {:noreply, state}
     end
+  end
+
+  # The server is the routing hub for every window, so an unexpected message
+  # must never crash it: native events with unrecognized shapes are dropped
+  # with telemetry, anything else is dropped with a warning.
+  def handle_info({:guppy_native_event, view_id, type, _payload}, state) do
+    emit_event_route_telemetry(view_id, type, :malformed_event)
+
+    Logger.warning(fn ->
+      "Guppy.Server dropped malformed native event " <>
+        inspect({view_id, type}, limit: 5, printable_limit: 120)
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_info(message, state) do
+    Logger.warning(fn ->
+      "Guppy.Server dropped unexpected message: " <>
+        inspect(message, limit: 5, printable_limit: 120)
+    end)
+
+    {:noreply, state}
   end
 
   defp gen_call_timeout(:infinity), do: :infinity
@@ -696,46 +762,54 @@ defmodule Guppy.Server do
     end
   end
 
-  defp put_menu_owner(state, _owner, []) do
-    clear_menu_owner_monitor(state)
+  defp put_slot_owner(state, slot, owner, empty?) do
+    {owner_key, monitor_key, _clear_request} = Map.fetch!(@owner_slots, slot)
+
+    cond do
+      empty? ->
+        clear_slot_monitor(state, slot)
+
+      Map.fetch!(state, owner_key) == owner ->
+        state
+
+      true ->
+        state = clear_slot_monitor(state, slot)
+
+        state
+        |> Map.put(owner_key, owner)
+        |> Map.put(monitor_key, Process.monitor(owner))
+    end
   end
 
-  defp put_menu_owner(%{menu_owner: owner} = state, owner, _menus)
-       when is_pid(owner) do
-    state
+  defp clear_slot_monitor(state, slot) do
+    {owner_key, monitor_key, _clear_request} = Map.fetch!(@owner_slots, slot)
+
+    case Map.fetch!(state, monitor_key) do
+      monitor_ref when is_reference(monitor_ref) ->
+        Process.demonitor(monitor_ref, [:flush])
+
+        state
+        |> Map.put(owner_key, nil)
+        |> Map.put(monitor_key, nil)
+
+      nil ->
+        state
+    end
   end
 
-  defp put_menu_owner(state, owner, _menus) do
-    state = clear_menu_owner_monitor(state)
-    %{state | menu_owner: owner, menu_monitor: Process.monitor(owner)}
-  end
+  defp maybe_clear_dead_slot_owner(state, slot, owner, monitor_ref) do
+    {owner_key, monitor_key, {command, _args} = clear_request} = Map.fetch!(@owner_slots, slot)
 
-  defp put_dock_menu_owner(state, _owner, []) do
-    clear_dock_menu_owner_monitor(state)
-  end
+    if is_pid(owner) and Map.fetch!(state, owner_key) == owner and
+         Map.fetch!(state, monitor_key) == monitor_ref do
+      _ = native_request(state, command, clear_request, state.native_request_timeout)
 
-  defp put_dock_menu_owner(%{dock_menu_owner: owner} = state, owner, _items)
-       when is_pid(owner) do
-    state
-  end
-
-  defp put_dock_menu_owner(state, owner, _items) do
-    state = clear_dock_menu_owner_monitor(state)
-    %{state | dock_menu_owner: owner, dock_menu_monitor: Process.monitor(owner)}
-  end
-
-  defp put_app_badge_owner(state, _owner, nil) do
-    clear_app_badge_owner_monitor(state)
-  end
-
-  defp put_app_badge_owner(%{app_badge_owner: owner} = state, owner, _label)
-       when is_pid(owner) do
-    state
-  end
-
-  defp put_app_badge_owner(state, owner, _label) do
-    state = clear_app_badge_owner_monitor(state)
-    %{state | app_badge_owner: owner, app_badge_monitor: Process.monitor(owner)}
+      state
+      |> Map.put(owner_key, nil)
+      |> Map.put(monitor_key, nil)
+    else
+      state
+    end
   end
 
   defp app_owner_conflict?(%{app_owner: nil}, _owner), do: false
@@ -765,75 +839,6 @@ defmodule Guppy.Server do
   end
 
   defp clear_app_owner(state), do: %{state | app_owner: nil, app_owner_monitor: nil}
-
-  defp maybe_clear_dead_menu_owner(
-         %{menu_owner: owner, menu_monitor: monitor_ref} = state,
-         owner,
-         monitor_ref
-       )
-       when is_pid(owner) do
-    _ = native_request(state, :set_menus, {:set_menus, [[]]}, state.native_request_timeout)
-    %{state | menu_owner: nil, menu_monitor: nil}
-  end
-
-  defp maybe_clear_dead_menu_owner(state, _owner, _monitor_ref), do: state
-
-  defp maybe_clear_dead_dock_menu_owner(
-         %{dock_menu_owner: owner, dock_menu_monitor: monitor_ref} = state,
-         owner,
-         monitor_ref
-       )
-       when is_pid(owner) do
-    _ =
-      native_request(state, :set_dock_menu, {:set_dock_menu, [[]]}, state.native_request_timeout)
-
-    %{state | dock_menu_owner: nil, dock_menu_monitor: nil}
-  end
-
-  defp maybe_clear_dead_dock_menu_owner(state, _owner, _monitor_ref), do: state
-
-  defp maybe_clear_dead_app_badge_owner(
-         %{app_badge_owner: owner, app_badge_monitor: monitor_ref} = state,
-         owner,
-         monitor_ref
-       )
-       when is_pid(owner) do
-    _ =
-      native_request(
-        state,
-        :set_app_badge,
-        {:set_app_badge, [nil]},
-        state.native_request_timeout
-      )
-
-    %{state | app_badge_owner: nil, app_badge_monitor: nil}
-  end
-
-  defp maybe_clear_dead_app_badge_owner(state, _owner, _monitor_ref), do: state
-
-  defp clear_menu_owner_monitor(%{menu_monitor: monitor_ref} = state)
-       when is_reference(monitor_ref) do
-    Process.demonitor(monitor_ref, [:flush])
-    %{state | menu_owner: nil, menu_monitor: nil}
-  end
-
-  defp clear_menu_owner_monitor(state), do: state
-
-  defp clear_dock_menu_owner_monitor(%{dock_menu_monitor: monitor_ref} = state)
-       when is_reference(monitor_ref) do
-    Process.demonitor(monitor_ref, [:flush])
-    %{state | dock_menu_owner: nil, dock_menu_monitor: nil}
-  end
-
-  defp clear_dock_menu_owner_monitor(state), do: state
-
-  defp clear_app_badge_owner_monitor(%{app_badge_monitor: monitor_ref} = state)
-       when is_reference(monitor_ref) do
-    Process.demonitor(monitor_ref, [:flush])
-    %{state | app_badge_owner: nil, app_badge_monitor: nil}
-  end
-
-  defp clear_app_badge_owner_monitor(state), do: state
 
   defp delete_view(state, view_id) do
     case Map.pop(state.views, view_id) do
@@ -902,22 +907,17 @@ defmodule Guppy.Server do
   defp validate_app_badge(label) when is_binary(label), do: {:ok, label}
   defp validate_app_badge(_label), do: {:error, :invalid_app_badge}
 
-  defp validate_open_file_dialog_options(state, caller, opts, mode) when is_list(opts),
-    do: opts |> Map.new() |> validate_open_file_dialog_options(state, caller, mode)
+  @open_file_dialog_keys [:multiple, :prompt, :directory, :filters, :owner_view_id]
+  @save_file_dialog_keys [:directory, :default_name, :filters, :owner_view_id]
 
-  defp validate_open_file_dialog_options(opts, state, caller, mode) when is_map(opts) do
-    with :ok <-
-           validate_file_dialog_keys(opts, [
-             :multiple,
-             :prompt,
-             :directory,
-             :filters,
-             :owner_view_id
-           ]),
+  defp validate_open_file_dialog_options(state, caller, opts, mode) do
+    with {:ok, opts} <- normalize_dialog_opts(opts),
+         :ok <- validate_file_dialog_keys(opts, @open_file_dialog_keys),
          {:ok, multiple} <- validate_optional_boolean(Map.get(opts, :multiple, false), :multiple),
          {:ok, prompt} <- validate_optional_string(Map.get(opts, :prompt), :prompt),
          {:ok, directory} <- validate_optional_string(Map.get(opts, :directory), :directory),
-         {:ok, filters} <- validate_file_dialog_filters(Map.get(opts, :filters)),
+         {:ok, filters} <-
+           tag_invalid(validate_file_dialog_filters(Map.get(opts, :filters)), :filters),
          {:ok, owner_view_id} <- validate_file_dialog_owner_view_id(state, caller, opts) do
       {:ok,
        %{
@@ -930,25 +930,18 @@ defmodule Guppy.Server do
        |> maybe_put_window_option(:filters, filters)
        |> maybe_put_window_option(:owner_view_id, owner_view_id)}
     else
-      {:error, :unknown_view_id} -> {:error, :unknown_view_id}
-      {:error, :not_view_owner} -> {:error, :not_view_owner}
-      _error -> {:error, :invalid_file_dialog_options}
+      error -> dialog_options_error(error)
     end
   end
 
-  defp validate_open_file_dialog_options(_opts, _state, _caller, _mode),
-    do: {:error, :invalid_file_dialog_options}
-
-  defp validate_save_file_dialog_options(state, caller, opts) when is_list(opts),
-    do: opts |> Map.new() |> validate_save_file_dialog_options(state, caller)
-
-  defp validate_save_file_dialog_options(opts, state, caller) when is_map(opts) do
-    with :ok <-
-           validate_file_dialog_keys(opts, [:directory, :default_name, :filters, :owner_view_id]),
+  defp validate_save_file_dialog_options(state, caller, opts) do
+    with {:ok, opts} <- normalize_dialog_opts(opts),
+         :ok <- validate_file_dialog_keys(opts, @save_file_dialog_keys),
          {:ok, directory} <- validate_optional_string(Map.get(opts, :directory), :directory),
          {:ok, default_name} <-
            validate_optional_string(Map.get(opts, :default_name), :default_name),
-         {:ok, filters} <- validate_file_dialog_filters(Map.get(opts, :filters)),
+         {:ok, filters} <-
+           tag_invalid(validate_file_dialog_filters(Map.get(opts, :filters)), :filters),
          {:ok, owner_view_id} <- validate_file_dialog_owner_view_id(state, caller, opts) do
       {:ok,
        %{}
@@ -957,14 +950,26 @@ defmodule Guppy.Server do
        |> maybe_put_window_option(:filters, filters)
        |> maybe_put_window_option(:owner_view_id, owner_view_id)}
     else
-      {:error, :unknown_view_id} -> {:error, :unknown_view_id}
-      {:error, :not_view_owner} -> {:error, :not_view_owner}
-      _error -> {:error, :invalid_file_dialog_options}
+      error -> dialog_options_error(error)
     end
   end
 
-  defp validate_save_file_dialog_options(_opts, _state, _caller),
-    do: {:error, :invalid_file_dialog_options}
+  defp normalize_dialog_opts(opts) when is_list(opts) do
+    if Keyword.keyword?(opts) do
+      {:ok, Map.new(opts)}
+    else
+      {:error, {:invalid_option, :options}}
+    end
+  end
+
+  defp normalize_dialog_opts(opts) when is_map(opts) and not is_struct(opts), do: {:ok, opts}
+  defp normalize_dialog_opts(_opts), do: {:error, {:invalid_option, :options}}
+
+  defp dialog_options_error({:error, reason}) when reason in [:unknown_view_id, :not_view_owner],
+    do: {:error, reason}
+
+  defp dialog_options_error({:error, {:invalid_option, field}}),
+    do: {:error, {:invalid_file_dialog_options, field}}
 
   defp validate_file_dialog_filters(nil), do: {:ok, nil}
   defp validate_file_dialog_filters([]), do: {:ok, nil}
@@ -973,11 +978,11 @@ defmodule Guppy.Server do
     if Enum.all?(filters, &(is_binary(&1) and &1 != "")) do
       {:ok, filters}
     else
-      {:error, :invalid_file_dialog_options}
+      {:error, {:invalid_option, :filters}}
     end
   end
 
-  defp validate_file_dialog_filters(_filters), do: {:error, :invalid_file_dialog_options}
+  defp validate_file_dialog_filters(_filters), do: {:error, {:invalid_option, :filters}}
 
   defp validate_file_dialog_owner_view_id(state, caller, opts) do
     case Map.fetch(opts, :owner_view_id) do
@@ -988,7 +993,7 @@ defmodule Guppy.Server do
         end
 
       {:ok, _view_id} ->
-        {:error, :invalid_file_dialog_options}
+        {:error, {:invalid_option, :owner_view_id}}
 
       :error ->
         {:ok, nil}
@@ -998,7 +1003,7 @@ defmodule Guppy.Server do
   defp validate_file_dialog_keys(opts, allowed_keys) do
     case Map.keys(opts) -- allowed_keys do
       [] -> :ok
-      _ -> {:error, :invalid_file_dialog_options}
+      unknown_keys -> {:error, {:invalid_option, {:unknown_keys, unknown_keys}}}
     end
   end
 
@@ -1143,33 +1148,60 @@ defmodule Guppy.Server do
   @supported_window_backgrounds [:opaque, :transparent, :blurred]
   @supported_window_decorations [:server, :client]
 
-  defp validate_window_options(opts) when is_list(opts),
-    do: validate_window_options(Map.new(opts))
+  defp validate_window_options(opts) when is_list(opts) do
+    if Keyword.keyword?(opts) do
+      validate_window_options(Map.new(opts))
+    else
+      {:error, {:invalid_window_options, :options}}
+    end
+  end
 
-  defp validate_window_options(opts) when is_map(opts) do
+  defp validate_window_options(opts) when is_map(opts) and not is_struct(opts) do
+    case do_validate_window_options(opts) do
+      {:ok, validated} -> {:ok, validated}
+      {:error, {:invalid_option, field}} -> {:error, {:invalid_window_options, field}}
+    end
+  end
+
+  defp validate_window_options(_opts), do: {:error, {:invalid_window_options, :options}}
+
+  defp do_validate_window_options(opts) do
     with :ok <- validate_window_option_keys(opts),
-         {:ok, window_bounds} <- validate_window_bounds(Map.get(opts, :window_bounds)),
-         {:ok, titlebar} <- validate_titlebar(Map.get(opts, :titlebar)),
+         {:ok, window_bounds} <-
+           tag_invalid(validate_window_bounds(Map.get(opts, :window_bounds)), :window_bounds),
+         {:ok, titlebar} <- tag_invalid(validate_titlebar(Map.get(opts, :titlebar)), :titlebar),
          {:ok, focus} <- validate_optional_boolean(Map.get(opts, :focus), :focus),
          {:ok, show} <- validate_optional_boolean(Map.get(opts, :show), :show),
-         {:ok, kind} <- validate_optional_atom_in(Map.get(opts, :kind), @supported_window_kinds),
+         {:ok, kind} <-
+           tag_invalid(
+             validate_optional_atom_in(Map.get(opts, :kind), @supported_window_kinds),
+             :kind
+           ),
          {:ok, is_movable} <- validate_optional_boolean(Map.get(opts, :is_movable), :is_movable),
          {:ok, is_resizable} <-
            validate_optional_boolean(Map.get(opts, :is_resizable), :is_resizable),
          {:ok, is_minimizable} <-
            validate_optional_boolean(Map.get(opts, :is_minimizable), :is_minimizable),
-         {:ok, display_id} <- validate_optional_display_id(Map.get(opts, :display_id)),
+         {:ok, display_id} <-
+           tag_invalid(validate_optional_display_id(Map.get(opts, :display_id)), :display_id),
          {:ok, window_background} <-
-           validate_optional_atom_in(
-             Map.get(opts, :window_background),
-             @supported_window_backgrounds
+           tag_invalid(
+             validate_optional_atom_in(
+               Map.get(opts, :window_background),
+               @supported_window_backgrounds
+             ),
+             :window_background
            ),
          {:ok, app_id} <- validate_optional_string(Map.get(opts, :app_id), :app_id),
-         {:ok, window_min_size} <- validate_size_map(Map.get(opts, :window_min_size)),
+         {:ok, window_min_size} <-
+           tag_invalid(validate_size_map(Map.get(opts, :window_min_size)), :window_min_size),
          {:ok, window_decorations} <-
-           validate_optional_atom_in(
-             Map.get(opts, :window_decorations),
-             @supported_window_decorations
+           tag_invalid(
+             validate_optional_atom_in(
+               Map.get(opts, :window_decorations),
+               @supported_window_decorations
+             ),
+             :window_decorations
            ),
          {:ok, tabbing_identifier} <-
            validate_optional_string(Map.get(opts, :tabbing_identifier), :tabbing_identifier) do
@@ -1192,12 +1224,14 @@ defmodule Guppy.Server do
     end
   end
 
-  defp validate_window_options(_opts), do: {:error, :invalid_window_options}
+  defp tag_invalid({:ok, value}, _field), do: {:ok, value}
+  defp tag_invalid({:error, {:invalid_option, _} = tagged}, _field), do: {:error, tagged}
+  defp tag_invalid({:error, _reason}, field), do: {:error, {:invalid_option, field}}
 
   defp validate_window_option_keys(opts) do
     case Map.keys(opts) -- @supported_window_options do
       [] -> :ok
-      _ -> {:error, :invalid_window_options}
+      unknown_keys -> {:error, {:invalid_option, {:unknown_keys, unknown_keys}}}
     end
   end
 
@@ -1320,11 +1354,11 @@ defmodule Guppy.Server do
 
   defp validate_optional_string(nil, _field), do: {:ok, nil}
   defp validate_optional_string(value, _field) when is_binary(value), do: {:ok, value}
-  defp validate_optional_string(_value, _field), do: {:error, :invalid_window_options}
+  defp validate_optional_string(_value, field), do: {:error, {:invalid_option, field}}
 
   defp validate_optional_boolean(nil, _field), do: {:ok, nil}
   defp validate_optional_boolean(value, _field) when is_boolean(value), do: {:ok, value}
-  defp validate_optional_boolean(_value, _field), do: {:error, :invalid_window_options}
+  defp validate_optional_boolean(_value, field), do: {:error, {:invalid_option, field}}
 
   defp validate_nested_keys(map, allowed_keys) do
     case Map.keys(map) -- allowed_keys do

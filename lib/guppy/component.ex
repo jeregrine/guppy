@@ -250,14 +250,37 @@ defmodule Guppy.Component do
   end
 
   def merge_styles(class_value, style_value) do
-    merged = normalize_class_value(class_value) ++ normalize_style_value(style_value)
+    merge_precompiled_styles(normalize_class_value(class_value), style_value)
+  end
+
+  @doc false
+  def merge_precompiled_styles(class_styles, style_value) do
+    merged = class_styles ++ normalize_style_value(style_value)
     if merged == [], do: nil, else: merged
   end
 
   @doc false
   def merge_image_options(class_value, style_value, object_fit_value, grayscale_value) do
-    {class_style, class_options} = image_class_to_style_and_options!(class_value)
-    style = class_style ++ normalize_style_value(style_value)
+    {class_styles, class_options} = image_class_to_style_and_options!(class_value)
+
+    merge_image_options_precompiled(
+      class_styles,
+      class_options,
+      style_value,
+      object_fit_value,
+      grayscale_value
+    )
+  end
+
+  @doc false
+  def merge_image_options_precompiled(
+        class_styles,
+        class_options,
+        style_value,
+        object_fit_value,
+        grayscale_value
+      ) do
+    style = class_styles ++ normalize_style_value(style_value)
 
     object_fit =
       if is_nil(object_fit_value), do: Map.get(class_options, :object_fit), else: object_fit_value
@@ -297,7 +320,8 @@ defmodule Guppy.Component do
     |> Enum.flat_map(fn token -> List.wrap(class_token_to_style!(token)) end)
   end
 
-  defp image_class_to_style_and_options!(value) do
+  @doc false
+  def image_class_to_style_and_options!(value) do
     value
     |> class_tokens!()
     |> Enum.reduce({[], %{}}, fn token, {styles, options} ->
@@ -355,16 +379,56 @@ defmodule Guppy.Component do
         "expected style to be nil, false, or a canonical style list; use class for class tokens, got: #{inspect(other)}"
       )
 
+  @class_style_cache :guppy_class_style_cache
+
+  @doc false
+  # Dynamic class strings are re-tokenized on every render, so successful
+  # token parses are memoized. The token space is bounded by the class names
+  # an app actually uses, which keeps the table small.
+  def create_class_style_cache do
+    if :ets.whereis(@class_style_cache) == :undefined do
+      :ets.new(@class_style_cache, [:named_table, :public, read_concurrency: true])
+    end
+
+    :ok
+  end
+
   defp class_token_to_style!(token) do
+    case lookup_cached_class_style(token) do
+      {:ok, style} ->
+        style
+
+      :miss ->
+        style = compute_class_token_style!(token)
+        cache_class_style(token, style)
+        style
+    end
+  end
+
+  # The cache table only exists once the :guppy application has started;
+  # templates rendered outside it just compute every time.
+  defp lookup_cached_class_style(token) do
+    case :ets.lookup(@class_style_cache, token) do
+      [{^token, style}] -> {:ok, style}
+      [] -> :miss
+    end
+  rescue
+    ArgumentError -> :miss
+  end
+
+  defp cache_class_style(token, style) do
+    :ets.insert(@class_style_cache, {token, style})
+  rescue
+    ArgumentError -> true
+  end
+
+  defp compute_class_token_style!(token) do
     cond do
       catalog_style = parse_catalog_style(token) ->
         catalog_style
 
       gradient_style = parse_linear_gradient_style(token) ->
         gradient_style
-
-      color_style = parse_named_color_style(token) ->
-        color_style
 
       hex_style = parse_hex_color_style(token) ->
         hex_style
@@ -376,7 +440,32 @@ defmodule Guppy.Component do
         grid_style
 
       true ->
-        raise ArgumentError, "unsupported Guppy class token: #{inspect(token)}"
+        raise ArgumentError, unsupported_class_token_message(token)
+    end
+  end
+
+  @named_color_names ~w(red green blue yellow black white gray)
+
+  defp unsupported_class_token_message(token) do
+    base = "unsupported Guppy class token: #{inspect(token)}."
+
+    color_hint =
+      if String.contains?(token, "-") and color_like_token?(token) do
+        " Named colors are limited to #{Enum.join(@named_color_names, "/")}; " <>
+          "use an arbitrary hex value like bg-[#1e293b] for other colors."
+      else
+        ""
+      end
+
+    base <>
+      color_hint <>
+      " See Guppy.Style for the supported class surface (Guppy.Style.catalog/0 lists catalog tokens)."
+  end
+
+  defp color_like_token?(token) do
+    case String.split(token, "-", parts: 2) do
+      [prefix, _rest] -> prefix in ["bg", "text", "border", "decoration", "strikethrough"]
+      _ -> false
     end
   end
 
@@ -384,16 +473,6 @@ defmodule Guppy.Component do
     case Guppy.Style.class_token_to_style(token) do
       {:ok, style} -> style
       :error -> nil
-    end
-  end
-
-  defp parse_named_color_style(token) do
-    with [prefix, color] <- String.split(token, "-", parts: 2),
-         {:ok, key} <- color_key(prefix),
-         {:ok, color_atom} <- named_color(color) do
-      {key, color_atom}
-    else
-      _ -> nil
     end
   end
 
@@ -440,18 +519,4 @@ defmodule Guppy.Component do
       _ -> nil
     end
   end
-
-  defp color_key("bg"), do: {:ok, :bg}
-  defp color_key("text"), do: {:ok, :text_color}
-  defp color_key("border"), do: {:ok, :border_color}
-  defp color_key(_), do: :error
-
-  defp named_color("red"), do: {:ok, :red}
-  defp named_color("green"), do: {:ok, :green}
-  defp named_color("blue"), do: {:ok, :blue}
-  defp named_color("yellow"), do: {:ok, :yellow}
-  defp named_color("black"), do: {:ok, :black}
-  defp named_color("white"), do: {:ok, :white}
-  defp named_color("gray"), do: {:ok, :gray}
-  defp named_color(_), do: :error
 end

@@ -599,4 +599,106 @@ defmodule Guppy.AppTest do
     wait_until(fn -> Guppy.Server.info(server).app_owner == nil end)
     assert :ok = Guppy.Server.set_menus(server, self(), [], 25)
   end
+
+  test "concurrent open_window calls for the same id do not start two windows" do
+    server = :"guppy_race_server_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    app_name = :"guppy_race_app_#{System.unique_integer([:positive])}"
+
+    {:ok, _sup} =
+      start_supervised(
+        {Guppy.StoppingCommandApp, name: app_name, parent: self(), runtime_server: server}
+      )
+
+    parent = self()
+
+    first =
+      Task.async(fn ->
+        Guppy.App.open_window(app_name, "raced",
+          module: Guppy.SlowStartWindow,
+          arg: %{block_on: parent}
+        )
+      end)
+
+    assert_receive {:slow_start_begun, window_pid}
+
+    # While the first open is still starting, a second open for the same id
+    # must be rejected instead of starting a second untracked window.
+    assert {:error, {:duplicate_window_id, "raced"}} =
+             Guppy.App.open_window(app_name, "raced",
+               module: Guppy.SlowStartWindow,
+               arg: %{block_on: parent}
+             )
+
+    send(window_pid, :guppy_release_slow_start)
+    assert {:ok, ^window_pid} = Task.await(first)
+    assert Guppy.App.window_pid(app_name, "raced") == window_pid
+    refute_receive {:slow_start_begun, _other}, 100
+  end
+
+  test "dispatching an unknown command logs a warning" do
+    server = :"guppy_unknown_cmd_server_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    app_name = :"guppy_unknown_cmd_app_#{System.unique_integer([:positive])}"
+
+    {:ok, _sup} =
+      start_supervised(
+        {Guppy.StoppingCommandApp, name: app_name, parent: self(), runtime_server: server}
+      )
+
+    log =
+      ExUnit.CaptureLog.capture_log([level: :warning], fn ->
+        assert :ok = Guppy.App.dispatch(app_name, "no_such_command", %{})
+        # Synchronous call to make sure the cast above has been processed.
+        _ = Guppy.App.commands(app_name)
+      end)
+
+    assert log =~ "no_such_command"
+    assert log =~ "unknown command"
+  end
+
+  test "handle_command can stop the coordinator via {:stop, reason, state}" do
+    server = :"guppy_stop_app_server_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Guppy.Server,
+       name: server,
+       native: Guppy.TimeoutRecordingNative,
+       native_server: self(),
+       native_request_timeout: 25}
+    )
+
+    app_name = :"guppy_stop_app_#{System.unique_integer([:positive])}"
+
+    {:ok, _sup} =
+      start_supervised(
+        {Guppy.StoppingCommandApp, name: app_name, parent: self(), runtime_server: server}
+      )
+
+    coordinator = Process.whereis(app_name)
+    assert is_pid(coordinator)
+
+    assert :ok = Guppy.App.dispatch(app_name, "ping", %{n: 1})
+    assert_receive {:app_command, "ping", %{n: 1}}
+
+    ref = Process.monitor(coordinator)
+    assert :ok = Guppy.App.dispatch(app_name, "stop_me", %{})
+    assert_receive {:DOWN, ^ref, :process, ^coordinator, :normal}
+  end
 end
