@@ -544,7 +544,7 @@ defmodule Examples.KanbanTodoWindow do
 
       <div id={@task.body_id} class="flex flex-col gap-1">
         <text id={@task.title_id} class="text-sm font-semibold leading-snug">{@task.title}</text>
-        <text id={@task.summary_id} class="text-xs text-[#6e6e73] leading-snug line-clamp-2 whitespace-normal">
+        <text id={@task.summary_id} class="text-xs text-[#6e6e73] leading-snug line-clamp-2 whitespace-normal text-ellipsis">
           {@task.summary}
         </text>
       </div>
