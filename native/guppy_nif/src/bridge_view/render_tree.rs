@@ -405,6 +405,12 @@ fn tree_keyboard_action<'a>(
     select: Option<&'a str>,
     toggle: Option<&'a str>,
 ) -> Option<TreeKeyboardAction<'a>> {
+    // Held key repeat must not spam select/toggle events; held arrows still
+    // move focus through the unguarded navigation handling above.
+    if event.is_held {
+        return None;
+    }
+
     match event.keystroke.key.as_str() {
         "enter" => select.map(TreeKeyboardAction::Select),
         "space" if item.has_children => toggle.map(TreeKeyboardAction::Toggle),
@@ -424,7 +430,48 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{SELECT_EVENT, TOGGLE_EVENT, apply_tree_row_styles, flatten_visible_tree_items};
+    use super::{
+        SELECT_EVENT, TOGGLE_EVENT, TreeKeyboardAction, VisibleTreeItem, apply_tree_row_styles,
+        flatten_visible_tree_items, tree_keyboard_action,
+    };
+    use gpui::{KeyDownEvent, Keystroke};
+
+    fn tree_key_event(key: &str, is_held: bool) -> KeyDownEvent {
+        KeyDownEvent {
+            keystroke: Keystroke::parse(key).unwrap(),
+            is_held,
+        }
+    }
+
+    #[test]
+    fn held_keys_do_not_select_or_toggle_tree_rows() {
+        let item = VisibleTreeItem {
+            id: "node".into(),
+            label: "Node".into(),
+            depth: 0,
+            expanded: false,
+            has_children: true,
+            parent_id: None,
+            style: Vec::new().into(),
+        };
+
+        assert!(matches!(
+            tree_keyboard_action(&tree_key_event("enter", false), &item, Some("sel"), None),
+            Some(TreeKeyboardAction::Select("sel"))
+        ));
+        assert!(
+            tree_keyboard_action(&tree_key_event("enter", true), &item, Some("sel"), None)
+                .is_none()
+        );
+        assert!(
+            tree_keyboard_action(&tree_key_event("space", true), &item, None, Some("tog"))
+                .is_none()
+        );
+        assert!(
+            tree_keyboard_action(&tree_key_event("right", true), &item, None, Some("tog"))
+                .is_none()
+        );
+    }
     use crate::{
         bridge_view::events,
         ir::{StyleOp, TreeItem},

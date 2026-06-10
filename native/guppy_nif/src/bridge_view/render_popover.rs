@@ -209,6 +209,11 @@ fn attach_keyboard_actions(
 }
 
 fn popover_keyboard_action(event: &KeyDownEvent, open: bool) -> Option<PopoverKeyboardAction> {
+    // Held key repeat must not spam open/close toggles.
+    if event.is_held {
+        return None;
+    }
+
     match event.keystroke.key.as_str() {
         "space" | "enter" => Some(PopoverKeyboardAction::Toggle),
         "escape" if open => Some(PopoverKeyboardAction::Close),
@@ -295,5 +300,19 @@ mod tests {
             keystroke: Keystroke::parse(key).unwrap(),
             is_held: false,
         }
+    }
+
+    fn held_key_event(key: &str) -> KeyDownEvent {
+        KeyDownEvent {
+            keystroke: Keystroke::parse(key).unwrap(),
+            is_held: true,
+        }
+    }
+
+    #[test]
+    fn held_keys_do_not_toggle_or_close_popovers() {
+        assert!(popover_keyboard_action(&held_key_event("space"), false).is_none());
+        assert!(popover_keyboard_action(&held_key_event("enter"), true).is_none());
+        assert!(popover_keyboard_action(&held_key_event("escape"), true).is_none());
     }
 }

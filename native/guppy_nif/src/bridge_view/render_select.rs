@@ -330,11 +330,16 @@ fn select_keyboard_action(
     value: Option<&str>,
 ) -> Option<SelectKeyboardAction> {
     if is_select_toggle_key(event) {
+        // Held key repeat must not spam open/close toggles.
+        if event.is_held {
+            return None;
+        }
+
         return Some(SelectKeyboardAction::Toggle);
     }
 
     match event.keystroke.key.as_str() {
-        "escape" if open => Some(SelectKeyboardAction::Close),
+        "escape" if open && !event.is_held => Some(SelectKeyboardAction::Close),
         "home" => first_enabled_option(options)
             .map(|option| SelectKeyboardAction::Change(option.value.clone())),
         "end" => last_enabled_option(options)
@@ -499,6 +504,30 @@ mod tests {
             keystroke: Keystroke::parse(key).unwrap(),
             is_held: false,
         }
+    }
+
+    fn held_key_event(key: &str) -> KeyDownEvent {
+        KeyDownEvent {
+            keystroke: Keystroke::parse(key).unwrap(),
+            is_held: true,
+        }
+    }
+
+    #[test]
+    fn held_keys_do_not_toggle_or_close_selects_but_still_navigate() {
+        let options = vec![
+            option("alpha", "Alpha", false),
+            option("beta", "Beta", false),
+        ];
+
+        assert!(select_keyboard_action(&held_key_event("space"), false, &options, None).is_none());
+        assert!(select_keyboard_action(&held_key_event("enter"), true, &options, None).is_none());
+        assert!(select_keyboard_action(&held_key_event("escape"), true, &options, None).is_none());
+
+        assert!(matches!(
+            select_keyboard_action(&held_key_event("down"), true, &options, Some("alpha")),
+            Some(SelectKeyboardAction::Change(value)) if value == "beta"
+        ));
     }
 
     fn option(value: &str, label: &str, disabled: bool) -> SelectOption {

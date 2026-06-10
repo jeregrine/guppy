@@ -179,7 +179,7 @@ where
         let key_callback_id = callback_id.to_owned();
         let key_node_id = node_key.clone();
         control = control.on_key_down(move |event: &KeyDownEvent, _, cx| {
-            if is_choice_toggle_key(event) {
+            if choice_toggle_triggered(event) {
                 key_emit(view_id, &key_node_id, &key_callback_id);
                 cx.stop_propagation();
             }
@@ -195,6 +195,11 @@ pub(crate) fn enabled_change_callback(disabled: bool, callback: Option<&str>) ->
 
 pub(crate) fn is_choice_toggle_key(event: &KeyDownEvent) -> bool {
     matches!(event.keystroke.key.as_str(), "space" | "enter")
+}
+
+/// Held key repeat must not spam discrete change events.
+pub(crate) fn choice_toggle_triggered(event: &KeyDownEvent) -> bool {
+    !event.is_held && is_choice_toggle_key(event)
 }
 
 #[cfg(test)]
@@ -230,6 +235,22 @@ mod tests {
         );
         assert_eq!(enabled_change_callback(true, Some("toggle")), None);
         assert_eq!(enabled_change_callback(false, None), None);
+    }
+
+    #[test]
+    fn held_keys_do_not_toggle_choice_controls() {
+        assert!(super::choice_toggle_triggered(&KeyDownEvent {
+            keystroke: Keystroke::parse("space").unwrap(),
+            is_held: false,
+        }));
+        assert!(!super::choice_toggle_triggered(&KeyDownEvent {
+            keystroke: Keystroke::parse("space").unwrap(),
+            is_held: true,
+        }));
+        assert!(!super::choice_toggle_triggered(&KeyDownEvent {
+            keystroke: Keystroke::parse("enter").unwrap(),
+            is_held: true,
+        }));
     }
 
     #[test]

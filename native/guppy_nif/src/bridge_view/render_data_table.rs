@@ -1062,7 +1062,8 @@ fn is_header_activation_key(event: &KeyDownEvent) -> bool {
 }
 
 fn is_activation_key(event: &KeyDownEvent) -> bool {
-    matches!(event.keystroke.key.as_str(), "space" | "enter")
+    // Held key repeat must not spam sort/row/cell activation events.
+    !event.is_held && matches!(event.keystroke.key.as_str(), "space" | "enter")
 }
 
 fn apply_column_width<E>(element: E, width: &DataTableColumnWidth) -> E
@@ -1121,9 +1122,26 @@ fn render_static_node(view_id: u64, path: &str, ir: &IrNode) -> AnyElement {
 #[cfg(test)]
 mod tests {
     use super::{
-        CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width, order_pinned_columns,
-        prepare_rows,
+        CELL_CLICK_EVENT, ROW_CLICK_EVENT, SORT_EVENT, apply_column_width, is_activation_key,
+        order_pinned_columns, prepare_rows,
     };
+    use gpui::{KeyDownEvent, Keystroke};
+
+    #[test]
+    fn held_keys_do_not_activate_table_rows_cells_or_headers() {
+        assert!(is_activation_key(&KeyDownEvent {
+            keystroke: Keystroke::parse("space").unwrap(),
+            is_held: false,
+        }));
+        assert!(!is_activation_key(&KeyDownEvent {
+            keystroke: Keystroke::parse("space").unwrap(),
+            is_held: true,
+        }));
+        assert!(!is_activation_key(&KeyDownEvent {
+            keystroke: Keystroke::parse("enter").unwrap(),
+            is_held: true,
+        }));
+    }
     use crate::{
         bridge_view::events,
         ir::{DataTableCell, DataTableColumn, DataTableColumnWidth, DataTableRow},

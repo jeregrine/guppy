@@ -630,7 +630,7 @@ fn render_row_checkbox(
         let key_context = state.context.clone();
         let key_callback_id = callback_id.clone();
         checkbox = checkbox.on_key_down(move |event: &KeyDownEvent, _, cx| {
-            if render_choice::is_choice_toggle_key(event) {
+            if render_choice::choice_toggle_triggered(event) {
                 events::emit_row_control_checkbox_change(
                     view_id,
                     &key_context,
@@ -709,7 +709,7 @@ fn render_row_radio(
         let key_callback_id = callback_id.clone();
         let key_value = node.value.clone();
         radio = radio.on_key_down(move |event: &KeyDownEvent, _, cx| {
-            if render_choice::is_choice_toggle_key(event) {
+            if render_choice::choice_toggle_triggered(event) {
                 events::emit_row_control_change(
                     view_id,
                     &key_context,
