@@ -203,6 +203,21 @@ fn cached_ir_field_keys_cover_allowed_schema() {
 }
 
 #[test]
+fn rejects_empty_node_ids() {
+    let node = map(vec![
+        (atom("kind"), atom("text")),
+        (atom("content"), binary("hello")),
+        (atom("id"), binary("")),
+    ]);
+
+    let err = IrNode::from_term(&node).unwrap_err();
+    assert!(
+        err.contains("id must not be empty"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
 fn rejects_unknown_native_ir_fields() {
     let node = map(vec![
         (atom("kind"), atom("text")),

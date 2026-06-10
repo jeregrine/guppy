@@ -1208,6 +1208,11 @@ impl IrNode {
         ensure_allowed_fields(map, allowed_fields, kind)?;
         ensure_allowed_node_events(kind, map)?;
         let id = get_optional_string_field(map, "id")?;
+        // Explicit ids key retained native state; an empty id would collide
+        // across nodes. The Elixir validator rejects these too.
+        if matches!(id.as_deref(), Some("")) {
+            return Err(format!("{kind} id must not be empty"));
+        }
 
         match kind {
             "text" => decode_text_ir_node(map, id),

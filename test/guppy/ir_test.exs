@@ -1177,6 +1177,18 @@ defmodule Guppy.IRTest do
 
     assert {:error, {:invalid_id, 123}} = Guppy.IR.validate(Guppy.IR.text("hello", id: 123))
 
+    # Empty ids would collide in retained native state keyed by explicit id.
+    assert {:error, {:invalid_id, ""}} = Guppy.IR.validate(Guppy.IR.text("hello", id: ""))
+
+    assert {:error, {:invalid_event, :click, ""}} =
+             Guppy.IR.validate(Guppy.IR.div([], events: %{click: ""}))
+
+    assert {:error, {:invalid_action_binding, "", "do_save"}} =
+             Guppy.IR.validate(Guppy.IR.div([], actions: %{"" => "do_save"}))
+
+    assert {:error, {:invalid_action_binding, "app.save", ""}} =
+             Guppy.IR.validate(Guppy.IR.div([], actions: %{"app.save" => ""}))
+
     assert {:error, {:duplicate_id, "dup"}} =
              Guppy.IR.validate(
                Guppy.IR.div([

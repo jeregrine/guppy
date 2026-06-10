@@ -2693,8 +2693,10 @@ defmodule Guppy.IR do
     end
   end
 
+  # Empty ids are rejected because explicit ids key retained native state;
+  # two nodes with id "" would silently share focus/scroll/input state.
   defp validate_id(nil), do: :ok
-  defp validate_id(id) when is_binary(id), do: :ok
+  defp validate_id(id) when is_binary(id) and id != "", do: :ok
   defp validate_id(other), do: {:error, {:invalid_id, other}}
 
   defp validate_optional_boolean(nil, _field), do: :ok
@@ -3103,7 +3105,9 @@ defmodule Guppy.IR do
 
   defp validate_actions(actions) when is_map(actions) do
     Enum.reduce_while(actions, :ok, fn
-      {action_name, callback_id}, :ok when is_binary(action_name) and is_binary(callback_id) ->
+      {action_name, callback_id}, :ok
+      when is_binary(action_name) and action_name != "" and is_binary(callback_id) and
+             callback_id != "" ->
         {:cont, :ok}
 
       {action_name, callback_id}, :ok ->
@@ -3139,7 +3143,7 @@ defmodule Guppy.IR do
   defp validate_events(events, allowed) when is_map(events) do
     Enum.reduce_while(events, :ok, fn
       {event_name, callback_id}, :ok ->
-        if event_name in allowed and is_binary(callback_id) do
+        if event_name in allowed and is_binary(callback_id) and callback_id != "" do
           {:cont, :ok}
         else
           {:halt, {:error, {:invalid_event, event_name, callback_id}}}
