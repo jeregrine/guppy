@@ -125,7 +125,7 @@ defmodule Guppy.Server do
 
   @impl true
   def init(opts) do
-    native = Keyword.get(opts, :native, Application.get_env(:guppy, :native))
+    native = Keyword.get(opts, :native, Application.get_env(:guppy, :native, Guppy.Native.Nif))
 
     state = %__MODULE__{
       native: native,

@@ -60,8 +60,8 @@ The examples read as obviously AI-designed: every screen is the same dark slate 
 Before external users rely on Guppy, make source builds and release consumption boring.
 
 - [ ] Keep `scripts/check`, `scripts/clean_install_load_test`, `scripts/package_smoke`, and macOS source-build CI green.
-- [ ] Finish the precompiled NIF artifact plan only for targets with CI build/load validation and checksums.
-- [ ] Document release-mode native build workflows and expected performance tradeoffs.
+- [ ] Cut hex v0.1.0 following the release runbook in `docs/distribution.md`. Decision 2026-06-09: precompiled artifacts + checksums for `aarch64-apple-darwin` are **required before** the hex cut (not a follow-up); the remaining steps are tag → CI artifact → load-validate → checksum commit → flip `Guppy.Native.Nif` to precompiled-by-default → publish. hexdocs (ex_doc), CHANGELOG 0.1.0 entry, and the README installation/platform/prod-mode sections are done.
+- [x] Document release-mode native build workflows and expected performance tradeoffs: README now carries a prominent "run your app in prod mode" warning and install-time platform requirements; `docs/performance.md` stays as the maintainer-facing baseline log rather than required reading.
 - [ ] Brainstorm ways to package this up into a binary we can code-sign. Existing ways all suck we might have to reinvent the wheel here.
 
 ## Priority 5: Text/editor parity

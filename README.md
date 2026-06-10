@@ -56,15 +56,42 @@ To be clear the AI left to its own devices would have gotten trapped in a slop-p
 
 I am not a rust expert by any means and it shows, I am slowly building up the correct understanding and vocabulary to get us closer, but any rust help would be greatly appreciated!
 
+## Installation
+
+Add `guppy` to your application's dependencies:
+
+```elixir
+def deps do
+  [
+    {:guppy, "~> 0.1.0"}
+  ]
+end
+```
+
+Platform support today is **macOS on Apple Silicon only**. A precompiled
+native artifact is published for `aarch64-apple-darwin`; building from source
+instead requires a working Rust toolchain. Adding Guppy to a Linux or Windows
+project will compile the native crate for a long time and then report
+`native_gui_status` as unsupported at runtime — wait for those targets before
+depending on Guppy there.
+
+> #### Run your app in prod mode {: .warning}
+>
+> **Debug native builds are dramatically slower than release builds** — laggy
+> enough to make interactive apps feel broken. Run anything you intend to
+> interact with as `MIX_ENV=prod mix run ...`, or keep dev mode and force a
+> release-mode native build with `GUPPY_NATIVE_RELEASE=1 mix compile --force`.
+
 ## Quick start
 
-Run a small example. The Rust NIF builds automatically during normal Mix compilation, so the source-build alpha path requires a working Rust toolchain:
+Run a small example from a repo checkout:
 
 ```bash
 mix run examples/hello_world.exs
 ```
 
-For interactive demos, especially scroll-heavy examples, use an optimized native build:
+For interactive demos, especially scroll-heavy examples, use an optimized
+native build — the difference is not subtle:
 
 ```bash
 MIX_ENV=prod mix run examples/super_demo.exs

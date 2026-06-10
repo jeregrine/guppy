@@ -4,6 +4,17 @@ Guppy is currently source-build first, with `rustler_precompiled` wired in for t
 
 The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, clean-install NIF loading, and generated package smoke loading. Distribution defaults to source builds until CI publishes checksummed precompiled artifacts.
 
+## Hex release runbook
+
+Precompiled artifacts and checksums are required before the first hex cut; do not publish a source-build-only package. The order of operations:
+
+1. Make sure `scripts/check`, `scripts/clean_install_load_test`, `scripts/package_smoke`, and `mix hex.build --unpack` are green.
+2. Finalize the `CHANGELOG.md` entry and tag `vX.Y.Z`; pushing the tag runs `.github/workflows/precompiled-nif.yml`, which builds and attaches the `aarch64-apple-darwin` NIF artifact to the GitHub release.
+3. Validate the artifact: on a clean checkout, `GUPPY_NATIVE_PRECOMPILED=1 mix compile` must download and load it, and `mix test` must pass.
+4. Generate and commit the checksum file with `mix rustler_precompiled.download Guppy.Native.Nif --all --print` (`mix.exs` already packages any `checksum-*.exs`).
+5. Flip `Guppy.Native.Nif` from force-source-build to precompiled-by-default (keep an env var to force source builds), and re-run every gate in step 1 plus step 3.
+6. `mix hex.publish`.
+
 ## Precompiled artifact plan
 
 `rustler_precompiled` is now part of the NIF module, but Guppy still forces source builds by default because no release artifacts or checksum file are published yet. The remaining work is the artifact/release process:
