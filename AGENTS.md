@@ -83,7 +83,7 @@ Important current invariants:
 - main-thread request drain scheduling is coalesced with an atomic scheduled flag
 - ETF IR field lookup keys are cached in Rust
 - native style lists use `Arc<[StyleOp]>`
-- native compilation/loading is wired through `RustlerPrecompiled`; source builds are forced by default until release artifacts/checksums exist
+- native compilation/loading is wired through `RustlerPrecompiled`; consumers download the checksummed release artifact by default, and `GUPPY_NATIVE_FORCE_BUILD=1` (exported by the repo's `mise.toml`) forces source builds for Guppy development
 - the RustlerPrecompiled target list is intentionally limited to currently supported precompiled targets (`aarch64-apple-darwin` today); do not add planned platforms until CI build/load validation exists
 - native event emission is implemented in Rust through Rustler `OwnedEnv`/`LocalPid` support
 - the registered event target is monitored with a Rustler resource; monitor generations prevent stale `down` callbacks from clearing newer registrations

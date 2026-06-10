@@ -11,7 +11,7 @@ defmodule CounterWindow do
     {:ok,
      window
      |> put_window_opts(
-       window_bounds: [width: 760, height: 560],
+       window_bounds: [width: 320, height: 220],
        titlebar: [title: "Counter"]
      )
      |> assign(:count, 0)}
@@ -19,9 +19,11 @@ defmodule CounterWindow do
 
   def render(window) do
     ~GUI"""
-    <div class="flex flex-col gap-2 p-4 bg-[#0f172a] text-[#f8fafc]">
-      <text id="count_label" class="text-2xl font-bold">count = {@count}</text>
-      <button id="increment_button" click="increment" class="p-2 rounded-md border-1">
+    <div class="flex flex-col items-center justify-center gap-4 w-full h-full p-5 bg-[#f5f5f7] text-[#1d1d1f]">
+      <text id="count_label" class="text-3xl font-semibold">{@count}</text>
+      <button id="increment_button" click="increment"
+              class="px-3 py-1 rounded-md border-1 border-[#007aff] bg-[#007aff] text-sm text-[#ffffff]"
+              hover_class="bg-[#0070e8]">
         Increment
       </button>
     </div>
@@ -33,7 +35,10 @@ defmodule CounterWindow do
   end
 end
 
+{:ok, _} = Application.ensure_all_started(:guppy)
+
 {:ok, pid} = CounterWindow.start_link(:ok)
+Process.monitor(pid)
 
 receive do
   {:DOWN, _ref, :process, ^pid, _reason} ->
@@ -445,4 +450,4 @@ Current source-build support:
 | `x86_64-unknown-linux-gnu`  | planned, needs GPUI runtime validation |
 | `x86_64-pc-windows-msvc`    | planned, needs GPUI/runtime validation |
 
-`rustler_precompiled` is wired only for the currently supported `aarch64-apple-darwin` target today; broader targets stay out of the precompiled matrix until they are validated. Source builds remain the default until release artifacts and checksums are published. `GUPPY_NATIVE_PRECOMPILED=1` is only an explicit artifact-path probe until then. See [`docs/distribution.md`](docs/distribution.md).
+`rustler_precompiled` serves a checksummed `aarch64-apple-darwin` artifact by default; broader targets stay out of the precompiled matrix until they are validated. Set `GUPPY_NATIVE_FORCE_BUILD=1` to build the crate from source instead (the repo itself always source-builds via `mise.toml`). See [`docs/distribution.md`](docs/distribution.md).

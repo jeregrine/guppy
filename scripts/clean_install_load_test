@@ -5,6 +5,9 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
+# Validate the consumer default: precompiled artifact download.
+unset GUPPY_NATIVE_FORCE_BUILD
+
 cd "$tmpdir"
 mix new guppy_load_smoke >/dev/null
 cd guppy_load_smoke

@@ -8,7 +8,8 @@ trap 'rm -rf "$tmpdir"' EXIT
 package_dir="$tmpdir/guppy-package"
 smoke_dir="$tmpdir/guppy_package_smoke"
 
-unset GUPPY_NATIVE_PRECOMPILED
+# Validate the source-build fallback from the packaged crate.
+export GUPPY_NATIVE_FORCE_BUILD=1
 
 cd "$repo_root"
 mix hex.build --unpack --output "$package_dir" >/dev/null

@@ -1,8 +1,8 @@
 # Distribution and native artifacts
 
-Guppy is currently source-build first, with `rustler_precompiled` wired in for the future artifact path. The native runtime is a single Rustler NIF built from `native/guppy_nif`; Rustler builds and copies it into `priv/native/` during normal Mix compilation.
+Guppy ships a checksummed precompiled NIF for supported targets and falls back to source builds (`GUPPY_NATIVE_FORCE_BUILD=1` forces them; the repo itself always source-builds via `mise.toml`). The native runtime is a single Rustler NIF built from `native/guppy_nif`; Rustler builds and copies it into `priv/native/` during normal Mix compilation.
 
-The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, clean-install NIF loading, and generated package smoke loading. Distribution defaults to source builds until CI publishes checksummed precompiled artifacts.
+The current runtime baseline has production-hardening coverage for bounded native requests, stale queued request expiry, Rustler-monitored event-target cleanup, server restart cleanup/reopen behavior, clean-install NIF loading, and generated package smoke loading. Consumers download the published artifact by default; the packaged crate keeps the source-build fallback working.
 
 ## Hex release runbook
 
@@ -10,7 +10,7 @@ Precompiled artifacts and checksums are required before the first hex cut; do no
 
 1. Make sure `scripts/check`, `scripts/clean_install_load_test`, `scripts/package_smoke`, and `mix hex.build --unpack` are green.
 2. Finalize the `CHANGELOG.md` entry and tag `vX.Y.Z`; pushing the tag runs `.github/workflows/precompiled-nif.yml`, which builds and attaches the `aarch64-apple-darwin` NIF artifact to the GitHub release.
-3. Validate the artifact: on a clean checkout, `GUPPY_NATIVE_PRECOMPILED=1 mix compile` must download and load it, and `mix test` must pass.
+3. Validate the artifact: with `GUPPY_NATIVE_FORCE_BUILD` unset and a clean build, `mix compile` must download and load it, and `mix test` must pass.
 4. Generate and commit the checksum file with `mix rustler_precompiled.download Guppy.Native.Nif --all --print` (`mix.exs` already packages any `checksum-*.exs`).
 5. Flip `Guppy.Native.Nif` from force-source-build to precompiled-by-default (keep an env var to force source builds), and re-run every gate in step 1 plus step 3.
 6. `mix hex.publish`.

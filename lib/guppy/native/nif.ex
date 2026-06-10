@@ -15,7 +15,10 @@ defmodule Guppy.Native.Nif do
                   do: :release,
                   else: :debug
 
-  @force_build System.get_env("GUPPY_NATIVE_PRECOMPILED") not in ["1", "true", "TRUE", "yes"]
+  # Consumers get the precompiled artifact by default; set
+  # GUPPY_NATIVE_FORCE_BUILD=1 to build the crate from source (required when
+  # developing Guppy itself — the repo's mise.toml exports it).
+  @force_build System.get_env("GUPPY_NATIVE_FORCE_BUILD") in ["1", "true", "TRUE", "yes"]
 
   @precompiled_targets [
     "aarch64-apple-darwin"

@@ -10,6 +10,8 @@ jobs:
   source-build:
     name: macOS source build
     runs-on: macos-latest
+    env:
+      GUPPY_NATIVE_FORCE_BUILD: "1"
 
     steps:
       - name: Checkout
