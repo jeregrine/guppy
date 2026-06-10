@@ -8,9 +8,12 @@ defmodule Guppy.MixProject do
       elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
       description: "Elixir-owned native desktop UI rendering through GPUI.",
+      source_url: "https://github.com/jeregrine/guppy",
+      homepage_url: "https://github.com/jeregrine/guppy",
       package: package(),
       deps: deps(),
       aliases: aliases(),
+      docs: docs(),
       dialyzer: [ignore_warnings: ".dialyzer_ignore.exs"]
     ]
   end
@@ -54,8 +57,31 @@ defmodule Guppy.MixProject do
     ]
   end
 
+  defp docs do
+    [
+      main: "readme",
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "docs/gpui-compliance.md",
+        "docs/distribution.md",
+        "docs/overlays.md",
+        "docs/focus-keyboard.md",
+        "docs/accessibility.md",
+        "docs/theme.md"
+      ],
+      groups_for_modules: [
+        "Core API": [Guppy, Guppy.Server, Guppy.IR, Guppy.Style],
+        Authoring: [Guppy.Window, Guppy.Component, Guppy.Markdown, Guppy.ContextMenu],
+        Apps: ~r/^Guppy\.App/,
+        "Native bridge": [Guppy.Native, Guppy.Native.Nif]
+      ]
+    ]
+  end
+
   defp deps do
     [
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:ex_slop, "~> 0.4", only: [:dev, :test], runtime: false},
       {:reach, "~> 2.0", only: [:dev, :test], runtime: false},
       {:ex_dna, "~> 1.0", only: [:dev, :test], runtime: false},

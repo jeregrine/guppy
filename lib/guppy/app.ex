@@ -32,16 +32,26 @@ defmodule Guppy.App do
 
   @type app_ref :: GenServer.server()
 
+  @typedoc """
+  App coordinator state threaded through `use Guppy.App` callbacks.
+
+  Treat it as opaque: pattern-match nothing out of it and return it (possibly
+  via the tuple shapes in `t:callback_result/0`) unchanged.
+  """
+  @opaque state :: Coordinator.state()
+
+  @typedoc "Result shape for `use Guppy.App` callbacks."
+  @type callback_result :: {:noreply, state()} | {:stop, term(), state()}
+
   @callback init(keyword()) ::
               map()
               | keyword()
               | Config.t()
               | {:ok, map() | keyword() | Config.t()}
               | {:stop, term()}
-  @callback handle_command(String.t(), map(), Coordinator.state()) ::
-              Coordinator.callback_result()
-  @callback handle_event(String.t(), map(), Coordinator.state()) :: Coordinator.callback_result()
-  @callback handle_info(term(), Coordinator.state()) :: Coordinator.callback_result()
+  @callback handle_command(String.t(), map(), state()) :: callback_result()
+  @callback handle_event(String.t(), map(), state()) :: callback_result()
+  @callback handle_info(term(), state()) :: callback_result()
 
   @optional_callbacks init: 1, handle_command: 3, handle_event: 3, handle_info: 2
 
