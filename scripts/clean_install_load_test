@@ -8,6 +8,16 @@ trap 'rm -rf "$tmpdir"' EXIT
 # Validate the consumer default: precompiled artifact download.
 unset GUPPY_NATIVE_FORCE_BUILD
 
+# A version bump lands before its tag's artifact finishes building, so skip
+# (loudly) when the artifact is not published yet; the release runbook
+# validates the download path after the tag build completes.
+version="$(sed -n 's/.*version: "\([0-9.]*\)",/\1/p' "$repo_root/mix.exs" | head -1)"
+artifact_url="https://github.com/jeregrine/guppy/releases/download/v${version}/libguppy_nif-v${version}-nif-2.15-aarch64-apple-darwin.so.tar.gz"
+if ! curl -fsIL "$artifact_url" >/dev/null 2>&1; then
+  echo "skipping consumer download smoke: no published artifact for v${version} yet (${artifact_url})"
+  exit 0
+fi
+
 cd "$tmpdir"
 mix new guppy_load_smoke >/dev/null
 cd guppy_load_smoke
