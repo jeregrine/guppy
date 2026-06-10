@@ -17,7 +17,7 @@ Precompiled artifacts and checksums are required before the first hex cut; do no
 
 ## Precompiled artifact plan
 
-`rustler_precompiled` is now part of the NIF module, but Guppy still forces source builds by default because no release artifacts or checksum file are published yet. The remaining work is the artifact/release process:
+`rustler_precompiled` serves the published artifact by default and `checksum-Elixir.Guppy.Native.Nif.exs` is committed; `GUPPY_NATIVE_FORCE_BUILD=1` forces source builds. The artifact/release process per target:
 
 1. Keep the RustlerPrecompiled target list constrained to currently supported and CI-built targets.
 2. Build the NIF artifact with `.github/workflows/precompiled-nif.yml` for every target in `Guppy.Native.Nif`'s `@precompiled_targets` list.
@@ -32,7 +32,7 @@ Precompiled artifacts and checksums are required before the first hex cut; do no
 
 | Target                      | Status                                                           | Notes                                                                    |
 | --------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `aarch64-apple-darwin`      | source-build supported; precompiled artifact workflow configured | primary local development target; only current RustlerPrecompiled target |
+| `aarch64-apple-darwin`      | precompiled artifact published, checksummed, and load-validated  | primary target; source-build fallback also CI-covered                    |
 | `x86_64-apple-darwin`       | source-build/precompiled planned                                 | needs CI/build-host confirmation                                         |
 | `aarch64-unknown-linux-gnu` | source-build/precompiled planned                                 | GPUI runtime behavior needs validation                                   |
 | `x86_64-unknown-linux-gnu`  | source-build/precompiled planned                                 | GPUI runtime behavior needs validation                                   |
