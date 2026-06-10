@@ -49,7 +49,7 @@ end
 
 ## Status
 
-Guppy is unreleased and macOS-first today. It can open native GPUI windows, render full trees, keep retained native state such as focus/scroll/text-input state by stable node identity, and route native events back to BEAM processes.
+Guppy is early (published on Hex as 0.2.x) and macOS-first today. It can open native GPUI windows, render full trees, keep retained native state such as focus/scroll/text-input state by stable node identity, and route native events back to BEAM processes.
 
 ## What is this? (Human Authored Section)
 
@@ -68,7 +68,7 @@ Add `guppy` to your application's dependencies:
 ```elixir
 def deps do
   [
-    {:guppy, "~> 0.1.0"}
+    {:guppy, "~> 0.2.0"}
   ]
 end
 ```
