@@ -2,6 +2,7 @@ use super::{
     events,
     identity::NodeIdentity,
     render_pass::RenderPass,
+    roving,
     style::{apply_div_style, apply_semantic_focus_visible_affordance},
 };
 use crate::{
@@ -57,19 +58,10 @@ pub(crate) fn render(
         visible_items
             .get(index)
             .map(|item| {
-                let previous_focus = index
-                    .checked_sub(1)
-                    .and_then(|previous_index| visible_items.get(previous_index))
-                    .and_then(|previous_item| row_focus_handles.get(&previous_item.id));
-                let next_focus = visible_items
-                    .get(index + 1)
-                    .and_then(|next_item| row_focus_handles.get(&next_item.id));
-                let first_focus = visible_items
-                    .first()
-                    .and_then(|first_item| row_focus_handles.get(&first_item.id));
-                let last_focus = visible_items
-                    .last()
-                    .and_then(|last_item| row_focus_handles.get(&last_item.id));
+                let targets =
+                    roving::vertical_neighbors(&visible_items, index, &row_focus_handles, |item| {
+                        &item.id
+                    });
                 let parent_focus = item
                     .parent_id
                     .as_ref()
@@ -93,10 +85,7 @@ pub(crate) fn render(
                     row_focus_handles.get(&item.id),
                     focus_visible,
                     window,
-                    previous_focus,
-                    next_focus,
-                    first_focus,
-                    last_focus,
+                    targets,
                     parent_focus,
                     first_child_focus,
                 )
@@ -124,18 +113,15 @@ fn prepare_row_focus_handles(
     keyboard_enabled: bool,
     cx: &mut Context<BridgeView>,
 ) -> HashMap<String, FocusHandle> {
-    if !keyboard_enabled {
-        return HashMap::new();
-    }
-
-    visible_items
-        .iter()
-        .map(|item| {
-            let row_id = tree_row_id(tree_id, &item.id);
-            let focus_handle = pass.ensure_focus_handle(&row_id, cx, Some(true), None);
-            (item.id.clone(), focus_handle)
-        })
-        .collect()
+    roving::prepare_focus_handles(
+        pass,
+        cx,
+        keyboard_enabled,
+        visible_items
+            .iter()
+            .map(|item| (item.id.clone(), tree_row_id(tree_id, &item.id)))
+            .collect::<Vec<_>>(),
+    )
 }
 
 fn flatten_visible_tree_items(items: &[TreeItem]) -> Vec<VisibleTreeItem> {
@@ -180,10 +166,7 @@ fn render_row(
     focus_handle: Option<&FocusHandle>,
     focus_visible: bool,
     window: &Window,
-    previous_focus: Option<&FocusHandle>,
-    next_focus: Option<&FocusHandle>,
-    first_focus: Option<&FocusHandle>,
-    last_focus: Option<&FocusHandle>,
+    targets: roving::NavigationTargets,
     parent_focus: Option<&FocusHandle>,
     first_child_focus: Option<&FocusHandle>,
 ) -> AnyElement {
@@ -268,57 +251,22 @@ fn render_row(
         let key_item_id = item.id.clone();
         let key_row_id = row_id.clone();
         let item = item.clone();
-        let previous_focus = previous_focus.cloned();
-        let next_focus = next_focus.cloned();
-        let first_focus = first_focus.cloned();
-        let last_focus = last_focus.cloned();
-        let parent_focus = parent_focus.cloned();
-        let first_child_focus = first_child_focus.cloned();
+        // Left moves to the parent unless the row is an expanded branch, and
+        // right descends into the first child of an expanded branch; the
+        // complementary cases fall through to tree_keyboard_action toggles.
+        let targets = {
+            let mut targets = targets;
+            if !(item.has_children && item.expanded) {
+                targets.left = parent_focus.cloned();
+            }
+            if item.has_children && item.expanded {
+                targets.right = first_child_focus.cloned();
+            }
+            targets
+        };
         row = row.on_key_down(move |event: &KeyDownEvent, window, cx| {
-            match event.keystroke.key.as_str() {
-                "up" => {
-                    if let Some(handle) = previous_focus.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "down" => {
-                    if let Some(handle) = next_focus.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "home" => {
-                    if let Some(handle) = first_focus.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "end" => {
-                    if let Some(handle) = last_focus.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "left" if !(item.has_children && item.expanded) => {
-                    if let Some(handle) = parent_focus.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "right" if item.has_children && item.expanded => {
-                    if let Some(handle) = first_child_focus.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                _ => {}
+            if targets.handle(event, window, cx) {
+                return;
             }
 
             if let Some(callback_id) = context_menu_callback.as_deref()

@@ -2,7 +2,7 @@ use super::{
     events,
     identity::NodeIdentity,
     render_pass::RenderPass,
-    render_text,
+    render_text, roving,
     style::{apply_div_style, apply_semantic_focus_visible_affordance},
 };
 use crate::{
@@ -27,25 +27,6 @@ const COLUMN_RESIZE_KEYBOARD_STEP: i32 = 16;
 struct DataTableFocusHandles {
     rows: HashMap<String, FocusHandle>,
     cells: HashMap<(String, String), FocusHandle>,
-}
-
-#[derive(Clone, Default)]
-struct RowFocusNeighbors {
-    previous: Option<FocusHandle>,
-    next: Option<FocusHandle>,
-    first: Option<FocusHandle>,
-    last: Option<FocusHandle>,
-    first_cell: Option<FocusHandle>,
-}
-
-#[derive(Clone, Default)]
-struct CellFocusNeighbors {
-    left: Option<FocusHandle>,
-    right: Option<FocusHandle>,
-    up: Option<FocusHandle>,
-    down: Option<FocusHandle>,
-    first: Option<FocusHandle>,
-    last: Option<FocusHandle>,
 }
 
 #[derive(Clone)]
@@ -99,27 +80,29 @@ pub(crate) fn render(
                     .checked_sub(1)
                     .and_then(|previous_index| rows.get(previous_index));
                 let next_row = rows.get(index + 1);
-                let row_focus_neighbors = RowFocusNeighbors {
-                    previous: previous_row
+                let row_focus_neighbors = roving::NavigationTargets {
+                    up: previous_row
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
-                    next: next_row
+                    down: next_row
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
-                    first: rows
+                    home: rows
                         .first()
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
-                    last: rows
+                    end: rows
                         .last()
                         .and_then(|row| body_focus_handles_for_rows.rows.get(&row.id))
                         .cloned(),
-                    first_cell: columns_for_rows.first().and_then(|column| {
+                    // Right enters the row's first cell.
+                    right: columns_for_rows.first().and_then(|column| {
                         body_focus_handles_for_rows
                             .cells
                             .get(&(row.id.clone(), column.id.clone()))
                             .cloned()
                     }),
+                    ..Default::default()
                 };
 
                 render_row(
@@ -338,26 +321,32 @@ fn render_header(
             let next_column_id = columns
                 .get(column_index + 1)
                 .map(|column| column.id.clone());
-            let down_focus = first_row_id
-                .and_then(|row_id| {
-                    body_focus_handles
-                        .cells
-                        .get(&(row_id.to_owned(), column.id.clone()))
-                })
-                .cloned();
             let (left_focus, right_focus) =
                 header_focus_neighbors(columns, focus_handles, column_index);
-            let first_focus = columns
-                .iter()
-                .find(|column| focus_handles.contains_key(&column.id))
-                .and_then(|column| focus_handles.get(&column.id))
-                .cloned();
-            let last_focus = columns
-                .iter()
-                .rev()
-                .find(|column| focus_handles.contains_key(&column.id))
-                .and_then(|column| focus_handles.get(&column.id))
-                .cloned();
+            let targets = roving::NavigationTargets {
+                left: left_focus,
+                right: right_focus,
+                // Down enters the first body row's cell in this column.
+                down: first_row_id
+                    .and_then(|row_id| {
+                        body_focus_handles
+                            .cells
+                            .get(&(row_id.to_owned(), column.id.clone()))
+                    })
+                    .cloned(),
+                home: columns
+                    .iter()
+                    .find(|column| focus_handles.contains_key(&column.id))
+                    .and_then(|column| focus_handles.get(&column.id))
+                    .cloned(),
+                end: columns
+                    .iter()
+                    .rev()
+                    .find(|column| focus_handles.contains_key(&column.id))
+                    .and_then(|column| focus_handles.get(&column.id))
+                    .cloned(),
+                ..Default::default()
+            };
             cell = cell.on_key_down(move |event: &KeyDownEvent, window, cx| {
                 if event.keystroke.modifiers.shift
                     && let Some(callback_id) = resize_callback_id.as_deref()
@@ -429,43 +418,8 @@ fn render_header(
                     }
                 }
 
-                match event.keystroke.key.as_str() {
-                    "left" => {
-                        if let Some(handle) = left_focus.as_ref() {
-                            handle.focus(window);
-                            cx.stop_propagation();
-                            return;
-                        }
-                    }
-                    "right" => {
-                        if let Some(handle) = right_focus.as_ref() {
-                            handle.focus(window);
-                            cx.stop_propagation();
-                            return;
-                        }
-                    }
-                    "down" => {
-                        if let Some(handle) = down_focus.as_ref() {
-                            handle.focus(window);
-                            cx.stop_propagation();
-                            return;
-                        }
-                    }
-                    "home" => {
-                        if let Some(handle) = first_focus.as_ref() {
-                            handle.focus(window);
-                            cx.stop_propagation();
-                            return;
-                        }
-                    }
-                    "end" => {
-                        if let Some(handle) = last_focus.as_ref() {
-                            handle.focus(window);
-                            cx.stop_propagation();
-                            return;
-                        }
-                    }
-                    _ => {}
+                if targets.handle(event, window, cx) {
+                    return;
                 }
 
                 if column_sortable
@@ -586,7 +540,7 @@ fn render_row(
     cell_context_menu: Option<&str>,
     focus_handles: &DataTableFocusHandles,
     header_focus_handles: &HashMap<String, FocusHandle>,
-    row_focus_neighbors: RowFocusNeighbors,
+    row_focus_neighbors: roving::NavigationTargets,
     focus_visible: bool,
     window: &Window,
 ) -> AnyElement {
@@ -676,43 +630,8 @@ fn render_row(
         let key_row_id = row_id.clone();
         let row_focus_neighbors = row_focus_neighbors.clone();
         element = element.on_key_down(move |event: &KeyDownEvent, window, cx| {
-            match event.keystroke.key.as_str() {
-                "up" => {
-                    if let Some(handle) = row_focus_neighbors.previous.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "down" => {
-                    if let Some(handle) = row_focus_neighbors.next.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "home" => {
-                    if let Some(handle) = row_focus_neighbors.first.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "end" => {
-                    if let Some(handle) = row_focus_neighbors.last.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "right" => {
-                    if let Some(handle) = row_focus_neighbors.first_cell.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                _ => {}
+            if row_focus_neighbors.handle(event, window, cx) {
+                return;
             }
 
             if let Some(callback_id) = context_menu_callback.as_deref()
@@ -809,12 +728,12 @@ fn cell_focus_neighbors(
     next_row_id: Option<&str>,
     column_index: usize,
     header_focus_handles: &HashMap<String, FocusHandle>,
-) -> CellFocusNeighbors {
+) -> roving::NavigationTargets {
     let Some(column) = columns.get(column_index) else {
-        return CellFocusNeighbors::default();
+        return roving::NavigationTargets::default();
     };
 
-    CellFocusNeighbors {
+    roving::NavigationTargets {
         left: column_index
             .checked_sub(1)
             .and_then(|index| columns.get(index))
@@ -848,13 +767,13 @@ fn cell_focus_neighbors(
                     .get(&(row_id.to_owned(), column.id.clone()))
             })
             .cloned(),
-        first: columns.first().and_then(|column| {
+        home: columns.first().and_then(|column| {
             focus_handles
                 .cells
                 .get(&(row_id.to_owned(), column.id.clone()))
                 .cloned()
         }),
-        last: columns.last().and_then(|column| {
+        end: columns.last().and_then(|column| {
             focus_handles
                 .cells
                 .get(&(row_id.to_owned(), column.id.clone()))
@@ -890,7 +809,7 @@ fn render_cell(
     cell_click: Option<&str>,
     cell_context_menu: Option<&str>,
     focus_handle: Option<&FocusHandle>,
-    focus_neighbors: CellFocusNeighbors,
+    focus_neighbors: roving::NavigationTargets,
     focus_visible: bool,
     window: &Window,
 ) -> AnyElement {
@@ -949,50 +868,8 @@ fn render_cell(
         let key_cell_id = cell_id.clone();
         let focus_neighbors = focus_neighbors.clone();
         element = element.on_key_down(move |event: &KeyDownEvent, window, cx| {
-            match event.keystroke.key.as_str() {
-                "left" => {
-                    if let Some(handle) = focus_neighbors.left.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "right" => {
-                    if let Some(handle) = focus_neighbors.right.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "up" => {
-                    if let Some(handle) = focus_neighbors.up.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "down" => {
-                    if let Some(handle) = focus_neighbors.down.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "home" => {
-                    if let Some(handle) = focus_neighbors.first.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                "end" => {
-                    if let Some(handle) = focus_neighbors.last.as_ref() {
-                        handle.focus(window);
-                        cx.stop_propagation();
-                        return;
-                    }
-                }
-                _ => {}
+            if focus_neighbors.handle(event, window, cx) {
+                return;
             }
 
             if let Some(callback_id) = context_menu_callback.as_deref()
@@ -1062,8 +939,7 @@ fn is_header_activation_key(event: &KeyDownEvent) -> bool {
 }
 
 fn is_activation_key(event: &KeyDownEvent) -> bool {
-    // Held key repeat must not spam sort/row/cell activation events.
-    !event.is_held && matches!(event.keystroke.key.as_str(), "space" | "enter")
+    roving::is_activation_key(event)
 }
 
 fn apply_column_width<E>(element: E, width: &DataTableColumnWidth) -> E

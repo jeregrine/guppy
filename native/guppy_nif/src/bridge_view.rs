@@ -18,6 +18,7 @@ mod render_text;
 mod render_text_input;
 mod render_tree;
 mod render_uniform_list;
+mod roving;
 mod style;
 
 use crate::bridge_text_input::BridgeTextInput;
